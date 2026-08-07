@@ -8,8 +8,8 @@ import {
   replaceWithQuote,
 } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
-import { initBusinessHub } from './business.js?v=20260805c';
-import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260805c';
+import { initBusinessHub } from './business.js?v=20260806a';
+import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260806a';
 
 const $ = (id) => document.getElementById(id);
 
@@ -519,9 +519,11 @@ async function renderOrders({ append = false } = {}) {
         ${trackingSteps(o)}
         ${o.purchase_order_number ? `<p class="muted">Purchase order: ${esc(o.purchase_order_number)}</p>` : ''}
         ${o.qbo_invoice_id ? `<p class="muted">Invoice: ${esc(o.qbo_invoice_id)}</p>` : ''}
+        <div class="dash-order-actions">
         ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
         ${o.payment_method === 'stripe' ? `<button class="btn btn-ghost btn-sm" data-receipt="${esc(o.id)}">Receipt</button>` : ''}
         ${orderRequestButton(o)}
+        </div>
       </div></details>`;
   }).join('') + pagerHtml('data-load-more-orders', st)
     : '<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>';

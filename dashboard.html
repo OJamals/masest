@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260806a">
+<link rel="stylesheet" href="css/style.css?v=20260806b">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <style>
@@ -131,7 +131,11 @@
   .dash-overview-marker small { color: var(--ink-soft); font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
   .dash-overview-marker b { color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; line-height: 1.25; }
   .msg-send { margin-top: 10px; }
-  .dash-clean-form { padding: 0; border: 0; box-shadow: none; }
+  /* Strips .form-card's chrome to sit bare on the page. It must drop the
+     background too: keeping .form-card's white surface while zeroing its 46px
+     padding left a painted slab with labels, inputs, and the save button flush
+     against every edge. */
+  .dash-clean-form { padding: 0; border: 0; box-shadow: none; background: transparent; }
   .dash-card-subtitle { display: flex; align-items: center; min-height: 44px; font-size: 1.05rem; line-height: 1.3; margin-bottom: 12px; }
   .dash-card-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
   .dash-action-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
@@ -150,6 +154,9 @@
   .dash-order-card[open] .dash-order-caret { transform: translateY(-50%) rotate(180deg); }
   @media (prefers-reduced-motion: reduce) { .dash-order-caret { transition: none; } }
   .dash-order-lines { padding: 8px 0 4px; }
+  /* Order actions were bare inline-flex siblings spaced only by the whitespace
+     between them, so they fused when they wrapped on narrow screens. */
+  .dash-order-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
   .dash-order-line { padding: 7px 0; }
   /* Order totals and line amounts sit in a visual column; tabular figures keep that
      column aligned across rows of differing digit widths. */
@@ -715,6 +722,6 @@
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260730a"></script>
 <script src="js/track.js" defer></script>
-<script type="module" src="js/dashboard.js?v=20260805c"></script>
+<script type="module" src="js/dashboard.js?v=20260806a"></script>
 </body>
 </html>

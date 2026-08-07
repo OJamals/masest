@@ -228,6 +228,17 @@ h3 {
 .services-hero-copy .subhead + .hero-actions {
   margin-top: 30px;
 }
+/* Hero CTA rows had no layout rule at all: the buttons are inline-flex and were
+   separated only by the whitespace text node between them (~4px), which vanishes
+   when they wrap — so the CTAs sat flush against each other on mobile. A flex gap
+   spaces them on both axes. All .hero-actions are text-align:start, so making
+   this a flex row changes no existing alignment. */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
 /* Tabular,
 lined-up figures for all data numerics */
 .display,
