@@ -905,7 +905,11 @@ test("blog_post form renders all field editors + live markdown preview", async (
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-blog-post-desktop.png` });
 });
 
-test("dedicated blog tab renders scoped editor with formatting, references, preview, and current posts", async ({ page }) => {
+// 3c8c41d6 folded the dedicated Blog sidebar tab into the Content workspace, so #blog is now
+// a legacy deep link that resolves to Content's blog sub-view. Everything this test covers —
+// the scoped editor, formatting, references, revisions, current posts — survived the merge;
+// only the entry point moved.
+test("blog sub-view renders scoped editor with formatting, references, preview, and current posts", async ({ page }) => {
   await bootAsStaff(page);
 
   const blogEntries = [{
@@ -975,7 +979,8 @@ test("dedicated blog tab renders scoped editor with formatting, references, prev
 
   await page.goto(`${BASE_URL}/admin.html#blog`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
-  await expect(page.locator('[data-tab="blog"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[data-tab="content"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('#contentToggle [data-content-view="blog"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#admBlog")).toContainText("Blog editor");
   await expect(page.locator("#admBlog")).toContainText("Current posts");
   await expect(page.locator("#admBlog")).toContainText("What HMIS 0-0-0 Actually Means");

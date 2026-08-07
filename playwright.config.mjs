@@ -11,4 +11,10 @@ export default {
     "**/_local/**",
     "**/test-results/**",
   ],
+  // admin.html boots through a lazily-imported module graph and then renders from stubbed
+  // APIs. In isolation that lands in ~200ms, but under full-suite parallelism — every spec
+  // running its own static server and browser — it can exceed the 5s default, and the
+  // failure lands on whichever admin spec happens to run first. That rotating red was
+  // indistinguishable from a real regression.
+  expect: { timeout: 10000 },
 };

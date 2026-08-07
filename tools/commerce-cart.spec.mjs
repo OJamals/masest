@@ -115,7 +115,7 @@ test("cart accepts flattened connector variant rows", async ({ page }) => {
 
   await expect(page.getByText("VertKleen CRHD - 5 gal pail")).toBeVisible();
   await expect(page.getByText("$125.00 each")).toBeVisible();
-  await expect(page.locator("#checkoutPay")).toBeEnabled();
+  await expect(page.locator("#checkoutContinue")).toHaveAttribute("aria-disabled", "false");
   await expect(page.getByText("$250.00")).toBeVisible();
 });
 
@@ -140,8 +140,7 @@ test("cart disables direct checkout when bulk freight items are present", async 
   await page.reload({ waitUntil: "domcontentloaded" });
 
   await expect(page.getByText("Quote required")).toBeVisible();
-  await expect(page.locator("#checkoutPay")).toBeDisabled();
-  await expect(page.locator("#checkoutNet")).toBeHidden();
+  await expect(page.locator("#checkoutContinue")).toHaveAttribute("aria-disabled", "true");
   await expect(page.locator("#cartStatus")).toContainText("Remove bulk freight items");
 
   const quoteHref = await page.locator("#checkoutQuote").getAttribute("href");
@@ -172,13 +171,14 @@ test("cart quote link reflects edited quantities before blur", async ({ page }) 
   });
   await page.reload({ waitUntil: "domcontentloaded" });
 
-  await page.locator("#checkoutEmail").fill("buyer@example.com");
   await page.locator('input[data-qty="crhd"]').fill("4");
 
+  // The receipt email moved to checkout.html with the rest of the payment step, so
+  // quoteUrl() now builds from the cart lines alone.
   const quoteHref = await page.locator("#checkoutQuote").getAttribute("href");
   const quoteUrl = new URL(quoteHref, BASE_URL);
   expect(quoteUrl.searchParams.get("cart")).toBeNull();
-  expect(quoteUrl.searchParams.get("email")).toBe("buyer@example.com");
+  expect(quoteUrl.searchParams.get("email")).toBeNull();
   expect(quoteUrl.searchParams.get("message")).toContain("VertKleen CR HD x 4");
 });
 
@@ -202,10 +202,10 @@ test("cart re-enables checkout after removing bulk freight items", async ({ page
   });
   await page.reload({ waitUntil: "domcontentloaded" });
 
-  await expect(page.locator("#checkoutPay")).toBeDisabled();
+  await expect(page.locator("#checkoutContinue")).toHaveAttribute("aria-disabled", "true");
   await page.locator('[data-remove="lam3"]').click();
 
-  await expect(page.locator("#checkoutPay")).toBeEnabled();
+  await expect(page.locator("#checkoutContinue")).toHaveAttribute("aria-disabled", "false");
   await expect(page.locator("#cartStatus")).toBeHidden();
 
   const quoteHref = await page.locator("#checkoutQuote").getAttribute("href");

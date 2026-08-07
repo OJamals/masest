@@ -170,6 +170,11 @@ test("business approval cards expose edit and guarded delete actions with center
     route.fulfill(json({ companies: [COMPANY], total: 1, has_more: false })));
 
   await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
+  // #acctToggle is static markup, so its buttons are visible and clickable before admin.js
+  // boots and attaches delegation — a click that lands first is dropped with no retry, and
+  // the card below then never arrives. data-active is only set once setTab has run, so it
+  // is the signal that the console is actually listening.
+  await page.waitForSelector('.adm-panel[data-panel="companies"][data-active="true"]');
   await page.getByRole("button", { name: "Businesses & approvals" }).click();
 
   const card = page.locator(".company-admin-card", { hasText: COMPANY.name });
