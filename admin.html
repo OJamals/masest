@@ -122,6 +122,12 @@
   .adm-main .crm-tabs .btn,
   .adm-main .pipe-toggle .btn,
   .adm-main .saved-views .btn { min-height: 40px !important; padding: 8px 14px; }
+  /* Sub-view toggles (Content, Products, CRM) carry "which workspace am I in?".
+     .btn-ghost paints the same surface white the shared .crm-tabs .is-active rule
+     uses, so the selected pill was separated from the others by font-weight alone.
+     Borrow the sidebar's selected-tab language so the answer is visible at a glance. */
+  .adm-main .crm-tabs .btn { background: transparent; color: var(--ink-soft); }
+  .adm-main .crm-tabs .btn.is-active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; }
   .adm-main .saved-views { padding: 12px 0 0; border-top: 1px solid var(--line-soft); }
   .adm-main .saved-views-label { flex: 0 0 100%; color: var(--muted); font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
   .adm-main .saved-views .adm-select { flex: 1 1 180px; max-width: none; }
@@ -1000,6 +1006,9 @@
         <!-- Pages and blog posts were two sidebar tabs driving one editor module,
              which can only ever have one of them mounted at a time. They are the
              same job on two content types, so they share one workspace. -->
+        <div class="adm-panel-title">
+          <div><h2>Content</h2><p class="muted">Edit site pages and blog posts, then publish them to the live site.</p></div>
+        </div>
         <div class="crm-tabs" id="contentToggle" role="group" aria-label="Content workspaces">
           <button class="btn btn-ghost btn-sm is-active" type="button" data-content-view="pages" aria-pressed="true">Website content</button>
           <button class="btn btn-ghost btn-sm" type="button" data-content-view="blog" aria-pressed="false">Blog posts</button>
