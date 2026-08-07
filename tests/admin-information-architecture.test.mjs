@@ -18,7 +18,7 @@ test('admin navigation groups daily, commerce, customer, publishing, and system 
     assert.match(html, new RegExp(`data-tab="${tab}"`), `${tab} should be a first-class admin tab`);
     assert.match(html, new RegExp(`data-panel="${tab}"`), `${tab} should have a matching panel`);
   }
-  for (const group of ['Today', 'Commerce', 'Customers', 'Publishing', 'Business system']) {
+  for (const group of ['Today', 'Sales', 'Orders &amp; catalog', 'Publishing', 'Business system']) {
     assert.match(html, new RegExp(`>${group}<`));
   }
 });

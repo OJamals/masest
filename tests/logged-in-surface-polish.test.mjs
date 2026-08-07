@@ -32,7 +32,7 @@ test("admin dashboard has production shell affordances without inline layout hac
   assert.match(html, /adm-tabs-wrap/, "admin tab rail should keep its mobile-safe scroll container class");
   assert.match(html, /class="adm-layout"/, "admin app should use a dashboard-style two-column shell");
   assert.match(html, /class="adm-sidebar adm-tabs-wrap"/, "admin sections should live in a sidebar rail");
-  for (const group of ["Today", "Commerce", "Customers", "Publishing", "Business system"]) {
+  for (const group of ["Today", "Sales", "Orders &amp; catalog", "Publishing", "Business system"]) {
     assert.match(html, new RegExp(`<span aria-hidden="true">${group}<\\/span>`), `admin nav should expose the ${group} group`);
   }
   assert.match(html, /adm-panel-header/, "admin panels should expose consistent panel header utility");
