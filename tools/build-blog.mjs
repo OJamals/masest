@@ -218,7 +218,7 @@ function postPage(post, all) {
     </aside>
   </article>
 </main>
-<script type="module" src="../js/main.js?v=20260807a"></script>
+<script type="module" src="../js/main.js?v=20260807b"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
@@ -322,7 +322,7 @@ ${cards}
   </section>
   <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="blog" data-cms-region="body"></div>
 </main>
-<script type="module" src="js/main.js?v=20260807a"></script>
+<script type="module" src="js/main.js?v=20260807b"></script>
 <script type="module" src="js/blog-index.js"></script>
 <script src="js/track.js" defer></script>
 </body>

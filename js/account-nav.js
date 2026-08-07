@@ -25,6 +25,17 @@ const ACCOUNT_MENU = [
   ['ph-map-pin', 'Addresses & payment', 'dashboard.html#addresses'],
 ];
 
+// Staff operate the store rather than shop it, so on public pages they get their
+// own destinations instead of a buyer's Orders / Addresses / Notifications — and
+// no cart. Password management stays, since staff still own their login.
+const STAFF_MENU = [
+  ['ph-shield-check', 'Admin console', 'admin.html'],
+  ['ph-lifebuoy', 'Customer support', 'admin.html#support-settings'],
+];
+const STAFF_ACCOUNT_MENU = [
+  ['ph-user', 'Profile & security', 'dashboard.html#profile'],
+];
+
 function injectStyle() {
   if (document.getElementById('acct-nav-style')) return;
   const s = document.createElement('style');
@@ -61,6 +72,7 @@ function injectStyle() {
   .acct-dd-menu .acct-admin { color:var(--accent-ink,#0a5b62); }
   /* Cart: transparent shopping-cart icon with a count bubble (replaces the "Cart" text pill) */
   .nav-cart { position:relative; display:inline-grid; place-items:center; width:42px; height:42px; border-radius:50%; background:transparent; color:var(--ink,#15171c); padding:0; }
+  .nav-cart[hidden] { display: none; }
   .nav-cart:hover { background:rgba(0,0,0,.06); }
   .nav.over-dark .nav-cart { color:#fff; }
   .nav.over-dark .nav-cart:hover { background:rgba(255,255,255,.12); }
@@ -148,26 +160,32 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
     mount.innerHTML = `<a class="nav-signin" href="${root}account.html">Finish setup</a>`;
   } else {
     const label = data.profile?.full_name || data.company?.name || data.email || 'Account';
-    const accountMenu = data.can_admin
-      ? MENU.map((item) => item[1] === 'Messages' ? ['ph-lifebuoy', 'Customer support', 'admin.html#support-settings'] : item)
-      : MENU;
+    const isStaff = data.can_admin === true;
+    const accountMenu = isStaff ? STAFF_MENU : MENU;
     const items = accountMenu.map(([i, l, h]) => {
       const isNotifications = l === 'Notifications';
       const marker = isNotifications ? ' data-account-nav-notifications' : '';
       const count = isNotifications ? '<span class="acct-menu-count" hidden>0</span>' : '';
       return `<a href="${root}${h}"${marker}><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}${count}</a>`;
     }).join('');
-    const accountItems = ACCOUNT_MENU.map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');
-    const admin = data.can_admin === true ? `<a class="acct-admin" href="${root}admin.html"><i class="ph ph-shield-check" aria-hidden="true"></i>Admin console</a>` : '';
+    const accountItems = (isStaff ? STAFF_ACCOUNT_MENU : ACCOUNT_MENU)
+      .map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');
+    // Admin console now leads the staff list above, so the old separate row
+    // above Sign out is gone.
     mount.innerHTML = `<details class="acct-dd">
       <summary aria-haspopup="true"><span class="acct-avatar">${esc((label[0] || 'A').toUpperCase())}</span><span class="acct-name">${esc(firstName(label))}</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
       <div class="acct-dd-menu">
-        <div class="acct-menu-section"><span class="acct-menu-label">Workspace</span>${items}</div>
+        <div class="acct-menu-section"><span class="acct-menu-label">${isStaff ? 'Staff' : 'Workspace'}</span>${items}</div>
         <div class="acct-menu-section"><span class="acct-menu-label">Account</span>${accountItems}</div>
-        <div class="acct-menu-section">${admin}<button type="button" class="acct-signout"><i class="ph ph-sign-out" aria-hidden="true"></i>Sign out</button></div>
+        <div class="acct-menu-section"><button type="button" class="acct-signout"><i class="ph ph-sign-out" aria-hidden="true"></i>Sign out</button></div>
       </div>
     </details>`;
   }
+
+  // Staff are running the store, not shopping it. Hidden rather than removed so a
+  // re-render on auth change (sign out) can put it straight back.
+  const cart = actions.querySelector('.nav-cart');
+  if (cart) cart.hidden = data?.can_admin === true;
 
   const burger = actions.querySelector('.nav-burger');
   if (prev) prev.replaceWith(mount);
