@@ -768,8 +768,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   // List actions delegated once on the stable #admCompanies container (#36).
   function wireCompanies() {
     wireAllUsers();
+    // Steady-state owner of the sub-view toggle. Calls showAcctView directly rather than
+    // going back through setTab, so switching view stays responsive even while this panel's
+    // first load is still in flight. admin.js binds a synchronous stand-in that covers the
+    // window before this runs; acctToggleWired tells it to stand down.
     const toggle = $('acctToggle');
     if (toggle) delegate(toggle, 'click', '[data-acct-view]', (event, button) => showAcctView(button.dataset.acctView));
+    state.acctToggleWired = true;
     const documentRequests = $('admDocumentRequests');
     $('documentRequestFilter')?.addEventListener('change', () => renderDocumentRequests());
     if (documentRequests) {
@@ -1220,8 +1225,12 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     });
   }
 
-  // Companies / Users sub-view toggle within the Accounts panel.
-  function showAcctView(view = 'users') {
+  // Select the Companies / Users / SDS sub-view WITHOUT loading it: state plus the button
+  // and panel state only. Split out from showAcctView so admin.js can apply a requested
+  // view before renderCompanies() runs — renderCompanies dispatches on state.acctView, so
+  // setting it first means the panel renders the right view once instead of painting the
+  // default and then swapping.
+  function applyAcctView(view = 'users') {
     state.acctView = view;
     $('acctToggle')?.querySelectorAll('[data-acct-view]').forEach((button) => {
       const on = button.dataset.acctView === view;
@@ -1229,6 +1238,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       button.setAttribute('aria-pressed', String(on));
     });
     document.querySelectorAll('[data-acct-panel]').forEach((panel) => { panel.hidden = panel.dataset.acctPanel !== view; });
+  }
+
+  // Select a sub-view and load it: what the #acctToggle buttons do once this module owns
+  // them, and what in-panel flows call when an action should land the staffer on a
+  // different view.
+  function showAcctView(view = 'users') {
+    applyAcctView(view);
     if (view === 'users') renderAllUsers({ refetch: !state.loaded.has('acctUsers') });
     if (view === 'companies') renderBusinessQueue({ refetch: !state.loaded.has('companies') });
     if (view === 'document-requests') renderDocumentRequests();
@@ -1236,10 +1252,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
 
   async function renderCompanies({ append = false, refetch = true } = {}) {
     if (!state.acctView) state.acctView = 'users';
+    // Keep the toggle and panel visibility in step with state on every mount. Without this
+    // a view selected before the module finished loading would render into a hidden panel.
+    applyAcctView(state.acctView);
     if (state.acctView === 'companies') await renderBusinessQueue({ refetch, append });
     else if (state.acctView === 'document-requests') await renderDocumentRequests({ append });
     else await renderAllUsers({ refetch });
   }
 
-  return { renderCompanies, wireCompanies, openCompanyDetail, showAcctView };
+  return { renderCompanies, wireCompanies, openCompanyDetail, showAcctView, applyAcctView };
 }

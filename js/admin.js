@@ -1,6 +1,6 @@
 /* MASEST staff admin console. */
 import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260807f';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels } from './util.js?v=20260807f';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels, delegate } from './util.js?v=20260807f';
 import { editKey } from './admin/edits.js?v=20260807f';
 import { createFeatureLoader } from './admin/feature-loader.js?v=20260807f';
 import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260807f';
@@ -672,7 +672,7 @@ const featureLoader = createFeatureLoader({
       import('./admin/crm.js?v=20260807f'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
-    const { renderCompanies, wireCompanies, openCompanyDetail, showAcctView } = createCompaniesTab({
+    const { renderCompanies, wireCompanies, openCompanyDetail, applyAcctView } = createCompaniesTab({
       $,
       api,
       state,
@@ -692,10 +692,12 @@ const featureLoader = createFeatureLoader({
         wireCompanies();
       },
       async render(options) {
+        // Select the requested sub-view BEFORE rendering. Overview account numbers and the
+        // #acctToggle buttons both arrive as options.acctView, and renderCompanies()
+        // dispatches on state.acctView — so applying it first renders the requested view
+        // once, instead of painting the Users default and then swapping it out.
+        if (options.acctView) applyAcctView(options.acctView);
         await renderCompanies(options);
-        // Overview account numbers land on the businesses list, not the Users
-        // sub-view they would otherwise default to.
-        if (options.acctView) showAcctView(options.acctView);
         if (options.openCompanyId) await openCompanyDetail(options.openCompanyId);
       },
     };
@@ -976,6 +978,25 @@ function wire() {
   });
   document.querySelectorAll('[data-tab]').forEach((button) => {
     button.addEventListener('click', () => setTab(button.dataset.tab));
+  });
+  // The Accounts sub-view buttons are static markup in admin.html, so they are clickable
+  // from first paint — but the companies module that handles them is lazy, and a click in
+  // that window used to be swallowed with no retry and no feedback: the view stayed on
+  // Users while the queue the buyer asked for was never fetched.
+  //
+  // This synchronous listener covers only that window. It records the choice on state and
+  // stops; renderCompanies() applies state.acctView on mount, so the panel's first paint is
+  // the requested view. Once wireCompanies() has bound its own handler it owns the toggle
+  // and this one steps aside.
+  //
+  // Deliberately NOT routed through setTab: that serializes on featureRenderTail, so a
+  // click while the panel's first load is still in flight would queue behind it instead of
+  // switching. The module's direct handler stays responsive even when a load is hung, which
+  // is what "business approval queue ignores stale overlapping directory and view loads"
+  // pins.
+  delegate($('acctToggle'), 'click', '[data-acct-view]', (event, button) => {
+    if (state.acctToggleWired) return;
+    state.acctView = button.dataset.acctView;
   });
   $('admNavToggle')?.addEventListener('click', () => {
     const sidebar = document.querySelector('.adm-sidebar');

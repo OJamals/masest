@@ -253,3 +253,42 @@ test("business approval queue ignores stale overlapping directory and view loads
 
   await expect(page.locator(".company-admin-card", { hasText: COMPANY.name })).toHaveCount(1);
 });
+
+// The sub-view buttons are static markup in admin.html, so staff can click them before the
+// lazy companies module has loaded and bound its handler. That click used to be swallowed
+// with no retry and no feedback: the view stayed on Users while the queue the buyer asked
+// for was never fetched. admin.js now binds a synchronous stand-in that records the choice,
+// and renderCompanies() applies state.acctView on mount.
+//
+// Holding the module import open is what makes this deterministic — otherwise the module
+// usually wins the race and the test passes without ever entering the window it guards.
+test("a sub-view clicked before the companies module loads is still honoured", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/users**", (route) => route.fulfill(json({ users: [] })));
+  await page.route("**/api/admin/companies**", (route) =>
+    route.fulfill(json({ companies: [COMPANY], total: 1, has_more: false })));
+
+  let moduleReleased = false;
+  await page.route("**/js/admin/companies.js*", async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    moduleReleased = true;
+    await route.fulfill({ status: 200, contentType: "text/javascript", body });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
+  const businesses = page.getByRole("button", { name: "Businesses & approvals" });
+  await expect(businesses).toBeVisible();
+
+  // Click squarely inside the window: the module has not been delivered yet, so nothing is
+  // listening on #acctToggle beyond admin.js's stand-in.
+  expect(moduleReleased).toBe(false);
+  await businesses.click();
+  expect(moduleReleased).toBe(false);
+
+  // Once the module lands the panel must come up on Businesses, not the Users default.
+  await expect(businesses).toHaveAttribute("aria-pressed", "true", { timeout: 15000 });
+  await expect(page.locator(".company-admin-card", { hasText: COMPANY.name })).toHaveCount(1);
+  await expect(page.locator('[data-acct-panel="companies"]')).toBeVisible();
+});
