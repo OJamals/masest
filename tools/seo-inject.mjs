@@ -582,11 +582,19 @@ function productPage(id, product, reviewsSnapshot) {
   const specs = productHighlights(id)
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
     .join("\n");
-  const proofLinks = productProofRecords(id)
+  const proofRecords = productProofRecords(id);
+  const proofLinks = proofRecords
     .map((record) => (
       `<li class="doc-file"><a href="../proof#${attr(record.slug)}"><span class="doc-file-copy">${text(record.title)}<span class="doc-control">${text(record.record_label)}</span></span><span class="doc-pill">Proof</span></a></li>`
     ))
     .join("\n");
+  // The hero asks for the purchase decision while the evidence for its strongest claim sits
+  // a full screen below. This jumps to that block rather than off-site, so proof is reachable
+  // from the claim without spending the buyer's place on the page.
+  const heroProof = proofRecords.length
+    ? `
+        <a class="product-hero-proof" href="#records"><i class="ph ph-seal-check" aria-hidden="true"></i>See ${proofRecords.length} field result${proofRecords.length === 1 ? "" : "s"}</a>`
+    : "";
   const docs = (product.docs || [])
     .flatMap((doc) => {
       if (doc && typeof doc === "object" && doc.file) {
@@ -604,7 +612,7 @@ function productPage(id, product, reviewsSnapshot) {
     })
     .join("\n");
   const backingSections = [
-    proofLinks && `<h3>Records and results</h3><ul class="product-fit-list">${proofLinks}</ul>`,
+    proofLinks && `<h3 id="records">Records and results</h3><ul class="product-fit-list">${proofLinks}</ul>`,
     docs && `<h3>Documents</h3><ul class="product-fit-list">${docs}</ul>`,
   ].filter(Boolean).join("\n        ");
   const procurement = QUOTE_ONLY_IDS.has(id)
@@ -664,7 +672,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
           <span><b>HMIS</b>${text(product.hmis || "0-0-0")}</span>
           <span><b>Alternative to</b>${text(replacement)}</span>
           <span><b>Supply</b>${text(supply)}</span>
-        </div>${QUOTE_ONLY_IDS.has(id) ? "" : `
+        </div>${heroProof}${QUOTE_ONLY_IDS.has(id) ? "" : `
         <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
              incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
              the "Request a quote" CTA below (data-quote-fallback="off" keeps this empty
@@ -722,7 +730,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   </section>
   ${contentPageMount(`products/${id}`)}
 </main>
-<script type="module" src="../js/main.js?v=20260807g"></script>
+<script type="module" src="../js/main.js?v=20260807h"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>

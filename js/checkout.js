@@ -251,9 +251,9 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260807g'),
+    import('./address-autocomplete.js?v=20260807h'),
     import('./auth.js?v=20260711w'),
-    import('./staff-surface.js?v=20260807g'),
+    import('./staff-surface.js?v=20260807h'),
   ]);
   const { checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;
@@ -503,17 +503,102 @@ async function boot() {
       .find((field) => !clean(field?.value));
   }
 
+  // Reveal every manual address block that is still missing a part, so the buyer sees the
+  // whole gap at once instead of discovering City/State/ZIP one failed submit at a time.
   function revealIncompleteAddress() {
     const prefixes = sameBilling.checked ? ['shipping'] : ['shipping', 'billing'];
+    let revealed = false;
     for (const prefix of prefixes) {
-      const field = firstIncompleteAddressField(prefix);
-      if (!field) continue;
+      if (!firstIncompleteAddressField(prefix)) continue;
       showManualAddress(prefix, false);
-      field.focus();
-      showStatus(`Complete the ${prefix} address before viewing rates.`, 'err');
-      return true;
+      revealed = true;
     }
-    return false;
+    return revealed;
+  }
+
+  // Field-level errors. The native bubble only ever names one field and vanishes on the next
+  // click, so failing controls carry their own message wired through aria-describedby.
+  const FIELD_LABELS = {
+    firstName: 'First name', lastName: 'Last name', email: 'Email', phone: 'Phone',
+    shippingAddress1: 'Street address', shippingCity: 'City', shippingState: 'State',
+    shippingPostalCode: 'ZIP code',
+    billingAddress1: 'Billing street address', billingCity: 'Billing city',
+    billingState: 'Billing state', billingPostalCode: 'Billing ZIP code',
+  };
+
+  function describedBy(field, errorId, attach) {
+    const ids = (field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+    const next = attach ? [...new Set([...ids, errorId])] : ids.filter((id) => id !== errorId);
+    if (next.length) field.setAttribute('aria-describedby', next.join(' '));
+    else field.removeAttribute('aria-describedby');
+  }
+
+  function clearFieldError(field) {
+    if (!field?.id) return;
+    const errorId = `${field.id}Error`;
+    field.removeAttribute('aria-invalid');
+    describedBy(field, errorId, false);
+    document.getElementById(errorId)?.remove();
+  }
+
+  function setFieldError(field, message) {
+    const errorId = `${field.id}Error`;
+    field.setAttribute('aria-invalid', 'true');
+    let note = document.getElementById(errorId);
+    if (!note) {
+      note = document.createElement('small');
+      note.id = errorId;
+      note.className = 'field-error';
+      // The autocomplete mount replaces the input in the flow, so anchor to the control
+      // wrapper when there is one and fall back to inserting after the input itself.
+      const host = field.closest('.field') || field.closest('.checkout-address-control');
+      if (host) host.append(note);
+      else field.after(note);
+    }
+    note.textContent = message;
+    describedBy(field, errorId, true);
+  }
+
+  function requiredFieldIds() {
+    const ids = ['firstName', 'lastName', 'checkoutEmail', 'phone'];
+    const prefixes = sameBilling.checked ? ['shipping'] : ['shipping', 'billing'];
+    for (const prefix of prefixes) {
+      ids.push(`${prefix}Address1`, `${prefix}City`, `${prefix}State`, `${prefix}PostalCode`);
+    }
+    return ids;
+  }
+
+  function fieldLabel(field) {
+    return FIELD_LABELS[field.name] || FIELD_LABELS[field.id] || 'This field';
+  }
+
+  function validationMessage(field) {
+    if (!clean(field.value)) return `${fieldLabel(field)} is required.`;
+    if (field.validity.typeMismatch && field.type === 'email') return 'Enter a valid email address.';
+    return field.validationMessage || `${fieldLabel(field)} is not valid yet.`;
+  }
+
+  // Returns true when the form is not ready to rate. Reveals hidden address parts first so a
+  // field can never be reported invalid while it is still hidden from the buyer.
+  function reportInvalidFields() {
+    revealIncompleteAddress();
+    const fields = requiredFieldIds().map((id) => document.getElementById(id)).filter(Boolean);
+    const invalid = [];
+    for (const field of fields) {
+      clearFieldError(field);
+      if (clean(field.value) && field.checkValidity()) continue;
+      setFieldError(field, validationMessage(field));
+      invalid.push(field);
+    }
+    if (!invalid.length) return false;
+    // One offender: repeat its own message, which may be "not valid" rather than "required".
+    const summary = invalid.length === 1
+      ? validationMessage(invalid[0])
+      : `${invalid.length} fields need attention before viewing rates.`;
+    showStatus(summary, 'err');
+    invalid[0].focus({ preventScroll: true });
+    invalid[0].scrollIntoView({ block: 'center', behavior: 'auto' });
+    return true;
   }
 
   document.getElementById('poToggle').addEventListener('click', (event) => {
@@ -539,7 +624,22 @@ async function boot() {
     'billingAddress1', 'billingAddress2', 'billingCity', 'billingState', 'billingPostalCode',
   ]);
   form.addEventListener('input', (event) => {
+    if (clean(event.target.value)) clearFieldError(event.target);
     if (rateBoundFields.has(event.target.name)) invalidateRates();
+  });
+  // Re-check on blur so a field the buyer filled and then emptied re-reports without waiting
+  // for another submit, and so a corrected value drops its message immediately.
+  form.addEventListener('focusout', (event) => {
+    const field = event.target;
+    if (!field?.id || !document.getElementById(`${field.id}Error`)) return;
+    if (clean(field.value) && field.checkValidity()) clearFieldError(field);
+    else setFieldError(field, validationMessage(field));
+  });
+  // Switching to a separate billing address must not leave stale billing errors behind.
+  sameBilling.addEventListener('change', () => {
+    for (const id of ['billingAddress1', 'billingCity', 'billingState', 'billingPostalCode']) {
+      clearFieldError(document.getElementById(id));
+    }
   });
   rateOptions.addEventListener('change', (event) => {
     if (event.target.name !== 'shippingRate') return;
@@ -579,7 +679,7 @@ async function boot() {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if (revealIncompleteAddress() || !form.reportValidity()) return;
+    if (reportInvalidFields()) return;
     invalidateRates();
     calculate.disabled = true;
     calculate.textContent = 'Verifying address & calculating…';

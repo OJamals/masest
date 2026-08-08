@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260807g";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260807h";
 import { smoothPref } from "./engagement.js";
 
 const IMAGE_DIMS = {
@@ -225,7 +225,11 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
       .concat((row.quoteVariants || [])
         .map((v) => `<option value="${v.vsku}" data-quote="1">${optLabel(v)} — quoted</option>`))
       .join("");
-    const btnClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-add";
+    // The "button" variant only mounts on /products/<id>, the highest-intent surface on the
+    // site. Rendering the buy control as btn-secondary left it visually subordinate to the
+    // quote and sample CTAs directly beneath it — primary is the correct weight for the
+    // action the page exists to complete.
+    const btnClass = variant === "button" ? "btn btn-primary btn-sm" : "shop-card-add";
     const first = row.variants[0].vsku;
     const quoteHref = `/contact?type=quote&product=${encodeURIComponent(p?.name || id)}`;
     return `<span class="commerce-buy" data-commerce-buy="${id}">`

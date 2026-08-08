@@ -68,9 +68,12 @@ test("animated homepage copy keeps stable accessible names", () => {
   const home = read("index.html");
 
   assert.match(home, /<section class="act"[^>]*aria-labelledby="storyAct1Title">/);
-  assert.match(
-    home,
-    /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial cleaning power without the harsh-chemical tradeoff\.<\/h1>/,
+  // The accessible name is the h1's text content, so assert on that rather than on raw
+  // markup — inline typographic spans (e.g. .no-break) must not count as a copy change.
+  const headline = home.match(/<h1 class="act-h" id="storyAct1Title"[^>]*>([\s\S]*?)<\/h1>/)?.[1];
+  assert.equal(
+    String(headline).replace(/<[^>]+>/g, ""),
+    "Industrial cleaning power without the harsh-chemical tradeoff.",
   );
   assert.match(home, /aria-label="Shop VertKleen by cleaning job"/);
   assert.match(home, /aria-label="Plan a VertKleen field trial"/);

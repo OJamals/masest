@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260807g">
+  <link rel="stylesheet" href="css/style.css?v=20260807h">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/checkout.js?v=20260807g"></script>
+  <script type="module" src="js/checkout.js?v=20260807h"></script>
 </head>
 <body class="checkout-flow-page">
 <a class="skip-link" href="#main">Skip to checkout</a>
@@ -46,6 +46,10 @@
 
       <section class="checkout-section" aria-labelledby="shippingDetailsTitle">
         <h2 id="shippingDetailsTitle"><span>1.</span> Shipping details</h2>
+        <!-- Carriers rate on the full destination, so the price cannot appear until this is
+             complete. Saying so up front costs one line; leaving it to the note under the
+             form means the buyer types the whole thing not knowing why. -->
+        <p class="checkout-section-lead">Carriers price each shipment from the full delivery address, so rates appear once these are complete.</p>
         <div class="checkout-contact-grid checkout-shipping-grid">
           <div class="field"><label for="firstName">First name</label><input id="firstName" name="firstName" maxlength="60" autocomplete="shipping given-name" required></div>
           <div class="field"><label for="lastName">Last name</label><input id="lastName" name="lastName" maxlength="60" autocomplete="shipping family-name" required></div>

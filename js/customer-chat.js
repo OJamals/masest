@@ -41,7 +41,7 @@ export async function initCustomerChat() {
     if (await session.getToken()) {
       const account = await session.me();
       if (account?.can_admin) {
-        const { initAdminSupport } = await import("./admin-support.js?v=20260807g");
+        const { initAdminSupport } = await import("./admin-support.js?v=20260807h");
         initAdminSupport({ auth: session, root, staff: account.staff });
         return;
       }
@@ -282,6 +282,14 @@ export async function initCustomerChat() {
   document.addEventListener(OBSTRUCTION_EVENT, scheduleDockAvoidance);
   window.addEventListener("hashchange", syncRouteVisibility);
   window.addEventListener("resize", scheduleDockAvoidance, { passive: true });
+  // A fixed obstruction (the lead bar) holds its position relative to the launcher, so resize
+  // is enough. An in-flow one — a purchase CTA — only enters the launcher's corner partway
+  // down the page, so it needs a scroll-time re-check. Read the distinction off computed
+  // layout rather than an attribute value, so a future in-flow obstruction is covered without
+  // anyone having to remember to declare it.
+  const inFlowObstruction = [...document.querySelectorAll(OBSTRUCTION_SELECTOR)]
+    .some((obstruction) => getComputedStyle(obstruction).position !== "fixed");
+  if (inFlowObstruction) window.addEventListener("scroll", scheduleDockAvoidance, { passive: true });
   document.addEventListener("visibilitychange", () => {
     if (panel.hidden || !authenticated) return;
     void setChatPresence(!document.hidden, { force: true, keepalive: document.hidden });

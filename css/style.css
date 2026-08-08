@@ -1330,6 +1330,10 @@ figure.photo figcaption {
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
+/* Hold a hyphenated compound together. Browsers treat an explicit hyphen as a break
+   opportunity, which split "harsh-chemical" across two lines of the homepage headline. */
+.no-break { white-space: nowrap; }
+
 /* No-JS fallback nav (chrome is normally JS-injected) */
 .nojs-nav {
   display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center;
@@ -4025,10 +4029,20 @@ body.checkout-flow-page::before { display: none; }
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(14,124,134,.12);
 }
+.checkout-flow-page .checkout-section-lead { margin: -6px 0 22px; max-width: 56ch; color: var(--muted); font-size: .86rem; line-height: 1.5; text-wrap: pretty; }
 .checkout-flow-page .optional { color: var(--muted); font-size: .76rem; font-weight: 500; }
 /* Justify a required field that looks nosy. Buyers who don't know why you want a phone
    number type a fake one, and the carrier calls it on delivery day. */
 .checkout-flow-page .field-hint { display: block; margin-top: 6px; color: var(--muted); font-size: .76rem; font-weight: 500; line-height: 1.4; text-wrap: pretty; }
+/* A blank-submit used to move focus and post one global line, leaving the buyer to work out
+   which of nine controls it meant. Each failing field now states its own requirement, and the
+   red border is paired with the message so colour is never the only signal. */
+.checkout-flow-page .field-error { display: block; margin-top: 6px; color: var(--status-danger-ink); font-size: .78rem; font-weight: 700; line-height: 1.4; text-wrap: pretty; }
+.checkout-address-control > .field-error { margin-top: 8px; }
+.checkout-flow-page .field input[aria-invalid="true"],
+.checkout-address-control > input[aria-invalid="true"] { border-color: var(--status-danger-ink); }
+.checkout-flow-page .field input[aria-invalid="true"]:focus,
+.checkout-address-control > input[aria-invalid="true"]:focus { border-color: var(--status-danger-ink); box-shadow: 0 0 0 2px rgba(180,35,24,.14); }
 /* Checkout is heavily mobile, so these text actions take the 44px touch target rather
    than the 40px that suffices in a dense desktop admin. */
 .checkout-inline-action,
@@ -4290,11 +4304,43 @@ body.checkout-flow-page::before { display: none; }
 }
 
 @media (max-width: 640px) {
-  .checkout-header { min-height: 92px; grid-template-columns: 46px minmax(0, 1fr); gap: 12px; padding: 12px 16px; }
+  /* Two rows rather than a hidden third column: dropping the back link and the security cue
+     at mobile stranded the buyer on the step with no way out and no reassurance, exactly
+     where the desktop layout offers both. */
+  /* Two rows rather than a hidden third column: dropping the back link and the security cue
+     at mobile stranded the buyer on the step with no way out and no reassurance, exactly
+     where the desktop layout offers both. The security cue rides along in the progress
+     column because it is a child of .checkout-progress-wrap, not of the header grid. */
+  .checkout-header {
+    min-height: 92px;
+    grid-template-columns: 46px minmax(0, 1fr);
+    grid-template-areas: "brand progress" "back back";
+    align-items: center;
+    gap: 6px 12px;
+    padding: 10px 16px;
+  }
+  .checkout-brand { grid-area: brand; }
   .checkout-brand img { width: 38px; height: 48px; }
-  .checkout-return,
-  .checkout-secure { display: none; }
-  .checkout-progress-wrap { justify-items: end; }
+  .checkout-progress-wrap { grid-area: progress; justify-items: end; gap: 6px; }
+  .checkout-return {
+    grid-area: back;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    font-size: .8rem;
+  }
+  .checkout-return::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-left: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+  }
+  .checkout-secure { font-size: .76rem; }
+  .checkout-secure i { font-size: .88rem; }
   .checkout-steps { gap: 5px; font-size: .78rem; }
   .checkout-steps > * { gap: 5px; }
   .checkout-steps > * + *::before { width: 10px; margin-right: 0; }
@@ -4848,14 +4894,45 @@ body .page-hero .product-shot {
   background: rgba(255, 255, 255, .72);
 }
 
+/* `display:flex` drops the UA ::marker, which left this reading as a bordered empty bar with
+   no sign it opened. Draw the chevron back in and rotate it on open so the control states
+   both that it is interactive and which way it is currently set. */
 .catalog-buying-details > summary {
   min-height: 44px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 10px 14px;
   color: var(--ink);
   font-weight: 800;
   cursor: pointer;
+  list-style: none;
+}
+
+.catalog-buying-details > summary::-webkit-details-marker { display: none; }
+
+.catalog-buying-details > summary::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  margin-block-start: -4px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform .18s ease, border-color .18s ease;
+}
+
+.catalog-buying-details[open] > summary::after {
+  margin-block-start: 4px;
+  transform: rotate(-135deg);
+}
+
+.catalog-buying-details > summary:hover::after { border-color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .catalog-buying-details > summary::after { transition: none; }
 }
 
 .catalog-buying-details .catalog-price-note {
@@ -7213,6 +7290,25 @@ body.product-detail-page main > section.product-static-section {
   letter-spacing: .05em;
   text-transform: uppercase;
 }
+
+/* Sits between the HMIS claim and the price so the evidence for the claim is one click from
+   the point the page asks for a purchase decision. Deliberately a text link, not a button —
+   it must not compete with Add to cart. */
+.product-detail-page .product-hero-proof {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--accent-ink);
+  font-size: .86rem;
+  font-weight: 800;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.product-detail-page .product-hero-proof i { font-size: 1.05rem; }
+.product-detail-page .product-hero-proof:hover { color: var(--accent); }
 
 .product-detail-page .product-detail-hero .hero-copy > .subhead {
   margin-block: 18px 24px;

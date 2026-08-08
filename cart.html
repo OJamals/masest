@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260807g">
+  <link rel="stylesheet" href="css/style.css?v=20260807h">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
   <link rel="stylesheet" href="css/components.css?v=20260805a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260807g"></script>
+  <script type="module" src="js/main.js?v=20260807h"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -48,7 +48,9 @@
         <p id="cartStatus" class="cart-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
         <div id="checkoutActive">
           <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
-          <div class="cart-path cart-path-primary">
+          <!-- The support launcher docks in this corner; marking the primary purchase path as
+               an obstruction lifts it clear instead of letting it crowd the checkout CTA. -->
+          <div class="cart-path cart-path-primary" data-customer-chat-obstruction>
             <div class="cart-path-heading">
               <span>Continue to checkout</span>
               <small>Confirm shipping details, billing, and live carrier rates.</small>
@@ -92,7 +94,7 @@
   import { items, remove, setQty } from "./js/cart.js";
   import { api, me, getToken } from "./js/auth.js?v=20260711w";
   import { safeUrl } from "./js/util.js";
-  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260807g";
+  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260807h";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2

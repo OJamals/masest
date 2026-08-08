@@ -26,7 +26,7 @@
     "smoke:admin": "playwright test tools/admin-auth-gate.spec.mjs tools/admin-quote-message-flows.spec.mjs tools/admin-content-cms.spec.mjs --reporter=line",
     "qa:admin-assurance": "node --test --test-timeout=120000 tests/admin-dialog-focus.test.mjs tests/admin-panel-spacing.test.mjs tests/admin-information-architecture.test.mjs tests/admin-role-aware-ui.test.mjs tests/partial-refunds.test.mjs tests/admin-crm-contact-import-api.test.mjs tests/admin-crm-contact-import-lib.test.mjs tests/admin-crm-contact-import-ui.test.mjs tests/staff-roles.test.mjs tests/staff-roles-write.test.mjs tests/qbo-financial-coverage.test.mjs tests/qbo-sync-endpoint.test.mjs tests/content-publish-hook.test.mjs && playwright test tools/admin-accounts-delete.spec.mjs tools/admin-quote-message-flows.spec.mjs tools/admin-crm-drawer.spec.mjs tools/admin-crm-pipeline.spec.mjs tools/admin-content-cms.spec.mjs --reporter=line",
     "smoke:cms": "playwright test tools/content-smoke.spec.mjs --reporter=line",
-    "qa:commerce-smoke": "playwright test tools/commerce-states.spec.mjs tools/product-buy.spec.mjs tools/commerce-cart.spec.mjs tools/cart-checkout-redirect.spec.mjs tools/contact-prefill.spec.mjs --reporter=line",
+    "qa:commerce-smoke": "playwright test tools/commerce-states.spec.mjs tools/product-buy.spec.mjs tools/commerce-cart.spec.mjs tools/cart-checkout-redirect.spec.mjs tools/checkout-validation.spec.mjs tools/contact-prefill.spec.mjs --reporter=line",
     "qa:ui-critical": "playwright test tools/focus-visible-a11y.spec.mjs tools/service-tabs-a11y.spec.mjs tools/site-audit-regressions.spec.mjs tools/story-hmis-visual.spec.mjs --reporter=line",
     "qa:remediation": "playwright test tools/*.spec.mjs --reporter=line",
     "seed": "node tools/seed-products.mjs"

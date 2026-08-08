@@ -398,10 +398,13 @@ test("scrolly opener states the VertKleen mechanism early", () => {
   const index = read("index.html");
   const storyCss = read("css/story.css");
   const actOne = index.match(/<section class="act" data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
+  // Match the rendered sentence, not the markup carrying it: inline typographic spans
+  // (e.g. .no-break holding a hyphenated compound together) are not a copy change.
+  const actOneCopy = actOne.replace(/<[^>]+>/g, "");
 
   assert.match(actOne, /class="story-promise"/);
-  assert.match(actOne, /Industrial cleaning power without the harsh-chemical tradeoff/);
-  assert.match(actOne, /removes scale, rust, grease, oil, and industrial buildup/);
+  assert.match(actOneCopy, /Industrial cleaning power without the harsh-chemical tradeoff/);
+  assert.match(actOneCopy, /removes scale, rust, grease, oil, and industrial buildup/);
   assert.match(storyCss, /\.story-promise/);
 });
 
