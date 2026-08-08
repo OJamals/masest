@@ -3659,6 +3659,36 @@ fully clickable cards) ---- */
 .cart-estimate[hidden] { display: none !important; }
 .cart-estimate dl { display: grid; gap: 12px; margin: 0; }
 
+/* ZIP-first shipping estimate. Sits under the totals because it answers a question the
+   totals raise ("what will freight cost?") without sending the buyer into the address form
+   to find out. Deliberately quiet: it must not compete with Continue to checkout. */
+.cart-ship-estimate { margin: -4px 0 22px; display: grid; gap: 8px; }
+.cart-ship-estimate[hidden] { display: none !important; }
+.cart-ship-estimate > label { color: var(--ink); font-size: .9rem; font-weight: 700; }
+.cart-ship-estimate-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.cart-ship-estimate-row input {
+  flex: 1 1 120px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 500 .92rem/1.2 var(--font);
+}
+
+.cart-ship-estimate-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(14, 124, 134, .12);
+}
+
+.cart-ship-estimate-row .btn { flex: 0 0 auto; min-height: 44px; }
+.cart-ship-estimate-note { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.45; text-wrap: pretty; }
+.cart-ship-estimated { color: var(--muted); font-size: .78rem; font-weight: 700; }
+
 .cart-estimate div {
   display: flex;
   align-items: center;

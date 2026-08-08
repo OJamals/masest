@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260807h">
+  <link rel="stylesheet" href="css/style.css?v=20260807i">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
   <link rel="stylesheet" href="css/components.css?v=20260805a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260807h"></script>
+  <script type="module" src="js/main.js?v=20260807i"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -48,6 +48,20 @@
         <p id="cartStatus" class="cart-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
         <div id="checkoutActive">
           <div id="cartEstimate" class="cart-estimate" hidden aria-live="polite"></div>
+          <!-- ZIP-only, non-binding. Lets a buyer see roughly what freight costs before
+               committing to the full address form; the exact rate is still earned at
+               checkout. Only offered for carts that consolidate into a single carton,
+               which is all the carrier's estimate endpoint can price honestly. -->
+          <form id="shipEstimateForm" class="cart-ship-estimate" data-customer-chat-obstruction hidden>
+            <label for="shipEstimateZip">Estimate shipping</label>
+            <div class="cart-ship-estimate-row">
+              <input id="shipEstimateZip" name="postal_code" type="text" inputmode="numeric"
+                autocomplete="postal-code" maxlength="10" placeholder="Delivery ZIP"
+                aria-describedby="shipEstimateNote">
+              <button class="btn btn-secondary" id="shipEstimateGo" type="submit">Estimate</button>
+            </div>
+            <p id="shipEstimateNote" class="cart-ship-estimate-note" role="status" aria-live="polite">Approximate. The exact carrier rate is confirmed at checkout.</p>
+          </form>
           <!-- The support launcher docks in this corner; marking the primary purchase path as
                an obstruction lifts it clear instead of letting it crowd the checkout CTA. -->
           <div class="cart-path cart-path-primary" data-customer-chat-obstruction>
@@ -94,7 +108,8 @@
   import { items, remove, setQty } from "./js/cart.js";
   import { api, me, getToken } from "./js/auth.js?v=20260711w";
   import { safeUrl } from "./js/util.js";
-  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260807h";
+  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260807i";
+  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260807i";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -172,7 +187,14 @@
   const requisitionStatus = document.getElementById("requisitionStatus");
   const summary = document.querySelector(".cart-summary");
   const shell = document.querySelector(".cart-shell");
+  const shipEstimateForm = document.getElementById("shipEstimateForm");
+  const shipEstimateZip = document.getElementById("shipEstimateZip");
+  const shipEstimateGo = document.getElementById("shipEstimateGo");
+  const shipEstimateNote = document.getElementById("shipEstimateNote");
   let canSaveRequisition = false;
+  // Cheapest estimated rate for the cart as it currently stands, or null. Cleared whenever
+  // the lines change, so the Shipping row can never show a price for a different cart.
+  let shipEstimate = null;
   function productName(sku) {
     const fallback = fallbackNames[String(sku).toLowerCase()];
     const name = vmap.get(sku)?.name || fallback || sku;
@@ -283,19 +305,98 @@
     estimate.hidden = !cartItems.length;
     if (!cartItems.length) return;
     const canEstimate = pricedLines === cartItems.length && currencies.size === 1;
+    // Only offer the ZIP estimate once every line is a priced, buyable variant — a cart that
+    // still needs review has no rateable parcel behind it. Static preview has no API.
+    if (shipEstimateForm) {
+      shipEstimateForm.hidden = !canEstimate || isLocalStaticPreview();
+    }
     const subtotalText = canEstimate
       ? priceMoney(subtotal, [...currencies][0])
       : "Pending review";
     const itemLabel = `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+    const shippingCell = shipEstimate
+      ? `<dd>${esc(priceMoney(shipEstimate.amount_minor / 100, shipEstimate.currency))} <span class="cart-ship-estimated">est.</span></dd>`
+      : "<dd>Calculated next</dd>";
     estimate.innerHTML = `
       <dl>
-        <div><dt>Shipping</dt><dd>Calculated next</dd></div>
+        <div><dt>Shipping</dt>${shippingCell}</div>
         <div><dt>Tax</dt><dd>Calculated at checkout</dd></div>
         <div class="cart-total-row"><dt>Estimated subtotal <span class="cart-total-count">${itemLabel}</span></dt><dd>${subtotalText}</dd></div>
       </dl>
       <p>Final product pricing and discounts are confirmed at checkout.</p>
     `;
   }
+
+  const ESTIMATE_MESSAGES = {
+    shipping_estimate_postal_invalid: "Enter a 5-digit US ZIP code.",
+    shipping_domestic_only: "Online rates cover US delivery. Request a quote for international freight.",
+    shipping_estimate_unavailable: "This cart ships as more than one carton, so the exact rate is calculated at checkout.",
+    shipping_cart_too_large: "This cart needs freight planning. Request a quote for a consolidated shipment.",
+    shipping_package_profile_missing: "An item is missing shipping dimensions. Request a quote for this cart.",
+    shipping_rates_unavailable: "No carrier rate came back for that ZIP. The exact rate is calculated at checkout.",
+    shipping_rates_not_configured: "Estimates are offline right now. The exact rate is calculated at checkout.",
+    rate_limited: "Too many estimates. Wait a moment, then try again.",
+  };
+
+  function setEstimateNote(text) {
+    if (shipEstimateNote) shipEstimateNote.textContent = text;
+  }
+
+  // Any change to the lines invalidates a price quoted for the previous cart.
+  function clearShipEstimate() {
+    if (!shipEstimate) return;
+    shipEstimate = null;
+    setEstimateNote("Cart changed. Estimate again for an updated rate.");
+  }
+
+  shipEstimateForm?.addEventListener("submit", async event => {
+    event.preventDefault();
+    const postalCode = String(shipEstimateZip?.value || "").trim();
+    if (!/^\d{5}(?:-\d{4})?$/.test(postalCode)) {
+      setEstimateNote(ESTIMATE_MESSAGES.shipping_estimate_postal_invalid);
+      shipEstimateZip?.focus();
+      return;
+    }
+    const cartItems = items();
+    if (!cartItems.length) return;
+    shipEstimateGo.disabled = true;
+    setEstimateNote("Checking carrier rates…");
+    try {
+      const response = await fetch("/api/shipping-estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cart: cartItems.map(item => ({ sku: item.sku, qty: item.qty })),
+          destination: { postal_code: postalCode },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        shipEstimate = null;
+        setEstimateNote(ESTIMATE_MESSAGES[result?.error] || "Could not estimate shipping. The exact rate is calculated at checkout.");
+        updateSubtotal();
+        return;
+      }
+      const [cheapest] = result.rates || [];
+      if (!cheapest) {
+        shipEstimate = null;
+        setEstimateNote(ESTIMATE_MESSAGES.shipping_rates_unavailable);
+        updateSubtotal();
+        return;
+      }
+      shipEstimate = cheapest;
+      const days = Number.isFinite(Number(cheapest.delivery_days)) ? Number(cheapest.delivery_days) : null;
+      const transit = days ? `, about ${days} business ${days === 1 ? "day" : "days"} in transit` : "";
+      setEstimateNote(`Cheapest to ${postalCode}: ${shippingServiceSummary(cheapest)}${transit}. Approximate — the exact rate is confirmed at checkout.`);
+      updateSubtotal();
+    } catch {
+      shipEstimate = null;
+      setEstimateNote("Could not reach the rate service. The exact rate is calculated at checkout.");
+      updateSubtotal();
+    } finally {
+      shipEstimateGo.disabled = false;
+    }
+  });
 
   // A cleared qty field mid-edit is not a removal — only commit values >= 1 and
   // let the Remove button be the sole deletion path. render() on change restores
@@ -305,6 +406,7 @@
     const sku = event.target?.dataset?.qty;
     if (!sku) return;
     if (validQty(event.target.value)) setQty(sku, event.target.value);
+    clearShipEstimate();
     render();
   });
   lines.addEventListener("input", event => {
@@ -312,6 +414,7 @@
     if (!sku) return;
     if (!validQty(event.target.value)) return;
     setQty(sku, event.target.value);
+    clearShipEstimate();
     syncQuoteHref();
     updateSubtotal();
   });
@@ -319,6 +422,7 @@
     const sku = event.target?.dataset?.remove;
     if (!sku) return;
     remove(sku);
+    clearShipEstimate();
     render();
   });
   checkoutContinue.addEventListener("click", event => {

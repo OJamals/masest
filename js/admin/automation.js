@@ -5,7 +5,7 @@
  * that matters most — it means the cron was never applied, its secret drifted,
  * or it fails before it can even record.
  */
-import { esc } from '../util.js?v=20260807h';
+import { esc } from '../util.js?v=20260807i';
 
 const STATE_LABEL = { ok: 'Healthy', stale: 'Overdue', failing: 'Failing', never: 'Never run' };
 // Reuses the shared status-badge tints rather than introducing new colours.

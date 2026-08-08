@@ -128,13 +128,17 @@ export async function verifyShippingSelectionToken({ secret, token, cart, now = 
   }
 }
 
-function normalizeRate(rate) {
+// `bookable` rates must carry a provider rate_id — that id is what gets signed into the
+// selection token and replayed at label purchase. The estimate endpoint returns no rate_id
+// (its results are not addressable), so that path passes bookable:false.
+function normalizeRate(rate, { bookable = true } = {}) {
   const currency = clean(rate?.shipping_amount?.currency || rate?.currency, 8).toLowerCase();
   const amount = Number(rate?.shipping_amount?.amount ?? rate?.amount);
   const amountMinor = Math.round(amount * 100);
-  if (!clean(rate?.rate_id, 100) || currency !== 'usd' || !Number.isFinite(amount) || amount < 0) return null;
+  if (currency !== 'usd' || !Number.isFinite(amount) || amount < 0) return null;
+  if (bookable && !clean(rate?.rate_id, 100)) return null;
   return {
-    rate_id: clean(rate.rate_id, 100),
+    rate_id: clean(rate?.rate_id, 100),
     carrier_id: clean(rate?.carrier_id, 100),
     carrier_name: clean(rate?.carrier_friendly_name || rate?.carrier_name || rate?.carrier_code, 120),
     service_code: clean(rate?.service_code, 100),
@@ -154,10 +158,28 @@ function checkoutEligibleRate(rate) {
   return !INELIGIBLE_CHECKOUT_SERVICE.test(`${rate.service_code} ${rate.service_type}`);
 }
 
-function providerRates(payload) {
-  const source = payload?.rate_response?.rates || payload?.rates || [];
+// MASEST always ships its own cartons: normalizePackages and combinePackagesForRates both
+// hardcode package_code 'package', for rating AND for label purchase. The provider ignores
+// that and prices carrier-supplied packaging anyway — a 28.5 lb, 24x12x10 carton comes back
+// with a $9.62 USPS flat_rate_envelope as the cheapest option, which is not a parcel that
+// can physically hold it. Sorting purely on price then offered the buyer a rate fulfillment
+// can never buy, and the difference came out of margin on every order.
+//
+// A rate is only offerable if it prices the packaging we actually ship. USPS names its
+// carrier packaging (flat_rate_*, thick_envelope, ...); UPS and FedEx report null for theirs.
+function ownPackagingRate(rate) {
+  const packageType = rate?.package_type;
+  return packageType == null || String(packageType).toLowerCase() === 'package';
+}
+
+function providerRates(payload, options = {}) {
+  // /rates answers { rate_response: { rates } }; /rates/estimate answers a bare array.
+  const source = Array.isArray(payload)
+    ? payload
+    : payload?.rate_response?.rates || payload?.rates || [];
   const rates = (Array.isArray(source) ? source : [])
-    .map(normalizeRate)
+    .filter(ownPackagingRate)
+    .map((rate) => normalizeRate(rate, options))
     .filter(Boolean)
     .filter(checkoutEligibleRate)
     .sort((a, b) => a.amount_minor - b.amount_minor
@@ -249,6 +271,102 @@ function checkoutOrder({ cart, variants, address, email, now }) {
       },
     },
     order_items: orderItems,
+  };
+}
+
+// A ZIP-only, non-binding shipping estimate for the cart, so a buyer can see roughly what
+// freight costs before committing to a full address form.
+//
+// Deliberately NOT a quote. It signs no selection token and persists no carton plan, so
+// nothing it returns can be presented to /api/checkout as a price to honour —
+// quoteCheckoutRates stays the only path that can produce a purchasable rate.
+//
+// The provider's estimate endpoint does not support multi-package shipments, so this is only
+// honest for a cart that consolidates into ONE carton. A multi-carton cart returns
+// `estimate_unavailable` rather than a single-parcel number that would understate the real
+// cost: carriers price per package and dimensional weight does not sum linearly.
+export const ESTIMATE_MAX_PACKAGES = 1;
+
+function estimateOrigin(warehouse) {
+  const address = warehouse?.origin_address || warehouse?.address || {};
+  const postalCode = clean(address.postal_code, 10);
+  const countryCode = clean(address.country_code || address.country || 'US', 2).toUpperCase();
+  if (!/^\d{5}(?:-\d{4})?$/.test(postalCode)) {
+    throw new CheckoutShippingError('shipping_estimate_origin_unavailable', 503);
+  }
+  return { postalCode, countryCode };
+}
+
+export function normalizeEstimateDestination(value) {
+  const postalCode = clean(value?.postal_code, 10);
+  const countryCode = clean(value?.country || 'US', 2).toUpperCase();
+  if (!/^\d{5}(?:-\d{4})?$/.test(postalCode)) {
+    throw new CheckoutShippingError('shipping_estimate_postal_invalid');
+  }
+  if (countryCode !== 'US') throw new CheckoutShippingError('shipping_domestic_only');
+  return { postalCode, countryCode, residential: value?.residential === true };
+}
+
+export async function estimateCheckoutRates(input, dependencies = {}) {
+  const { env = {}, variants = [] } = input || {};
+  if (!clean(env.SHIPSTATION_API_KEY, 256) || !clean(env.SHIPSTATION_WAREHOUSE_ID, 100)) {
+    throw new CheckoutShippingError('shipping_rates_not_configured', 503);
+  }
+  const now = dependencies.now || Date.now;
+  const cart = canonicalCart(input.cart);
+  const destination = normalizeEstimateDestination(input.destination);
+  // Reuse the real packing so the estimate describes the same parcels the buyer would be
+  // rated on, and so an unshippable cart fails here for the same reason it would at rating.
+  let packages;
+  try {
+    packages = combinePackagesForRates(packagesFromOrderItems(
+      { order_items: cart.map((line) => ({ sku: line.sku, qty: line.qty })) },
+      variants,
+      { maxPackages: 250 },
+    ));
+  } catch (error) {
+    if (error?.code === 'too_many_shipping_packages') {
+      throw new CheckoutShippingError('shipping_cart_too_large', 409);
+    }
+    throw new CheckoutShippingError('shipping_package_profile_missing', 409);
+  }
+  if (packages.length > ESTIMATE_MAX_PACKAGES) {
+    throw new CheckoutShippingError('shipping_estimate_unavailable', 409, { package_count: packages.length });
+  }
+  const [parcel] = packages;
+  const fulfillment = (dependencies.fulfillmentSummary || fulfillmentSummary)(new Date(now()));
+  const listCarriers = dependencies.listCarriers
+    || ((runtimeEnv) => shipStationRequest(runtimeEnv, '/carriers'));
+  const loadWarehouse = dependencies.loadWarehouse
+    || ((runtimeEnv) => shipStationRequest(runtimeEnv, `/warehouses/${encodeURIComponent(clean(runtimeEnv.SHIPSTATION_WAREHOUSE_ID, 100))}`));
+  const estimateRates = dependencies.estimateRates
+    || ((runtimeEnv, payload) => shipStationRequest(runtimeEnv, '/rates/estimate', { method: 'POST', body: payload }));
+  const [carrierPayload, warehousePayload] = await Promise.all([listCarriers(env), loadWarehouse(env)]);
+  const carriers = Array.isArray(carrierPayload?.carriers) ? carrierPayload.carriers : [];
+  const carrierIds = [...new Set(carriers.map((carrier) => clean(carrier?.carrier_id, 100)).filter(Boolean))];
+  if (!carrierIds.length) throw new CheckoutShippingError('shipping_carriers_unavailable', 503);
+  const origin = estimateOrigin(warehousePayload?.warehouse || warehousePayload);
+  const rates = providerRates(await estimateRates(env, {
+    carrier_ids: carrierIds,
+    from_country_code: origin.countryCode,
+    from_postal_code: origin.postalCode,
+    to_country_code: destination.countryCode,
+    to_postal_code: destination.postalCode,
+    weight: parcel.weight,
+    ...(parcel.dimensions ? { dimensions: parcel.dimensions } : {}),
+    confirmation: 'none',
+    address_residential_indicator: destination.residential ? 'yes' : 'unknown',
+    ...(/^\d{4}-\d{2}-\d{2}$/.test(clean(fulfillment.ship_date, 10)) ? { ship_date: fulfillment.ship_date } : {}),
+  }), { bookable: false });
+  if (!rates.length) throw new CheckoutShippingError('shipping_rates_unavailable', 502);
+  // Drop the (empty) rate_id key entirely: an estimate must not look addressable downstream.
+  const offered = rates.slice(0, 6).map(({ rate_id: _rateId, ...rate }) => rate);
+  return {
+    estimate: true,
+    postal_code: destination.postalCode,
+    package_count: packages.length,
+    fulfillment,
+    rates: offered,
   };
 }
 

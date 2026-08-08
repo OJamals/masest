@@ -1,3 +1,5 @@
+import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260807i';
+
 const money = (amount, currency = 'usd') => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: String(currency).toUpperCase(),
 }).format(Number(amount) || 0);
@@ -185,19 +187,9 @@ export function arrivalLabel(rate = {}, options = {}) {
     : `Arrives ${arrivalMonthDay(earliest)} – ${arrivalMonthDay(latest)}`;
 }
 
-export function shippingServiceLabel(rate = {}) {
-  const carrier = clean(rate.carrier_name).replace(/\s+One Balance$/i, '');
-  const service = clean(rate.service_type);
-  if (!service) return carrier;
-  if (!carrier) return service;
-  const escapedCarrier = carrier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return service.replace(new RegExp(`^${escapedCarrier}[®™]?\\s*(?:[·–—-]\\s*)?`, 'i'), '').trim() || service;
-}
-
-function shippingServiceSummary(rate = {}) {
-  const carrier = clean(rate.carrier_name).replace(/\s+One Balance$/i, '');
-  return [carrier, shippingServiceLabel(rate)].filter(Boolean).join(' ');
-}
+// shippingServiceLabel is re-exported so tests and other callers keep their import path; the
+// cart imports the shared module directly, since importing this one boots the checkout page.
+export { shippingServiceLabel };
 
 function flattenCatalog(products) {
   const catalog = new Map();
@@ -251,9 +243,9 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260807h'),
+    import('./address-autocomplete.js?v=20260807i'),
     import('./auth.js?v=20260711w'),
-    import('./staff-surface.js?v=20260807h'),
+    import('./staff-surface.js?v=20260807i'),
   ]);
   const { checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;
