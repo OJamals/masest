@@ -1,8 +1,8 @@
 /* MASEST / VertKleen shared JS (v2, taste-skill applied)
    Icons: Phosphor web family only. No emoji. No em-dashes in copy. */
-import { renderChrome } from "./main/chrome.js?v=20260807f";
+import { renderChrome } from "./main/chrome.js?v=20260807g";
 import { initResponsiveTables, initReveal } from "./main/effects.js";
-import { initServiceCatalog } from "./main/service-catalog.js?v=20260807f";
+import { initServiceCatalog } from "./main/service-catalog.js?v=20260807g";
 import {
   initCartButtons,
   initShop,
@@ -10,17 +10,17 @@ import {
   loadCommerceCatalog,
   productCard,
   refreshCommerceActions,
-} from "./main/commerce-ui.js?v=20260807f";
+} from "./main/commerce-ui.js?v=20260807g";
 import {
   initBeforeAfter,
   initIndustryDiscovery,
   initProofFilters,
   initQuoteForm,
-} from "./main/engagement.js?v=20260807f";
-import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260807f";
+} from "./main/engagement.js?v=20260807g";
+import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260807g";
 import { initDataVisualizations } from "./main/data-visuals.js";
-import { initContentSnapshots } from "./main/content-snapshots.js?v=20260807f";
-import { initPricingBindings } from "./main/pricing-data.js?v=20260807f";
+import { initContentSnapshots } from "./main/content-snapshots.js?v=20260807g";
+import { initPricingBindings } from "./main/pricing-data.js?v=20260807g";
 
 window.MASESTMain = {
   initReveal,

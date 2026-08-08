@@ -251,9 +251,9 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260807f'),
+    import('./address-autocomplete.js?v=20260807g'),
     import('./auth.js?v=20260711w'),
-    import('./staff-surface.js?v=20260807f'),
+    import('./staff-surface.js?v=20260807g'),
   ]);
   const { checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;
