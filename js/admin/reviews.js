@@ -4,7 +4,7 @@
 // Shared primitives ($, api, state, message, admSkeleton, admEmpty) and the
 // admin-local statusBadge / badge helpers are injected; esc/confirmDialog/delegate/
 // dateTime come from util.js — mirrors js/admin/threads.js + js/admin/orders.js.
-import { esc, confirmDialog, delegate, dateTime as date } from '../util.js?v=20260807e';
+import { esc, confirmDialog, delegate, dateTime as date } from '../util.js?v=20260807f';
 
 export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty, statusBadge, badge }) {
   // Filled stars in accent ink, unfilled dimmed via opacity — avoids relying on the
