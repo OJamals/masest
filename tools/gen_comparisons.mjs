@@ -328,7 +328,7 @@ function pageHtml(page) {
   </section>
 </main>
 
-<script type="module" src="../js/main.js?v=20260807i"></script>
+<script type="module" src="../js/main.js?v=20260808a"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

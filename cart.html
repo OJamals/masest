@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260807i">
+  <link rel="stylesheet" href="css/style.css?v=20260808a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
   <link rel="stylesheet" href="css/components.css?v=20260805a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260807i"></script>
+  <script type="module" src="js/main.js?v=20260808a"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -60,16 +60,19 @@
                 aria-describedby="shipEstimateNote">
               <button class="btn btn-secondary" id="shipEstimateGo" type="submit">Estimate</button>
             </div>
-            <p id="shipEstimateNote" class="cart-ship-estimate-note" role="status" aria-live="polite">Approximate. The exact carrier rate is confirmed at checkout.</p>
+            <p id="shipEstimateNote" class="cart-ship-estimate-note" role="status" aria-live="polite">Approximate until checkout.</p>
           </form>
-          <!-- The support launcher docks in this corner; marking the primary purchase path as
-               an obstruction lifts it clear instead of letting it crowd the checkout CTA. -->
-          <div class="cart-path cart-path-primary" data-customer-chat-obstruction>
+          <div class="cart-path cart-path-primary">
             <div class="cart-path-heading">
-              <span>Continue to checkout</span>
-              <small>Confirm shipping details, billing, and live carrier rates.</small>
+              <small>Shipping details, billing, and live carrier rates come next. Payment stays on Stripe.</small>
             </div>
-            <div class="cart-actions">
+            <!-- The support launcher docks in this corner and does overlap the checkout button
+                 on narrower, shorter desktops (measured: 1024x760 and 1100x820 both collide),
+                 so the button row registers as an obstruction and the launcher lifts clear.
+                 Deliberately this row and not the .cart-path card: the card's padding reaches
+                 the launcher at widths where the button never does, and registering the card
+                 lifted the launcher ~172px over the order summary to dodge its own padding. -->
+            <div class="cart-actions" data-customer-chat-obstruction>
               <a class="btn btn-primary" id="checkoutContinue" href="checkout.html">Continue to checkout</a>
             </div>
           </div>
@@ -78,8 +81,7 @@
                form (account-holders, rarely used) sits behind the disclosure. -->
           <div class="cart-path cart-path-quote cart-quote-prompt">
             <div class="cart-path-heading">
-              <span>Formal quote</span>
-              <small>Get documented pricing before purchase.</small>
+              <small>Need documented pricing, or a bulk size that ships by freight?</small>
             </div>
             <a class="btn btn-secondary" id="checkoutQuote" href="contact.html?type=quote">Get formal quote</a>
           </div>
@@ -97,7 +99,6 @@
               <p id="requisitionStatus" class="cart-field-help" role="status" aria-live="polite"></p>
             </form>
           </details>
-          <p class="cart-checkout-note"><i class="ph ph-lock-key" aria-hidden="true"></i> Address verification and live shipping rates come next; payment stays on Stripe.</p>
           <div id="cartAccount" class="cart-account" hidden></div>
         </div>
       </aside>
@@ -108,8 +109,8 @@
   import { items, remove, setQty } from "./js/cart.js";
   import { api, me, getToken } from "./js/auth.js?v=20260711w";
   import { safeUrl } from "./js/util.js";
-  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260807i";
-  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260807i";
+  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260808a";
+  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260808a";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -331,6 +332,7 @@
     shipping_estimate_postal_invalid: "Enter a 5-digit US ZIP code.",
     shipping_domestic_only: "Online rates cover US delivery. Request a quote for international freight.",
     shipping_estimate_unavailable: "This cart ships as more than one carton, so the exact rate is calculated at checkout.",
+    shipping_product_unavailable: "A bulk size in this cart ships by freight, not parcel. Request a quote for it.",
     shipping_cart_too_large: "This cart needs freight planning. Request a quote for a consolidated shipment.",
     shipping_package_profile_missing: "An item is missing shipping dimensions. Request a quote for this cart.",
     shipping_rates_unavailable: "No carrier rate came back for that ZIP. The exact rate is calculated at checkout.",
@@ -386,8 +388,8 @@
       }
       shipEstimate = cheapest;
       const days = Number.isFinite(Number(cheapest.delivery_days)) ? Number(cheapest.delivery_days) : null;
-      const transit = days ? `, about ${days} business ${days === 1 ? "day" : "days"} in transit` : "";
-      setEstimateNote(`Cheapest to ${postalCode}: ${shippingServiceSummary(cheapest)}${transit}. Approximate — the exact rate is confirmed at checkout.`);
+      const transit = days ? `, about ${days} business ${days === 1 ? "day" : "days"}` : "";
+      setEstimateNote(`Cheapest to ${postalCode}: ${shippingServiceSummary(cheapest)}${transit}. Exact rate at checkout.`);
       updateSubtotal();
     } catch {
       shipEstimate = null;

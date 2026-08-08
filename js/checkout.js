@@ -1,4 +1,4 @@
-import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260807i';
+import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260808a';
 
 const money = (amount, currency = 'usd') => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: String(currency).toUpperCase(),
@@ -7,6 +7,10 @@ const clean = (value) => String(value ?? '').trim();
 const escapeHtml = (value) => clean(value).replace(/[&<>"']/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[char]));
+
+export function fieldNeedsError(field) {
+  return !clean(field?.value) || !field?.checkValidity?.();
+}
 
 export function checkoutAddress(values, prefix) {
   return {
@@ -243,9 +247,9 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260807i'),
+    import('./address-autocomplete.js?v=20260808a'),
     import('./auth.js?v=20260711w'),
-    import('./staff-surface.js?v=20260807i'),
+    import('./staff-surface.js?v=20260808a'),
   ]);
   const { checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;
@@ -345,7 +349,8 @@ async function boot() {
     ratesBox.hidden = true;
     pay.disabled = true;
     payHint.textContent = 'Confirm your address and select a shipping method to continue.';
-    shippingPending.textContent = 'Shipping calculated after address confirmation.';
+    shippingPending.textContent = '';
+    shippingPending.hidden = true;
     calculate.classList.add('btn-primary');
     calculate.classList.remove('btn-secondary', 'checkout-recalculate');
     calculate.textContent = 'Confirm address & view rates';
@@ -436,6 +441,7 @@ async function boot() {
       ? `Google standardized the address · ${state.quote.package_count} package${state.quote.package_count === 1 ? '' : 's'}`
       : `Google verified the address · ${state.quote.package_count} package${state.quote.package_count === 1 ? '' : 's'}`;
     shippingPending.innerHTML = `<i class="ph ph-check-circle" aria-hidden="true"></i> ${state.quote.package_count} package${state.quote.package_count === 1 ? '' : 's'} rated with live carrier pricing.`;
+    shippingPending.hidden = false;
     calculate.classList.remove('btn-primary');
     calculate.classList.add('btn-secondary', 'checkout-recalculate');
     calculate.textContent = 'Recalculate rates';
@@ -570,6 +576,12 @@ async function boot() {
     return field.validationMessage || `${fieldLabel(field)} is not valid yet.`;
   }
 
+  function syncFieldError(field) {
+    if (!field?.id || !document.getElementById(`${field.id}Error`)) return;
+    if (fieldNeedsError(field)) setFieldError(field, validationMessage(field));
+    else clearFieldError(field);
+  }
+
   // Returns true when the form is not ready to rate. Reveals hidden address parts first so a
   // field can never be reported invalid while it is still hidden from the buyer.
   function reportInvalidFields() {
@@ -578,7 +590,7 @@ async function boot() {
     const invalid = [];
     for (const field of fields) {
       clearFieldError(field);
-      if (clean(field.value) && field.checkValidity()) continue;
+      if (!fieldNeedsError(field)) continue;
       setFieldError(field, validationMessage(field));
       invalid.push(field);
     }
@@ -616,16 +628,13 @@ async function boot() {
     'billingAddress1', 'billingAddress2', 'billingCity', 'billingState', 'billingPostalCode',
   ]);
   form.addEventListener('input', (event) => {
-    if (clean(event.target.value)) clearFieldError(event.target);
+    syncFieldError(event.target);
     if (rateBoundFields.has(event.target.name)) invalidateRates();
   });
   // Re-check on blur so a field the buyer filled and then emptied re-reports without waiting
   // for another submit, and so a corrected value drops its message immediately.
   form.addEventListener('focusout', (event) => {
-    const field = event.target;
-    if (!field?.id || !document.getElementById(`${field.id}Error`)) return;
-    if (clean(field.value) && field.checkValidity()) clearFieldError(field);
-    else setFieldError(field, validationMessage(field));
+    syncFieldError(event.target);
   });
   // Switching to a separate billing address must not leave stale billing errors behind.
   sameBilling.addEventListener('change', () => {

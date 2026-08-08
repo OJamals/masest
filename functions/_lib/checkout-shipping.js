@@ -236,14 +236,19 @@ export async function loadShippingQuotePlan(env, rateId, dependencies = {}) {
   }
 }
 
-function checkoutOrder({ cart, variants, address, email, now }) {
+// Availability is the same question whether the buyer is buying or only estimating, so both
+// paths ask it here. Bulk sizes (55 gal drums, 275 gal totes) are quote-routed by carrying
+// active=false, and they also have no shipping dimensions — without this gate the estimate
+// path reached the packer first and blamed the missing dimensions, reporting a deliberate
+// LTL business rule as if it were a data defect.
+function checkoutOrderItems({ cart, variants }) {
   const bySku = new Map(variants.map((variant) => [clean(variant?.vsku, 160), variant]));
   const orderItems = [];
   for (const line of cart) {
     const variant = bySku.get(line.sku);
     const product = variant?.products;
     if (!variant || variant.active === false || product?.active === false || product?.mode !== 'buy') {
-      throw new CheckoutShippingError('shipping_product_unavailable', 409);
+      throw new CheckoutShippingError('shipping_product_unavailable', 409, { skus: [line.sku] });
     }
     orderItems.push({
       sku: line.sku,
@@ -254,6 +259,11 @@ function checkoutOrder({ cart, variants, address, email, now }) {
     });
   }
   if (orderItems.length !== cart.length) throw new CheckoutShippingError('shipping_product_unavailable', 409);
+  return orderItems;
+}
+
+function checkoutOrder({ cart, variants, address, email, now }) {
+  const orderItems = checkoutOrderItems({ cart, variants });
   return {
     order_number: `checkout-${now()}`,
     currency: 'usd',
@@ -315,15 +325,12 @@ export async function estimateCheckoutRates(input, dependencies = {}) {
   const now = dependencies.now || Date.now;
   const cart = canonicalCart(input.cart);
   const destination = normalizeEstimateDestination(input.destination);
-  // Reuse the real packing so the estimate describes the same parcels the buyer would be
-  // rated on, and so an unshippable cart fails here for the same reason it would at rating.
+  // Same availability gate and the same packing the bookable quote runs, so an estimate can
+  // never describe a cart checkout would refuse, or parcels it would not build.
+  const orderItems = checkoutOrderItems({ cart, variants });
   let packages;
   try {
-    packages = combinePackagesForRates(packagesFromOrderItems(
-      { order_items: cart.map((line) => ({ sku: line.sku, qty: line.qty })) },
-      variants,
-      { maxPackages: 250 },
-    ));
+    packages = combinePackagesForRates(packagesFromOrderItems({ order_items: orderItems }, variants, { maxPackages: 250 }));
   } catch (error) {
     if (error?.code === 'too_many_shipping_packages') {
       throw new CheckoutShippingError('shipping_cart_too_large', 409);

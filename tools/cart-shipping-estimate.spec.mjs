@@ -73,7 +73,8 @@ test("a ZIP estimate posts the cart and shows the cheapest rate in the shipping 
   await expect(page.locator("#shipEstimateNote")).toContainText("UPS Ground");
   await expect(page.locator("#shipEstimateNote")).not.toContainText("UPS UPS");
   await expect(page.locator("#shipEstimateNote")).toContainText("4 business days");
-  await expect(page.locator("#shipEstimateNote")).toContainText("confirmed at checkout");
+  // The caveat has to survive the copy trim — an estimate must never read as a firm price.
+  await expect(page.locator("#shipEstimateNote")).toContainText("Exact rate at checkout");
 
   expect(calls).toHaveLength(1);
   expect(calls[0].destination).toEqual({ postal_code: "95112" });
@@ -116,6 +117,27 @@ test("a malformed ZIP is rejected in the browser without calling the rate servic
   await expect(page.locator("#shipEstimateNote")).toContainText("5-digit US ZIP");
   await expect(page.locator("#shipEstimateZip")).toBeFocused();
   expect(calls).toHaveLength(0);
+});
+
+// Registration is a bare attribute with no visible effect until the launcher collides, so it
+// is easy to drop in an unrelated edit. Measured behaviour it protects: at 1024x760 the
+// launcher overlaps the checkout button by ~25px, so the button row must lift it — while the
+// padded .cart-path card must NOT be registered, since its padding reaches the launcher at
+// widths where the button never does and lifting on that dodges nothing a buyer can see.
+test("the launcher clears the checkout button without lifting for card padding", async ({ page }) => {
+  await openCart(page);
+  await expect(page.locator(".cart-path-primary .cart-actions")).toHaveAttribute("data-customer-chat-obstruction", "");
+  await expect(page.locator("#shipEstimateForm")).toHaveAttribute("data-customer-chat-obstruction", "");
+  await expect(page.locator(".cart-path-primary")).not.toHaveAttribute("data-customer-chat-obstruction", "");
+
+  await page.setViewportSize({ width: 1024, height: 760 });
+  await page.waitForTimeout(400);
+  const hit = await page.evaluate(() => {
+    const l = document.querySelector(".customer-chat__toggle").getBoundingClientRect();
+    const b = document.querySelector("#checkoutContinue").getBoundingClientRect();
+    return l.left < b.right && l.right > b.left && l.top < b.bottom && l.bottom > b.top;
+  });
+  expect(hit, "launcher must not sit on the checkout button").toBe(false);
 });
 
 test("a rate-service failure never blocks checkout", async ({ page }) => {

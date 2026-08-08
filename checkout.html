@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260807i">
+  <link rel="stylesheet" href="css/style.css?v=20260808a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/checkout.js?v=20260807i"></script>
+  <script type="module" src="js/checkout.js?v=20260808a"></script>
 </head>
 <body class="checkout-flow-page">
 <a class="skip-link" href="#main">Skip to checkout</a>
@@ -81,7 +81,9 @@
         </div>
 
         <label id="saveAddressWrap" class="checkout-check checkout-save" hidden><input id="saveAddress" name="saveAddress" type="checkbox" checked> Save to my account for faster checkout</label>
-        <p id="shippingPending" class="checkout-shipping-state">Shipping calculated after address confirmation.</p>
+        <!-- Empty until there is real state to report. The section lead already explains why
+             the address is needed; this only speaks once packages have been rated. -->
+        <p id="shippingPending" class="checkout-shipping-state" hidden></p>
       </section>
 
       <div class="checkout-bottom-row">

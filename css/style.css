@@ -3860,16 +3860,6 @@ fully clickable cards) ---- */
   color: var(--muted);
   box-shadow: none;
 }
-.cart-checkout-note {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
-  margin: 14px 0 0;
-  color: var(--muted);
-  font-size: .875rem;
-  line-height: 1.45;
-}
-.cart-checkout-note i { margin-top: 2px; color: var(--accent); font-size: 1rem; }
 .cart-quote-prompt {
   display: grid;
   gap: 10px;

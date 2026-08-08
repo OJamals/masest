@@ -142,6 +142,30 @@ test("a multi-carton cart declines rather than understating a single parcel", as
   );
 });
 
+// Bulk sizes are quote-routed by carrying active=false, and they also have no shipping
+// dimensions. The packer would have caught them second and blamed the dimensions, reporting
+// an LTL business rule as a data defect; the availability gate has to answer first.
+test("a freight-only bulk size is refused as unavailable, not as missing dimensions", async () => {
+  const drum = {
+    vsku: "VK-CRHD-55G", product_sku: "cr-hd", label: "55 gal drum", price: 726.56,
+    active: false, shipping_weight_lb: null, shipping_length_in: null,
+    shipping_width_in: null, shipping_height_in: null,
+    products: { name: "VertKleen CR-HD", mode: "buy", active: true },
+  };
+  await assert.rejects(
+    () => estimateCheckoutRates(
+      { env: ENV, cart: [{ sku: "VK-CRHD-55G", qty: 1 }], variants: [drum], destination: { postal_code: "95112" } },
+      estimateDeps(),
+    ),
+    (error) => {
+      assert.equal(error.code, "shipping_product_unavailable");
+      assert.equal(error.status, 409);
+      assert.deepEqual(error.details.skus, ["VK-CRHD-55G"]);
+      return true;
+    },
+  );
+});
+
 test("estimate rejects non-US and malformed postal codes", async () => {
   const base = { env: ENV, cart: [{ sku: "VK-CRHD-1G", qty: 1 }], variants: [JUG] };
   await assert.rejects(

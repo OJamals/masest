@@ -119,6 +119,12 @@ test("checkout reports a malformed email rather than accepting it", async ({ pag
   await expectDescribedError(page, "checkoutEmail");
   await expect(page.locator("#checkoutEmailError")).toContainText("valid email");
   await expect(page.locator("#checkoutEmail")).toBeFocused();
+
+  // Editing one invalid non-empty value into another must not make the field look fixed.
+  await page.locator("#checkoutEmail").fill("still-not-an-email");
+  await page.locator("#phone").click();
+  await expectDescribedError(page, "checkoutEmail");
+  await expect(page.locator("#checkoutEmailError")).toContainText("valid email");
 });
 
 // The checkbox sits under a decorative .checkout-switch span, so a direct .uncheck() is

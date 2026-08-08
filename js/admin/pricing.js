@@ -1,6 +1,6 @@
 // Unified live-pricing workspace. Product/tier, service, and program prices
 // keep their domain tables, but staff edit all three through this boundary.
-import { esc, delegate, rowMatchesQuery } from '../util.js?v=20260807i';
+import { esc, delegate, rowMatchesQuery } from '../util.js?v=20260808a';
 
 const DEFAULT_TIERS = ['retail', 'hvac', 'wholesale'];
 
