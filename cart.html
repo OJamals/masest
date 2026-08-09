@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260808a">
+  <link rel="stylesheet" href="css/style.css?v=20260808b">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
   <link rel="stylesheet" href="css/components.css?v=20260805a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260808a"></script>
+  <script type="module" src="js/main.js?v=20260808b"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -109,8 +109,8 @@
   import { items, remove, setQty } from "./js/cart.js";
   import { api, me, getToken } from "./js/auth.js?v=20260711w";
   import { safeUrl } from "./js/util.js";
-  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260808a";
-  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260808a";
+  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260808b";
+  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260808b";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2

@@ -258,7 +258,9 @@ test("descaler card defaults to the first live API variant price", async () => {
       const options = await descaler.locator(".commerce-vol").evaluate((select) =>
         Array.from(select.options).map((option) => option.textContent.trim())
       );
-      assert.ok(options.some((label) => /1 gal jug/.test(label)));
+      // Options are a ladder of volumes with the container noun stripped ("1 gal", not
+      // "1 gal jug"); the full pack wording is asserted on .price-note just above.
+      assert.ok(options.some((label) => label === "1 gal"), `expected a "1 gal" option, got ${options.join(" | ")}`);
     } finally {
       await browser.close();
     }

@@ -93,6 +93,34 @@ test("product selector routes bulk freight to the shared quote flow", async ({ p
   await expect(quote).toHaveAttribute("href", /contact\?type=quote&product=.*message=.*#quoteForm/);
 });
 
+// The size list is a ladder of volumes, so every option has to drop its container noun or
+// none do. "jug" was missing from the strip, which rendered one dropdown as
+// "1 gal jug / 2.5 gal jug / 5 gal / 55 gal" — the same column mixing both conventions.
+test("size options drop the container noun consistently", async ({ page }) => {
+  await page.route("**/api/products", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [{
+        sku: "cr-hd", name: "VertKleen CR HD", mode: "buy", active: true,
+        product_variants: [
+          { vsku: "VK-CRHD-1G", label: "1 gal jug", gallons: 1, price: 11.67, currency: "usd", active: true, sort: 1 },
+          { vsku: "VK-CRHD-2.5G", label: "2.5 gal jug", gallons: 2.5, price: 29.16, currency: "usd", active: true, sort: 2 },
+          { vsku: "VK-CRHD-5G", label: "5 gal pail", gallons: 5, price: 58.33, currency: "usd", active: true, sort: 3 },
+          { vsku: "VK-CRHD-55G", label: "55 gal drum", gallons: 55, price: 387.51, currency: "usd", active: false, sort: 4 },
+          { vsku: "VK-CRHD-275G", label: "275 gal tote", gallons: 275, price: 1707.23, currency: "usd", active: false, sort: 5 },
+        ],
+      }],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/products/crhd.html`, { waitUntil: "networkidle" });
+  const options = await page.locator(".product-hero-buy .commerce-vol option").allInnerTexts();
+  expect(options).toEqual(["1 gal", "2.5 gal", "5 gal", "55 gal — quoted", "275 gal — quoted"]);
+  // The full pack wording still belongs somewhere; it stays spelled out under the price.
+  await expect(page.locator(".product-hero-buy .price-note")).toContainText("1 gal jug");
+});
+
 test("hcr bulk pricing shows freight-quote CTA through the commerce selector", async ({ page }) => {
   await page.route("**/api/products", route => route.fulfill({
     status: 200,

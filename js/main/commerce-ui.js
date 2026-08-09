@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260808a";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260808b";
 import { smoothPref } from "./engagement.js";
 
 const IMAGE_DIMS = {
@@ -219,7 +219,11 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
     // Root-absolute paths: these controls also hydrate on /products/<id> subpages,
     // where a relative "contact" or "account.html" would resolve under /products/.
     const accountPath = `/account.html?return=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
-    const optLabel = (v) => String(v.label || "Pack").replace(/\s+(bottle|pail|drum|tote)$/i, "");
+    // Strip the container noun so the sizes line up as a scannable list of volumes.
+    // "jug" was missing, so one dropdown read "1 gal jug / 2.5 gal jug / 5 gal / 55 gal" —
+    // the same column mixing packs that keep their noun with packs that lost it. The full
+    // label is still spelled out under the price, which is where the detail belongs.
+    const optLabel = (v) => String(v.label || "Pack").replace(/\s+(bottle|jug|pail|drum|tote)$/i, "");
     const opts = row.variants
       .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${optLabel(v)}</option>`)
       .concat((row.quoteVariants || [])

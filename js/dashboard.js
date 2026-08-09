@@ -8,9 +8,9 @@ import {
   replaceWithQuote,
 } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
-import { initBusinessHub } from './business.js?v=20260808a';
-import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260808a';
-import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260808a';
+import { initBusinessHub } from './business.js?v=20260808b';
+import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260808b';
+import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260808b';
 
 const $ = (id) => document.getElementById(id);
 

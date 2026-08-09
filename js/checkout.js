@@ -1,4 +1,4 @@
-import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260808a';
+import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260808b';
 
 const money = (amount, currency = 'usd') => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: String(currency).toUpperCase(),
@@ -247,9 +247,9 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260808a'),
+    import('./address-autocomplete.js?v=20260808b'),
     import('./auth.js?v=20260711w'),
-    import('./staff-surface.js?v=20260808a'),
+    import('./staff-surface.js?v=20260808b'),
   ]);
   const { checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;
@@ -435,7 +435,11 @@ async function boot() {
     if (note) note.textContent = fulfillmentNote(state.quote?.fulfillment);
     ratesBox.hidden = false;
     pay.disabled = !rates.length;
-    payHint.textContent = rates.length ? 'Secure payment opens on Stripe.' : 'No shipping method is available.';
+    // The trust line directly beneath already names Stripe; repeating it here put two
+    // consecutive sentences about Stripe under one button. This slot reports the choice.
+    payHint.textContent = rates.length
+      ? `${shippingServiceSummary(state.quote.rates[state.selectedRate])} selected.`
+      : 'No shipping method is available.';
     const validation = state.quote.address_validation;
     document.getElementById('addressVerification').textContent = validation?.corrected
       ? `Google standardized the address · ${state.quote.package_count} package${state.quote.package_count === 1 ? '' : 's'}`
@@ -646,7 +650,7 @@ async function boot() {
     if (event.target.name !== 'shippingRate') return;
     state.selectedRate = Number(event.target.value);
     const selected = state.quote?.rates?.[state.selectedRate];
-    payHint.textContent = `${shippingServiceSummary(selected)} selected. Secure payment opens on Stripe.`;
+    payHint.textContent = `${shippingServiceSummary(selected)} selected.`;
     showStatus(`${shippingServiceSummary(selected)} selected. Continue to secure payment.`, 'ok');
     renderTotals();
   });

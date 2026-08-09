@@ -1,7 +1,7 @@
 // Admin SEO-audit tab (#36 per-tab split). Fetches each marketing page and reports
 // title/description presence. Guards re-run via the shared `state.loaded` set, so
 // `state` and the `$` lookup are injected; `esc` comes from the shared util module.
-import { esc } from '../util.js?v=20260808a';
+import { esc } from '../util.js?v=20260808b';
 
 export function createSeoAudit({ $, state }) {
   return async function runSeoAudit() {

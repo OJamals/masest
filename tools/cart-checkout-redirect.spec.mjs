@@ -126,6 +126,14 @@ test("Card/ACH checkout posts the cart payload and redirects to the Stripe sessi
   await expect(payBtn).toBeDisabled();
   await page.locator("#calculateShipping").click();
   await expect(payBtn).toBeEnabled();
+
+  // The trust line under the button already names Stripe. The hint used to name it too,
+  // stacking two consecutive sentences about Stripe under one control; it reports the
+  // chosen service instead, and only the trust line carries the processor.
+  const payHint = page.locator("#checkoutPayHint");
+  await expect(payHint).toContainText("selected");
+  await expect(payHint).not.toContainText("Stripe");
+  await expect(page.locator(".checkout-payment-trust")).toContainText("Stripe");
   expect(checkoutBody).toBeNull();
   expect(ratesBody.cart).toEqual([{ sku: "crhd", qty: 2 }]);
 
