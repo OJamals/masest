@@ -35,17 +35,42 @@ export function computeRefund({ total, refundedAmount = 0, requestedAmount } = {
 // Line-level refunds: staff pick SKUs and quantities, the amount follows from the order's
 // own line prices. Deriving it here (rather than trusting a number from the browser) keeps
 // the refunded amount and the restocked quantities describing the same event.
-export function computeLineRefund({ orderItems = [], lines = [] } = {}) {
+export function computeLineRefund({ orderItems = [], lines = [], refundedLines = [] } = {}) {
   if (!Array.isArray(lines) || !lines.length) return { ok: false, error: 'refund_lines_required' };
   const available = new Map();
   for (const item of orderItems) {
     const sku = String(item?.sku || '').trim();
     const qty = Math.floor(Number(item?.qty) || 0);
     if (!sku || qty <= 0) continue;
+    const unitPrice = Number(item?.unit_price) || 0;
     const existing = available.get(sku);
     // Duplicate SKUs on one order sum their quantity but must share a single unit price.
-    if (existing) existing.qty += qty;
-    else available.set(sku, { qty, unitPrice: Number(item?.unit_price) || 0, backordered: !!item?.backordered });
+    if (existing) {
+      existing.qty += qty;
+      existing.restockQty += item?.backordered ? 0 : qty;
+      if (Math.abs(existing.unitPrice - unitPrice) > 0.000001) existing.ambiguousPrice = true;
+    } else {
+      available.set(sku, {
+        qty,
+        unitPrice,
+        restockQty: item?.backordered ? 0 : qty,
+        ambiguousPrice: false,
+      });
+    }
+  }
+
+  // Completed and already-claimed line reversals consume refundable quantity. This is
+  // separate from `refunded_amount`: an amount-only refund has no defensible SKU mapping.
+  for (const line of Array.isArray(refundedLines) ? refundedLines : []) {
+    const sku = String(line?.sku || '').trim();
+    const qty = Math.floor(Number(line?.qty) || 0);
+    const source = available.get(sku);
+    if (!source || qty <= 0) continue;
+    source.qty = Math.max(0, source.qty - qty);
+    const restored = Number.isFinite(Number(line?.restock_qty))
+      ? Math.floor(Number(line.restock_qty))
+      : qty;
+    source.restockQty = Math.max(0, source.restockQty - Math.max(0, restored));
   }
 
   const seen = new Set();
@@ -56,11 +81,21 @@ export function computeLineRefund({ orderItems = [], lines = [] } = {}) {
     const qty = Math.floor(Number(line?.qty) || 0);
     const source = available.get(sku);
     if (!sku || seen.has(sku)) return { ok: false, error: 'refund_lines_invalid' };
-    if (!source || qty <= 0 || qty > source.qty) return { ok: false, error: 'refund_lines_invalid' };
+    if (!source || source.ambiguousPrice || qty <= 0 || qty > source.qty) {
+      return { ok: false, error: 'refund_lines_invalid' };
+    }
     seen.add(sku);
     const lineTotal = Math.round(source.unitPrice * qty * 100) / 100;
     amount = Math.round((amount + lineTotal) * 100) / 100;
-    selected.push({ sku, qty, unit_price: source.unitPrice, line_total: lineTotal, backordered: source.backordered });
+    const restockQty = Math.min(qty, source.restockQty);
+    selected.push({
+      sku,
+      qty,
+      unit_price: source.unitPrice,
+      line_total: lineTotal,
+      restock_qty: restockQty,
+      backordered: restockQty === 0,
+    });
   }
   if (amount <= 0) return { ok: false, error: 'refund_lines_invalid' };
   return { ok: true, amount, lines: selected };

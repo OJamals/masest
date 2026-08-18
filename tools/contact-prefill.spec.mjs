@@ -75,7 +75,7 @@ test("customer chat context stays visible, editable, and submits only its allowe
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ ok: true }),
+      body: JSON.stringify({ ok: true, durable: true, quote_id: "44444444-4444-4444-8444-444444444444" }),
     });
   });
   const params = new URLSearchParams([

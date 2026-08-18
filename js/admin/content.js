@@ -192,8 +192,8 @@ function fieldTemplate(field, payload) {
       <label class="${esc(cls)}">${esc(field.label)}
         <div class="adm-chips" data-chips-for="${esc(field.key)}">
           <span class="adm-chips-list">${items.map(chipSpan).join("")}</span>
-          <input class="adm-chip-input" name="${esc(field.key)}_entry" type="text" autocomplete="off" data-chip-input placeholder="Add tag, press Enter">
-          <input type="hidden" data-content-payload-field="${esc(field.key)}" data-content-field-kind="list" value="${esc(items.join(", "))}">
+          <input class="adm-chip-input" name="${esc(field.key)}_entry" type="text" autocomplete="off" data-chip-input placeholder="Add tag, press Enter…">
+          <input type="hidden" name="${esc(field.key)}" data-content-payload-field="${esc(field.key)}" data-content-field-kind="list" value="${esc(items.join(", "))}">
         </div>
       </label>
     `;
@@ -225,14 +225,14 @@ function fieldTemplate(field, payload) {
     }
     return `
       <label class="${esc(cls)}">${esc(field.label)}
-        <textarea class="adm-textarea adm-content-field-text" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true"${required}>${esc(value)}</textarea>
+        <textarea class="adm-textarea adm-content-field-text" name="${esc(field.key)}" data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" spellcheck="true"${required}>${esc(value)}</textarea>
       </label>
     `;
   }
   if (field.kind === "checkbox") {
     return `
       <label class="adm-content-check ${esc(cls)}">
-        <input type="checkbox" data-content-payload-field="${esc(field.key)}" data-content-field-kind="checkbox"${value === true ? " checked" : ""}>
+        <input type="checkbox" name="${esc(field.key)}" data-content-payload-field="${esc(field.key)}" data-content-field-kind="checkbox"${value === true ? " checked" : ""}>
         <span>${esc(field.label)}</span>
       </label>
     `;
@@ -243,12 +243,12 @@ function fieldTemplate(field, payload) {
       .join("");
     return `
       <label class="${esc(cls)}">${esc(field.label)}
-        <select class="adm-select" data-content-payload-field="${esc(field.key)}" data-content-field-kind="select"${required}>${opts}</select>
+        <select class="adm-select" name="${esc(field.key)}" data-content-payload-field="${esc(field.key)}" data-content-field-kind="select"${required}>${opts}</select>
       </label>
     `;
   }
   const inputType = field.kind === "number" ? "number" : field.kind === "date" ? "date" : "text";
-  const input = `<input class="adm-input" type="${inputType}"${field.kind === "number" ? ' step="0.01"' : ""}${field.pattern ? ` pattern="${esc(field.pattern)}"` : ""}${field.key === "page" ? ' list="contentPageOptions"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
+  const input = `<input class="adm-input" name="${esc(field.key)}" autocomplete="off" type="${inputType}"${field.kind === "number" ? ' step="0.01"' : ""}${field.pattern ? ` pattern="${esc(field.pattern)}"` : ""}${field.key === "page" ? ' list="contentPageOptions"' : ""} data-content-payload-field="${esc(field.key)}" data-content-field-kind="${esc(field.kind)}" value="${esc(value)}"${required}>`;
   if (ASSET_FIELD_KEYS.has(field.key)) {
     return `
       <div class="adm-content-asset-control ${esc(cls)}">
@@ -287,12 +287,12 @@ function seoFieldTemplate(field, seo) {
   if (field.kind === "textarea") {
     return `
       <label class="full">${esc(field.label)}
-        <textarea class="adm-textarea adm-content-field-text" data-content-seo-field="${esc(field.key)}" rows="3"${maxlength}>${esc(value)}</textarea>
+        <textarea class="adm-textarea adm-content-field-text" name="seo_${esc(field.key)}" data-content-seo-field="${esc(field.key)}" rows="3"${maxlength}>${esc(value)}</textarea>
         ${meter}
       </label>
     `;
   }
-  const input = `<input class="adm-input" type="text" data-content-seo-field="${esc(field.key)}" value="${esc(value)}"${maxlength}>`;
+  const input = `<input class="adm-input" name="seo_${esc(field.key)}" type="text" autocomplete="off" data-content-seo-field="${esc(field.key)}" value="${esc(value)}"${maxlength}>`;
   if (field.key === "og_image") {
     return `
       <div class="adm-content-asset-control wide">
@@ -319,7 +319,7 @@ function seoFieldsTemplate(seo = {}) {
 
 function formTemplate({ blog = false, admEmpty } = {}) {
   const typeControl = blog
-    ? `<input id="contentType" type="hidden" value="blog_post"><p class="adm-content-placement full" role="note">${esc(placementText("blog_post"))}</p>`
+    ? `<input id="contentType" name="content_type" type="hidden" value="blog_post"><p class="adm-content-placement full" role="note">${esc(placementText("blog_post"))}</p>`
     : `<label class="adm-content-selector">Content area <select id="contentType" name="content_type" class="adm-select">${selectOptions(TYPES, "service")}</select></label>`;
   return `
     <div class="adm-card adm-content-editor">
@@ -386,7 +386,7 @@ function formTemplate({ blog = false, admEmpty } = {}) {
             <summary>Review workflow &amp; editor lock (multi-editor tools)</summary>
             <div class="adm-content-disclosure-body">
               <label>Workflow note
-                <textarea id="contentWorkflowNote" name="workflow_note" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context"></textarea>
+                <textarea id="contentWorkflowNote" name="workflow_note" class="adm-textarea" rows="3" placeholder="Reviewer instructions, change requests, or scheduling context…"></textarea>
               </label>
               <div class="adm-content-action-group" data-content-action-group="review" aria-label="Review workflow">
                 <button class="btn btn-secondary btn-sm" type="button" data-content-workflow="submit_review" data-capability="content.write"><i class="ph ph-check-square-offset" aria-hidden="true"></i> Submit for review</button>
@@ -524,6 +524,12 @@ function listTemplate(entries, admEmpty) {
   `;
 }
 
+function contentMatchesQuery(entry, query) {
+  if (!query) return true;
+  return [entry.title, entry.slug, entry.type, entry.locale]
+    .some((value) => String(value || "").toLowerCase().includes(query));
+}
+
 function workflowTemplate(admEmpty, { blog = false } = {}) {
   const queueCopy = blog
     ? `Scheduled blog posts stay visible here. Press "Publish due to CMS" when their scheduled time arrives; the static build runs separately.`
@@ -594,10 +600,11 @@ function shellTemplate(admEmpty) {
               </div>
             </div>
             <div class="adm-tools adm-tools-flush">
-              <select id="contentTypeFilter" class="adm-select adm-select-sm" aria-label="Filter content type">
+              <input id="contentSearch" name="content_search" class="adm-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search title or slug…" aria-label="Search content library">
+              <select id="contentTypeFilter" name="content_type_filter" class="adm-select adm-select-sm" aria-label="Filter content type">
                 <option value="">All types</option>${selectOptions(TYPES)}
               </select>
-              <select id="contentStatusFilter" class="adm-select adm-select-sm" aria-label="Filter content status">
+              <select id="contentStatusFilter" name="content_status_filter" class="adm-select adm-select-sm" aria-label="Filter content status">
                 ${selectOptions(STATUSES, "all")}
               </select>
             </div>
@@ -1278,7 +1285,13 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       list.innerHTML = admEmpty("ph-warning", "Couldn't load content", "The list request failed. Reload or switch filters to retry.");
       return;
     }
-    list.innerHTML = listTemplate(state.content || [], admEmpty);
+    const query = ($("contentSearch")?.value || "").trim().toLowerCase();
+    const entries = (state.content || []).filter((entry) => contentMatchesQuery(entry, query));
+    if (query && !entries.length) {
+      list.innerHTML = admEmpty("ph-magnifying-glass", "No matching content", "Try another title or slug.");
+      return;
+    }
+    list.innerHTML = listTemplate(entries, admEmpty);
   }
 
   function renderWorkflowQueue() {
@@ -1651,6 +1664,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       }
     });
     root.addEventListener("input", (event) => {
+      if (event.target.matches("#contentSearch")) {
+        renderList();
+        return;
+      }
       if (event.target.closest("#contentForm")) formDirty = true;
       if (event.target.matches("#contentTitle")) {
         syncSlugFromTitle();

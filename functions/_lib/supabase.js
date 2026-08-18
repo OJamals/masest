@@ -5,6 +5,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { filterByStream, categoryStream, unsubscribeToken, htmlToText } from './email.js';
 import { isStaffEmail, normalizeStaffRole } from './authz.js';
+import {
+  CommerceContextError,
+  resolveCommerceContextSnapshot,
+} from './commerce-context.js';
+
+export { CommerceContextError } from './commerce-context.js';
 
 // Service-role client — bypasses RLS. SERVER ONLY. Never return its key or use client-side.
 export function adminClient(env) {
@@ -22,7 +28,7 @@ export async function userFromRequest(request, env) {
     auth: { persistSession: false },
   });
   const { data, error } = await sb.auth.getUser(token);
-  if (error || !data?.user) return { user: null, token };
+  if (error || !data?.user) return { user: null, token, error: error || null };
   return { user: data.user, token };
 }
 
@@ -41,31 +47,51 @@ export async function readBody(request) {
   try { return await request.json(); } catch { return {}; }
 }
 
-// Auth gate for company-scoped account routes (#38). Returns { user, companyId, role, sb }
-// on success, or { error: Response } to return early — collapses the repeated
-// auth → profile/company/role lookup → access errors into one call.
-export async function requireCompany(request, env) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return { error: json(401, { error: 'unauthenticated' }) };
-  const sb = adminClient(env);
-  const { data: profile } = await sb.from('profiles').select('company_id,role').eq('id', user.id).maybeSingle();
-  const companyId = profile?.company_id || null;
-  if (!companyId) return { error: json(403, { error: 'no_company' }) };
-  return { user, companyId, role: profile.role, sb };
+export async function resolveCommerceContext(request, env, dependencies = {}) {
+  return resolveCommerceContextSnapshot({
+    request,
+    env,
+    userFromRequest: dependencies.userFromRequest || userFromRequest,
+    adminClient: dependencies.adminClient || adminClient,
+  });
+}
+
+function commerceContextUnavailable() {
+  return json(503, { error: 'commerce_context_unavailable', retryable: true });
+}
+
+// Auth gate for company-scoped account routes (#38). All account surfaces now consume the
+// same typed commerce snapshot Checkout uses, so a profile/company query failure can never
+// be mistaken for an anonymous or retail Buyer.
+export async function requireCompany(request, env, dependencies = {}) {
+  let context;
+  try {
+    context = await (dependencies.resolveCommerceContext || resolveCommerceContext)(request, env, dependencies);
+  } catch (error) {
+    if (error instanceof CommerceContextError) return { error: commerceContextUnavailable() };
+    return { error: commerceContextUnavailable() };
+  }
+  if (!context.user) return { error: json(401, { error: 'unauthenticated' }) };
+  if (!context.companyId) return { error: json(403, { error: 'no_company' }) };
+  return { ...context, context };
+}
+
+export async function requireCommerceUser(request, env, dependencies = {}) {
+  let context;
+  try {
+    context = await (dependencies.resolveCommerceContext || resolveCommerceContext)(request, env, dependencies);
+  } catch {
+    return { error: commerceContextUnavailable() };
+  }
+  if (!context.user) return { error: json(401, { error: 'unauthenticated' }) };
+  return { ...context, context };
 }
 
 // Resolve the caller's pricing tier. Guests, anonymous requests, and non-approved
 // accounts always get 'retail'. Approved B2B companies get companies.price_tier.
-export async function tierForRequest(request, env) {
-  const { user } = await userFromRequest(request, env);
-  if (!user) return { tier: 'retail', user: null, companyId: null };
-  const sb = adminClient(env);
-  const { data: profile } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
-  const companyId = profile?.company_id || null;
-  if (!companyId) return { tier: 'retail', user, companyId: null };
-  const { data: company } = await sb.from('companies').select('status,price_tier').eq('id', companyId).maybeSingle();
-  const tier = (company?.status === 'approved' && company?.price_tier) ? company.price_tier : 'retail';
-  return { tier, user, companyId };
+export async function tierForRequest(request, env, dependencies = {}) {
+  const context = await (dependencies.resolveCommerceContext || resolveCommerceContext)(request, env, dependencies);
+  return { tier: context.tier, user: context.user, companyId: context.companyId, context };
 }
 
 // vsku -> explicit price for a given tier. Missing entries fall back to the
@@ -74,9 +100,12 @@ export async function tierPriceMap(sb, tier) {
   const map = new Map();
   if (!tier) return map;
   try {
-    const { data } = await sb.from('price_tiers').select('vsku,price').eq('tier', tier);
+    const { data, error } = await sb.from('price_tiers').select('vsku,price').eq('tier', tier);
+    if (error) throw error;
     for (const r of data || []) map.set(r.vsku, Number(r.price));
-  } catch { /* price_tiers may not exist pre-migration → empty map = base price */ }
+  } catch (error) {
+    throw new CommerceContextError('pricing', error);
+  }
   return map;
 }
 

@@ -15,15 +15,15 @@ test("newsletter.js subscribes via the shared helper, not an inline job payload"
   assert.match(src, /klaviyo_error/);
 });
 
-test("quote.js fires industry nurture subscribe after its emails, before returning", () => {
+test("quote.js schedules industry nurture only after durable intake, before returning", () => {
   const src = read("functions/api/quote.js");
   assert.match(src, /from\s+['"]\.\.\/_lib\/klaviyo\.js['"]/, "quote.js must import ../_lib/klaviyo.js");
   assert.match(src, /subscribeLead\(env/, "quote.js must call injected subscribeLeadByIndustry boundary");
+  const durableIdx = src.indexOf("durable = await persistIntake");
   const callIdx = src.indexOf("subscribeLead(env");
-  const returnIdx = src.lastIndexOf("return json(200");
-  const lastEmailIdx = src.lastIndexOf("sendMessage(env");
-  assert.ok(callIdx > -1 && returnIdx > -1 && lastEmailIdx > -1, "anchors present");
-  assert.ok(lastEmailIdx < callIdx && callIdx < returnIdx, "subscribe runs after emails and before the response");
+  const returnIdx = src.lastIndexOf("return json(durable.duplicate");
+  assert.ok(durableIdx > -1 && callIdx > -1 && returnIdx > -1, "anchors present");
+  assert.ok(durableIdx < callIdx && callIdx < returnIdx, "subscribe runs only after durable intake and before the response");
 });
 
 test("newsletter.html is a real signup page wired to subscribeNewsletter", () => {

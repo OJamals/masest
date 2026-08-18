@@ -57,6 +57,6 @@ test('checkout keeps address rationale and mobile escape/trust cues', () => {
 });
 
 test('homepage keeps the audited hyphenated headline phrase unbroken', () => {
-  assert.match(home, /<span class="no-break">harsh-chemical<\/span>/);
+  assert.match(home, /<span class="no-break">Harsh-Chemical<\/span>/);
   assert.match(css, /\.no-break\s*\{\s*white-space:\s*nowrap;?\s*\}/);
 });

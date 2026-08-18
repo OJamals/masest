@@ -4,7 +4,6 @@
 .qa-local/homepage-concept/
 node_modules/
 node_modules
-package-lock.json
 dist/
 tmp/
 backups/
@@ -16,6 +15,11 @@ design-qa.md
 plans/
 advisor-plans/
 .dev.vars
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 .wrangler/
 test-results/
 output/

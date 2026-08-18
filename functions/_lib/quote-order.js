@@ -1,10 +1,27 @@
 import { quotePayloadWithOffer } from './quote-convert.js';
+import {
+  offerExpiryReached,
+  offerStatus,
+  offerValidityExpired,
+  quoteExpirationPatch,
+  quoteIsOpenRequisition,
+} from './quote-lifecycle.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export function requisitionQuoteMayBeSent(quote = {}) {
-  return !['closed', 'spam'].includes(quote.status)
-    && !['accepted', 'payment_pending', 'ordered'].includes(quote.payload?.offer_status);
+export function requisitionQuoteMayBeSent(quote = {}, now = Date.now()) {
+  if (quote?.source && quote.source !== 'requisition') return false;
+  const storedOffer = offerStatus(quote);
+  if (quote.status === 'spam' || quote.pipeline_stage === 'won') return false;
+  if (['accepted', 'payment_pending', 'ordered'].includes(storedOffer)) return false;
+  // Sending a revision is the explicit reactivation policy for a declined/expired
+  // requisition. The atomic offer commit reopens status/pipeline, and the unique index
+  // rejects it if the Buyer already created a fresh open request for this requisition.
+  if (['declined', 'expired'].includes(storedOffer)) return true;
+  if (quote.status === 'closed' || quote.pipeline_stage === 'lost') return false;
+  return !['accepted', 'payment_pending', 'ordered'].includes(
+    offerExpiryReached(quote, now) ? 'expired' : quote.payload?.offer_status,
+  );
 }
 
 export function guardQuoteOffer(query, payload = {}) {
@@ -25,14 +42,54 @@ export function isOpenRequisitionQuoteConflict(error) {
 
 export async function findOpenRequisitionQuote(sb, requisitionId) {
   const { data: quote, error } = await sb.from('quotes')
-    .select('id,status,pipeline_stage,created_at')
+    .select('id,status,pipeline_stage,payload,source,created_at')
     .eq('source', 'requisition')
     .contains('payload', { requisition_id: requisitionId })
     .not('status', 'in', '(closed,spam)')
+    // Historical requisitions can predate the pipeline default. Null is the same open
+    // intake state used by quoteLifecycle(), so the storage lookup must retain it.
+    .or('pipeline_stage.is.null,pipeline_stage.not.in.(lost,won)')
+    .or('payload->>offer_status.is.null,payload->>offer_status.not.in.(declined,expired,ordered)')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  return { quote: quote || null, error };
+  const open = quote && quoteIsOpenRequisition(quote);
+  return {
+    quote: open ? quote : null,
+    // A time-expired/malformed sent row still participates in the database partial
+    // unique index until its explicit expiry transition is persisted. Request creation
+    // uses this snapshot to release that identity before inserting a fresh Quote.
+    staleQuote: quote && !open ? quote : null,
+    error,
+  };
+}
+
+export async function expireQuoteOfferIfDue(sb, quote, {
+  at = new Date().toISOString(),
+} = {}) {
+  const boundary = Date.parse(at);
+  if (!offerExpiryReached(quote, boundary)) return { quote, expired: false };
+  const patch = quoteExpirationPatch(quote, at);
+  let update = sb.from('quotes').update(patch).eq('id', quote.id).eq('status', quote.status);
+  update = quote.pipeline_stage == null
+    ? update.is('pipeline_stage', null)
+    : update.eq('pipeline_stage', quote.pipeline_stage);
+  const query = guardQuoteOffer(update, quote.payload);
+  const { data, error } = await query
+    .select('id,created_at,type,product,industry,email,status,pipeline_stage,source,payload')
+    .maybeSingle();
+  if (error) return { quote, expired: true, error };
+  if (data) return { quote: data, expired: true };
+
+  const current = await sb.from('quotes')
+    .select('id,created_at,type,product,industry,email,status,pipeline_stage,source,payload')
+    .eq('id', quote.id)
+    .maybeSingle();
+  return {
+    quote: current.data || quote,
+    expired: true,
+    ...(current.error ? { error: current.error } : {}),
+  };
 }
 
 async function boundQuote(sb, quoteId, draftOrderId) {
@@ -139,6 +196,19 @@ export async function reopenQuoteAfterPaymentFailure(sb, {
   if (bound.error) return bound;
   const identity = quoteOrderIdentity(bound.quote, finalOrderId);
   if (identity) return identity;
+  if (offerValidityExpired(bound.quote, Date.parse(at))) {
+    const updated = await updateQuoteState(
+      sb,
+      bound.quote,
+      quoteExpirationPatch(bound.quote, at),
+    );
+    return resolveQuoteUpdate(
+      sb,
+      { quoteId, draftOrderId, finalOrderId },
+      updated,
+      (quote) => quote.payload?.offer_status === 'expired',
+    );
+  }
   if (quoteIsAccepted(bound.quote)) return { ok: true };
   if (bound.quote.payload?.offer_status !== 'payment_pending') {
     return { error: 'quote_state_conflict' };

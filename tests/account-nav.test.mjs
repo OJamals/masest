@@ -101,10 +101,10 @@ test("account dropdown only exposes admin console from explicit admin access", (
   assert.doesNotMatch(nav, /data\.is_staff\s*\?/, "client nav should not show admin console from the old is_staff response shape");
 });
 
-test("account dropdown is viewport clamped for left edge buttons", () => {
+test("account dropdown stays viewport-safe without synchronous layout reads", () => {
   const nav = read("js/account-nav.js");
 
-  assert.match(nav, /\.acct-dd-menu\s*\{[^}]*position:fixed/s, "dropdown menu should escape edge-clipping with fixed positioning");
-  assert.match(nav, /function positionAccountMenu/, "account nav should position dropdown relative to trigger");
-  assert.match(nav, /Math\.max\(8,\s*Math\.min/, "account dropdown should clamp within viewport gutters");
+  assert.match(nav, /\.acct-dd-menu\s*\{[^}]*position:absolute[^}]*inset-inline-end:0/s, "dropdown should anchor to its trigger edge in CSS");
+  assert.match(nav, /\.acct-dd-menu\s*\{[^}]*width:min\(236px, calc\(100vw - 16px\)\)[^}]*max-height:calc\(100dvh - 88px\)/s, "dropdown should preserve viewport gutters and a bounded scroll area");
+  assert.doesNotMatch(nav, /function positionAccountMenu|getBoundingClientRect|offsetWidth|offsetHeight/, "dropdown positioning should not force layout from JavaScript");
 });

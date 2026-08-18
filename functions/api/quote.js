@@ -1,6 +1,5 @@
-// /api/quote - public contact/quote intake. Stores the lead in Supabase
-// best-effort, emails sales and the buyer, and subscribes quote leads to the
-// matching Klaviyo industry nurture list when configured.
+// /api/quote - public contact/quote intake. A durable, idempotent lead record is the
+// acknowledgement boundary; email and nurture delivery happen only after that commit.
 import { adminClient, emailLayout, htmlEscape, json, sendEmail } from '../_lib/supabase.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { subscribeLeadByIndustry } from '../_lib/klaviyo.js';
@@ -13,6 +12,7 @@ import { verifyTurnstile } from '../_lib/turnstile.js';
 import { QUOTE_TASK_DETAILS } from '../../js/quote-task-details.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TASK_FIELD_LIMITS = Object.fromEntries(
   QUOTE_TASK_DETAILS.map(({ name, limit }) => [name, limit]),
 );
@@ -112,10 +112,42 @@ function displayRows(payload) {
     .join('');
 }
 
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+async function quoteIntakeFingerprint(row) {
+  const bytes = new TextEncoder().encode(stableJson(row));
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function saveQuoteIntake(sb, { intakeId, fingerprint, row }) {
+  const { data, error } = await sb.rpc('save_quote_intake', {
+    p_intake_id: intakeId,
+    p_fingerprint: fingerprint,
+    p_quote: row,
+  });
+  if (error) {
+    const collision = /quote_intake_identity_collision/i.test(error.message || '');
+    return { error: collision ? 'idempotency_conflict' : 'intake_unavailable' };
+  }
+  const quoteId = String(data?.quote_id || '');
+  if (!UUID.test(quoteId)) return { error: 'intake_unavailable' };
+  return { quoteId, duplicate: data?.duplicate === true };
+}
+
 export async function handleQuote({ request, env }, dependencies = {}) {
   const checkRateLimit = dependencies.rateLimit || rateLimit;
   const verifyCaptcha = dependencies.verifyTurnstile || verifyTurnstile;
   const getAdminClient = dependencies.adminClient || adminClient;
+  const persistIntake = dependencies.saveIntake || saveQuoteIntake;
   const sendMessage = dependencies.sendEmail || sendEmail;
   const subscribeLead = dependencies.subscribeLeadByIndustry || subscribeLeadByIndustry;
   const ct = request.headers.get('content-type') || '';
@@ -157,88 +189,98 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   if (captcha.status === 'rejected') return json(400, { error: 'captcha_failed' });
   if (captcha.status === 'unavailable') return json(503, { error: 'captcha_unavailable' });
 
+  const intakeId = String(fields.submission_id || '').trim();
+  if (!UUID.test(intakeId)) return json(400, { error: 'submission_id_required' });
+
   const type = normalizeRequestType(fields.type);
   const payload = { ...fields };
   delete payload._gotcha;
   delete payload['cf-turnstile-response'];
+  delete payload.submission_id;
 
-  const leadScore = scoreLead(fields);
+  // Transport-only identity/CAPTCHA fields must never change the durable fingerprint or
+  // lead score across an otherwise identical retry.
+  const leadScore = scoreLead(payload);
   const priority = priorityForScore(leadScore);
   const pipelineStage = pipelineStageForType(type);
   const nextStep = nextStepForType(type);
   const product = type === 'sample'
     ? (sampleProductSummary(fields) || fields.product || null)
     : (fields.product || null);
-  let saved = false;
-
+  const row = {
+    type,
+    name,
+    email,
+    company,
+    phone: fields.phone || null,
+    product,
+    industry: fields.industry || null,
+    location: fields.location || fields.ship_to || null,
+    message: fields.message || null,
+    payload,
+    source: 'contact',
+    status: 'new',
+    lead_score: leadScore,
+    priority: priorityForScore(leadScore),
+    pipeline_stage: pipelineStage,
+    next_step: nextStep,
+  };
+  let durable;
   try {
     const sb = getAdminClient(env);
-    const row = {
-      type,
-      name,
-      email,
-      company,
-      phone: fields.phone || null,
-      product,
-      industry: fields.industry || null,
-      location: fields.location || fields.ship_to || null,
-      message: fields.message || null,
-      payload,
-      source: 'contact',
-      status: 'new',
-      lead_score: leadScore,
-      priority: priorityForScore(leadScore),
-      pipeline_stage: pipelineStage,
-      next_step: nextStep,
-    };
-    let { error } = await sb.from('quotes').insert(row);
-    if (error && /pipeline_stage|next_step|schema cache|column/i.test(error.message || '')) {
-      const fallback = { ...row };
-      delete fallback.pipeline_stage;
-      delete fallback.next_step;
-      ({ error } = await sb.from('quotes').insert(fallback));
-    }
-    saved = !error;
-  } catch {
-    saved = false;
-  }
-
-  const reqLabel = type.charAt(0).toUpperCase() + type.slice(1);
-  const rows = displayRows(payload);
-
-  await sendMessage(env, {
-    to: salesRecipients(env),
-    subject: `New ${priority} ${reqLabel} request - ${company || name}`,
-    category: 'lead_internal',
-    html: emailLayout({
-      heading: `New ${htmlEscape(reqLabel)} request`,
-      bodyHtml: `
-        <p><b>Lead score:</b> ${leadScore} (${htmlEscape(priority)})</p>
-        <table style="border-collapse:collapse">${rows}</table>
-        ${saved ? '' : '<p style="color:#b42318">Lead email sent, but database save did not complete.</p>'}
-      `,
-    }),
-  });
-
-  await sendMessage(env, {
-    to: [email],
-    subject: 'We received your MASEST request',
-    category: 'lead_autoreply',
-    html: emailLayout({
-      heading: `Thanks for reaching out, ${htmlEscape(name)}`,
-      bodyHtml: '<p>We received your request. A MASEST team member will review it and follow up with next steps.</p>',
-      ctaText: 'Visit MASEST',
-      ctaUrl: env.SITE_URL || 'https://masest.co',
-    }),
-  });
-
-  try {
-    await subscribeLead(env, { email, industry: fields.industry });
+    durable = await persistIntake(sb, {
+      intakeId,
+      fingerprint: await quoteIntakeFingerprint(row),
+      row,
+    });
   } catch (error) {
-    console.warn('klaviyo_quote_subscribe_failed', error);
+    console.error('quote_intake_persist_failed', error?.name || 'error');
+    durable = { error: 'intake_unavailable' };
+  }
+  if (durable?.error === 'idempotency_conflict') return json(409, { error: durable.error });
+  if (!durable?.quoteId) return json(503, { error: 'intake_unavailable', retryable: true });
+
+  if (!durable.duplicate) {
+    const reqLabel = type.charAt(0).toUpperCase() + type.slice(1);
+    const rows = displayRows(payload);
+    const followUps = await Promise.allSettled([
+      sendMessage(env, {
+        to: salesRecipients(env),
+        subject: `New ${priority} ${reqLabel} request - ${company || name}`,
+        category: 'lead_internal',
+        html: emailLayout({
+          heading: `New ${htmlEscape(reqLabel)} request`,
+          bodyHtml: `
+            <p><b>Lead score:</b> ${leadScore} (${htmlEscape(priority)})</p>
+            <table style="border-collapse:collapse">${rows}</table>
+          `,
+        }),
+      }),
+      sendMessage(env, {
+        to: [email],
+        subject: 'We received your MASEST request',
+        category: 'lead_autoreply',
+        html: emailLayout({
+          heading: `Thanks for reaching out, ${htmlEscape(name)}`,
+          bodyHtml: '<p>We received your request. A MASEST team member will review it and follow up with next steps.</p>',
+          ctaText: 'Visit MASEST',
+          ctaUrl: env.SITE_URL || 'https://masest.co',
+        }),
+      }),
+      subscribeLead(env, { email, industry: fields.industry }),
+    ]);
+    if (followUps.some(({ status }) => status === 'rejected')) {
+      console.warn('quote_intake_follow_up_failed', durable.quoteId);
+    }
   }
 
-  return json(200, { ok: true, saved, lead_score: leadScore });
+  return json(durable.duplicate ? 200 : 201, {
+    ok: true,
+    durable: true,
+    quote_id: durable.quoteId,
+    duplicate: durable.duplicate,
+    lead_score: leadScore,
+  });
 }
 
 export function createQuoteHandler(dependencies = {}) {

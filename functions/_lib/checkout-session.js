@@ -6,10 +6,24 @@
 // to customer_email.
 // Stripe caps every metadata value at 500 characters, so the cart is stored in a
 // compact shape (short keys, no display names — the webhook re-derives names from
-// product_variants) and split across cart, cart2, cart3… keys. 20 chunks × 450 chars holds
-// ~150 cart lines; with the 25 fixed keys below that stays under Stripe's 50-key limit.
+// product_variants) and split across cart, cart2, cart3… keys. The Session carries 33
+// fixed metadata keys, leaving at most 16 cart chunks under Stripe's 50-key limit.
 const CART_CHUNK_SIZE = 450;
-const CART_MAX_CHUNKS = 20;
+const CART_MAX_CHUNKS = 16;
+
+export function normalizeCheckoutBuyerEmail(value) {
+  const email = String(value || '').trim().toLowerCase();
+  if (!email || email.length > 254 || /[\u0000-\u0020\u007f]/.test(email)) {
+    return { error: 'buyer_email_invalid' };
+  }
+  const at = email.lastIndexOf('@');
+  if (at < 1 || at > 64 || at !== email.indexOf('@')) return { error: 'buyer_email_invalid' };
+  const domain = email.slice(at + 1);
+  if (domain.length > 253 || !domain.includes('.') || domain.split('.').some((label) => (
+    !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label)
+  ))) return { error: 'buyer_email_invalid' };
+  return { value: email };
+}
 
 export function normalizePurchaseOrderNumber(value) {
   if (value == null) return { value: null };
@@ -62,6 +76,7 @@ export function buildStripeCheckoutSessionParams({
   appUrl,
   email,
   companyId,
+  buyerUserId = null,
   sellable,
   qtyBySku,
   taxEnabled = false,
@@ -71,9 +86,12 @@ export function buildStripeCheckoutSessionParams({
   purchaseOrderNumber = null,
   quoteId = null,
   quoteOrderId = null,
+  quoteCheckoutAttemptId = null,
   allowPromotionCodes = true,
 }) {
-  const cleanEmail = String(email || "").trim();
+  const buyerEmail = normalizeCheckoutBuyerEmail(email);
+  if (buyerEmail.error) throw new Error(buyerEmail.error);
+  const cleanEmail = buyerEmail.value;
   const cart = sellable.map((product) => ({
     sku: product.sku,
     product_sku: product.product_sku,
@@ -149,13 +167,22 @@ export function buildStripeCheckoutSessionParams({
     cancel_url: `${appUrl}/${selectedAddress ? "checkout.html" : "cart.html"}`,
     metadata: {
       company_id: companyId || "",
+      buyer_user_id: buyerUserId || "",
       buyer_email: cleanEmail,
       purchase_order_number: purchaseOrderNumber || "",
       quote_id: quoteId || "",
       quote_order_id: quoteOrderId || "",
+      quote_checkout_attempt_id: quoteCheckoutAttemptId || "",
       shipping_rate_id: selectedRate?.rate_id || "",
       shipping_carrier_id: selectedRate?.carrier_id || "",
       shipping_service_code: selectedRate?.service_code || "",
+      shipping_contract_version: shippingSelection?.v === 3 ? "3" : selectedRate ? "legacy_v2" : "legacy_static",
+      shipping_plan_id: shippingSelection?.plan_id || "",
+      shipping_plan_digest: shippingSelection?.plan_digest || "",
+      shipping_cart_digest: shippingSelection?.cart_digest || "",
+      shipping_address_digest: shippingSelection?.address_digest || "",
+      shipping_amount_minor: selectedRate ? String(Math.max(0, Math.round(Number(selectedRate.amount_minor) || 0))) : "",
+      shipping_currency: selectedRate?.currency || "",
       ship_name: selectedAddress?.name || "",
       ship_company: selectedAddress?.company || "",
       ship_phone: selectedAddress?.phone || "",
@@ -192,10 +219,13 @@ export function buildStripeCheckoutSessionParams({
 }
 
 export function buyerEmailFromStripeSession(session) {
-  return String(
-    session?.customer_details?.email
-      || session?.customer_email
-      || session?.metadata?.buyer_email
-      || "",
-  ).trim();
+  for (const candidate of [
+    session?.metadata?.buyer_email,
+    session?.customer_email,
+    session?.customer_details?.email,
+  ]) {
+    const normalized = normalizeCheckoutBuyerEmail(candidate);
+    if (normalized.value) return normalized.value;
+  }
+  return "";
 }

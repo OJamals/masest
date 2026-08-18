@@ -18,6 +18,7 @@ Required events:
 
 ```text
 checkout.session.completed
+checkout.session.expired
 checkout.session.async_payment_succeeded
 checkout.session.async_payment_failed
 customer.subscription.updated
@@ -31,6 +32,26 @@ charge.refunded
 Create live Shipping Rate objects in Stripe, then publish their `shr_...` IDs through CMS type `shipping_rate`. Test-mode objects cannot be used with a live key.
 
 Store `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` only in `.dev.vars` locally and encrypted Cloudflare Pages production secrets. Never place them in client JavaScript, CMS, Git, or chat.
+
+## Quote Checkout attempt cutover
+
+`supabase/schema-quote-lifecycle.sql` creates the attempt store with
+`quote_checkout_attempt_cutover.ready = false`. This prevents deployment from creating a second
+payable Session beside a pre-migration Quote Session.
+
+After the matching application code is live and every old Worker instance has drained, verify
+all pre-migration Quote Checkout Sessions are terminal or absent. Then activate:
+
+```sql
+update public.quote_checkout_attempt_cutover
+set ready = true,
+    ready_at = now(),
+    updated_at = now()
+where singleton = true;
+```
+
+Keep the gate false during application rollback. Full sequence and bounded rollback:
+[`docs/COMMERCE_WORKFLOW_DEPLOYMENT.md`](COMMERCE_WORKFLOW_DEPLOYMENT.md).
 
 ## Payout reconciliation preview
 

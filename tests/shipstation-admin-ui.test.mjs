@@ -80,3 +80,16 @@ test('orders UI proxies label documents and confirms reconciliation and returns'
   const listSelect = ordersApi.match(/\.select\('id,order_number,[^']+'/)?.[0] || '';
   assert.doesNotMatch(listSelect, /shipstation_label_url/);
 });
+
+test('orders UI exposes exact split recovery for locally finalized label purchases', async () => {
+  const source = await read('../js/admin/orders.js');
+  assert.match(source, /attempt\?\.operation === 'label_purchase'/);
+  assert.match(source, /data-shipstation-reconcile-label="\$\{id\}"[^>]+data-order-shipment-id=/);
+  const reconcileHandler = source.slice(
+    source.indexOf("'[data-shipstation-reconcile-label]'"),
+    source.indexOf('async function reconcileExactLabel'),
+  );
+  assert.match(reconcileHandler, /button\.closest\('\.adm-shipstation-reconcile'\)/);
+  assert.match(reconcileHandler, /order_shipment_id:\s*button\.dataset\.orderShipmentId\s*\|\|\s*undefined/);
+  assert.match(source, /const explicitOrderShipmentId = String\(metadata\.order_shipment_id \|\| ''\)[\s\S]+explicitOrderShipmentId\s*\?\s*explicitOrderShipmentId === String\(shipment\.id\)/);
+});

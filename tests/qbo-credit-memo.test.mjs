@@ -136,9 +136,13 @@ test('refund credit memo is wired end to end', () => {
   assert.match(sync, /claim_qbo_refunds/);
   assert.match(sync, /syncRefund/);
   const admin = read('functions/api/admin/orders.js');
-  assert.match(admin, /qbo_refunds/);
-  assert.match(admin, /qbo_sync_status !== 'skipped'[\s\S]*qbo_refunds/,
-    'admin refunds must keep Stripe test-mode orders outside production QBO');
+  const effects = read('functions/_lib/integration-effects.js');
+  const reversal = read('supabase/schema-order-reversals.sql');
+  assert.match(admin, /queueRefundCommand/);
+  assert.match(effects, /order_accounting_reversal[\s\S]*accountingReversalEffect/);
+  assert.match(reversal, /p_action = 'credit_memo'[\s\S]*insert into public\.qbo_refunds/,
+    'the durable accounting effect must enqueue one credit memo after provider success');
+  assert.match(reversal, /unique \(source, entry_type, provider_object_id\)|on conflict \(stripe_refund_id\) do nothing/i);
   const migration = read('supabase/schema-qbo-refunds.sql');
   assert.match(migration, /create table if not exists public\.qbo_refunds/);
   assert.match(migration, /stripe_refund_id\s+text/);

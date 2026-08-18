@@ -289,13 +289,16 @@
 }
 .story .chem-tag b { font-variant-numeric: tabular-nums; color: var(--s-danger-ink); font-weight: 800; letter-spacing: .02em; }
 .story .chem-tag .pulse {
+  position: relative;
   width: 9px; height: 9px; border-radius: 50%; background: var(--s-danger);
-  box-shadow: 0 0 0 0 rgba(169, 52, 32, .6); animation: pulse 2s infinite;
+}
+.story .chem-tag .pulse::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: var(--s-danger); animation: pulse 2s infinite;
 }
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(169, 52, 32, .55); }
-  70% { box-shadow: 0 0 0 12px rgba(169, 52, 32, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(169, 52, 32, 0); }
+  0% { opacity: .6; transform: scale(1); }
+  70%, 100% { opacity: 0; transform: scale(3.6); }
 }
 
 /* Reveal driver: JS sets opacity/transform every frame */

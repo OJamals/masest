@@ -5,7 +5,7 @@ import test from 'node:test';
 const src = readFileSync(new URL('../js/admin/quotes.js', import.meta.url), 'utf8');
 
 test('deal drawer details has a Buyer contact picker', () => {
-  assert.match(src, /Buyer contact <select class="adm-select" data-d-contact/);
+  assert.match(src, /Buyer contact <select class="adm-select"[^>]*data-d-contact/);
 });
 
 test('drawer populates the picker from the resolved company on open', () => {

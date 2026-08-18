@@ -6,9 +6,12 @@ import {
   downloadOrderLabel,
   getOrderLabel,
   reconcileOrderLabelPurchase,
+  reconcileOrderLabelVoid,
+  reconcileOrderReturnLabel,
 } from '../functions/_lib/shipstation-orders.js';
 
 const ORDER_ID = '70f81af0-5ae5-4ea7-953b-f612b6e0ed91';
+const ORDER_SHIPMENT_ID = '11111111-1111-4111-8111-111111111111';
 const baseOrder = {
   id: ORDER_ID,
   order_number: 'MST-00000123',
@@ -16,12 +19,44 @@ const baseOrder = {
   currency: 'usd',
   ship_address: { address: { country: 'US' } },
   shipstation_shipment_id: 'se-shipment-1',
+  shipstation_order_shipment_id: ORDER_SHIPMENT_ID,
   shipstation_rate_id: 'se-rate-1',
   shipstation_label_id: 'se-label-1',
   shipstation_label_status: 'label_purchased',
   shipstation_cost: 12.34,
   shipstation_updated_at: '2026-08-04T17:00:00.000Z',
   tracking_status: 'packing',
+  order_shipments: [{
+    id: ORDER_SHIPMENT_ID,
+    split_key: 'default',
+    revision: 1,
+    provider_shipment_id: 'se-shipment-1',
+    selected_rate_id: 'se-rate-1',
+    status: 'rated',
+  }],
+  order_provider_links: [{
+    id: 'outbound-link-1',
+    provider: 'shipstation',
+    object_type: 'label',
+    provider_object_id: 'se-label-1',
+    metadata: {
+      order_shipment_id: ORDER_SHIPMENT_ID,
+      shipment_id: 'se-shipment-1',
+      revision: 1,
+      status: 'label_purchased',
+      tracking_status: 'packing',
+      cost: 12.34,
+      currency: 'usd',
+    },
+  }],
+  order_financial_entries: [{
+    source: 'shipstation',
+    entry_type: 'postage_purchase',
+    provider_object_id: 'se-label-1',
+    amount: 12.34,
+    currency: 'usd',
+    recognition_state: 'recognized',
+  }],
 };
 
 const providerLabel = {
@@ -41,6 +76,17 @@ const providerLabel = {
     zpl: 'https://api.shipengine.com/v1/downloads/1/token/label.zpl',
   },
 };
+
+function pendingPurchaseOrder(overrides = {}) {
+  return {
+    ...baseOrder,
+    shipstation_label_id: null,
+    shipstation_label_status: 'reconcile_required',
+    order_provider_links: [],
+    order_financial_entries: [],
+    ...overrides,
+  };
+}
 
 test('getOrderLabel requires exact order label and returns no provider URL', async () => {
   const result = await getOrderLabel(
@@ -76,10 +122,11 @@ test('getOrderLabel authorizes a return label linked through the order provider 
   const order = {
     ...baseOrder,
     shipstation_return_label_id: null,
-    order_provider_links: [{
+    order_provider_links: [...baseOrder.order_provider_links, {
       provider: 'shipstation',
       object_type: 'return_label',
       provider_object_id: 'se-return-linked-1',
+      metadata: { outbound_label_id: 'se-label-1', order_shipment_id: ORDER_SHIPMENT_ID },
     }],
   };
   const result = await getOrderLabel(
@@ -97,11 +144,23 @@ test('getOrderLabel authorizes an outbound split label linked through the order 
   const linkedLabel = { ...providerLabel, label_id: 'se-label-split-a', shipment_id: 'se-shipment-split-a' };
   const order = {
     ...baseOrder,
-    order_provider_links: [{
+    order_shipments: [...baseOrder.order_shipments, {
+      id: '22222222-2222-4222-8222-222222222222',
+      split_key: 'split_a',
+      revision: 0,
+      provider_shipment_id: 'se-shipment-split-a',
+      status: 'rated',
+    }],
+    order_provider_links: [...baseOrder.order_provider_links, {
       provider: 'shipstation',
       object_type: 'label',
       provider_object_id: 'se-label-split-a',
-      metadata: { shipment_id: 'se-shipment-split-a' },
+      metadata: {
+        order_shipment_id: '22222222-2222-4222-8222-222222222222',
+        shipment_id: 'se-shipment-split-a',
+        status: 'label_purchased',
+        tracking_status: 'packing',
+      },
     }],
   };
   const result = await getOrderLabel(
@@ -199,6 +258,30 @@ test('downloadOrderLabel cancels a chunked body immediately above 10 MiB', async
   assert.equal(cancelled, true);
 });
 
+test('downloadOrderLabel times out while the provider document body is stalled', async () => {
+  const stalledBody = new ReadableStream({
+    pull() { return new Promise(() => {}); },
+  });
+  const pending = downloadOrderLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: ORDER_ID, label_id: 'se-label-1', format: 'pdf' },
+    {},
+    {
+      loadOrder: async () => baseOrder,
+      getLabel: async () => providerLabel,
+      fetchDocument: async () => new Response(stalledBody, {
+        headers: { 'content-type': 'application/pdf' },
+      }),
+      documentTimeoutMs: 10,
+    },
+  ).then(() => 'resolved', (error) => error.code);
+  const outcome = await Promise.race([
+    pending,
+    new Promise((resolve) => setTimeout(() => resolve('still_pending'), 100)),
+  ]);
+  assert.equal(outcome, 'shipstation_label_document_timeout');
+});
+
 test('reconcileOrderLabelPurchase adopts exactly one exact-shipment label without purchase', async () => {
   const queries = [];
   let finalized;
@@ -207,7 +290,7 @@ test('reconcileOrderLabelPurchase adopts exactly one exact-shipment label withou
     { order_id: ORDER_ID, confirm: true, reason: 'Repair provider timeout' },
     { user: { id: 'staff-1' }, role: 'owner' },
     {
-      loadOrder: async () => ({ ...baseOrder, shipstation_label_id: null, shipstation_label_status: 'reconcile_required' }),
+      loadOrder: async () => pendingPurchaseOrder(),
       listLabels: async (_env, query) => {
         queries.push(query);
         return { labels: query.page === 1 ? [providerLabel, { ...providerLabel, label_id: 'se-other', shipment_id: 'se-other-shipment' }] : [], pages: 1 };
@@ -234,7 +317,7 @@ test('reconcileOrderLabelPurchase adopts exactly one exact-shipment label withou
 test('reconcileOrderLabelPurchase remains retryable when atomic finalization fails', async () => {
   let attempts = 0;
   const dependencies = {
-    loadOrder: async () => ({ ...baseOrder, shipstation_label_id: null, shipstation_label_status: 'reconcile_required' }),
+    loadOrder: async () => pendingPurchaseOrder(),
     listLabels: async () => ({ labels: [providerLabel], pages: 1 }),
     finalizeReconciliation: async () => {
       attempts += 1;
@@ -251,6 +334,45 @@ test('reconcileOrderLabelPurchase remains retryable when atomic finalization fai
   assert.equal(attempts, 2);
 });
 
+test('reconcileOrderLabelPurchase closes a provider-success attempt after canonical finalization', async () => {
+  let completed;
+  const result = await reconcileOrderLabelPurchase(
+    { SHIPSTATION_API_KEY: 'secret' },
+    {
+      order_id: ORDER_ID,
+      order_shipment_id: ORDER_SHIPMENT_ID,
+      confirm: true,
+      reason: 'Close the durable attempt after local finalization',
+    },
+    { user: { id: 'staff-1' } },
+    {
+      loadOrder: async () => ({
+        ...baseOrder,
+        shipstation_operation_attempts: [{
+          operation_key: 'label_purchase:completed-locally',
+          operation: 'label_purchase',
+          order_shipment_id: ORDER_SHIPMENT_ID,
+          provider_object_id: 'se-label-1',
+          status: 'provider_succeeded',
+          result_summary: { label_id: 'se-label-1', shipment_id: 'se-shipment-1' },
+        }],
+      }),
+      claimAttemptReconciliation: async () => ({
+        operation_key: 'label_purchase:completed-locally', lease_owner: 'reconciler-completion',
+      }),
+      completeOperationAttempt: async (_env, input) => { completed = input; },
+      listLabels: async () => assert.fail('canonical completion must not query the provider'),
+      finalizeReconciliation: async () => assert.fail('canonical completion must not finalize twice'),
+      audit: async () => {},
+    },
+  );
+
+  assert.equal(result.already_finalized, true);
+  assert.equal(result.label_id, 'se-label-1');
+  assert.equal(completed.operationKey, 'label_purchase:completed-locally');
+  assert.doesNotMatch(JSON.stringify(completed.resultSummary), /https?:\/\//i);
+});
+
 test('reconcileOrderLabelPurchase keeps zero/multiple candidates locked', async () => {
   for (const fixture of [
     { labels: [], code: 'shipstation_label_reconcile_not_found' },
@@ -263,7 +385,7 @@ test('reconcileOrderLabelPurchase keeps zero/multiple candidates locked', async 
         { order_id: ORDER_ID, confirm: true, reason: 'Repair provider timeout' },
         { user: { id: 'staff-1' } },
         {
-          loadOrder: async () => ({ ...baseOrder, shipstation_label_id: null, shipstation_label_status: 'reconcile_required' }),
+          loadOrder: async () => pendingPurchaseOrder(),
           listLabels: async () => ({ labels: fixture.labels, pages: 1 }),
           persistLabel: async (_env, _id, value) => { patch = value; },
           recordFinancialEntry: async () => assert.fail('unresolved result must not record cost'),
@@ -373,6 +495,20 @@ test('createOrderReturnLabel retry repairs existing result without provider call
     shipstation_return_cost: 9.87,
     shipstation_return_charge_event: 'on_creation',
     shipstation_return_tracking_number: '9400111899223856928499',
+    order_provider_links: [...baseOrder.order_provider_links, {
+      provider: 'shipstation',
+      object_type: 'return_label',
+      provider_object_id: 'se-return-1',
+      metadata: {
+        outbound_label_id: 'se-label-1',
+        order_shipment_id: ORDER_SHIPMENT_ID,
+        status: 'return_label_created',
+        tracking_number: '9400111899223856928499',
+        cost: 9.87,
+        currency: 'usd',
+        charge_event: 'on_creation',
+      },
+    }],
   };
   const result = await createOrderReturnLabel(
     { SHIPSTATION_API_KEY: 'secret' },
@@ -404,12 +540,13 @@ test('createOrderReturnLabel treats a provider-ledger-only return as existing', 
     ...baseOrder,
     shipstation_return_label_id: null,
     shipstation_return_label_status: null,
-    order_provider_links: [{
+    order_provider_links: [...baseOrder.order_provider_links, {
       provider: 'shipstation',
       object_type: 'return_label',
       provider_object_id: 'se-return-linked-1',
       metadata: {
         outbound_label_id: 'se-label-1',
+        order_shipment_id: ORDER_SHIPMENT_ID,
         status: 'return_label_created',
         tracking_number: '9400111899223856928499',
         cost: 9.87,
@@ -447,10 +584,18 @@ test('createOrderReturnLabel ignores an old-outbound return link after replaceme
     shipstation_return_label_id: null,
     shipstation_return_label_status: null,
     order_provider_links: [{
+      ...baseOrder.order_provider_links[0],
+      provider_object_id: 'se-label-2',
+      metadata: { ...baseOrder.order_provider_links[0].metadata, status: 'label_purchased' },
+    }, {
+      ...baseOrder.order_provider_links[0],
+      id: 'outbound-link-old',
+      provider_object_id: 'se-label-1',
+    }, {
       provider: 'shipstation',
       object_type: 'return_label',
       provider_object_id: 'se-return-old',
-      metadata: { outbound_label_id: 'se-label-1', status: 'return_label_created' },
+      metadata: { outbound_label_id: 'se-label-1', order_shipment_id: ORDER_SHIPMENT_ID, status: 'return_label_created' },
     }],
   };
   const result = await createOrderReturnLabel(
@@ -483,6 +628,73 @@ test('createOrderReturnLabel ignores an old-outbound return link after replaceme
   assert.equal(result.label_id, 'se-return-new');
 });
 
+test('createOrderReturnLabel targets an explicit older split without using the latest projection', async () => {
+  const currentShipmentId = '33333333-3333-4333-8333-333333333333';
+  const links = [];
+  let claimDetail;
+  let finalized;
+  const splitOrder = {
+    ...baseOrder,
+    shipstation_order_shipment_id: currentShipmentId,
+    shipstation_shipment_id: 'se-shipment-current',
+    shipstation_label_id: 'se-label-current',
+    order_shipments: [...baseOrder.order_shipments, {
+      id: currentShipmentId,
+      split_key: 'current',
+      revision: 2,
+      provider_shipment_id: 'se-shipment-current',
+      status: 'rated',
+    }],
+    order_provider_links: [...baseOrder.order_provider_links, {
+      id: 'outbound-link-current',
+      provider: 'shipstation',
+      object_type: 'label',
+      provider_object_id: 'se-label-current',
+      metadata: {
+        order_shipment_id: currentShipmentId,
+        shipment_id: 'se-shipment-current',
+        revision: 2,
+        status: 'label_purchased',
+        tracking_status: 'packing',
+      },
+    }],
+  };
+
+  const result = await createOrderReturnLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: ORDER_ID, label_id: 'se-label-1', confirm: true, reason: 'Return the older split carton' },
+    { user: { id: 'staff-1', email: 'staff@example.com' } },
+    {
+      loadOrder: async () => splitOrder,
+      claimReturn: async (_env, orderId, labelId, detail) => {
+        assert.equal(orderId, ORDER_ID);
+        assert.equal(labelId, 'se-label-1');
+        claimDetail = detail;
+        return true;
+      },
+      createReturn: async (_env, labelId) => ({
+        ...providerLabel,
+        label_id: 'se-return-old-split',
+        is_return_label: true,
+        outbound_label_id: labelId,
+        charge_event: 'carrier_default',
+        shipment_cost: { currency: 'usd', amount: 7.65 },
+      }),
+      finalizeReturn: async (_env, input) => { finalized = input; },
+      linkProviderObject: async (_env, link) => links.push(link),
+      recordFinancialEntry: async () => {},
+      audit: async () => {},
+    },
+  );
+
+  assert.equal(claimDetail.orderShipmentId, ORDER_SHIPMENT_ID);
+  assert.equal(claimDetail.parentProviderLinkId, 'outbound-link-1');
+  assert.equal(finalized.orderShipmentId, ORDER_SHIPMENT_ID);
+  assert.equal(links[0].metadata.order_shipment_id, ORDER_SHIPMENT_ID);
+  assert.equal(links[0].metadata.outbound_label_id, 'se-label-1');
+  assert.equal(result.outbound_label_id, 'se-label-1');
+});
+
 test('createOrderReturnLabel validates confirmation, exact label, domestic route, and claim', async () => {
   for (const fixture of [
     { input: { order_id: ORDER_ID, label_id: 'se-label-1', confirm: false, reason: 'Customer requested return' }, code: 'shipstation_return_confirmation_required' },
@@ -512,5 +724,116 @@ test('createOrderReturnLabel validates confirmation, exact label, domestic route
       ),
       (error) => error.code === fixture.code,
     );
+  }
+});
+
+test('reconcileOrderLabelVoid reads exact provider state and finalizes without a second void', async () => {
+  let finalized;
+  let completed;
+  const result = await reconcileOrderLabelVoid(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: ORDER_ID, label_id: 'se-label-1', confirm: true, reason: 'Repair lost void response' },
+    { user: { id: 'staff-1' } },
+    {
+      loadOrder: async () => ({
+        ...baseOrder,
+        shipstation_label_status: 'void_reconcile_required',
+        shipstation_operation_attempts: [{
+          operation_key: 'label_void:key',
+          operation: 'label_void',
+          provider_link_id: 'outbound-link-1',
+          status: 'reconcile_required',
+        }],
+      }),
+      claimAttemptReconciliation: async () => ({
+        operation_key: 'label_void:key', lease_owner: 'reconciler-a',
+      }),
+      getLabel: async () => ({ ...providerLabel, voided: true, status: 'voided' }),
+      finalizeVoidReconciliation: async (_env, input) => { finalized = input; return { applied: true }; },
+      completeOperationAttempt: async (_env, input) => { completed = input; },
+      voidLabel: async () => assert.fail('reconciliation must never mutate provider'),
+      audit: async () => {},
+    },
+  );
+  assert.equal(finalized.labelId, 'se-label-1');
+  assert.equal(completed.operationKey, 'label_void:key');
+  assert.equal(result.accepted, true);
+  assert.equal(result.status, 'label_voided');
+});
+
+test('reconcileOrderReturnLabel adopts one exact parent and keeps zero/multiple candidates locked', async () => {
+  const uncertainOrder = {
+    ...baseOrder,
+    shipstation_return_label_status: 'return_reconcile_required',
+    shipstation_return_updated_at: '2026-08-04T17:00:00.000Z',
+    shipstation_operation_attempts: [{
+      operation_key: 'label_return:key',
+      operation: 'label_return',
+      parent_provider_link_id: 'outbound-link-1',
+      status: 'reconcile_required',
+      created_at: '2026-08-04T17:00:00.000Z',
+    }],
+  };
+  const returnLabel = {
+    ...providerLabel,
+    label_id: 'se-return-reconciled',
+    is_return_label: true,
+    outbound_label_id: 'se-label-1',
+    charge_event: 'carrier_default',
+    shipment_cost: { currency: 'usd', amount: 8.25 },
+  };
+  let finalized;
+  let linked;
+  let completed;
+  const result = await reconcileOrderReturnLabel(
+    { SHIPSTATION_API_KEY: 'secret' },
+    { order_id: ORDER_ID, label_id: 'se-label-1', confirm: true, reason: 'Repair lost return response' },
+    { user: { id: 'staff-1' } },
+    {
+      loadOrder: async () => uncertainOrder,
+      claimAttemptReconciliation: async () => ({
+        operation_key: 'label_return:key', lease_owner: 'reconciler-b',
+      }),
+      listLabels: async () => ({ labels: [returnLabel], pages: 1 }),
+      finalizeReturnReconciliation: async (_env, input) => { finalized = input; return { applied: true }; },
+      linkProviderObject: async (_env, input) => { linked = input; },
+      recordFinancialEntry: async () => {},
+      audit: async () => {},
+      completeOperationAttempt: async (_env, input) => { completed = input; },
+      createReturn: async () => assert.fail('reconciliation must never create a return'),
+      now: () => new Date('2026-08-04T18:00:00.000Z'),
+    },
+  );
+  assert.equal(finalized.orderShipmentId, ORDER_SHIPMENT_ID);
+  assert.equal(linked.metadata.order_shipment_id, ORDER_SHIPMENT_ID);
+  assert.equal(completed.operationKey, 'label_return:key');
+  assert.equal(result.label_id, 'se-return-reconciled');
+
+  for (const fixture of [
+    { labels: [], code: 'shipstation_return_reconcile_not_found' },
+    { labels: [returnLabel, { ...returnLabel, label_id: 'se-return-second' }], code: 'shipstation_return_reconcile_ambiguous' },
+  ]) {
+    let persisted;
+    await assert.rejects(
+      reconcileOrderReturnLabel(
+        { SHIPSTATION_API_KEY: 'secret' },
+        { order_id: ORDER_ID, label_id: 'se-label-1', confirm: true, reason: 'Keep ambiguous return locked' },
+        {},
+        {
+          loadOrder: async () => uncertainOrder,
+          claimAttemptReconciliation: async () => ({
+            operation_key: 'label_return:key', lease_owner: 'reconciler-c',
+          }),
+          listLabels: async () => ({ labels: fixture.labels, pages: 1 }),
+          persistReturn: async (_env, _id, patch) => { persisted = patch; },
+          audit: async () => {},
+          finalizeReturnReconciliation: async () => assert.fail('ambiguous evidence cannot finalize'),
+          now: () => new Date('2026-08-04T18:00:00.000Z'),
+        },
+      ),
+      (error) => error.code === fixture.code,
+    );
+    assert.equal(persisted.shipstation_return_label_status, 'return_reconcile_required');
+    assert.equal(persisted.shipstation_return_error, fixture.code);
   }
 });

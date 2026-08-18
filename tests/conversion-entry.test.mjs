@@ -73,7 +73,7 @@ test("animated homepage copy keeps stable accessible names", () => {
   const headline = home.match(/<h1 class="act-h" id="storyAct1Title"[^>]*>([\s\S]*?)<\/h1>/)?.[1];
   assert.equal(
     String(headline).replace(/<[^>]+>/g, ""),
-    "Industrial cleaning power without the harsh-chemical tradeoff.",
+    "Industrial Cleaning Power Without the Harsh-Chemical Tradeoff.",
   );
   assert.match(home, /aria-label="Shop VertKleen by cleaning job"/);
   assert.match(home, /aria-label="Plan a VertKleen field trial"/);

@@ -148,3 +148,48 @@ test("a rate-service failure never blocks checkout", async ({ page }) => {
   await expect(page.locator("#checkoutContinue")).toBeEnabled();
   await expect(page.locator("#checkoutContinue")).toBeVisible();
 });
+
+test("a delayed old ZIP estimate cannot overwrite the newer edited ZIP", async ({ page }) => {
+  let releaseFirst;
+  const firstGate = new Promise((resolve) => { releaseFirst = resolve; });
+  const calls = [];
+  await page.route("**/api/products", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(CATALOG),
+  }));
+  await page.route("**/api/shipping-estimate", async (route) => {
+    const postalCode = route.request().postDataJSON().destination.postal_code;
+    calls.push(postalCode);
+    if (postalCode === "95112") await firstGate;
+    const amountMinor = postalCode === "95112" ? 1111 : 2222;
+    try {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...ESTIMATE,
+          postal_code: postalCode,
+          rates: [{ ...ESTIMATE.rates[0], amount_minor: amountMinor }],
+        }),
+      });
+    } catch {
+      // The superseded request is intentionally aborted before its route is released.
+    }
+  });
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ crhd: 3 })));
+  await page.reload({ waitUntil: "domcontentloaded" });
+
+  await page.locator("#shipEstimateZip").fill("95112");
+  await page.locator("#shipEstimateGo").click();
+  await expect.poll(() => calls.length).toBe(1);
+  await page.locator("#shipEstimateZip").fill("95113");
+  await expect(page.locator("#shipEstimateGo")).toBeEnabled();
+  await page.locator("#shipEstimateGo").click();
+
+  await expect(page.locator("#cartEstimate")).toContainText("$22.22");
+  releaseFirst();
+  await page.waitForTimeout(100);
+  await expect(page.locator("#cartEstimate")).toContainText("$22.22");
+  await expect(page.locator("#cartEstimate")).not.toContainText("$11.11");
+  expect(calls).toEqual(["95112", "95113"]);
+});

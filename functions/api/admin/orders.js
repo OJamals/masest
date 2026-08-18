@@ -1,26 +1,24 @@
 // /api/admin/orders — staff order management.
 //   GET ?status=&limit=         → orders across all companies
 //   GET ?export=csv             → CSV download of (filtered) orders
-//   POST { id, status }         → update status + notify company
-//   POST { id, action:'refund' }→ Stripe refund + cancel + notify
-import Stripe from 'stripe';
+//   POST explicit action        → guarded Order command; bare status writes rejected
+//   POST { id, action:'refund' }→ queue one immutable refund command
 import { adminClient, requireStaff, json, readBody, companyEmails, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
-import { computeLineRefund, computeRefund, qboFullDocumentRefund } from '../../_lib/refund.js';
-import { stockDecrements, stockIncrements } from '../../_lib/order-shape.js';
 import { staffCan, staffCanWrite } from '../../_lib/authz.js';
 import { planNetSettlement, netAging } from '../../_lib/credit.js';
 import { escapeLike } from '../../_lib/crm.js';
-import { decorateOrderLifecycle, planOrderStatusWrite, settledOrderStatus, shouldPromoteToFulfilled } from '../../_lib/order-lifecycle.js';
-import { orderReference } from '../../_lib/order-integrations.js';
+import { decorateOrderLifecycle, settledOrderStatus, shouldPromoteToFulfilled } from '../../_lib/order-lifecycle.js';
+import { linkOrderProviderObject, orderReference } from '../../_lib/order-integrations.js';
 import { shipmentEmailCta, shipmentEmailHtml, shipmentNotice } from '../../_lib/order-email.js';
 import {
-  cancellationEventId,
-  orderCancellationEffects,
-  planOrderCancellation,
-} from '../../_lib/order-cancellation.js';
-import { ingestProviderEvent } from '../../_lib/integration-effects.js';
+  confirmCancellationCommand,
+  orderReversalHttpStatus,
+  prepareCancellationCommand,
+  queueRefundCommand,
+  retireCancellationReviewCommand,
+} from '../../_lib/order-reversal-service.js';
 import { packingSlipHtml } from '../../_lib/packing-slip.js';
 
 // Statuses where an order is a live commitment a human should acknowledge.
@@ -31,7 +29,6 @@ const WRITABLE_ORDER_STATUSES = ORDER_STATUSES.filter((status) => status !== 'ca
 /* Pseudo-status for the fulfillment queue: a lifecycle view, not a column value. */
 const NEEDS_FULFILLMENT = 'needs_fulfillment';
 const PAYMENT_METHODS = ['stripe', 'net'];
-const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
 const TRACKING_STATUSES = ['processing', 'packing', 'shipped', 'delivered', 'blocked'];
 
 function roundAmount(value) {
@@ -101,9 +98,13 @@ function normalizeOrderWrite(body, currentStatus = null) {
   const lines = normalizeOrderItems(body.items);
   if (!lines.ok) return lines;
   const tax = amountOr(body.tax, 0);
+  const shipping = amountOr(body.shipping, 0);
   const subtotal = amountOr(body.subtotal, lines.subtotal);
-  const total = amountOr(body.total, subtotal + tax);
-  if (subtotal == null || tax == null || total == null) return { ok: false, error: 'invalid_order_total' };
+  const total = amountOr(body.total, subtotal + shipping + tax);
+  if (subtotal == null || shipping == null || tax == null || total == null) return { ok: false, error: 'invalid_order_total' };
+  if (subtotal !== lines.subtotal || total !== roundAmount(subtotal + shipping + tax)) {
+    return { ok: false, error: 'order_total_mismatch' };
+  }
   return {
     ok: true,
     items: lines.items,
@@ -113,6 +114,7 @@ function normalizeOrderWrite(body, currentStatus = null) {
       status: status.status,
       payment_method: payment.method,
       subtotal,
+      shipping,
       tax,
       total,
       currency: (optionalText(body.currency, 8) || 'usd').toLowerCase(),
@@ -120,10 +122,52 @@ function normalizeOrderWrite(body, currentStatus = null) {
   };
 }
 
-async function decrementOrderStock(sb, items) {
-  for (const args of stockDecrements(items)) {
-    await sb.rpc('decrement_variant_stock', args).then(() => {}, () => {});
+function manualOrderErrorCode(error, fallback) {
+  const message = String(error?.message || error?.details || '').toLowerCase();
+  for (const code of [
+    'invalid_manual_order',
+    'invalid_manual_order_items',
+    'invalid_manual_order_item',
+    'manual_order_subtotal_mismatch',
+    'duplicate_manual_order_item',
+    'manual_order_stock_unavailable',
+    'manual_order_stock_restore_failed',
+    'invalid_draft_order_update',
+    'invalid_draft_order_delete',
+    'settled_order_lines_immutable',
+    'order_delete_forbidden',
+    'stale_order_revision',
+    'stale_order_status',
+    'order_cancellation_in_progress',
+    'tracking_update_forbidden',
+    'tracking_fulfillment_not_settled',
+    'invalid_tracking_update',
+    'order_not_found',
+    'provider_object_already_claimed',
+  ]) {
+    if (message.includes(code)) return code;
   }
+  if (error?.code === '23503') return 'invalid_manual_order_reference';
+  if (error?.code === '23505') return 'provider_object_already_claimed';
+  return fallback;
+}
+
+function manualOrderHttpStatus(code) {
+  if (code === 'order_not_found') return 404;
+  if ([
+    'manual_order_stock_unavailable',
+    'manual_order_stock_restore_failed',
+    'settled_order_lines_immutable',
+    'order_delete_forbidden',
+    'stale_order_revision',
+    'stale_order_status',
+    'order_cancellation_in_progress',
+    'tracking_update_forbidden',
+    'tracking_fulfillment_not_settled',
+    'provider_object_already_claimed',
+  ].includes(code)) return 409;
+  if (code.endsWith('_failed')) return 500;
+  return 400;
 }
 
 function toCsv(rows) {
@@ -285,7 +329,7 @@ export async function onRequest({ request, env }) {
     const detailId = params.get('id');
     if (detailId) {
       const { data: order, error } = await sb.from('orders')
-        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at),order_provider_links(provider,object_type,provider_object_id,metadata,created_at),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,reason,metadata,created_at),order_shipments(id,split_key,generation,revision,provider_shipment_id,external_shipment_id,package_hash,status,operation,operation_state,selected_rate_id,item_allocations,error_code,updated_at,order_shipment_packages(sequence,package_code,weight_value,weight_unit,length_in,width_in,height_in,package_hash),order_shipment_rates(provider_rate_id,provider_shipment_id,shipment_revision,carrier_id,carrier_code,carrier_name,service_code,service_type,amount_minor,currency,currency_exponent,package_hash,delivery_days,estimated_delivery_at,selected,invalidated_at)),order_requests(id,type,status,reason,line_items,requested_email,resolution_note,created_at,resolved_at)')
+        .select('*,companies(name,net_terms_days,status),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),shipment_events(status,carrier,tracking_number,note,created_at),order_provider_links(id,provider,object_type,provider_object_id,metadata,created_at),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,reason,metadata,created_at),order_shipments(id,split_key,generation,revision,provider_shipment_id,external_shipment_id,package_hash,status,operation,operation_state,selected_rate_id,item_allocations,error_code,updated_at,order_shipment_packages(sequence,package_code,weight_value,weight_unit,length_in,width_in,height_in,package_hash),order_shipment_rates(provider_rate_id,provider_shipment_id,shipment_revision,carrier_id,carrier_code,carrier_name,service_code,service_type,amount_minor,currency,currency_exponent,package_hash,delivery_days,estimated_delivery_at,selected,invalidated_at)),shipstation_operation_attempts(operation_key,operation,order_shipment_id,provider_link_id,parent_provider_link_id,provider_object_id,status,error_code,provider_succeeded_at,lease_expires_at,created_at),order_requests(id,type,status,reason,line_items,requested_email,resolution_note,created_at,resolved_at),order_reversal_commands(id,type,status,request_id,retirement_reason,retired_by_email,retired_at,created_at)')
         .eq('id', detailId).single();
       if (error) return json(error.code === 'PGRST116' ? 404 : 500, { error: error.message });
       const { data: timeline } = await sb.from('audit_log')
@@ -300,6 +344,10 @@ export async function onRequest({ request, env }) {
       }
       const safeOrder = { ...order };
       delete safeOrder.shipstation_label_url;
+      safeOrder.cancellation_review = (safeOrder.order_reversal_commands || [])
+        .filter((command) => command.type === 'cancel' && command.status === 'review_required')
+        .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))[0] || null;
+      delete safeOrder.order_reversal_commands;
       return json(200, {
         order: decorateOrderLifecycle({ ...safeOrder, net_aging: netAging(order, order.companies?.net_terms_days) }),
         timeline: timeline || [],
@@ -311,7 +359,7 @@ export async function onRequest({ request, env }) {
     const isCsv = params.get('export') === 'csv';
     const { limit, offset } = parsePage(params, { defaultLimit: 100, maxLimit: 200 });
     let q = sb.from('orders')
-      .select('id,order_number,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,ship_address,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,shipstation_shipment_id,shipstation_order_shipment_id,shipstation_shipment_revision,shipstation_package_hash,shipstation_shipment_state,shipstation_label_id,shipstation_rate_id,shipstation_carrier_id,shipstation_service_code,shipstation_cost,shipstation_label_status,shipstation_error,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),order_provider_links(provider,object_type,provider_object_id,metadata),order_financial_entries(source,entry_type,provider_object_id,recognition_state),order_shipments(id,split_key,generation,revision,status,operation_state,provider_shipment_id,external_shipment_id,package_hash,item_allocations,order_shipment_packages(sequence,package_code,weight_value,weight_unit,length_in,width_in,height_in,package_hash),order_shipment_rates(provider_rate_id,provider_shipment_id,shipment_revision,carrier_id,carrier_code,carrier_name,service_code,service_type,amount_minor,currency,currency_exponent,delivery_days,estimated_delivery_at,selected,invalidated_at))', isCsv ? undefined : { count: 'exact' })
+      .select('id,order_number,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,refunded_amount,created_at,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id,qbo_intuit_tid,qbo_payment_intuit_tid,company_id,customer_email,ship_address,stripe_payment_intent,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,shipstation_shipment_id,shipstation_order_shipment_id,shipstation_shipment_revision,shipstation_package_hash,shipstation_shipment_state,shipstation_label_id,shipstation_rate_id,shipstation_carrier_id,shipstation_service_code,shipstation_cost,shipstation_label_status,shipstation_error,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,companies(name,net_terms_days),order_items(sku,product_sku,name,qty,unit_price,line_total,backordered),order_provider_links(id,provider,object_type,provider_object_id,metadata),order_financial_entries(source,entry_type,provider_object_id,recognition_state),order_shipments(id,split_key,generation,revision,status,operation_state,provider_shipment_id,external_shipment_id,package_hash,item_allocations,order_shipment_packages(sequence,package_code,weight_value,weight_unit,length_in,width_in,height_in,package_hash),order_shipment_rates(provider_rate_id,provider_shipment_id,shipment_revision,carrier_id,carrier_code,carrier_name,service_code,service_type,amount_minor,currency,currency_exponent,delivery_days,estimated_delivery_at,selected,invalidated_at)),shipstation_operation_attempts(operation_key,operation,order_shipment_id,provider_link_id,parent_provider_link_id,provider_object_id,status,error_code,provider_succeeded_at,lease_expires_at,created_at)', isCsv ? undefined : { count: 'exact' })
       .neq('status', 'cart').order('created_at', { ascending: false });
     q = isCsv ? q.limit(5000) : q.range(offset, offset + limit - 1);
     // "Needs fulfillment" is the queue the Overview counts, so the deep link from
@@ -422,51 +470,85 @@ export async function onRequest({ request, env }) {
       return json(200, { ok: true, accepted: acceptedIds.length, skipped: ids.length - acceptedIds.length });
     }
 
-    // Cancellation is a plan first, an action second. Without `confirm` this returns the
-    // exact consequences so the operator approves a specific reversal rather than a verb.
+    // Preflight persists the exact revision/labels/money/stock/accounting snapshot. Confirm
+    // accepts only that command identity; it never recomputes consequences from newer rows.
+    if (body.action === 'retire_cancellation_review') {
+      if (!staffCan(role, 'order.refund')) {
+        return json(403, { error: 'forbidden', message: 'Retiring a blocked cancellation requires finance or owner access.' });
+      }
+      if (!body.id) return json(400, { error: 'order_id_required' });
+      try {
+        const result = await retireCancellationReviewCommand({
+          sb,
+          orderId: body.id,
+          commandId: body.command_id,
+          reason: body.reason,
+          actor: user,
+        });
+        return json(200, {
+          ok: true,
+          retired: true,
+          command: result.command,
+          fresh_preflight_required: result.fresh_preflight_required,
+          message: 'Blocked cancellation retired. Start a fresh cancellation preflight against the current order and accounting state.',
+        });
+      } catch (error) {
+        const code = String(error?.code || error?.message || 'cancellation_review_retirement_failed');
+        return json(orderReversalHttpStatus(error), { error: code });
+      }
+    }
+
     if (body.action === 'cancel_order') {
       if (!staffCan(role, 'order.refund')) {
         return json(403, { error: 'forbidden', message: 'Cancelling a paid order requires finance or owner access.' });
       }
-      const { data: order, error: readErr } = await sb.from('orders')
-        .select('id,order_number,status,company_id,customer_email,payment_method,total,currency,refunded_amount,qbo_sync_status,stripe_payment_intent,tracking_status,tracking_number,shipstation_label_id,shipstation_label_status,shipstation_cost,order_items(sku,qty,unit_price,backordered)')
-        .eq('id', body.id).single();
-      if (readErr) return json(readErr.code === 'PGRST116' ? 404 : 500, { error: readErr.message });
-      const plan = planOrderCancellation(order, { reason: body.reason });
-      if (body.confirm !== true) return json(200, { ok: true, preflight: true, plan });
+      try {
+        if (body.confirm === true) {
+          const result = await confirmCancellationCommand({
+            sb,
+            orderId: body.id,
+            commandId: body.command_id,
+          });
+          await recordAudit(sb, {
+            user, action: 'order.cancel_queued', targetType: 'order', targetId: body.id,
+            detail: { command_id: result.command.id, replay: result.replay },
+          });
+          return json(202, {
+            ok: true,
+            cancelling: true,
+            replay: result.replay,
+            command: result.command,
+            message: 'Cancellation queued. Every label, refund, stock, accounting, and notification step is visible on the order timeline.',
+          });
+        }
 
-      const reason = String(body.reason || '').trim();
-      if (reason.length < 8) {
-        return json(400, { error: 'cancel_reason_required', message: 'Give a reason of at least 8 characters — it is recorded on the order and shown to the buyer.' });
+        const result = await prepareCancellationCommand({
+          sb,
+          orderId: body.id,
+          requestId: body.request_id,
+          reason: body.reason,
+          actor: user,
+        });
+        await recordAudit(sb, {
+          user, action: 'order.cancel_preflight', targetType: 'order', targetId: body.id,
+          detail: { command_id: result.command.id, request_id: result.command.request_id, plan_hash_bound: true },
+        });
+        return json(200, {
+          ok: true,
+          preflight: true,
+          replay: result.replay,
+          command: result.command,
+          plan: result.plan,
+        });
+      } catch (error) {
+        const code = String(error?.code || error?.message || 'cancellation_failed');
+        return json(orderReversalHttpStatus(error), {
+          error: code,
+          message: code === 'accounting_review_required'
+            ? 'QuickBooks receivable state needs finance review before this order can be cancelled.'
+            : undefined,
+        });
       }
-      if (plan.blockers.includes('already_cancelled')) return json(200, { ok: true, already_cancelled: true });
-      if (plan.blockers.includes('not_an_order')) return json(409, { error: 'not_an_order' });
-      // A delivered or in-transit order can still be cancelled (disputes, refusals), but
-      // only when staff acknowledge the parcel and its postage are already gone.
-      if (plan.blockers.includes('shipment_in_transit') && body.acknowledge_in_transit !== true) {
-        return json(409, { error: 'shipment_in_transit', plan });
-      }
-      const attempt = Math.max(1, Math.floor(Number(body.attempt) || 1));
-      const enqueued = await ingestProviderEvent(sb, {
-        provider: 'masest',
-        environmentOrTenant: 'production',
-        providerEventId: cancellationEventId(order.id, attempt),
-        providerEventType: 'order.cancel',
-        providerObjectId: order.id,
-        occurredAt: new Date().toISOString(),
-        metadata: { source: 'admin_orders', actor: user?.email || null },
-      }, JSON.stringify({ order_id: order.id, reason, attempt }), orderCancellationEffects({ ...plan, reason }));
-      if (enqueued?.error) return json(503, { error: 'cancellation_enqueue_failed' });
-      await recordAudit(sb, {
-        user, action: 'order.cancel', targetType: 'order', targetId: body.id,
-        detail: { reason, attempt, plan },
-      });
-      return json(202, {
-        ok: true,
-        cancelling: true,
-        plan,
-        message: 'Cancellation queued. Label void, refund, restock, and the buyer notice run in order and are visible on the order timeline.',
-      });
     }
 
     // Approve or decline a buyer request. Approval does not duplicate the cancel/return
@@ -515,41 +597,19 @@ export async function onRequest({ request, env }) {
       if (!normalized.ok) return json(400, { error: normalized.error, message: normalized.message });
       const invoiceId = optionalText(body.qbo_invoice_id, 80);
       const paymentId = optionalText(body.qbo_payment_id, 80);
-      const qboLinked = Boolean(invoiceId || paymentId);
-      const orderInsert = {
+      const orderWrite = {
         ...normalized.patch,
         qbo_invoice_id: invoiceId,
-        qbo_doc_id: invoiceId,
-        qbo_doc_type: invoiceId ? 'invoice' : null,
         qbo_payment_id: paymentId,
-        qbo_sync_status: qboLinked ? 'synced' : 'pending',
-        qbo_synced_at: qboLinked ? new Date().toISOString() : null,
       };
-      const { data: order, error } = await sb.from('orders')
-        .insert(orderInsert)
-        .select('id,order_number,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
-        .single();
-      if (error) return json(500, { error: error.message });
-      try {
-        await linkOrderProviderObject(sb, {
-          orderId: order.id, provider: 'quickbooks', objectType: 'invoice', providerObjectId: invoiceId,
-          metadata: { order_number: order.order_number },
-        });
-        await linkOrderProviderObject(sb, {
-          orderId: order.id, provider: 'quickbooks', objectType: 'payment', providerObjectId: paymentId,
-          metadata: { order_number: order.order_number },
-        });
-      } catch (linkError) {
-        await sb.from('orders').delete().eq('id', order.id).then(() => {}, () => {});
-        return json(linkError?.code === '23505' ? 409 : 500, { error: 'qbo_provider_link_failed' });
+      const { data: order, error } = await sb.rpc('create_manual_order_atomic', {
+        p_order: orderWrite,
+        p_items: normalized.items,
+      });
+      if (error) {
+        const code = manualOrderErrorCode(error, 'manual_order_create_failed');
+        return json(manualOrderHttpStatus(code), { error: code });
       }
-      const orderItems = normalized.items.map((item) => ({ ...item, order_id: order.id }));
-      const { error: itemsError } = await sb.from('order_items').insert(orderItems);
-      if (itemsError) {
-        await sb.from('orders').delete().eq('id', order.id).then(() => {}, () => {});
-        return json(500, { error: itemsError.message });
-      }
-      await decrementOrderStock(sb, normalized.items);
       await recordAudit(sb, { user, action: 'order.create', targetType: 'order', targetId: order.id, detail: { company_id: order.company_id, status: order.status, payment_method: order.payment_method, item_count: normalized.items.length } });
       return json(201, { ok: true, order });
     }
@@ -559,35 +619,26 @@ export async function onRequest({ request, env }) {
     if (body.action === 'update_order') {
       if (!staffCan(role, 'order.write')) return json(403, { error: 'forbidden' });
       const { data: before, error: beforeErr } = await sb.from('orders')
-        .select('id,company_id,customer_email,status,payment_method,order_items(sku,qty,backordered)')
+        .select('id,company_id,customer_email,status,payment_method,reversal_revision')
         .eq('id', body.id).single();
       if (beforeErr) return json(beforeErr.code === 'PGRST116' ? 404 : 500, { error: beforeErr.message });
+      if (!['cart', 'pending_payment'].includes(before.status)) {
+        return json(409, { error: 'settled_order_lines_immutable' });
+      }
       const normalized = normalizeOrderWrite(body, before.status);
       if (!normalized.ok) return json(400, { error: normalized.error, message: normalized.message });
-      const statusPlan = planOrderStatusWrite(before, normalized.patch.status);
-      if (!statusPlan.ok) return json(400, { error: statusPlan.error });
-
-      const { data: order, error } = await sb.from('orders')
-        .update(normalized.patch)
-        .eq('id', body.id)
-        .select('id,order_number,company_id,customer_email,status,payment_method,total,currency,qbo_invoice_id,qbo_doc_id,qbo_doc_type,qbo_payment_id')
-        .single();
-      if (error) return json(500, { error: error.message });
-
-      const { error: deleteItemsError } = await sb.from('order_items').delete().eq('order_id', body.id);
-      if (deleteItemsError) return json(500, { error: deleteItemsError.message });
-      const { error: insertItemsError } = await sb.from('order_items').insert(normalized.items.map((item) => ({ ...item, order_id: body.id })));
-      if (insertItemsError) return json(500, { error: insertItemsError.message });
-
-      if (order.status === 'cancelled' && before.status === 'net_open' && before.payment_method === 'net') {
-        for (const args of stockIncrements(before.order_items)) {
-          await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
-        }
+      if (normalized.patch.status !== before.status || normalized.patch.payment_method !== before.payment_method) {
+        return json(409, { error: 'use_explicit_order_action' });
       }
-      if (order.status !== before.status) {
-        const statusLabel = order.status.replace('_', ' ');
-        const recipients = await notifyCompany(sb, env, request, order.company_id, statusLabel, null, order);
-        await notifyBuyerTracking(env, request, order, statusLabel, null, recipients);
+      const { data: order, error } = await sb.rpc('update_draft_order_atomic', {
+        p_order_id: body.id,
+        p_expected_revision: before.reversal_revision,
+        p_order: normalized.patch,
+        p_items: normalized.items,
+      });
+      if (error) {
+        const code = manualOrderErrorCode(error, 'draft_order_update_failed');
+        return json(manualOrderHttpStatus(code), { error: code });
       }
       await recordAudit(sb, { user, action: 'order.update', targetType: 'order', targetId: body.id, detail: { company_id: order.company_id, status: order.status, previous_status: before.status, item_count: normalized.items.length } });
       return json(200, { ok: true, order });
@@ -596,110 +647,56 @@ export async function onRequest({ request, env }) {
     if (body.action === 'delete_order') {
       if (!staffCan(role, 'order.delete')) return json(403, { error: 'forbidden', message: 'Only owner staff can remove orders.' });
       const { data: order, error: readErr } = await sb.from('orders')
-        .select('id,company_id,customer_email,status,payment_method,total,currency')
+        .select('id,company_id,customer_email,status,payment_method,total,currency,reversal_revision')
         .eq('id', body.id).single();
       if (readErr) return json(readErr.code === 'PGRST116' ? 404 : 500, { error: readErr.message });
-      const { error } = await sb.from('orders').delete().eq('id', body.id);
-      if (error?.code === '23503') {
-        return json(409, { error: 'order_has_financial_history', message: 'Orders with provider financial entries are retained for reconciliation.' });
+      const { data: deleted, error } = await sb.rpc('delete_draft_order_atomic', {
+        p_order_id: body.id,
+        p_expected_revision: order.reversal_revision,
+      });
+      if (error) {
+        const code = manualOrderErrorCode(error, 'draft_order_delete_failed');
+        return json(manualOrderHttpStatus(code), { error: code });
       }
-      if (error) return json(500, { error: error.message });
-      await recordAudit(sb, { user, action: 'order.delete', targetType: 'order', targetId: body.id, detail: order });
+      await recordAudit(sb, { user, action: 'order.delete', targetType: 'order', targetId: body.id, detail: deleted });
       return json(200, { ok: true, deleted: true });
     }
 
     if (body.action === 'refund') {
       if (!staffCan(role, 'order.refund')) return json(403, { error: 'forbidden', message: 'Refunds require finance or owner access.' });
-      const { data: ord, error: e1 } = await sb.from('orders')
-        .select('id,order_number,company_id,customer_email,status,total,currency,refunded_amount,payment_method,stripe_payment_intent,qbo_sync_status,order_items(sku,qty,backordered)').eq('id', body.id).single();
-      if (e1) return json(500, { error: e1.message });
-      if (!ord) return json(404, { error: 'not_found' });
-      if (REFUND_BLOCKING_STATUSES.has(ord.status)) {
-        return json(400, { error: 'not_refundable', message: `Order is already ${ord.status}.` });
-      }
-      if (ord.payment_method !== 'stripe' || !ord.stripe_payment_intent) {
-        return json(400, { error: 'not_refundable', message: 'Only Stripe-paid orders can be refunded here. Cancel NET orders by setting status to cancelled.' });
-      }
-      // Three shapes: `lines` (staff pick SKUs, amount derived from the order's own
-      // prices), `amount` (partial), or neither (whole remaining balance). Line refunds
-      // are the only shape that can restock precisely, because they name the goods.
-      let lineRefund = null;
-      if (body.lines !== undefined) {
-        lineRefund = computeLineRefund({ orderItems: ord.order_items, lines: body.lines });
-        if (!lineRefund.ok) return json(400, { error: lineRefund.error });
-      }
-      const plan = computeRefund({
-        total: ord.total,
-        refundedAmount: ord.refunded_amount,
-        requestedAmount: lineRefund ? lineRefund.amount : body.amount,
-      });
-      if (!plan.ok) return json(400, { error: plan.error });
-      const secret = env.STRIPE_SECRET_KEY;
-      if (!secret) return json(500, { error: 'stripe_not_configured' });
-      const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
-      let stripeRefund;
       try {
-        // Deterministic idempotency key so a retried / double-submitted refund settles
-        // once at Stripe. Keyed on the order + its pre-refund state + this amount: an
-        // identical retry dedupes, while a distinct later partial refund still goes
-        // through (different prior refunded_amount → different key).
-        const idempotencyKey = `refund:${ord.id}:${ord.refunded_amount || 0}:${plan.amountCents}`;
-        stripeRefund = await stripe.refunds.create(
-          { payment_intent: ord.stripe_payment_intent, amount: plan.amountCents },
-          { idempotencyKey },
-        );
-      } catch (err) {
-        return json(502, { error: 'stripe_refund_failed', detail: err?.message || String(err) });
-      }
-      if (!stripeRefund?.id) return json(502, { error: 'stripe_refund_id_missing' });
-      try {
-        await linkOrderProviderObject(sb, {
-          orderId: ord.id,
-          provider: 'stripe',
-          objectType: 'refund',
-          providerObjectId: stripeRefund?.id,
-          metadata: { order_number: ord.order_number, amount: plan.amount, currency: ord.currency },
+        const result = await queueRefundCommand({
+          sb,
+          orderId: body.id,
+          requestId: body.request_id,
+          amount: body.amount,
+          lines: body.lines,
+          actor: user,
         });
-      } catch (linkError) {
-        return json(linkError?.code === '23505' ? 409 : 503, { error: 'stripe_refund_link_failed' });
+        await recordAudit(sb, {
+          user,
+          action: 'order.refund_queued',
+          targetType: 'order',
+          targetId: body.id,
+          detail: {
+            command_id: result.command.id,
+            request_id: result.command.request_id,
+            amount_minor: result.command.amount_minor,
+            replay: result.replay,
+          },
+        });
+        return json(202, {
+          ok: true,
+          refund_queued: true,
+          replay: result.replay,
+          amount: Number(result.command.amount_minor) / 100,
+          command: result.command,
+          message: 'Refund queued. Money, stock, accounting, and notification progress is visible on the order timeline.',
+        });
+      } catch (error) {
+        const code = String(error?.code || error?.message || 'refund_command_failed');
+        return json(orderReversalHttpStatus(error), { error: code });
       }
-      const update = { refunded_amount: plan.newRefundedAmount };
-      if (plan.fullyRefunded) update.status = 'refunded';
-      const { data: updated, error: e2 } = await sb.from('orders').update(update)
-        .eq('id', body.id).select('id,company_id,status,total,refunded_amount').single();
-      if (e2) return json(500, { error: e2.message });
-      // Restock what the refund actually covered: named lines when staff picked them,
-      // the whole order on a full refund. A bare partial amount maps to no specific goods,
-      // so it restocks nothing. Best-effort: never fail the refund on inventory.
-      const restockSource = lineRefund ? lineRefund.lines : plan.fullyRefunded ? ord.order_items : [];
-      for (const args of stockIncrements(restockSource)) {
-        await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
-      }
-      // Queue a reversing QBO credit memo (#22) so the books match the refund. The
-      // worker posts it and retries on failure; best-effort here — never fail the
-      // refund (the money already moved at Stripe) if the enqueue hiccups.
-      if (ord.qbo_sync_status !== 'skipped') {
-        await sb.from('qbo_refunds').insert({
-          order_id: ord.id,
-          amount: plan.amount,
-          fully_refunded: qboFullDocumentRefund({ total: ord.total, refundedAmount: ord.refunded_amount, amount: plan.amount }),
-          stripe_refund_id: stripeRefund?.id || null,
-        }).then(() => {}, () => {});
-      }
-      const label = plan.fullyRefunded ? 'refunded' : 'partially refunded';
-      const refundMsg = plan.fullyRefunded
-        ? 'Your MASEST order was refunded. The amount will return to your original payment method.'
-        : `A partial refund of $${plan.amount.toFixed(2)} was issued to your original payment method.`;
-      const refundRecipients = await notifyCompany(sb, env, request, updated?.company_id, label, refundMsg, ord);
-      // Guest orders have no company — email the buyer directly (excluded if already covered).
-      await notifyBuyerTracking(env, request, ord, label, refundMsg, refundRecipients);
-      await recordAudit(sb, {
-        user,
-        action: plan.fullyRefunded ? 'order.refund' : 'order.refund_partial',
-        targetType: 'order', targetId: body.id,
-        detail: { company_id: updated?.company_id, amount: plan.amount, refunded_amount: plan.newRefundedAmount, fully_refunded: plan.fullyRefunded },
-      });
-      return json(200, { ok: true, refunded: plan.fullyRefunded, partial: !plan.fullyRefunded, amount: plan.amount, order: updated });
     }
 
     if (body.action === 'record_qbo_invoice') {
@@ -841,11 +838,21 @@ export async function onRequest({ request, env }) {
         update.status = 'fulfilled';
       }
 
-      const { data: order, error } = await sb.from('orders').update(update)
-        .eq('id', body.id)
-        .select('id,order_number,company_id,customer_email,status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at')
-        .single();
-      if (error) return json(500, { error: error.message });
+      const { data: order, error } = await sb.rpc('update_order_tracking_guarded', {
+        p_order_id: body.id,
+        p_expected_status: current.status,
+        p_tracking_status: trackingStatus,
+        p_carrier: carrier,
+        p_tracking_number: trackingNumber,
+        p_tracking_url: trackingUrl,
+        p_estimated_delivery_at: update.estimated_delivery_at,
+        p_shipped_at: update.shipped_at,
+        p_promote_fulfilled: fulfilled,
+      });
+      if (error) {
+        const code = manualOrderErrorCode(error, 'tracking_update_failed');
+        return json(manualOrderHttpStatus(code), { error: code });
+      }
       // Append a customer-visible shipment event (history) — best-effort; never fail the update.
       await sb.from('shipment_events').insert({
         order_id: body.id, status: trackingStatus, carrier, tracking_number: trackingNumber, note,
@@ -876,36 +883,15 @@ export async function onRequest({ request, env }) {
     }
 
     if (!ORDER_STATUSES.includes(body.status)) return json(400, { error: 'invalid_status' });
-    // Money states must go through their dedicated actions: a bare status write moves no
-    // money, returns no stock, and posts no QBO reversal. 'cart' would also hide the
-    // order from the admin list (the GET filters it out) with no way back.
-    if (body.status === 'refunded') {
-      return json(400, { error: 'use_refund_action', message: 'Use the Refund control — setting the status directly would not move any money.' });
-    }
-    if (body.status === 'cart') return json(400, { error: 'invalid_status' });
     const { data: before, error: beforeErr } = await sb.from('orders')
-      .select('id,company_id,customer_email,status,payment_method,order_items(sku,qty,backordered)')
+      .select('id,order_number,company_id,customer_email,status,total,currency')
       .eq('id', body.id).single();
     if (beforeErr) return json(beforeErr.code === 'PGRST116' ? 404 : 500, { error: beforeErr.message });
-    const statusPlan = planOrderStatusWrite(before, body.status);
-    if (!statusPlan.ok) return json(400, { error: statusPlan.error });
-    const { data: order, error } = await sb.from('orders').update({ status: statusPlan.status })
-      .eq('id', body.id).select('id,order_number,company_id,customer_email,status,total,currency').single();
-    if (error) return json(500, { error: error.message });
-    // Cancelling an open NET order is the sanctioned NET-cancel path (refund action
-    // rejects NET). Its stock was decremented at placement — return it exactly once,
-    // on the net_open→cancelled edge.
-    if (body.status === 'cancelled' && before.status === 'net_open' && before.payment_method === 'net') {
-      for (const args of stockIncrements(before.order_items)) {
-        await sb.rpc('increment_variant_stock', args).then(() => {}, () => {});
-      }
-    }
-    const statusLabel = body.status.replace('_', ' ');
-    const statusRecipients = await notifyCompany(sb, env, request, order?.company_id, statusLabel, null, order);
-    // Guest orders have no company — email the buyer directly (excluded if already covered).
-    await notifyBuyerTracking(env, request, order, statusLabel, null, statusRecipients);
-    await recordAudit(sb, { user, action: 'order.set_status', targetType: 'order', targetId: body.id, detail: { company_id: order?.company_id, status: body.status, previous_status: before.status } });
-    return json(200, { ok: true, order });
+    if (body.status === before.status) return json(200, { ok: true, unchanged: true, order: before });
+    return json(409, {
+      error: 'use_explicit_order_action',
+      message: 'Use the dedicated payment, fulfillment, cancellation, or refund action for this transition.',
+    });
   }
 
   return json(405, { error: 'method_not_allowed' });

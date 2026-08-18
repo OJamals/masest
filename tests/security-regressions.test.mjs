@@ -7,8 +7,20 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { emailLayout, json } from "../functions/_lib/supabase.js";
+import { refundCommandPlan } from "../functions/_lib/order-reversal.js";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("repository keeps npm lockfile trackable and ignores common local secret files", () => {
+  const ignore = read(".gitignore");
+  assert.doesNotMatch(ignore, /^package-lock\.json\s*$/m);
+  assert.match(ignore, /^\.env\s*$/m);
+  assert.match(ignore, /^\.env\.\*\s*$/m);
+  assert.match(ignore, /^!\.env\.example\s*$/m);
+  assert.match(ignore, /^\*\.pem\s*$/m);
+  assert.match(ignore, /^\*\.key\s*$/m);
+  assert.doesNotThrow(() => JSON.parse(read("package-lock.json")));
+});
 
 test("JSON responses default to no-store while explicit cache policy wins", () => {
   assert.equal(json(401, { error: "unauthenticated" }).headers.get("cache-control"), "no-store");
@@ -54,25 +66,36 @@ test("admin notifications escape staff-controlled email text", () => {
 });
 
 test("admin refund rejects non-Stripe and already-settled orders", () => {
-  const orders = read("functions/api/admin/orders.js");
-  assert.match(orders, /REFUND_BLOCKING_STATUSES\.has\(ord\.status\)/, "blocks cancelled/refunded orders");
-  assert.match(orders, /ord\.payment_method !== 'stripe' \|\| !ord\.stripe_payment_intent/, "Stripe-paid orders only");
-  assert.match(orders, /computeRefund\(/, "amount is validated against the remaining balance");
+  const base = {
+    id: 'order-1', status: 'paid', payment_method: 'stripe', stripe_payment_intent: 'pi_1',
+    total: 100, refunded_amount: 0, currency: 'usd', reversal_revision: 0,
+    order_items: [{ sku: 'VK-1', qty: 1, unit_price: 100, backordered: false }],
+  };
+  assert.equal(refundCommandPlan({ ...base, payment_method: 'net', stripe_payment_intent: null }, {
+    requestId: 'refund:security-net',
+  }).error, 'not_refundable');
+  assert.equal(refundCommandPlan({ ...base, status: 'cancelled' }, {
+    requestId: 'refund:security-cancelled',
+  }).error, 'not_refundable');
+  assert.equal(refundCommandPlan({ ...base, refunded_amount: 100 }, {
+    requestId: 'refund:security-settled',
+  }).error, 'already_refunded');
 });
 
 test("admin refund sends Stripe a deterministic idempotency key", () => {
-  const orders = read("functions/api/admin/orders.js");
-  // Without an idempotency key a retried or concurrent double-submit double-refunds.
-  assert.match(
-    orders,
-    /const idempotencyKey = `refund:\$\{ord\.id\}:\$\{ord\.refunded_amount \|\| 0\}:\$\{plan\.amountCents\}`/,
-    "key is deterministic per refund attempt (allows distinct partials, dedupes retries)",
-  );
-  assert.match(
-    orders,
-    /refunds\.create\(\s*\{ payment_intent: ord\.stripe_payment_intent, amount: plan\.amountCents \},\s*\{ idempotencyKey \},/,
-    "the key is passed to Stripe",
-  );
+  const order = {
+    id: 'order-1', status: 'paid', payment_method: 'stripe', stripe_payment_intent: 'pi_1',
+    total: 100, refunded_amount: 0, currency: 'usd', reversal_revision: 0,
+    order_items: [{ sku: 'VK-1', qty: 1, unit_price: 100, backordered: false }],
+  };
+  const first = refundCommandPlan(order, { requestId: 'refund:security-attempt-1', amount: 25 });
+  const replay = refundCommandPlan(order, { requestId: 'refund:security-attempt-1', amount: 25 });
+  const distinct = refundCommandPlan(order, { requestId: 'refund:security-attempt-2', amount: 25 });
+  assert.equal(first.provider_idempotency_key, replay.provider_idempotency_key);
+  assert.notEqual(first.provider_idempotency_key, distinct.provider_idempotency_key);
+  const effects = read("functions/_lib/integration-effects.js");
+  assert.match(effects, /idempotencyKey = String\(command\.provider_idempotency_key/);
+  assert.match(effects, /createRefund\(env, \{ paymentIntent, amountCents, idempotencyKey \}\)/);
 });
 
 test("Stripe redirect endpoints require canonical APP_URL", () => {

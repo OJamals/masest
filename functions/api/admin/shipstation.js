@@ -14,6 +14,8 @@ import {
   listOrderShipments,
   rateOrderShipment,
   reconcileOrderLabelPurchase,
+  reconcileOrderLabelVoid,
+  reconcileOrderReturnLabel,
   reconcileOrderShipment,
   selectOrderShipmentRate,
   updateOrderShipment,
@@ -21,6 +23,29 @@ import {
 } from '../../_lib/shipstation-orders.js';
 
 const LABEL_GET_ACTIONS = new Set(['label', 'label_document', 'shipments']);
+const CONFLICT_ERRORS = new Set([
+  'order_cancellation_in_progress',
+  'shipstation_operation_reconciliation_required',
+  'shipstation_operation_reconciliation_locked',
+  'shipstation_operation_reconciliation_ambiguous',
+  'shipstation_label_reconcile_not_required',
+  'shipstation_label_reconcile_truncated',
+  'shipstation_label_reconciliation_mismatch',
+  'shipstation_label_void_reconciliation_unresolved',
+  'shipstation_return_reconcile_not_required',
+  'shipstation_return_reconcile_not_found',
+  'shipstation_return_reconcile_ambiguous',
+  'shipstation_return_reconcile_truncated',
+  'shipstation_shipment_reconciliation_not_required',
+  'shipstation_shipment_reconciliation_mismatch',
+  'shipstation_shipment_reconciliation_unresolved',
+  'shipstation_shipment_reconciliation_required',
+  'shipstation_shipment_revision_conflict',
+  'shipstation_shipment_split_exists',
+  'shipstation_shipment_operation_locked',
+  'shipstation_shipment_locked_by_label',
+  'shipstation_split_item_conservation_failed',
+]);
 
 function isLabelGet(request) {
   if (request.method !== 'GET') return false;
@@ -35,14 +60,16 @@ function noStore(response) {
 
 function errorResponse(error, cacheSafe = false) {
   const code = error?.code || 'shipstation_request_failed';
-  const status = [
-    'shipstation_shipment_revision_conflict',
-    'shipstation_shipment_split_exists',
-    'shipstation_shipment_operation_locked',
-    'shipstation_shipment_locked_by_label',
-    'shipstation_split_item_conservation_failed',
-  ]
-    .includes(code) ? 409 : error?.status >= 400 ? 502 : 400;
+  const declaredStatus = Number(error?.status);
+  const status = CONFLICT_ERRORS.has(code)
+    ? 409
+    : declaredStatus >= 400 && declaredStatus < 500
+      ? declaredStatus
+      : declaredStatus >= 500
+        ? 502
+        : code.endsWith('_failed')
+          ? 502
+        : 400;
   const response = json(status, { error: code });
   return cacheSafe ? noStore(response) : response;
 }
@@ -61,6 +88,8 @@ export function createShipStationAdminHandler(dependencies = {}) {
   const listShipmentsImpl = dependencies.listShipments || listOrderShipments;
   const downloadLabelImpl = dependencies.downloadLabel || downloadOrderLabel;
   const reconcileLabelImpl = dependencies.reconcileLabel || reconcileOrderLabelPurchase;
+  const reconcileLabelVoidImpl = dependencies.reconcileLabelVoid || reconcileOrderLabelVoid;
+  const reconcileReturnLabelImpl = dependencies.reconcileReturnLabel || reconcileOrderReturnLabel;
   const returnLabelImpl = dependencies.returnLabel || createOrderReturnLabel;
   const configureWebhookImpl = dependencies.configureWebhook || configureShipStationTrackingWebhook;
 
@@ -88,6 +117,8 @@ export function createShipStationAdminHandler(dependencies = {}) {
       listShipments: listShipmentsImpl,
       downloadLabel: downloadLabelImpl,
       reconcileLabel: reconcileLabelImpl,
+      reconcileLabelVoid: reconcileLabelVoidImpl,
+      reconcileReturnLabel: reconcileReturnLabelImpl,
       returnLabel: returnLabelImpl,
       configureWebhook: configureWebhookImpl,
     });
@@ -137,6 +168,12 @@ async function handleShipStationRequest({ request, env, user, role }, dependenci
     if (body.action === 'reconcile_label_purchase') {
       return json(200, await dependencies.reconcileLabel(env, body, { user, role }));
     }
+    if (body.action === 'reconcile_label_void') {
+      return json(200, await dependencies.reconcileLabelVoid(env, body, { user, role }));
+    }
+    if (body.action === 'reconcile_return_label') {
+      return json(200, await dependencies.reconcileReturnLabel(env, body, { user, role }));
+    }
     if (body.action === 'return_label') return json(200, await dependencies.returnLabel(env, body, { user, role }));
     if (body.action === 'configure_tracking_webhook') {
       return json(200, await dependencies.configureWebhook(env, { user, role }));
@@ -171,6 +208,8 @@ export async function onRequest({ request, env }) {
     listShipments: listOrderShipments,
     downloadLabel: downloadOrderLabel,
     reconcileLabel: reconcileOrderLabelPurchase,
+    reconcileLabelVoid: reconcileOrderLabelVoid,
+    reconcileReturnLabel: reconcileOrderReturnLabel,
     returnLabel: createOrderReturnLabel,
     configureWebhook: configureShipStationTrackingWebhook,
   });

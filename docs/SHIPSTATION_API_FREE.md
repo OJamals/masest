@@ -43,17 +43,20 @@ Apply once through Supabase SQL Editor or the normal migration runner:
 supabase/schema-shipments.sql
 supabase/schema-shipstation.sql
 supabase/schema-shipstation-shipments.sql
+supabase/schema-shipment-label-ownership.sql
 supabase/schema-provider-inbox.sql
+supabase/schema-order-reversals.sql
 ```
 
-All migrations are re-runnable. Shipment migration supplies customer-visible status history. ShipStation migrations add provider IDs/status/cost fields, variant package profiles, normalized split shipments/packages/rates, provider-event idempotency, immutable `order_financial_entries`, state constraints, and service-role-only shipment/label/tracking/void RPCs. `order_shipments.status` is provider-shipment operation state; customer-visible fulfillment remains `orders.tracking_status` plus `shipment_events`.
+All migrations are re-runnable. Shipment migration supplies customer-visible status history. ShipStation migrations add provider IDs/status/cost fields, variant package profiles, normalized split shipments/packages/rates, authoritative label-to-split ownership, expiring provider-operation attempts, provider-event idempotency, immutable `order_financial_entries`, state constraints, and service-role-only shipment/label/tracking/void RPCs. `order_shipments.status` is provider-shipment operation state; customer-visible fulfillment remains `orders.tracking_status` plus `shipment_events`.
 
-Transactional verification and rollback:
+Full deployment order, read-only verification, Quote cutover, and evidence-preserving rollback:
 
-```bash
-node tools/verify-provider-financial-ledger.mjs --verify
-tools/rollback-shipstation-financial-ledger.sh --verify
-```
+[`docs/COMMERCE_WORKFLOW_DEPLOYMENT.md`](COMMERCE_WORKFLOW_DEPLOYMENT.md)
+
+`node tools/verify-provider-financial-ledger.mjs --verify` applies schema and performs
+transactional fixture writes against the configured database. Run it only in a reviewed
+non-production verification window; it is not a read-only status check.
 
 ## Warehouse ID
 
@@ -88,6 +91,8 @@ Copy desired `warehouses[].warehouse_id` into `SHIPSTATION_WAREHOUSE_ID`. Endpoi
 11. Before carrier movement, expand **Void label / request carrier refund**, enter a specific reason, check the explicit confirmation, then click **Void label**. One atomic claim permits one provider `PUT /v2/labels/{label_id}/void` call. In-transit/delivered labels are blocked.
 12. Provider `approved: true` atomically records `label_voided`, one shipment-history event, and a pending negative postage entry. It means the carrier refund was requested—not settled. Rejected responses record `label_void_failed`; timeout/5xx records `void_reconcile_required`; neither creates refund evidence.
 13. Open order detail to inspect provider IDs, realized postage, pending carrier credit, integration effects, shipment events, and staff audit history together.
+14. If a provider response is lost, use the exact split's reconciliation action. Zero or multiple
+    provider candidates remain locked; staff must never guess a label or repeat the mutation.
 
 ## Duplicate-charge guard
 

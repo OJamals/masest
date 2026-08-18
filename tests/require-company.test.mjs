@@ -5,13 +5,16 @@ import test from 'node:test';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
-test('supabase.js defines requireCompany returning user/companyId/role/sb or an error response', () => {
+test('supabase.js derives company gates from the typed commerce snapshot', () => {
   const src = read('functions/_lib/supabase.js');
+  const context = read('functions/_lib/commerce-context.js');
   assert.match(src, /export async function requireCompany/);
-  assert.match(src, /requireCompany[\s\S]{0,400}unauthenticated/, '401 when no user');
-  assert.match(src, /requireCompany[\s\S]{0,400}select\('company_id,role'\)/, 'resolves company and role together');
-  assert.match(src, /requireCompany[\s\S]{0,400}no_company/, '403 when no company');
-  assert.match(src, /return \{ user, companyId, role: profile\.role, sb \}/, 'returns the role for mutation authorization');
+  assert.match(src, /resolveCommerceContext/);
+  assert.match(src, /error: 'unauthenticated'/, '401 when no user');
+  assert.match(src, /error: 'no_company'/, '403 when no company');
+  assert.match(src, /return \{ \.\.\.context, context \}/, 'returns the immutable context fields');
+  assert.match(context, /select\('id,company_id,role,full_name,phone'\)/, 'resolves profile and role once');
+  assert.match(context, /select\('id,name,status,price_tier,tax_exempt,stripe_customer_id'\)/, 'resolves Company commerce fields once');
 });
 
 // Every company-scoped account route uses the wrapper instead of re-deriving the company.
@@ -27,8 +30,9 @@ const ROUTES = [
 for (const path of ROUTES) {
   test(`${path} uses requireCompany`, () => {
     const src = read(path);
-    assert.match(src, /import\s*\{[^}]*requireCompany[^}]*\}\s*from\s*['"][^'"]*supabase\.js['"]/, 'must import requireCompany');
-    assert.match(src, /requireCompany\(request, env\)/, 'must call requireCompany');
+    const primitive = path.endsWith('/order.js') ? 'requireCommerceUser' : 'requireCompany';
+    assert.match(src, new RegExp(`import\\s*\\{[^}]*${primitive}[^}]*\\}\\s*from\\s*['\"][^'\"]*supabase\\.js['\"]`), `must import ${primitive}`);
+    assert.match(src, new RegExp(`${primitive}\\(request, env\\)`), `must call ${primitive}`);
     assert.doesNotMatch(src, /companyForUser\(/, 'must not re-derive the company itself');
   });
 }

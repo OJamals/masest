@@ -34,26 +34,28 @@ test('#42 refunds have a distinct refunded order status', () => {
   const admin = read('js/admin/orders.js'); // Orders consts moved in #36
   const schema = read('supabase/schema.sql');
   const migration = read('supabase/schema-refunds.sql');
+  const reversal = read('supabase/schema-order-reversals.sql');
   assert.match(api, /ORDER_STATUSES[\s\S]*'refunded'/);
-  assert.match(api, /REFUND_BLOCKING_STATUSES[\s\S]*'refunded'/);
-  assert.match(api, /update\.status\s*=\s*'refunded'/, 'refund action must mark a fully-refunded order refunded');
+  assert.match(api, /queueRefundCommand\(/, 'refund action must use the immutable reversal command');
+  assert.match(reversal, /apply_order_reversal_complete_effect[\s\S]*status = 'refunded'/, 'completion must atomically mark a fully-refunded order refunded');
   assert.match(admin, /ORDER_STATUSES[\s\S]*'refunded'/, 'admin filter/status dropdown must include refunded');
   assert.match(admin, /REFUND_BLOCKING_STATUSES[\s\S]*'refunded'/, 'admin UI should hide refund action after refund');
   assert.match(schema, /order_status[\s\S]*'refunded'/);
   assert.match(migration, /alter type order_status add value if not exists 'refunded'/i);
 });
 
-test('#43 company-scoped account routes share no-company contract and order shape', () => {
+test('#43 account routes preserve Company scope while profileless Buyers retain their own orders', () => {
   const notifications = read('functions/api/account/notifications.js');
   const orders = read('functions/api/account/orders.js');
   const order = read('functions/api/account/order.js');
-  // 403 no_company contract is now provided by the requireCompany wrapper (or inline literal).
+  // Business-only notifications keep the 403 contract. Paid Order history and reorder also
+  // support authenticated retail Buyers, scoped to their persisted Auth user id.
   const noCompanyContract = (src) => /requireCompany\(/.test(src) || /return json\(403,\s*\{\s*error:\s*'no_company'\s*\}\)/.test(src);
   assert.ok(noCompanyContract(notifications), 'notifications must enforce the no_company 403 contract');
-  assert.ok(noCompanyContract(orders), 'orders must enforce the no_company 403 contract');
-  assert.ok(noCompanyContract(order), 'order must enforce the no_company 403 contract');
-  const placedOrdersQuery = orders.slice(orders.indexOf('const ordersQuery'), orders.indexOf('const requisitionsQuery'));
-  assert.doesNotMatch(placedOrdersQuery, /\.eq\(\s*'user_id'/, 'placed orders must remain company-scoped');
+  assert.match(orders, /requireCommerceUser\(request, env\)/);
+  assert.match(order, /requireCommerceUser\(request, env\)/);
+  assert.match(orders, /companyId\s*\?\s*ordersQuery\.eq\('company_id', companyId\)\s*:\s*ordersQuery\.eq\('user_id', user\.id\)/);
+  assert.match(order, /companyId\s*\?\s*orderQuery\.eq\('company_id', companyId\)\s*:\s*orderQuery\.eq\('user_id', user\.id\)/);
   assert.match(orders, /const requisitionsQuery[\s\S]*\.eq\('user_id', user\.id\)/, 'saved requisitions must remain buyer-private');
   assert.match(orders, /order_items\(sku,product_sku,name,qty,unit_price,line_total\)/);
   assert.match(order, /order_items\(sku,product_sku,name,qty,unit_price,line_total\)/);

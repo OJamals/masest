@@ -99,7 +99,7 @@ export function createAdminSearch({ api, esc, onSelect, debounce }) {
     root.className = 'adm-search-global';
     root.innerHTML = `
       <i class="ph ph-magnifying-glass adm-search-icon" aria-hidden="true"></i>
-      <input id="admGlobalSearch" class="adm-search-input" type="search" role="combobox" autocomplete="off"
+      <input id="admGlobalSearch" name="admin_search" class="adm-search-input" type="search" role="combobox" autocomplete="off"
         aria-expanded="false" aria-controls="admSearchResults" aria-autocomplete="list"
         aria-label="Search orders, quotes, accounts, people, and products"
         placeholder="Search orders, quotes, accounts…">

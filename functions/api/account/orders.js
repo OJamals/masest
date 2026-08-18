@@ -1,14 +1,16 @@
 // Company order history and buyer-owned saved requisitions.
 import {
+  CommerceContextError,
   json,
   requireCompany,
-  tierForRequest,
+  requireCommerceUser,
   tierPriceMap,
 } from '../../_lib/supabase.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { decorateOrderLifecycle } from '../../_lib/order-lifecycle.js';
 import { normalizeCartQuantities } from '../../_lib/order-shape.js';
 import {
+  expireQuoteOfferIfDue,
   findOpenRequisitionQuote,
   isOpenRequisitionQuoteConflict,
 } from '../../_lib/quote-order.js';
@@ -39,9 +41,22 @@ async function requestRequisitionQuote(sb, companyId, user, body) {
   if (!requisition) return json(404, { error: 'not_found' });
   if (!requisition.order_items?.length) return json(409, { error: 'empty_requisition' });
 
-  const { quote: existing, error: existingError } = await findOpenRequisitionQuote(sb, requisition.id);
+  const {
+    quote: existing,
+    staleQuote,
+    error: existingError,
+  } = await findOpenRequisitionQuote(sb, requisition.id);
   if (existingError) return json(500, { error: 'server_error' });
   if (existing) return json(200, { quote: existing, existing: true }, { 'cache-control': 'no-store' });
+  if (staleQuote) {
+    const expired = await expireQuoteOfferIfDue(sb, staleQuote);
+    if (expired.error) return json(500, { error: 'server_error' });
+    // A revision can win the expiry CAS. Re-read before insert so the winner is returned
+    // instead of turning the partial-index conflict into a generic 500.
+    const { quote: current, error: currentError } = await findOpenRequisitionQuote(sb, requisition.id);
+    if (currentError) return json(500, { error: 'server_error' });
+    if (current) return json(200, { quote: current, existing: true }, { 'cache-control': 'no-store' });
+  }
 
   const { data: company, error: companyError } = await sb.from('companies')
     .select('name')
@@ -76,15 +91,22 @@ async function requestRequisitionQuote(sb, companyId, user, body) {
   return json(201, { quote }, { 'cache-control': 'no-store' });
 }
 
-async function priceRequisition(sb, request, env, qtyBySku) {
+async function priceRequisition(sb, tier, qtyBySku) {
   const skus = Object.keys(qtyBySku);
   const { data, error } = await sb.from('product_variants')
     .select('vsku,product_sku,label,price,currency,active,products(name,mode,active)')
     .in('vsku', skus);
   if (error) return { error: 'server_error' };
   const bySku = new Map((data || []).map((variant) => [variant.vsku, variant]));
-  const { tier } = await tierForRequest(request, env);
-  const prices = tier === 'retail' ? new Map() : await tierPriceMap(sb, tier);
+  let prices;
+  try {
+    prices = tier === 'retail' ? new Map() : await tierPriceMap(sb, tier);
+  } catch (error) {
+    if (error instanceof CommerceContextError || error?.code === 'commerce_context_unavailable') {
+      return { error: 'commerce_context_unavailable', retryable: true };
+    }
+    return { error: 'server_error' };
+  }
   const lines = [];
   for (const sku of skus) {
     const variant = bySku.get(sku);
@@ -110,34 +132,39 @@ async function priceRequisition(sb, request, env, qtyBySku) {
 }
 
 export async function onRequestGet({ request, env }) {
-  const ctx = await requireCompany(request, env);
+  const ctx = await requireCommerceUser(request, env);
   if (ctx.error) return ctx.error;
   const { companyId, user, sb } = ctx;
 
   const searchParams = new URL(request.url).searchParams;
   const { limit, offset } = parsePage(searchParams, { defaultLimit: 25, maxLimit: 100 });
   const wantsSummary = searchParams.get('summary') === '1';
-  const ordersQuery = sb.from('orders')
+  let ordersQuery = sb.from('orders')
     .select('id,order_number,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,created_at,qbo_invoice_id,qbo_sync_status,tracking_status,carrier,tracking_number,tracking_url,estimated_delivery_at,shipped_at,updated_at,order_items(sku,product_sku,name,qty,unit_price,line_total),shipment_events(status,note,created_at),order_requests(id,type,status,created_at)', { count: 'exact' })
-    .eq('company_id', companyId)
     .neq('status', 'cart')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
+  ordersQuery = companyId ? ordersQuery.eq('company_id', companyId) : ordersQuery.eq('user_id', user.id);
   const activeQuery = wantsSummary
-    ? sb.from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('company_id', companyId)
-      .not('status', 'in', '(cart,cancelled,refunded)')
-      .or('tracking_status.is.null,tracking_status.neq.delivered,status.not.in.(paid,net_paid,fulfilled)')
+    ? (() => {
+      let query = sb.from('orders')
+        .select('id', { count: 'exact', head: true })
+        .not('status', 'in', '(cart,cancelled,refunded)')
+        .or('tracking_status.is.null,tracking_status.neq.delivered,status.not.in.(paid,net_paid,fulfilled)');
+      query = companyId ? query.eq('company_id', companyId) : query.eq('user_id', user.id);
+      return query;
+    })()
     : Promise.resolve({ count: 0, error: null });
-  const requisitionsQuery = sb.from('orders')
-    .select('id,requisition_name,subtotal,total,currency,created_at,order_items(sku,product_sku,name,qty,unit_price,line_total)')
-    .eq('company_id', companyId)
-    .eq('user_id', user.id)
-    .eq('status', 'cart')
-    .not('requisition_name', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(25);
+  const requisitionsQuery = companyId
+    ? sb.from('orders')
+      .select('id,requisition_name,subtotal,total,currency,created_at,order_items(sku,product_sku,name,qty,unit_price,line_total)')
+      .eq('company_id', companyId)
+      .eq('user_id', user.id)
+      .eq('status', 'cart')
+      .not('requisition_name', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(25)
+    : Promise.resolve({ data: [], error: null });
   const [
     { data, error, count },
     { count: activeTotal, error: summaryError },
@@ -156,7 +183,7 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   const ctx = await requireCompany(request, env);
   if (ctx.error) return ctx.error;
-  const { companyId, user, sb } = ctx;
+  const { companyId, user, sb, tier } = ctx;
   let body;
   try {
     body = await readBoundedJson(request, REQUISITION_BODY_MAX_BYTES);
@@ -174,8 +201,12 @@ export async function onRequestPost({ request, env }) {
   const qtyBySku = normalizeCartQuantities(body.cart);
   if (!qtyBySku || !Object.keys(qtyBySku).length) return json(400, { error: 'invalid_requisition_cart' });
 
-  const priced = await priceRequisition(sb, request, env, qtyBySku);
-  if (priced.error) return json(priced.error === 'server_error' ? 500 : 409, priced);
+  const priced = await priceRequisition(sb, tier, qtyBySku);
+  if (priced.error) {
+    const status = priced.error === 'commerce_context_unavailable' ? 503
+      : priced.error === 'server_error' ? 500 : 409;
+    return json(status, priced);
+  }
   const subtotal = priced.lines.reduce((sum, line) => sum + line.line_total, 0);
   const currency = priced.lines[0]?.currency || 'usd';
   const items = priced.lines.map(({ currency: _currency, ...line }) => line);

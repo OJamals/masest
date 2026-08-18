@@ -8,7 +8,12 @@ function quoteRequest(body) {
   return new Request('https://masest.test/api/quote', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'cf-connecting-ip': '192.0.2.20' },
-    body: JSON.stringify({ name: 'Buyer', email: 'buyer@example.com', ...body }),
+    body: JSON.stringify({
+      name: 'Buyer',
+      email: 'buyer@example.com',
+      submission_id: '11111111-1111-4111-8111-111111111111',
+      ...body,
+    }),
   });
 }
 
@@ -18,15 +23,11 @@ test('quote task economics and operating boundaries are normalized, persisted, a
   const handler = createQuoteHandler({
     rateLimit: async () => ({ ok: true }),
     verifyTurnstile: async () => ({ status: 'unconfigured' }),
-    adminClient: () => ({
-      from: (table) => ({
-        insert: async (row) => {
-          assert.equal(table, 'quotes');
-          inserts.push(row);
-          return { error: null };
-        },
-      }),
-    }),
+    adminClient: () => ({}),
+    saveIntake: async (_sb, { row }) => {
+      inserts.push(row);
+      return { quoteId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', duplicate: false };
+    },
     sendEmail: async (_env, message) => {
       emails.push(message);
       return { ok: true };
@@ -53,7 +54,7 @@ test('quote task economics and operating boundaries are normalized, persisted, a
     env: { SALES_EMAIL: 'sales@example.com' },
   });
 
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 201);
   assert.equal(inserts.length, 1);
   assert.equal(inserts[0].payload.current_chemical, 'Existing alkaline cleaner');
   assert.equal(inserts[0].payload.current_dilution, '1:20');
@@ -100,14 +101,11 @@ test('legacy quote payloads remain unchanged and blank task details are removed'
   const handler = createQuoteHandler({
     rateLimit: async () => ({ ok: true }),
     verifyTurnstile: async () => ({ status: 'unconfigured' }),
-    adminClient: () => ({
-      from: () => ({
-        insert: async (row) => {
-          inserted = row;
-          return { error: null };
-        },
-      }),
-    }),
+    adminClient: () => ({}),
+    saveIntake: async (_sb, { row }) => {
+      inserted = row;
+      return { quoteId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', duplicate: false };
+    },
     sendEmail: async () => ({ ok: true }),
     subscribeLeadByIndustry: async () => {},
   });
@@ -124,7 +122,7 @@ test('legacy quote payloads remain unchanged and blank task details are removed'
     env: {},
   });
 
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 201);
   assert.equal(inserted.payload.product, 'VertKleen CR');
   assert.equal(inserted.payload.industry, 'Data Centers');
   assert.equal(inserted.payload.message, 'Existing request');
@@ -140,14 +138,11 @@ test('every task-detail field is independently bounded at the API boundary', asy
   const handler = createQuoteHandler({
     rateLimit: async () => ({ ok: true }),
     verifyTurnstile: async () => ({ status: 'unconfigured' }),
-    adminClient: () => ({
-      from: () => ({
-        insert: async (row) => {
-          inserted = row;
-          return { error: null };
-        },
-      }),
-    }),
+    adminClient: () => ({}),
+    saveIntake: async (_sb, { row }) => {
+      inserted = row;
+      return { quoteId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', duplicate: false };
+    },
     sendEmail: async () => ({ ok: true }),
     subscribeLeadByIndustry: async () => {},
   });
@@ -160,7 +155,7 @@ test('every task-detail field is independently bounded at the API boundary', asy
     env: {},
   });
 
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 201);
   for (const [key, limit] of Object.entries(limits)) {
     assert.equal(inserted.payload[key].length, limit, `${key} limit`);
     assert.match(inserted.payload[key], new RegExp(`^${key}`), `${key} value`);

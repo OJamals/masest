@@ -1,3 +1,5 @@
+import { ProviderTimeoutError, fetchWithDeadline } from './provider-fetch.js';
+
 const ENDPOINT = 'https://addressvalidation.googleapis.com/v1:validateAddress';
 const DELIVERABLE_GRANULARITY = new Set(['PREMISE', 'SUB_PREMISE']);
 
@@ -65,8 +67,9 @@ export async function validateGoogleAddress(value, env = {}, dependencies = {}) 
   let referer = 'https://masest.co/';
   try { referer = `${new URL(env.APP_URL || referer).origin}/`; } catch { /* use canonical production origin */ }
   let response;
+  let payload;
   try {
-    response = await fetchImpl(`${ENDPOINT}?key=${encodeURIComponent(key)}`, {
+    ({ response, payload } = await fetchWithDeadline(fetchImpl, `${ENDPOINT}?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Referer: referer },
       body: JSON.stringify({
@@ -79,17 +82,21 @@ export async function validateGoogleAddress(value, env = {}, dependencies = {}) 
         },
         enableUspsCass: true,
       }),
-    });
-  } catch {
+    }, {
+      timeoutMs: dependencies.timeoutMs || 10_000,
+      timeoutCode: 'address_validation_timeout',
+      consumeResponse: async (providerResponse) => ({
+        response: providerResponse,
+        payload: await providerResponse.json(),
+      }),
+    }));
+  } catch (error) {
+    if (error instanceof ProviderTimeoutError) {
+      throw new AddressValidationError('address_validation_timeout', 503);
+    }
     throw new AddressValidationError('address_validation_unavailable', 503);
   }
   if (!response.ok) throw new AddressValidationError('address_validation_unavailable', 503);
-  let payload;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new AddressValidationError('address_validation_unavailable', 503);
-  }
   const verdict = payload?.result?.verdict || {};
   const nextAction = verdict.possibleNextAction;
   if (verdict.addressComplete !== true

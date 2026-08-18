@@ -60,7 +60,7 @@ function injectStyle() {
   .acct-notif-dot { position:absolute; top:-4px; right:-4px; min-width:15px; height:15px; padding:0 3px; border-radius:999px; background:var(--status-danger-ink,#b42318); color:#fff; font-size:.58rem; font-weight:800; display:grid; place-items:center; line-height:1; box-shadow:0 0 0 2px var(--surface,#fff); }
   .nav.over-dark .acct-notif-dot { box-shadow:0 0 0 2px #0b0d12; }
   .acct-name { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .acct-dd-menu { position:fixed; left:8px; top:56px; width:min(236px, calc(100vw - 16px)); max-width:calc(100vw - 16px); max-height:calc(100vh - 16px); overflow:auto; background:var(--surface,#fff);
+  .acct-dd-menu { position:absolute; inset-inline-end:0; left:auto; top:calc(100% + 10px); width:min(236px, calc(100vw - 16px)); max-width:calc(100vw - 16px); max-height:calc(100dvh - 88px); overflow:auto; overscroll-behavior:contain; background:var(--surface,#fff);
     border:1px solid var(--line,#e4e6e9); border-radius:var(--r-card,16px); box-shadow:0 18px 40px -16px rgba(0,0,0,.28); padding:8px; z-index:120; }
   .acct-menu-section { padding:4px 0; }
   .acct-menu-section + .acct-menu-section { border-top:1px solid var(--line,#e4e6e9); margin-top:4px; padding-top:8px; }
@@ -87,20 +87,6 @@ function injectStyle() {
   .nav-cart .cart-count[hidden] { display:none; }
   @media (max-width:860px){ .acct-name{ display:none; } }`;
   document.head.appendChild(s);
-}
-
-function positionAccountMenu(dd) {
-  if (!dd?.open) return;
-  const menu = dd.querySelector('.acct-dd-menu');
-  const summary = dd.querySelector('summary');
-  if (!menu || !summary) return;
-  const rect = summary.getBoundingClientRect();
-  const menuWidth = Math.min(menu.offsetWidth || 236, window.innerWidth - 16);
-  const menuHeight = Math.min(menu.offsetHeight || 0, window.innerHeight - 16);
-  const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
-  const top = Math.max(8, Math.min(rect.bottom + 10, window.innerHeight - menuHeight - 8));
-  menu.style.left = `${left}px`;
-  menu.style.top = `${top}px`;
 }
 
 export async function initAccountNav({
@@ -226,15 +212,11 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
   // Close the dropdown on outside click / Escape.
   const dd = mount.querySelector('details.acct-dd');
   if (dd) {
-    dd.addEventListener('toggle', () => { if (dd.open) requestAnimationFrame(() => positionAccountMenu(dd)); });
     // Document/window listeners are bound ONCE and look up the live dropdown, so
     // auth-change re-renders don't accumulate handlers on detached nodes.
     if (!document.documentElement.dataset.acctDdBound) {
       document.documentElement.dataset.acctDdBound = '1';
       const liveDd = () => document.querySelector('.nav-account details.acct-dd');
-      const syncLive = () => { const d = liveDd(); if (d?.open) requestAnimationFrame(() => positionAccountMenu(d)); };
-      window.addEventListener('resize', syncLive);
-      window.addEventListener('scroll', syncLive, { passive: true, capture: true });
       document.addEventListener('click', (e) => { const d = liveDd(); if (d?.open && !d.closest('.nav-account').contains(e.target)) d.open = false; });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const d = liveDd(); if (d) d.open = false; } });
     }

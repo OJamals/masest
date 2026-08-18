@@ -144,11 +144,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const claimStatus = String(document.claim_status || '').replaceAll('_', ' ');
     const controls = pending
       ? `<div class="admin-order-actions" data-capability-scope="content.review">
-          <select class="adm-select admin-input-sm" data-document-request-decision="${esc(request.id)}" aria-label="Decision for ${esc(document.title || request.document_id)}">
+          <select class="adm-select admin-input-sm" name="document_decision" data-document-request-decision="${esc(request.id)}" aria-label="Decision for ${esc(document.title || request.document_id)}">
             <option value="approved">Approve</option>
             <option value="denied">Deny</option>
           </select>
-          <input class="adm-input admin-input-md" data-document-request-note="${esc(request.id)}" maxlength="500" placeholder="Decision note (optional)" aria-label="Decision note">
+          <input class="adm-input admin-input-md" name="document_decision_note" autocomplete="off" data-document-request-note="${esc(request.id)}" maxlength="500" placeholder="Decision note (optional)…" aria-label="Decision note">
           <button class="btn btn-primary btn-sm" type="button" data-document-request-apply="${esc(request.id)}" data-capability="content.review">Apply decision</button>
         </div>`
       : `<p class="muted admin-inline-note">${request.decision_note ? esc(request.decision_note) : 'No decision note.'}${reviewed}</p>`;
@@ -223,15 +223,15 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
 
   function businessFormFields(company = {}) {
     return `
-      <label class="wide">Business name <input class="adm-input" name="name" required value="${esc(company.name || '')}"></label>
+      <label class="wide">Business name <input class="adm-input" name="name" autocomplete="organization" required value="${esc(company.name || '')}"></label>
       <label>Status <select class="adm-select" name="status">${optionList(COMPANY_STATUSES, company.status || 'pending')}</select></label>
       <label>Price tier <select class="adm-select" name="price_tier">${optionList(PRICE_TIERS, company.price_tier || 'retail')}</select></label>
       <label>NET days <input class="adm-input" name="net_terms_days" type="number" min="0" value="${esc(company.net_terms_days || 0)}"></label>
       <label>Credit limit <input class="adm-input" name="credit_limit" type="number" min="0" step="0.01" value="${esc(company.credit_limit || 0)}"></label>
-      <label>Business email <input class="adm-input" name="business_email" type="email" value="${esc(company.business_email || '')}"></label>
-      <label>Phone <input class="adm-input" name="business_phone" value="${esc(company.business_phone || '')}"></label>
-      <label class="wide">Legal name <input class="adm-input" name="legal_name" value="${esc(company.legal_name || '')}"></label>
-      <label class="wide">Website <input class="adm-input" name="website" type="url" value="${esc(company.website || '')}"></label>
+      <label>Business email <input class="adm-input" name="business_email" type="email" autocomplete="email" spellcheck="false" value="${esc(company.business_email || '')}"></label>
+      <label>Phone <input class="adm-input" name="business_phone" type="tel" autocomplete="tel" value="${esc(company.business_phone || '')}"></label>
+      <label class="wide">Legal name <input class="adm-input" name="legal_name" autocomplete="organization" value="${esc(company.legal_name || '')}"></label>
+      <label class="wide">Website <input class="adm-input" name="website" type="url" autocomplete="url" spellcheck="false" value="${esc(company.website || '')}"></label>
       <label class="full" style="display:flex;align-items:center;gap:8px;flex-direction:row">
         <input type="checkbox" name="tax_exempt" value="1" style="width:auto"${company.tax_exempt ? ' checked' : ''}> <span>Tax exempt</span>
       </label>`;
@@ -317,10 +317,10 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <div class="company-add-user" style="margin-top:12px">
         <h4 style="margin:0 0 6px">Add a user to this company</h4>
         <div class="adm-inline-actions">
-          <input class="adm-input" id="cuEmail" type="email" placeholder="email@company.com" aria-label="New user email">
-          <input class="adm-input" id="cuPassword" type="text" placeholder="temp password (min 8)" aria-label="Temporary password">
-          <input class="adm-input" id="cuName" type="text" placeholder="Full name (optional)" aria-label="Full name">
-          <select class="adm-select adm-select-sm" id="cuRole" aria-label="Role">${memberRoleOptions('buyer')}</select>
+          <input class="adm-input" id="cuEmail" name="new_user_email" type="email" autocomplete="email" spellcheck="false" placeholder="email@company.com…" aria-label="New user email">
+          <input class="adm-input" id="cuPassword" name="new_user_password" type="password" autocomplete="new-password" placeholder="Temporary password (min 8)…" aria-label="Temporary password">
+          <input class="adm-input" id="cuName" name="new_user_name" type="text" autocomplete="name" placeholder="Full name (optional)…" aria-label="Full name">
+          <select class="adm-select adm-select-sm" id="cuRole" name="new_user_role" aria-label="Role">${memberRoleOptions('buyer')}</select>
           <button class="btn btn-secondary btn-sm" type="button" data-member-add data-company-id="${esc(company.id)}" data-capability="user.manage"><i class="ph ph-user-plus" aria-hidden="true"></i> Create user</button>
         </div>
         <p class="muted" style="margin-top:4px;font-size:.82rem">Creates a Supabase login attached to this company. Share the temp password or have them reset it.</p>
@@ -343,11 +343,11 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   function addressFormFields(a = {}) {
     return `
       <label>Type <select class="adm-select" name="type">${ADDR_TYPES.map(([v, l]) => `<option value="${v}"${(a.type || 'ship') === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label class="wide">Line 1 <input class="adm-input" name="line1" required value="${esc(a.line1 || '')}"></label>
-      <label class="wide">Line 2 <input class="adm-input" name="line2" value="${esc(a.line2 || '')}"></label>
-      <label>City <input class="adm-input" name="city" required value="${esc(a.city || '')}"></label>
-      <label>State <input class="adm-input" name="state" maxlength="2" required placeholder="TX" value="${esc(a.state || '')}"></label>
-      <label>Zip <input class="adm-input" name="zip" required value="${esc(a.zip || '')}"></label>
+      <label class="wide">Line 1 <input class="adm-input" name="line1" autocomplete="address-line1" required value="${esc(a.line1 || '')}"></label>
+      <label class="wide">Line 2 <input class="adm-input" name="line2" autocomplete="address-line2" value="${esc(a.line2 || '')}"></label>
+      <label>City <input class="adm-input" name="city" autocomplete="address-level2" required value="${esc(a.city || '')}"></label>
+      <label>State <input class="adm-input" name="state" autocomplete="address-level1" maxlength="2" required placeholder="TX…" value="${esc(a.state || '')}"></label>
+      <label>Zip <input class="adm-input" name="zip" autocomplete="postal-code" required value="${esc(a.zip || '')}"></label>
       <label class="full" style="display:flex;align-items:center;gap:8px;flex-direction:row">
         <input type="checkbox" name="is_default" value="1" style="width:auto"${a.is_default ? ' checked' : ''}> <span>Set as default</span>
       </label>`;
@@ -359,7 +359,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <span><b>${esc(a.type === 'bill' ? 'Billing' : 'Shipping')}</b> ${esc(a.line1)}${a.line2 ? ', ' + esc(a.line2) : ''}, ${esc(a.city)}, ${esc(a.state)} ${esc(a.zip)}${a.is_default ? ' <span class="badge badge-warning">default</span>' : ''}</span>
         <span>
           <button class="btn btn-ghost btn-sm" type="button" data-addr-edit="${esc(a.id)}" data-capability="user.manage">Edit</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-addr-delete="${esc(a.id)}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
+          <button class="btn btn-ghost btn-sm" type="button" data-addr-delete="${esc(a.id)}" aria-label="Delete address" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
         </span>
       </div>`).join('') : '<p class="muted">No addresses on file.</p>';
     return `<div class="company-addresses"><h3>Addresses</h3>${rows}
@@ -384,7 +384,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <div class="dash-row">
         <span>${esc(String(o.id).slice(0, 8))} &middot; ${esc(date(o.created_at))} &middot; ${esc(money(o.total, o.currency))}</span>
         <span>
-          <select class="adm-select adm-select-sm" data-mo-status="${esc(o.id)}" data-capability="order.write">
+          <select class="adm-select adm-select-sm" name="order_status" data-mo-status="${esc(o.id)}" data-capability="order.write">
             ${ORDER_STATUSES.filter((s) => s !== 'refunded' || o.status === 'refunded')
               .map((s) => `<option value="${s}"${s === o.status ? ' selected' : ''}>${s.replaceAll('_', ' ')}</option>`).join('')}
           </select>
@@ -664,7 +664,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
           <button class="btn btn-ghost btn-sm" type="button" data-company-detail-tab="orders">Orders</button>
           <button class="btn btn-ghost btn-sm" type="button" data-company-view-as="${esc(company.id || id)}" data-capability="company.view_as">View as customer</button>
         </div>
-        <input class="adm-input" id="rejectReason" type="text" placeholder="Rejection reason (shown to the customer)" data-capability="company.credit" style="width:100%;margin:8px 0 4px">
+        <input class="adm-input" id="rejectReason" name="rejection_reason" type="text" autocomplete="off" placeholder="Rejection reason (shown to the customer)…" data-capability="company.credit" style="width:100%;margin:8px 0 4px">
         ${bizDossier(company)}
         ${renderCompanyMembers(company, detail.members || [])}
         ${renderCompanyInvites(company, detail.invites || [])}
@@ -732,7 +732,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       return;
     }
     box.innerHTML = `<div class="adm-tools adm-tools-flush company-bulk-tools">
-      <label class="admin-select-all"><input type="checkbox" id="coAll" aria-label="Select all pending accounts" data-capability="company.credit"> Select pending</label>
+      <label class="admin-select-all"><input type="checkbox" id="coAll" name="select_all_companies" aria-label="Select all pending accounts" data-capability="company.credit"> Select pending</label>
       <button class="btn btn-ghost btn-sm" id="bulkApprove" type="button" data-capability="company.credit">Approve pending selected</button>
     </div>
     <div class="company-admin-list">${companies.map((company) => {
@@ -741,15 +741,15 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       const members = (company.profiles || []).map((p) => p.full_name || p.role).join(', ');
       return `<article class="company-admin-card">
         <div class="company-admin-head">
-          <label class="company-admin-check"><input type="checkbox" class="co-check" value="${id}"${pending ? '' : ' disabled'}><span>${pending ? 'Select' : esc(String(company.status || 'not pending').replaceAll('_', ' '))}</span></label>
+          <label class="company-admin-check"><input type="checkbox" class="co-check" name="selected_company" value="${id}" aria-label="Select ${esc(company.name || 'company')}"${pending ? '' : ' disabled'}><span>${pending ? 'Select' : esc(String(company.status || 'not pending').replaceAll('_', ' '))}</span></label>
           <button class="link-name" data-open-company="${id}" type="button">${esc(company.name)}</button>
           ${statusBadge(company.status)}
         </div>
         <div class="company-admin-fields">
           <div><span>Setup</span>${setupProgress(company)}</div>
-          <label><span>NET days</span><input class="adm-input" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${id}" data-capability="company.credit"></label>
-          <label><span>Credit</span><input class="adm-input" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${id}" data-capability="company.credit"></label>
-          <label><span>Tier</span><select class="adm-select" data-tier="${id}" data-capability="company.credit">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></label>
+          <label><span>NET days</span><input class="adm-input" name="net_terms_days" type="number" min="0" value="${esc(company.net_terms_days || 0)}" data-net="${id}" data-capability="company.credit"></label>
+          <label><span>Credit</span><input class="adm-input" name="credit_limit" type="number" min="0" value="${esc(company.credit_limit || 0)}" data-credit="${id}" data-capability="company.credit"></label>
+          <label><span>Tier</span><select class="adm-select" name="price_tier" data-tier="${id}" data-capability="company.credit">${['retail', 'hvac', 'wholesale'].map((tier) => `<option value="${tier}"${(company.price_tier || 'retail') === tier ? ' selected' : ''}>${tier}</option>`).join('')}</select></label>
           <div><span>Members</span><b>${esc(members || '-')}</b></div>
         </div>
         <div class="company-admin-actions">
@@ -904,8 +904,8 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         <small class="muted" style="display:block">${esc(user.full_name || user.phone || user.id)}</small></td>
       <td>
         <div class="account-role-controls">
-          <label><span class="sr-only">Company role</span><select class="adm-select adm-select-sm" data-au-role="${esc(user.id)}" data-capability="user.role">${memberRoleOptions(user.role)}</select></label>
-          <label><span class="sr-only">Admin access</span><select class="adm-select adm-select-sm" data-au-staff-role="${esc(user.id)}" data-capability="user.role">${staffRoleOptions(user)}</select></label>
+          <label><span class="sr-only">Company role</span><select class="adm-select adm-select-sm" name="company_role" data-au-role="${esc(user.id)}" data-capability="user.role">${memberRoleOptions(user.role)}</select></label>
+          <label><span class="sr-only">Admin access</span><select class="adm-select adm-select-sm" name="staff_role" data-au-staff-role="${esc(user.id)}" data-capability="user.role">${staffRoleOptions(user)}</select></label>
         </div>
       </td>
       <td>${business}</td>
@@ -913,7 +913,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       <td>${user.last_sign_in_at ? esc(date(user.last_sign_in_at)) : 'never'}</td>
       <td class="adm-inline-actions">
         <button class="btn btn-ghost btn-sm" type="button" data-au-save="${esc(user.id)}" data-capability="user.role">Save roles</button>
-        <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
+        <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}" aria-label="Delete ${esc(user.email || user.full_name || 'user')}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i></button>
       </td>
     </tr>`;
   }
@@ -961,7 +961,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       box.innerHTML = `<div class="account-console">
         <div data-account-metrics>${renderAccountMetrics()}</div>
         <div class="adm-tools">
-          <input id="auSearch" class="adm-search" type="search" placeholder="Search loaded users, businesses, roles" aria-label="Search loaded users">
+          <input id="auSearch" name="account_search" class="adm-search" type="search" autocomplete="off" placeholder="Search loaded users, businesses, roles…" aria-label="Search loaded users">
           <button class="btn btn-primary btn-sm" type="button" data-au-new data-capability="user.manage"><i class="ph ph-user-plus" aria-hidden="true"></i> New user</button>
           <button class="btn btn-secondary btn-sm" type="button" data-business-new="root" data-capability="company.credit"><i class="ph ph-buildings" aria-hidden="true"></i> New business</button>
           <span class="adm-status" id="auStatus" role="status" aria-live="polite"></span>
@@ -1007,7 +1007,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
   function userFormFields(user = {}) {
     return `
       <label class="wide">Email <input class="adm-input" name="email" type="email" autocomplete="off" spellcheck="false" required value="${esc(user.email || '')}"></label>
-      ${user.id ? '' : '<label>Password <input class="adm-input" name="password" type="text" autocomplete="new-password" minlength="8" required placeholder="min 8 chars"></label>'}
+      ${user.id ? '' : '<label>Password <input class="adm-input" name="password" type="password" autocomplete="new-password" minlength="8" required placeholder="Min 8 chars…"></label>'}
       <label>Full name <input class="adm-input" name="full_name" type="text" autocomplete="off" value="${esc(user.full_name || '')}"></label>
       <label>Phone <input class="adm-input" name="phone" type="text" autocomplete="off" value="${esc(user.phone || '')}"></label>
       <label>Company role <select class="adm-select" name="role">${memberRoleOptions(user.role)}</select></label>

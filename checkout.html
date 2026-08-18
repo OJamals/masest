@@ -53,7 +53,7 @@
         <div class="checkout-contact-grid checkout-shipping-grid">
           <div class="field"><label for="firstName">First name</label><input id="firstName" name="firstName" maxlength="60" autocomplete="shipping given-name" required></div>
           <div class="field"><label for="lastName">Last name</label><input id="lastName" name="lastName" maxlength="60" autocomplete="shipping family-name" required></div>
-          <div class="field"><label for="checkoutEmail">Email</label><input id="checkoutEmail" name="email" type="email" autocomplete="shipping email" required></div>
+          <div class="field"><label for="checkoutEmail">Email</label><input id="checkoutEmail" name="email" type="email" autocomplete="shipping email" spellcheck="false" required></div>
           <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" inputmode="tel" maxlength="40" autocomplete="shipping tel" aria-describedby="phoneHint" required><small id="phoneHint" class="field-hint">Carriers require it for freight delivery contact.</small></div>
           <div class="field checkout-business-name"><label for="businessName">Business name <span class="optional">Optional</span></label><input id="businessName" name="businessName" autocomplete="shipping organization"></div>
         </div>
@@ -67,7 +67,7 @@
         <div id="shippingAddressControl" class="checkout-address-control">
           <label id="shippingAddressLabel" for="shippingAddress1">Street address</label>
           <div id="shippingAutocomplete" class="address-autocomplete" hidden></div>
-          <input id="shippingAddress1" name="shippingAddress1" autocomplete="shipping address-line1" placeholder="Street address" required hidden>
+          <input id="shippingAddress1" name="shippingAddress1" autocomplete="shipping address-line1" placeholder="Street address…" required hidden>
         </div>
         <button id="shippingManualToggle" class="checkout-text-action" type="button" aria-expanded="false" aria-controls="shippingAddressDetails">Enter address manually</button>
         <button id="shippingSuiteToggle" class="checkout-text-action" type="button" aria-expanded="false" aria-controls="shippingAddress2Field"><i class="ph ph-buildings" aria-hidden="true"></i> Add apartment or suite</button>
@@ -104,7 +104,7 @@
         <div id="billingAddressControl" class="checkout-address-control">
           <label id="billingAddressLabel" for="billingAddress1">Address</label>
           <div id="billingAutocomplete" class="address-autocomplete" hidden></div>
-          <input id="billingAddress1" name="billingAddress1" autocomplete="billing address-line1" placeholder="Street address" required hidden>
+          <input id="billingAddress1" name="billingAddress1" autocomplete="billing address-line1" placeholder="Street address…" required hidden>
         </div>
         <button id="billingManualToggle" class="checkout-text-action" type="button" aria-expanded="false" aria-controls="billingAddressDetails">Enter address manually</button>
         <button id="billingSuiteToggle" class="checkout-text-action" type="button" aria-expanded="false" aria-controls="billingAddress2Field"><i class="ph ph-buildings" aria-hidden="true"></i> Add apartment or suite</button>

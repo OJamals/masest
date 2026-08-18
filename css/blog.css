@@ -5,7 +5,7 @@
   gap: 28px;
   margin-top: 28px;
 }
-.blog-card { border: 1px solid var(--line, #e5e7eb); border-radius: 14px; overflow: hidden; background: var(--card, #fff); transition: transform .18s ease, box-shadow .18s ease; }
+.blog-card { border: 1px solid var(--line, #e5e7eb); border-radius: 14px; overflow: hidden; background: var(--card, #fff); transition: transform .18s ease; }
 .blog-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,.08); }
 @media (prefers-reduced-motion: reduce) {
   .blog-card,

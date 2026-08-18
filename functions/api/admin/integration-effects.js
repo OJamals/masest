@@ -1,7 +1,7 @@
 // POST /api/admin/integration-effects
 // Operator/scheduler entry point for bounded provider effect processing.
 // Existing STRIPE_EFFECTS_WORKER_SECRET binding remains the cutover access secret.
-import { json } from '../../_lib/supabase.js';
+import { adminClient, json } from '../../_lib/supabase.js';
 import { runIntegrationEffectsWorker } from '../../_lib/integration-effects.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';

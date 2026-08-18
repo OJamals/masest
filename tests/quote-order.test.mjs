@@ -22,6 +22,7 @@ function quoteOrderDb() {
         requisition_id: "44444444-4444-4444-8444-444444444444",
         offer_order_id: DRAFT_ID,
         offer_status: "accepted",
+        offer_expires_at: "2999-01-01T00:00:00.000Z",
       },
       status: "contacted",
       pipeline_stage: "proposal",
@@ -165,6 +166,23 @@ test("accepted and payment-pending offers are immutable", () => {
   }
 });
 
+test("sending a revision is the explicit reactivation for declined or expired requisitions", () => {
+  for (const offerStatus of ["declined", "expired"]) {
+    assert.equal(quoteOrders.requisitionQuoteMayBeSent({
+      source: "requisition",
+      status: "closed",
+      pipeline_stage: "lost",
+      payload: { offer_status: offerStatus },
+    }), true);
+  }
+  assert.equal(quoteOrders.requisitionQuoteMayBeSent({
+    source: "requisition",
+    status: "closed",
+    pipeline_stage: "won",
+    payload: { offer_status: "declined" },
+  }), false);
+});
+
 test("offer-state guard makes absent and existing bindings compare-and-swap safe", () => {
   function queryLog() {
     const calls = [];
@@ -195,12 +213,13 @@ test("offer-state guard makes absent and existing bindings compare-and-swap safe
 
 test("open requisition quote lookup protects its saved requisition", async () => {
   const filters = [];
-  const quote = { id: QUOTE_ID, status: "contacted", payload: { requisition_id: REQUISITION_ID } };
+  const quote = { id: QUOTE_ID, source: "requisition", status: "contacted", pipeline_stage: "new", payload: { requisition_id: REQUISITION_ID } };
   const query = {
     select() { return this; },
     eq(column, value) { filters.push([column, value]); return this; },
     contains(column, value) { filters.push([column, value]); return this; },
     not(column, operator, value) { filters.push([column, operator, value]); return this; },
+    or(value) { filters.push(["or", value]); return this; },
     order() { return this; },
     limit() { return this; },
     async maybeSingle() { return { data: quote, error: null }; },
@@ -210,19 +229,51 @@ test("open requisition quote lookup protects its saved requisition", async () =>
     REQUISITION_ID,
   );
 
-  assert.deepEqual(result, { quote, error: null });
+  assert.deepEqual(result, { quote, staleQuote: null, error: null });
   assert.deepEqual(filters, [
     ["source", "requisition"],
     ["payload", { requisition_id: REQUISITION_ID }],
     ["status", "in", "(closed,spam)"],
+    ["or", "pipeline_stage.is.null,pipeline_stage.not.in.(lost,won)"],
+    ["or", "payload->>offer_status.is.null,payload->>offer_status.not.in.(declined,expired,ordered)"],
   ]);
+});
+
+test("expired SQL-open rows are returned as stale snapshots for pre-insert transition", async () => {
+  const quote = {
+    id: QUOTE_ID,
+    source: "requisition",
+    status: "contacted",
+    pipeline_stage: "proposal",
+    payload: {
+      requisition_id: REQUISITION_ID,
+      offer_order_id: DRAFT_ID,
+      offer_status: "sent",
+      offer_expires_at: "2020-01-01T00:00:00.000Z",
+    },
+  };
+  const query = {
+    select() { return this; },
+    eq() { return this; },
+    contains() { return this; },
+    not() { return this; },
+    or() { return this; },
+    order() { return this; },
+    limit() { return this; },
+    async maybeSingle() { return { data: quote, error: null }; },
+  };
+  const result = await quoteOrders.findOpenRequisitionQuote({ from: () => query }, REQUISITION_ID);
+  assert.deepEqual(result, { quote: null, staleQuote: quote, error: null });
 });
 
 test("open requisition quotes are database-unique and duplicate races are recognized", () => {
   const schema = readFileSync(new URL("../supabase/schema-quotes.sql", import.meta.url), "utf8");
+  const lifecycleSchema = readFileSync(new URL("../supabase/schema-quote-lifecycle.sql", import.meta.url), "utf8");
   assert.match(schema, /quotes_open_requisition_unique_idx/);
+  assert.match(lifecycleSchema, /coalesce\(pipeline_stage, 'new'\) not in \('lost', 'won'\)/);
   assert.match(schema, /payload\s*->>\s*'requisition_id'/);
   assert.match(schema, /status\s+not\s+in\s*\(\s*'closed'\s*,\s*'spam'\s*\)/);
+  assert.match(schema, /offer_status[\s\S]*declined[\s\S]*expired[\s\S]*ordered/);
   assert.equal(quoteOrders.isOpenRequisitionQuoteConflict({
     code: "23505",
     message: 'duplicate key value violates unique constraint "quotes_open_requisition_unique_idx"',
@@ -257,6 +308,24 @@ test("ACH quote stays bound to its draft while pending and reopens after failure
   assert.equal(state.quote.payload.final_order_id, undefined);
   assert.ok(state.draft, "failed ACH must leave the accepted quote retryable");
   assert.deepEqual(calls.map(([name]) => name), ["quote.update", "quote.update"]);
+});
+
+test("payment failure after the exact offer boundary expires instead of reopening", async () => {
+  const { state, db } = quoteOrderDb();
+  state.quote.payload.offer_status = "payment_pending";
+  state.quote.payload.final_order_id = FINAL_ID;
+  state.quote.payload.offer_expires_at = "2026-08-17T12:00:00.000Z";
+
+  const result = await reopenQuoteAfterPaymentFailure(db, {
+    quoteId: QUOTE_ID,
+    draftOrderId: DRAFT_ID,
+    finalOrderId: FINAL_ID,
+    at: "2026-08-17T12:00:00.000Z",
+  });
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(state.quote.payload.offer_status, "expired");
+  assert.equal(state.quote.payload.final_order_id, undefined);
 });
 
 test("quote transitions never overwrite a concurrent ordered state", async () => {

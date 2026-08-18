@@ -66,6 +66,7 @@ test("UI fetches detail by id and opens the modal with a backorder badge", () =>
 });
 
 test('orders with immutable provider financial evidence return a stable delete conflict', () => {
-  assert.match(API, /error\?\.code === '23503'/);
-  assert.match(API, /order_has_financial_history/);
+  assert.match(API, /body\.action === 'delete_order'[\s\S]*?rpc\('delete_draft_order_atomic'/);
+  assert.match(API, /'order_delete_forbidden'/);
+  assert.match(API, /'order_delete_forbidden',[\s\S]*?\]\.includes\(code\)\) return 409/);
 });

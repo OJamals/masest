@@ -7,7 +7,7 @@ import {
   items as cartItems,
   replaceWithQuote,
 } from './cart.js';
-import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
+import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, restoreFocusOnClose, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 import { initBusinessHub } from './business.js?v=20260808b';
 import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260808b';
 import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260808b';
@@ -452,12 +452,6 @@ async function renderOrders({ append = false } = {}) {
   loaded.orders = true;
   const box = $('ordersBody');
   const st = pages.orders;
-  if (!ACCOUNT?.company) {
-    st.items = []; st.offset = 0; st.total = 0; st.hasMore = false;
-    box.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before placing or tracking company orders.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
-    wirePanelLinks(box);
-    return;
-  }
   if (!append) {
     st.items = []; st.offset = 0;
     box.innerHTML = `<div class="skeleton skeleton-block dash-order-skeleton"></div>`.repeat(3);
@@ -475,13 +469,13 @@ async function renderOrders({ append = false } = {}) {
   st.total = res.total; st.hasMore = !!res.has_more;
   const list = st.items;
   const requisitions = res.requisitions || [];
-  const requisitionHtml = `<section>
+  const requisitionHtml = ACCOUNT?.company ? `<section>
     <div class="dash-card-toolbar"><div><h2 class="headline dash-section-title dash-section-title-tight">Saved requisitions</h2><p class="muted">${requisitions.length} of 25 saved</p></div><a class="btn btn-ghost btn-sm" href="cart.html">Open cart</a></div>
     ${requisitions.length ? requisitions.map((requisition) => {
       const itemCount = (requisition.order_items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
       return `<div class="dash-row"><span><b>${esc(requisition.requisition_name)}</b><small class="muted">${itemCount} item${itemCount === 1 ? '' : 's'} · ${fmtDate(requisition.created_at)}</small></span><span class="dash-action-row dash-action-row--flush"><b>${money(requisition.total, requisition.currency)}</b><button class="btn btn-primary btn-sm" type="button" data-request-requisition-quote="${esc(requisition.id)}">Request quote</button><button class="btn btn-ghost btn-sm" type="button" data-use-requisition="${esc(requisition.id)}">Use</button><button class="btn btn-ghost btn-sm" type="button" data-delete-requisition="${esc(requisition.id)}">Delete</button></span></div>`;
     }).join('') : '<div class="empty-state"><i class="ph ph-clipboard-text empty-icon" aria-hidden="true"></i><div class="empty-title">No saved requisitions</div><div class="empty-body">Build a repeat order in the cart, then save it here for later.</div></div>'}
-  </section>`;
+  </section>` : `<section><div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Save repeat purchases with a business profile</div><div class="empty-body">Your personal order history remains available below.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div></section>`;
   // Mirrors availableOrderRequests() on the server, which re-validates and is
   // authoritative — this only decides whether to offer the button at all.
   const RETURN_WINDOW_MS = 30 * 86400000;
@@ -539,7 +533,12 @@ async function renderOrders({ append = false } = {}) {
       cartLines.forEach((line) => cartAdd(line.sku, line.qty));
       if (issues?.length) toast('Some items changed:\n' + issues.map((issue) => `• ${issue.name || issue.sku} — ${issue.reason.replace('_', ' ')}`).join('\n'), { variant: 'warning' });
       location.href = 'cart.html';
-    } catch { toast('Could not rebuild this cart. Try again.', { variant: 'error' }); button.disabled = false; }
+    } catch (error) {
+      toast(error?.data?.error === 'catalog_unavailable'
+        ? 'The catalog is temporarily unavailable. Try rebuilding this cart again.'
+        : 'Could not rebuild this cart. Try again.', { variant: 'error' });
+      button.disabled = false;
+    }
   };
   box.querySelectorAll('[data-use-requisition]').forEach((button) => button.addEventListener('click', () => {
     restoreCart(button.dataset.useRequisition, button, 'None of these saved items are available.');
@@ -621,6 +620,41 @@ async function renderOrders({ append = false } = {}) {
 /* ---------- quote requests ---------- */
 // Buyer-safe mirror of quote requests. Ready offers can be accepted into the cart;
 // checkout revalidates the quote and its server-owned order before using prices.
+function declineQuoteDialog() {
+  return new Promise((resolve) => {
+    const dlg = document.createElement('dialog');
+    const id = `decline-quote-${Date.now()}`;
+    dlg.className = 'confirm-dialog';
+    dlg.setAttribute('aria-labelledby', `${id}-title`);
+    dlg.setAttribute('aria-describedby', `${id}-copy`);
+    dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
+      <h2 id="${id}-title">Decline this quote?</h2>
+      <p class="confirm-dialog-msg" id="${id}-copy">MASEST will close this offer. Your account team can prepare a revision later.</p>
+      <label class="confirm-dialog-field" for="${id}-reason">Reason <span class="muted">(optional)</span></label>
+      <textarea id="${id}-reason" name="reason" class="confirm-dialog-input" rows="3" maxlength="500"></textarea>
+      <menu class="confirm-dialog-actions">
+        <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Keep quote</button>
+        <button value="decline" class="btn btn-danger btn-sm" type="submit">Decline quote</button>
+      </menu>
+    </form>`;
+    if (typeof dlg.showModal !== 'function') {
+      resolve(window.confirm('Decline this quote?') ? '' : null);
+      return;
+    }
+    document.body.appendChild(dlg);
+    restoreFocusOnClose(dlg);
+    dlg.addEventListener('close', () => {
+      const reason = dlg.returnValue === 'decline'
+        ? dlg.querySelector('[name="reason"]')?.value.trim().slice(0, 500) || ''
+        : null;
+      resolve(reason);
+      dlg.remove();
+    });
+    dlg.showModal();
+    dlg.querySelector('[name="reason"]')?.focus();
+  });
+}
+
 async function renderQuoteRequests({ append = false } = {}) {
   const box = $('quotesBody');
   if (!box) return;
@@ -632,12 +666,12 @@ async function renderQuoteRequests({ append = false } = {}) {
   st.offset += (res.quotes || []).length;
   st.total = res.total; st.hasMore = !!res.has_more;
   if (!st.items.length) { box.hidden = true; return; }
-  const stateAttr = { Received: 'pending_payment', 'In review': 'net_open', 'Quote ready': 'paid', Accepted: 'paid', 'Payment pending': 'pending_payment', 'Order placed': 'fulfilled', Quoted: 'paid', Closed: 'cancelled' };
+  const stateAttr = { Received: 'pending_payment', 'In review': 'net_open', 'Quote ready': 'paid', 'Revised quote sent': 'paid', Accepted: 'paid', Declined: 'cancelled', Expired: 'cancelled', 'Payment pending': 'pending_payment', 'Order placed': 'fulfilled', Quoted: 'paid', Closed: 'cancelled' };
   box.innerHTML = `<h2 class="headline dash-section-title">Quote requests</h2>`
     + st.items.map((q) => {
       const lines = (q.offer?.order_items || []).map((item) =>
         `<small class="muted">${esc(item.name || item.sku)} × ${esc(item.qty)} · ${money(item.line_total, q.offer.currency)}</small>`).join('');
-      return `<div class="dash-row"><span>${fmtDate(q.created_at)} · ${esc(q.product || q.type || 'Quote')}${lines}</span><span class="dash-action-row dash-action-row--flush"><span class="badge" data-s="${esc(stateAttr[q.state] || '')}">${esc(q.state)}</span>${q.can_accept ? `<button class="btn btn-primary btn-sm" type="button" data-accept-quote="${esc(q.id)}">${q.state === 'Accepted' ? 'Load quote' : 'Accept quote'}</button>` : ''}</span></div>`;
+      return `<div class="dash-row"><span>${fmtDate(q.created_at)} · ${esc(q.product || q.type || 'Quote')}${lines}</span><span class="dash-action-row dash-action-row--flush"><span class="badge" data-s="${esc(stateAttr[q.state] || '')}">${esc(q.state)}</span>${q.can_decline ? `<button class="btn btn-ghost btn-sm" type="button" data-decline-quote="${esc(q.id)}">Decline</button>` : ''}${q.can_accept ? `<button class="btn btn-primary btn-sm" type="button" data-accept-quote="${esc(q.id)}">${q.state === 'Accepted' ? 'Load quote' : 'Accept quote'}</button>` : ''}</span></div>`;
     }).join('')
     + pagerHtml('data-load-more-quotes', st)
     + `<p class="muted">Need to add details? <a href="#messages">Message your account team</a>.</p>`;
@@ -660,6 +694,37 @@ async function renderQuoteRequests({ append = false } = {}) {
     } catch (error) {
       toast(error.data?.error || 'Could not accept this quote. Try again.', { variant: 'error' });
       button.disabled = false;
+    }
+  }));
+  box.querySelectorAll('[data-decline-quote]').forEach((button) => button.addEventListener('click', async () => {
+    const quote = st.items.find((item) => item.id === button.dataset.declineQuote);
+    if (!quote) return;
+    const reason = await declineQuoteDialog();
+    if (reason === null) return;
+    const label = button.textContent;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = 'Declining…';
+    try {
+      await api('/api/account/quotes', {
+        method: 'POST',
+        body: { id: quote.id, action: 'decline_offer', ...(reason ? { reason } : {}) },
+      });
+      toast('Quote declined. Your account team can prepare a revision if needed.', { variant: 'success' });
+      await renderQuoteRequests();
+    } catch (error) {
+      if ([403, 409].includes(error.status) || [403, 409].includes(error.data?.status)) {
+        await renderQuoteRequests();
+        toast('This quote changed or is no longer available. The list has been refreshed.', { variant: 'warning' });
+      } else {
+        toast(error.data?.error || 'Could not decline this quote. Try again.', { variant: 'error' });
+      }
+    } finally {
+      if (button.isConnected) {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        button.textContent = label;
+      }
     }
   }));
   box.querySelector('[data-load-more-quotes]')?.addEventListener('click', (e) => { e.currentTarget.disabled = true; renderQuoteRequests({ append: true }); });
@@ -707,7 +772,9 @@ async function renderMessages({ older = false } = {}) {
   if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question about orders, pricing, NET terms, or anything else.</div></div>`; }
   else {
     thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${esc(m.body)}<time>${fmtDT(m.created_at)}${m.source === 'email_reply' ? ' · <span class="msg-source">Email reply</span>' : ''}</time></div>`).join('');
-    thread.scrollTop = older ? thread.scrollHeight - previousHeight : thread.scrollHeight;
+    requestAnimationFrame(() => {
+      thread.scrollTop = older ? thread.scrollHeight - previousHeight : thread.scrollHeight;
+    });
   }
 }
 function wireMessageForm() {

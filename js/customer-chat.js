@@ -130,8 +130,15 @@ export async function initCustomerChat() {
 
   const updateDockAvoidance = () => {
     dockFrame = 0;
-    shell.style.setProperty("--customer-chat-avoid", "0px");
-    const launcher = toggle.getBoundingClientRect();
+    const currentLift = Number.parseFloat(shell.style.getPropertyValue("--customer-chat-avoid")) || 0;
+    const renderedLauncher = toggle.getBoundingClientRect();
+    const launcher = {
+      left: renderedLauncher.left,
+      right: renderedLauncher.right,
+      top: renderedLauncher.top + currentLift,
+      bottom: renderedLauncher.bottom + currentLift,
+      height: renderedLauncher.height,
+    };
     let lift = 0;
     const obstructionRects = [...document.querySelectorAll(OBSTRUCTION_SELECTOR)].flatMap((obstruction) => {
       if (obstruction.dataset.customerChatObstructionActive === "false") return [];
@@ -227,7 +234,9 @@ export async function initCustomerChat() {
       return;
     }
     messages.forEach((message) => list.append(makeMessage(message)));
-    list.scrollTop = list.scrollHeight;
+    requestAnimationFrame(() => {
+      list.scrollTop = list.scrollHeight;
+    });
   };
   const loadMessages = async ({ quiet = false } = {}) => {
     if (!authenticated) return;

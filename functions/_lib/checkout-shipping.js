@@ -31,6 +31,15 @@ function clean(value, max = 160) {
   return normalized;
 }
 
+// Provider labels and ids are untrusted response data. A malformed entry is unusable, but
+// must not be reflected as a Buyer address error or take down otherwise valid rates.
+function providerText(value, max = 160) {
+  const normalized = String(value ?? '').trim();
+  return normalized.length <= max && !/[\u0000-\u001F\u007F]/.test(normalized)
+    ? normalized
+    : '';
+}
+
 export function normalizeShippingAddress(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new CheckoutShippingError('shipping_address_incomplete');
@@ -78,21 +87,40 @@ function base64UrlDecode(value) {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort()
+      .filter((key) => value[key] !== undefined)
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+async function sha256(value) {
+  const digest = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalJson(value)));
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
 async function hmacKey(secret) {
   const normalized = clean(secret, 256);
   if (normalized.length < 32) throw new CheckoutShippingError('shipping_quote_not_configured', 503);
   return crypto.subtle.importKey('raw', encoder.encode(normalized), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
-async function createShippingSelectionToken({ secret, cart, address, billingAddress, billingSameAsShipping, rate, now }) {
+async function createShippingSelectionToken({ secret, plan }) {
   const payload = {
-    v: 2,
-    exp: Math.floor(now() / 1000) + QUOTE_TTL_SECONDS,
-    cart,
-    address,
-    billing_address: billingAddress,
-    billing_same_as_shipping: billingSameAsShipping,
-    rate,
+    v: 3,
+    exp: Math.floor(new Date(plan.expires_at).getTime() / 1000),
+    plan_id: plan.plan_id,
+    plan_digest: plan.plan_digest,
+    cart_digest: plan.cart_digest,
+    address_digest: plan.address_digest,
+    cart: plan.cart,
+    address: plan.address,
+    billing_address: plan.billing_address,
+    billing_same_as_shipping: plan.billing_same_as_shipping,
+    rate: plan.rate,
   };
   const encoded = base64UrlEncode(JSON.stringify(payload));
   const signature = await crypto.subtle.sign('HMAC', await hmacKey(secret), encoder.encode(encoded));
@@ -111,15 +139,33 @@ export async function verifyShippingSelectionToken({ secret, token, cart, now = 
     );
     if (!valid) throw new Error('signature');
     const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(encoded)));
-    if (payload?.v !== 2 || !payload?.rate || !payload?.address
-      || !payload?.billing_address || !Array.isArray(payload?.cart)) {
+    if (payload?.v === 2) {
+      throw new CheckoutShippingError('shipping_quote_legacy', 409);
+    }
+    if (payload?.v !== 3 || !payload?.rate || !payload?.address
+      || !payload?.billing_address || !Array.isArray(payload?.cart)
+      || !payload?.plan_id || !payload?.plan_digest
+      || !payload?.cart_digest || !payload?.address_digest) {
       throw new Error('payload');
     }
     if (Number(payload.exp) <= Math.floor(now() / 1000)) {
       throw new CheckoutShippingError('shipping_quote_expired', 409);
     }
-    if (JSON.stringify(payload.cart) !== JSON.stringify(canonicalCart(cart))) {
+    const currentCart = canonicalCart(cart);
+    if (JSON.stringify(payload.cart) !== JSON.stringify(currentCart)) {
       throw new CheckoutShippingError('shipping_quote_cart_changed', 409);
+    }
+    if (await sha256(currentCart) !== payload.cart_digest) throw new Error('cart_digest');
+    if (await sha256({
+      address: payload.address,
+      billing_address: payload.billing_address,
+      billing_same_as_shipping: payload.billing_same_as_shipping,
+    }) !== payload.address_digest) throw new Error('address_digest');
+    if (payload.plan_id !== payload.rate.rate_id
+      || !Number.isInteger(Number(payload.rate.amount_minor))
+      || Number(payload.rate.amount_minor) < 0
+      || !/^[a-z]{3}$/.test(String(payload.rate.currency || ''))) {
+      throw new Error('rate_binding');
     }
     return payload;
   } catch (error) {
@@ -128,27 +174,107 @@ export async function verifyShippingSelectionToken({ secret, token, cart, now = 
   }
 }
 
+async function shippingPlanRow({
+  cart,
+  address,
+  billingAddress,
+  billingSameAsShipping,
+  packages,
+  rate,
+  expiresAt,
+}) {
+  const planId = rate.rate_id;
+  const cartDigest = await sha256(cart);
+  const addressDigest = await sha256({
+    address,
+    billing_address: billingAddress,
+    billing_same_as_shipping: billingSameAsShipping,
+  });
+  const planDigest = await sha256({
+    contract_version: 3,
+    plan_id: planId,
+    rate_id: rate.rate_id,
+    amount_minor: rate.amount_minor,
+    currency: rate.currency,
+    cart_digest: cartDigest,
+    address_digest: addressDigest,
+    packages,
+    rate,
+  });
+  return {
+    contract_version: 3,
+    plan_id: planId,
+    plan_digest: planDigest,
+    cart_digest: cartDigest,
+    address_digest: addressDigest,
+    rate_id: rate.rate_id,
+    carrier_id: rate.carrier_id || null,
+    service_code: rate.service_code || null,
+    amount_minor: rate.amount_minor,
+    currency: rate.currency,
+    cart,
+    address,
+    billing_address: billingAddress,
+    billing_same_as_shipping: billingSameAsShipping,
+    packages,
+    rate,
+    expires_at: expiresAt,
+  };
+}
+
+export function assertShippingPlanSelection(selection, result, {
+  notFoundStatus = 409,
+  cart = null,
+} = {}) {
+  if (result?.outcome !== 'found' || !result.plan) {
+    throw new CheckoutShippingError('shipping_plan_not_found', notFoundStatus);
+  }
+  const plan = result.plan;
+  const matches = selection?.v === 3
+    && selection.plan_id === plan.plan_id
+    && selection.plan_digest === plan.plan_digest
+    && selection.cart_digest === plan.cart_digest
+    && selection.address_digest === plan.address_digest
+    && selection.rate?.rate_id === plan.rate_id
+    && Number(selection.rate?.amount_minor) === Number(plan.amount_minor)
+    && String(selection.rate?.currency || '').toLowerCase() === String(plan.currency || '').toLowerCase()
+    && String(selection.rate?.carrier_id || '') === String(plan.carrier_id || '')
+    && String(selection.rate?.service_code || '') === String(plan.service_code || '');
+  if (!matches) throw new CheckoutShippingError('shipping_plan_mismatch', 409);
+  if (cart) {
+    try {
+      if (JSON.stringify(canonicalCart(cart)) !== JSON.stringify(canonicalCart(plan.cart))) {
+        throw new Error('cart_mismatch');
+      }
+    } catch {
+      throw new CheckoutShippingError('shipping_plan_mismatch', 409);
+    }
+  }
+  return plan;
+}
+
 // `bookable` rates must carry a provider rate_id — that id is what gets signed into the
 // selection token and replayed at label purchase. The estimate endpoint returns no rate_id
 // (its results are not addressable), so that path passes bookable:false.
 function normalizeRate(rate, { bookable = true } = {}) {
-  const currency = clean(rate?.shipping_amount?.currency || rate?.currency, 8).toLowerCase();
+  const currency = providerText(rate?.shipping_amount?.currency || rate?.currency, 8).toLowerCase();
   const amount = Number(rate?.shipping_amount?.amount ?? rate?.amount);
   const amountMinor = Math.round(amount * 100);
   if (currency !== 'usd' || !Number.isFinite(amount) || amount < 0) return null;
-  if (bookable && !clean(rate?.rate_id, 100)) return null;
+  const rateId = providerText(rate?.rate_id, 100);
+  if (bookable && !rateId) return null;
   return {
-    rate_id: clean(rate?.rate_id, 100),
-    carrier_id: clean(rate?.carrier_id, 100),
-    carrier_name: clean(rate?.carrier_friendly_name || rate?.carrier_name || rate?.carrier_code, 120),
-    service_code: clean(rate?.service_code, 100),
-    service_type: clean(rate?.service_type || rate?.service_code, 120),
+    rate_id: rateId,
+    carrier_id: providerText(rate?.carrier_id, 100),
+    carrier_name: providerText(rate?.carrier_friendly_name || rate?.carrier_name || rate?.carrier_code, 120),
+    service_code: providerText(rate?.service_code, 100),
+    service_type: providerText(rate?.service_type || rate?.service_code, 120),
     amount_minor: amountMinor,
     currency,
     delivery_days: Number.isFinite(Number(rate?.delivery_days ?? rate?.carrier_delivery_days))
       ? Number(rate?.delivery_days ?? rate?.carrier_delivery_days)
       : null,
-    estimated_delivery_date: clean(rate?.estimated_delivery_date, 80) || null,
+    estimated_delivery_date: providerText(rate?.estimated_delivery_date, 80) || null,
   };
 }
 
@@ -195,8 +321,8 @@ function providerRates(payload, options = {}) {
   });
 }
 
-// Best-effort: the fallback path recomputes cartons with this same module, so a lost row
-// costs the exact snapshot, not correctness. Never fail a rate quote on a bookkeeping write.
+// A signed rate is a promise to fulfill the exact carton plan priced by the carrier. The row
+// is therefore part of issuing the quote, not advisory bookkeeping.
 async function defaultPersistShippingQuotes(env, rows) {
   if (!rows.length) return { ok: false, skipped: 'no_rows' };
   if (!env?.SUPABASE_URL || !env?.SUPABASE_SERVICE_ROLE_KEY) {
@@ -221,18 +347,42 @@ async function defaultPersistShippingQuotes(env, rows) {
 // with the rate id carried in checkout-session metadata.
 export async function loadShippingQuotePlan(env, rateId, dependencies = {}) {
   const id = String(rateId || '').trim();
-  if (!id) return null;
+  if (!id) return { outcome: 'not_found', plan: null };
   const sb = dependencies.sb || adminClient(env);
   try {
     const { data, error } = await sb
       .from('checkout_shipping_quotes')
-      .select('rate_id,carrier_id,service_code,amount_minor,currency,packages,rate')
+      .select('contract_version,plan_id,plan_digest,cart_digest,address_digest,rate_id,carrier_id,service_code,amount_minor,currency,cart,address,billing_address,billing_same_as_shipping,packages,rate,expires_at')
       .eq('rate_id', id)
       .maybeSingle();
-    if (error || !data) return null;
-    return Array.isArray(data.packages) && data.packages.length ? data : null;
-  } catch {
-    return null;
+    if (error) throw error;
+    if (!data) return { outcome: 'not_found', plan: null };
+    if (Number(data.contract_version) !== 3 || data.plan_id !== data.rate_id
+      || !Array.isArray(data.packages) || !data.packages.length) {
+      throw new CheckoutShippingError('shipping_plan_integrity_failed', 503);
+    }
+    const expected = await shippingPlanRow({
+      cart: data.cart,
+      address: data.address,
+      billingAddress: data.billing_address,
+      billingSameAsShipping: data.billing_same_as_shipping !== false,
+      packages: data.packages,
+      rate: data.rate,
+      expiresAt: data.expires_at,
+    });
+    if (expected.plan_id !== data.plan_id
+      || expected.plan_digest !== data.plan_digest
+      || expected.cart_digest !== data.cart_digest
+      || expected.address_digest !== data.address_digest
+      || expected.amount_minor !== data.amount_minor
+      || expected.currency !== data.currency) {
+      throw new CheckoutShippingError('shipping_plan_integrity_failed', 503);
+    }
+    return { outcome: 'found', plan: data };
+  } catch (error) {
+    if (error instanceof CheckoutShippingError) throw error;
+    console.error('checkout_shipping_quote_load_failed', error?.code || error?.message || 'unknown');
+    throw new CheckoutShippingError('shipping_plan_store_unavailable', 503);
   }
 }
 
@@ -299,9 +449,9 @@ export const ESTIMATE_MAX_PACKAGES = 1;
 
 function estimateOrigin(warehouse) {
   const address = warehouse?.origin_address || warehouse?.address || {};
-  const postalCode = clean(address.postal_code, 10);
-  const countryCode = clean(address.country_code || address.country || 'US', 2).toUpperCase();
-  if (!/^\d{5}(?:-\d{4})?$/.test(postalCode)) {
+  const postalCode = providerText(address.postal_code, 10);
+  const countryCode = providerText(address.country_code || address.country || 'US', 2).toUpperCase();
+  if (!/^\d{5}(?:-\d{4})?$/.test(postalCode) || !/^[A-Z]{2}$/.test(countryCode)) {
     throw new CheckoutShippingError('shipping_estimate_origin_unavailable', 503);
   }
   return { postalCode, countryCode };
@@ -348,23 +498,37 @@ export async function estimateCheckoutRates(input, dependencies = {}) {
     || ((runtimeEnv) => shipStationRequest(runtimeEnv, `/warehouses/${encodeURIComponent(clean(runtimeEnv.SHIPSTATION_WAREHOUSE_ID, 100))}`));
   const estimateRates = dependencies.estimateRates
     || ((runtimeEnv, payload) => shipStationRequest(runtimeEnv, '/rates/estimate', { method: 'POST', body: payload }));
-  const [carrierPayload, warehousePayload] = await Promise.all([listCarriers(env), loadWarehouse(env)]);
+  let carrierPayload;
+  let warehousePayload;
+  try {
+    [carrierPayload, warehousePayload] = await Promise.all([listCarriers(env), loadWarehouse(env)]);
+  } catch (error) {
+    if (error?.code === 'shipstation_timeout') throw new CheckoutShippingError('shipping_rates_timeout', 503);
+    throw error;
+  }
   const carriers = Array.isArray(carrierPayload?.carriers) ? carrierPayload.carriers : [];
-  const carrierIds = [...new Set(carriers.map((carrier) => clean(carrier?.carrier_id, 100)).filter(Boolean))];
+  const carrierIds = [...new Set(carriers.map((carrier) => providerText(carrier?.carrier_id, 100)).filter(Boolean))];
   if (!carrierIds.length) throw new CheckoutShippingError('shipping_carriers_unavailable', 503);
   const origin = estimateOrigin(warehousePayload?.warehouse || warehousePayload);
-  const rates = providerRates(await estimateRates(env, {
-    carrier_ids: carrierIds,
-    from_country_code: origin.countryCode,
-    from_postal_code: origin.postalCode,
-    to_country_code: destination.countryCode,
-    to_postal_code: destination.postalCode,
-    weight: parcel.weight,
-    ...(parcel.dimensions ? { dimensions: parcel.dimensions } : {}),
-    confirmation: 'none',
-    address_residential_indicator: destination.residential ? 'yes' : 'unknown',
-    ...(/^\d{4}-\d{2}-\d{2}$/.test(clean(fulfillment.ship_date, 10)) ? { ship_date: fulfillment.ship_date } : {}),
-  }), { bookable: false });
+  let ratePayload;
+  try {
+    ratePayload = await estimateRates(env, {
+      carrier_ids: carrierIds,
+      from_country_code: origin.countryCode,
+      from_postal_code: origin.postalCode,
+      to_country_code: destination.countryCode,
+      to_postal_code: destination.postalCode,
+      weight: parcel.weight,
+      ...(parcel.dimensions ? { dimensions: parcel.dimensions } : {}),
+      confirmation: 'none',
+      address_residential_indicator: destination.residential ? 'yes' : 'unknown',
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(clean(fulfillment.ship_date, 10)) ? { ship_date: fulfillment.ship_date } : {}),
+    });
+  } catch (error) {
+    if (error?.code === 'shipstation_timeout') throw new CheckoutShippingError('shipping_rates_timeout', 503);
+    throw error;
+  }
+  const rates = providerRates(ratePayload, { bookable: false });
   if (!rates.length) throw new CheckoutShippingError('shipping_rates_unavailable', 502);
   // Drop the (empty) rate_id key entirely: an estimate must not look addressable downstream.
   const offered = rates.slice(0, 6).map(({ rate_id: _rateId, ...rate }) => rate);
@@ -417,9 +581,15 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
     || ((runtimeEnv) => shipStationRequest(runtimeEnv, '/carriers'));
   const quoteRates = dependencies.quoteRates
     || ((runtimeEnv, payload) => shipStationRequest(runtimeEnv, '/rates', { method: 'POST', body: payload }));
-  const carrierPayload = await listCarriers(env);
+  let carrierPayload;
+  try {
+    carrierPayload = await listCarriers(env);
+  } catch (error) {
+    if (error?.code === 'shipstation_timeout') throw new CheckoutShippingError('shipping_rates_timeout', 503);
+    throw error;
+  }
   const carriers = Array.isArray(carrierPayload?.carriers) ? carrierPayload.carriers : [];
-  const carrierIds = [...new Set(carriers.map((carrier) => clean(carrier?.carrier_id, 100)).filter(Boolean))];
+  const carrierIds = [...new Set(carriers.map((carrier) => providerText(carrier?.carrier_id, 100)).filter(Boolean))];
   if (!carrierIds.length) throw new CheckoutShippingError('shipping_carriers_unavailable', 503);
   // buildRateRequest re-validates the carton list and enforces the provider's 20-package
   // ceiling, so it has to sit inside the same mapping as the packing step — otherwise a
@@ -446,37 +616,42 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
     }
     throw new CheckoutShippingError('shipping_package_profile_missing', 409);
   }
-  const rates = providerRates(await quoteRates(env, request));
+  let ratePayload;
+  try {
+    ratePayload = await quoteRates(env, request);
+  } catch (error) {
+    if (error?.code === 'shipstation_timeout') throw new CheckoutShippingError('shipping_rates_timeout', 503);
+    throw error;
+  }
+  const rates = providerRates(ratePayload);
   if (!rates.length) throw new CheckoutShippingError('shipping_rates_unavailable', 502);
   const offered = rates.slice(0, 12);
-  const signedRates = await Promise.all(offered.map(async (rate) => ({
-    ...rate,
-    token: await createShippingSelectionToken({
-      secret: env.SHIPPING_QUOTE_SECRET,
-      cart,
-      address,
-      billingAddress,
-      billingSameAsShipping,
-      rate,
-      now,
-    }),
-  })));
-  // Persist the exact carton plan behind every offered rate. The buyer leaves for Stripe
-  // and comes back as a webhook; without this the fulfillment side has to re-guess the
-  // packing and can buy a shipment that differs from the one the buyer paid for.
-  const persistQuotes = dependencies.persistShippingQuotes || defaultPersistShippingQuotes;
-  await persistQuotes(env, offered.map((rate) => ({
-    rate_id: rate.rate_id,
-    carrier_id: rate.carrier_id || null,
-    service_code: rate.service_code || null,
-    amount_minor: rate.amount_minor,
-    currency: rate.currency,
+  const expiresAt = new Date(now() + QUOTE_TTL_SECONDS * 1000).toISOString();
+  const plans = await Promise.all(offered.map((rate) => shippingPlanRow({
     cart,
     address,
-    billing_address: billingAddress,
+    billingAddress,
+    billingSameAsShipping,
     packages,
     rate,
-    expires_at: new Date(now() + QUOTE_TTL_SECONDS * 1000).toISOString(),
+    expiresAt,
+  })));
+  // Persist every exact carton plan before any corresponding signed token can escape.
+  const persistQuotes = dependencies.persistShippingQuotes || defaultPersistShippingQuotes;
+  let persistence;
+  try {
+    persistence = await persistQuotes(env, plans);
+  } catch (error) {
+    console.error('checkout_shipping_quote_persist_failed', error?.code || error?.message || 'unknown');
+    throw new CheckoutShippingError('shipping_plan_store_unavailable', 503);
+  }
+  const persistedCount = persistence?.count == null ? plans.length : Number(persistence.count);
+  if (!persistence?.ok || !Number.isFinite(persistedCount) || persistedCount < plans.length) {
+    throw new CheckoutShippingError('shipping_plan_store_unavailable', 503);
+  }
+  const signedRates = await Promise.all(plans.map(async (plan) => ({
+    ...plan.rate,
+    token: await createShippingSelectionToken({ secret: env.SHIPPING_QUOTE_SECRET, plan }),
   })));
   return {
     address,

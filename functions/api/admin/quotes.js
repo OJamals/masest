@@ -1,4 +1,5 @@
 // /api/admin/quotes - staff view of inbound /api/quote leads.
+import Stripe from 'stripe';
 import { adminClient, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { staffCanWrite } from '../../_lib/authz.js';
@@ -11,12 +12,74 @@ import { recordSupportMessage } from '../../_lib/support-messages.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { createQuoteLeadLifecycle, createSupabaseQuoteLeadStore } from '../../_lib/quote-leads.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
+import { quoteDeliveryState } from '../../_lib/quote-lifecycle.js';
+import {
+  createSupabaseQuoteCheckoutAttemptStore,
+  prepareQuoteCheckoutMutation,
+  releaseQuoteCheckoutMutation,
+} from '../../_lib/quote-checkout-attempt.js';
 
 const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,source,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
+const QUOTE_STATUSES = new Set(['new', 'contacted', 'closed', 'spam']);
+const QUOTE_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
+const QUOTE_DUE_FILTERS = new Set(['overdue', 'upcoming', 'unscheduled']);
 
 function leadMutationResponse(result) {
   if (result.ok) return json(200, result);
   return json(result.status || (result.storage_error ? 500 : 400), { error: result.error });
+}
+
+export function quoteFilters(searchParams, now = new Date()) {
+  const status = String(searchParams.get('status') || '').trim();
+  const priority = String(searchParams.get('priority') || '').trim();
+  const due = String(searchParams.get('due') || '').trim();
+  const owner = String(searchParams.get('owner') || '').trim().slice(0, 160);
+  const search = String(searchParams.get('search') || '').trim().replace(/[,()]/g, ' ').trim().slice(0, 200);
+  if (status && !QUOTE_STATUSES.has(status)) return { error: 'invalid_status_filter' };
+  if (priority && !QUOTE_PRIORITIES.has(priority)) return { error: 'invalid_priority_filter' };
+  if (due && !QUOTE_DUE_FILTERS.has(due)) return { error: 'invalid_due_filter' };
+  return { status, priority, due, owner, search, now: now.toISOString() };
+}
+
+export function applyQuoteFilters(query, filters) {
+  let filtered = query;
+  if (filters.status) filtered = filtered.eq('status', filters.status);
+  if (filters.priority) filtered = filtered.eq('priority', filters.priority);
+  if (filters.owner) filtered = filtered.ilike('assigned_to', `%${escapeLike(filters.owner)}%`);
+  if (filters.due) {
+    filtered = filtered.not('status', 'in', '(closed,spam)');
+    if (filters.due === 'overdue') filtered = filtered.lte('due_at', filters.now);
+    if (filters.due === 'upcoming') filtered = filtered.gt('due_at', filters.now);
+    if (filters.due === 'unscheduled') filtered = filtered.is('due_at', null);
+  }
+  if (filters.search) {
+    const like = `%${escapeLike(filters.search)}%`;
+    filtered = filtered.or([
+      'name', 'email', 'company', 'phone', 'product', 'industry', 'location',
+      'message', 'notes', 'next_step', 'assigned_to',
+    ].map((column) => `${column}.ilike.${like}`).join(','));
+  }
+  return filtered;
+}
+
+async function quotesWithDelivery(sb, quotes) {
+  const eventIds = [...new Set((quotes || [])
+    .map((quote) => String(quote.payload?.offer_delivery_event_id || ''))
+    .filter(Boolean))];
+  if (!eventIds.length) return quotes || [];
+  const { data, error } = await sb.from('integration_effects')
+    .select('event_id,status,provider_result')
+    .in('event_id', eventIds);
+  if (error) throw error;
+  const grouped = new Map();
+  for (const effect of data || []) {
+    if (!grouped.has(effect.event_id)) grouped.set(effect.event_id, []);
+    grouped.get(effect.event_id).push(effect);
+  }
+  return (quotes || []).map((quote) => ({
+    ...quote,
+    delivery_state: quoteDeliveryState(grouped.get(quote.payload?.offer_delivery_event_id) || []),
+  }));
 }
 
 async function companyIdForQuote(sb, { companyId, email }) {
@@ -85,8 +148,18 @@ async function sendTrackedLeadEmail(env, options) {
 }
 
 function quoteLeadLifecycle({ sb, env }) {
+  const checkoutAttemptStore = createSupabaseQuoteCheckoutAttemptStore(sb);
+  const stripe = env.STRIPE_SECRET_KEY
+    ? new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() })
+    : null;
   return createQuoteLeadLifecycle({
     store: createSupabaseQuoteLeadStore(sb),
+    prepareCheckoutChange: (input) => prepareQuoteCheckoutMutation({
+      ...input,
+      stripe,
+      store: checkoutAttemptStore,
+    }),
+    releaseCheckoutChange: (input) => releaseQuoteCheckoutMutation(checkoutAttemptStore, input),
     stageChanged: (quote, stage, source) => klaviyoTrack(env, {
       email: quote.email,
       metric: 'Deal Stage Changed',
@@ -131,17 +204,6 @@ function quoteLeadLifecycle({ sb, env }) {
         bodyHtml: `<p>${htmlEscape(nextStep)}</p><p>This lead has no buyer email on file. Follow-up was due ${htmlEscape(dueText)} ET.</p>`,
       }),
     }),
-    offerReady: ({ quote, appUrl }) => sendEmail(env, {
-      to: [quote.email],
-      subject: 'Your MASEST quote is ready',
-      html: emailLayout({
-        heading: 'Your quote is ready',
-        bodyHtml: `<p>Review the pricing for ${htmlEscape(quote.product || 'your saved requisition')}, accept it, and continue to secure checkout.</p>`,
-        ctaText: 'Review your quote',
-        ctaUrl: `${appUrl}/dashboard.html#quotes`,
-      }),
-      category: 'quote',
-    }),
     converted: ({ quote, recipients, appUrl }) => sendEmail(env, {
       to: recipients,
       subject: 'Your quote is now an order',
@@ -178,21 +240,32 @@ export async function onRequest({ request, env }) {
   const sb = adminClient(env);
 
   if (request.method === 'GET') {
-    if (new URL(request.url).searchParams.get('view') === 'workspace') {
+    const searchParams = new URL(request.url).searchParams;
+    const view = searchParams.get('view');
+    const expiry = await quoteLeadLifecycle({ sb, env }).expireDue({ batch: 50 });
+    if (!expiry.ok) return json(503, { error: 'quote_expiry_transition_failed' });
+    const filters = quoteFilters(searchParams);
+    if (filters.error) return json(400, { error: filters.error });
+
+    if (view === 'workspace') {
       const result = await quoteLeadLifecycle({ sb, env }).workspace({
-        id: new URL(request.url).searchParams.get('id'),
+        id: searchParams.get('id'),
       });
       return json(result.status, result.body, { 'cache-control': 'no-store' });
     }
-    if (new URL(request.url).searchParams.get('view') === 'pipeline') {
-      const { data, error } = await sb.from('quotes').select('id,pipeline_stage,deal_value').neq('status', 'spam').limit(5000);
+    if (view === 'pipeline') {
+      const pipelineQuery = applyQuoteFilters(
+        sb.from('quotes').select('id,pipeline_stage,deal_value'),
+        filters,
+      );
+      const { data, error } = await pipelineQuery.limit(5000);
       if (error) {
         if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { summary: pipelineSummary([]), needs_migration: true });
         return json(500, { error: error.message });
       }
       return json(200, { summary: pipelineSummary(data || []) });
     }
-    if (new URL(request.url).searchParams.get('view') === 'report') {
+    if (view === 'report') {
       const { data, error } = await sb.from('quotes').select('id,pipeline_stage,deal_value,expected_close,lost_reason').neq('status', 'spam').limit(5000);
       if (error) {
         if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { report: pipelineReport([]), needs_migration: true });
@@ -200,8 +273,8 @@ export async function onRequest({ request, env }) {
       }
       return json(200, { report: pipelineReport(data || []) });
     }
-    if (new URL(request.url).searchParams.get('view') === 'contacts') {
-      const id = new URL(request.url).searchParams.get('id');
+    if (view === 'contacts') {
+      const id = searchParams.get('id');
       if (!id) return json(400, { error: 'id_required' });
       const { data: q } = await sb.from('quotes').select('id,email,company').eq('id', id).maybeSingle();
       if (!q) return json(404, { error: 'not_found' });
@@ -222,10 +295,10 @@ export async function onRequest({ request, env }) {
       }
       return json(200, { company_id: companyId, contacts: contacts || [] });
     }
-    if (new URL(request.url).searchParams.get('export') === 'csv') {
-      const { data, error } = await sb.from('quotes')
-        .select('id,created_at,type,name,email,company,phone,product,industry,location,status,priority,next_step,due_at,lead_score,assigned_to')
-        .order('created_at', { ascending: false }).limit(5000);
+    if (searchParams.get('export') === 'csv') {
+      const exportQuery = applyQuoteFilters(sb.from('quotes')
+        .select('id,created_at,type,name,email,company,phone,product,industry,location,status,priority,next_step,due_at,lead_score,assigned_to'), filters);
+      const { data, error } = await exportQuery.order('created_at', { ascending: false }).limit(5000);
       if (error) return json(500, { error: error.message });
       const rows = [['Quote', 'Date', 'Type', 'Name', 'Email', 'Company', 'Phone', 'Product', 'Industry', 'Location', 'Status', 'Priority', 'Next step', 'Due', 'Lead score', 'Assigned']];
       for (const qt of data || []) {
@@ -233,28 +306,24 @@ export async function onRequest({ request, env }) {
       }
       return csvResponse(rows, 'masest-quotes');
     }
-    const _singleId = new URL(request.url).searchParams.get('id');
-    if (_singleId && !new URL(request.url).searchParams.get('view') && new URL(request.url).searchParams.get('export') !== 'csv') {
+    const _singleId = searchParams.get('id');
+    if (_singleId && !view && searchParams.get('export') !== 'csv') {
       const { data, error } = await sb.from('quotes').select(QUOTE_SELECT).eq('id', _singleId).maybeSingle();
       if (error) {
         if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { quote: null, needs_migration: true });
         return json(500, { error: error.message });
       }
-      return json(data ? 200 : 404, data ? { quote: data } : { error: 'not_found' });
+      if (!data) return json(404, { error: 'not_found' });
+      const [quote] = await quotesWithDelivery(sb, [data]);
+      return json(200, { quote });
     }
-    const listParams = new URL(request.url).searchParams;
-    const { limit, offset } = parsePage(listParams, { defaultLimit: 100, maxLimit: 300 });
-    let listQuery = sb.from('quotes')
-      .select(QUOTE_SELECT, { count: 'exact' })
-      .order('created_at', { ascending: false })
+    const { limit, offset } = parsePage(searchParams, { defaultLimit: 100, maxLimit: 300 });
+    let listQuery = applyQuoteFilters(
+      sb.from('quotes').select(QUOTE_SELECT, { count: 'exact' }),
+      filters,
+    );
+    listQuery = listQuery.order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
-    // Server-side search so results aren't limited to the loaded page. Commas and
-    // parens are stripped — they would break the PostgREST or= filter syntax.
-    const search = String(listParams.get('search') || '').trim().replace(/[,()]/g, ' ').trim();
-    if (search) {
-      const like = `%${escapeLike(search)}%`;
-      listQuery = listQuery.or(['name', 'email', 'company', 'product', 'location'].map((col) => `${col}.ilike.${like}`).join(','));
-    }
     const { data, error, count } = await listQuery;
     if (error) {
       if (/does not exist|relation|schema cache/i.test(error.message)) {
@@ -263,10 +332,16 @@ export async function onRequest({ request, env }) {
       return json(500, { error: error.message });
     }
 
-    const quotes = data || [];
-    // Badge counts must reflect ALL quotes, not just the current page.
-    const newCount = await sb.from('quotes').select('id', { count: 'exact', head: true }).eq('status', 'new');
-    const urgentCount = await sb.from('quotes').select('id', { count: 'exact', head: true }).eq('priority', 'urgent');
+    const quotes = await quotesWithDelivery(sb, data || []);
+    // Counts use the same server predicates as the rows; range is the only difference.
+    const newCount = await applyQuoteFilters(
+      sb.from('quotes').select('id', { count: 'exact', head: true }),
+      filters,
+    ).eq('status', 'new');
+    const urgentCount = await applyQuoteFilters(
+      sb.from('quotes').select('id', { count: 'exact', head: true }),
+      filters,
+    ).eq('priority', 'urgent');
     return json(200, {
       quotes,
       new_count: newCount.count || 0,
@@ -302,9 +377,9 @@ export async function onRequest({ request, env }) {
       const result = await leadLifecycle.sendOffer({
         id: body.id,
         items: body.items,
+        expiresAt: body.expires_at,
         actor: user.email || null,
         user,
-        appUrl: env.APP_URL || new URL(request.url).origin,
       });
       return json(result.status, result.body);
     }

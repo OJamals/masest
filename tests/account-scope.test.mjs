@@ -20,7 +20,7 @@ const ACCOUNT_ROUTES = readdirSync(ACCOUNT_DIR).filter((f) => f.endsWith(".js"))
 // tenant key is the email — taken from user.email, never from client input. The
 // pattern below matches exactly that shape (`escapeLike(email)` where email is the
 // auth-derived local) so a route filtering by a client-supplied email still fails.
-const SCOPE_RE = /requireCompany\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role|\.ilike\(\s*'email'\s*,\s*escapeLike\(email\)\s*\)|repository\.(?:listForUser|findRequest)\(\s*user\.id/;
+const SCOPE_RE = /require(?:Company|CommerceUser)\(|\.eq\(\s*'company_id'|\.eq\(\s*'id'\s*,\s*user\.id|\.eq\(\s*'user_id'\s*,\s*user\.id|company_id\s*,\s*role|\.ilike\(\s*'email'\s*,\s*escapeLike\(email\)\s*\)|repository\.(?:listForUser|findRequest)\(\s*user\.id/;
 const ACCOUNT_ERASURE_IMPORT_RE = /import\s+\{\s*deleteAccountUser\s*\}\s+from\s+['"][^'"]*_lib\/account-erasure\.js['"]/;
 const ACCOUNT_ERASURE_CALL_RE = /await\s+deleteAccountUser\(\s*sb\s*,\s*user\.id\s*\)/;
 
@@ -47,11 +47,11 @@ test("every account route authenticates (requireCompany or userFromRequest) and 
     const src = read(name);
     // Routes authenticate either via the requireCompany wrapper (which does
     // profile/company lookup internally) or the raw primitive.
-    const usesWrapper = /requireCompany\(\s*request\s*,\s*env\s*\)/.test(src);
+    const usesWrapper = /require(?:Company|CommerceUser)\(\s*request\s*,\s*env\s*\)/.test(src);
     const usesRaw = /userFromRequest\(\s*request\s*,\s*env\s*\)/.test(src);
     assert.ok(usesWrapper || usesRaw,
       `account/${name} must authenticate via requireCompany or userFromRequest`);
-    assert.match(src, /import\s*\{[^}]*\b(requireCompany|userFromRequest)\b[^}]*\}\s*from\s*['"][^'"]*_lib\/supabase\.js['"]/,
+    assert.match(src, /import\s*\{[^}]*\b(requireCompany|requireCommerceUser|userFromRequest)\b[^}]*\}\s*from\s*['"][^'"]*_lib\/supabase\.js['"]/,
       `account/${name} must import its auth primitive`);
     const guards401 = /if\s*\(\s*ctx\.error\s*\)\s*return\s+ctx\.error/.test(src)
       || /if\s*\(\s*!user\s*\)\s*return\s+json\(\s*401\s*,/.test(src);
@@ -86,7 +86,7 @@ test("auth guard precedes any DB access inside the handler", () => {
 
     // Guard = the requireCompany call (auth+company resolved before sb exists) or the
     // raw inline 401 check. Either must come before any DB access.
-    let guardIdx = handler.search(/requireCompany\(\s*request/);
+    let guardIdx = handler.search(/require(?:Company|CommerceUser)\(\s*request/);
     if (guardIdx < 0) guardIdx = handler.search(/if\s*\(\s*!user\s*\)\s*return\s+json\(\s*401/);
     assert.ok(guardIdx >= 0, `account/${name} auth guard not found in handler body`);
 

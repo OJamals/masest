@@ -1,6 +1,6 @@
 /* MASEST staff admin console. */
 import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260808b';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels, delegate } from './util.js?v=20260808b';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260808b';
 import { editKey } from './admin/edits.js?v=20260808b';
 import { createFeatureLoader } from './admin/feature-loader.js?v=20260808b';
 import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260808b';
@@ -89,6 +89,18 @@ function markDirty(event) {
   if (el.matches?.('input:not([type=checkbox]):not([type=file]), select, textarea') && editKey(el)) {
     el.dataset.dirty = '1';
   }
+}
+
+function dirtyAdminControls() {
+  return [...(featurePanel(state.tab)?.querySelectorAll('[data-dirty="1"]') || [])];
+}
+
+function hasUnsavedAdminEdits() {
+  return dirtyAdminControls().length > 0;
+}
+
+function clearUnsavedAdminEdits() {
+  dirtyAdminControls().forEach((control) => { delete control.dataset.dirty; });
 }
 
 // Coalesce rapid input (search keystrokes) into a single trailing call so a query like
@@ -318,7 +330,7 @@ function renderFeatureTab(tab, token, options, invalidated) {
   return task;
 }
 
-function setTab(tab, context = {}) {
+async function setTab(tab, context = {}) {
   // The old top-level Customers tab folded into the CRM People directory —
   // keep #customers deep links working by landing on that sub-view. Historical
   // Pricing and Emails hashes still land on their current host workspaces.
@@ -338,7 +350,19 @@ function setTab(tab, context = {}) {
   if (tab === 'offers') tab = 'newsletter';
   if (tab === 'traffic' || tab === 'seo') tab = 'analytics';
   if (tab === 'reports' || tab === 'exports') tab = 'finance';
-  state.tab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
+  const nextTab = document.querySelector(`[data-panel="${tab}"]`) ? tab : 'overview';
+  if (nextTab !== state.tab && hasUnsavedAdminEdits()) {
+    const discard = await confirmDialog('Discard unsaved changes and leave this workspace?', {
+      confirmText: 'Discard changes',
+      danger: true,
+    });
+    if (!discard) {
+      if (location.hash.slice(1) !== state.tab) history.replaceState(null, '', '#' + state.tab);
+      return Promise.resolve({ cancelled: true });
+    }
+    clearUnsavedAdminEdits();
+  }
+  state.tab = nextTab;
   // replaceState, NOT location.hash: assigning location.hash fires hashchange →
   // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
   // like quotes painted every row twice). Back/forward still works via hashchange.
@@ -1005,6 +1029,11 @@ function wire() {
   });
   wireTablist(document.querySelector('.adm-tabs[role="tablist"]'), (tab) => setTab(tab.dataset.tab));
   window.addEventListener('hashchange', syncTabFromHash);
+  window.addEventListener('beforeunload', (event) => {
+    if (!hasUnsavedAdminEdits()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
   new MutationObserver(() => applyCapabilityUi(document.body, state.staff)).observe(document.body, { childList: true, subtree: true });
   $('gateForm').addEventListener('submit', async (event) => {
     event.preventDefault();

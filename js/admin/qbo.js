@@ -133,7 +133,7 @@ export async function renderQboStatus() {
       if (!info.qbo_webhook?.configured) detail.dataset.state = 'warn';
       else delete detail.dataset.state;
     }
-    button.innerHTML = info.connected ? '<i class="ph ph-plugs-connected"></i> Reconnect QuickBooks' : '<i class="ph ph-plugs-connected"></i> Connect QuickBooks';
+    button.innerHTML = info.connected ? '<i class="ph ph-plugs-connected" aria-hidden="true"></i> Reconnect QuickBooks' : '<i class="ph ph-plugs-connected" aria-hidden="true"></i> Connect QuickBooks';
     button.disabled = !configReady;
     if (syncButton) syncButton.disabled = !allowSync;
     const disconnectBtn = $("qboDisconnect");

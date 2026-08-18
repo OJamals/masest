@@ -178,7 +178,7 @@ begin
   v_link := btrim(coalesce(p_notification ->> 'link', ''));
   if v_company_id is null
      or v_type is null
-     or v_type not in ('order', 'account')
+     or v_type not in ('order', 'offer', 'account')
      or v_title = ''
      or char_length(v_title) > 160
      or v_body = ''

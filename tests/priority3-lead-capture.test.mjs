@@ -144,7 +144,7 @@ test("contact form posts all five public request types to quote intake", async (
           await route.fulfill({
             status: 200,
             contentType: "application/json",
-            body: JSON.stringify({ ok: true }),
+            body: JSON.stringify({ ok: true, durable: true, quote_id: "11111111-1111-4111-8111-111111111111" }),
           });
         });
         await page.goto(`${BASE_URL}/contact.html?type=${flow.intent}&industry=Data%20Centers`, { waitUntil: "load" });
@@ -205,7 +205,7 @@ test("task economics and operating boundaries survive URL prefill, editing, and 
         await route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ ok: true }),
+          body: JSON.stringify({ ok: true, durable: true, quote_id: "22222222-2222-4222-8222-222222222222" }),
         });
       });
       await page.goto(
@@ -305,7 +305,7 @@ test("product-prefilled sample requests can submit one requested product", async
         await route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ ok: true }),
+          body: JSON.stringify({ ok: true, durable: true, quote_id: "33333333-3333-4333-8333-333333333333" }),
         });
       });
       await page.goto(`${BASE_URL}/contact.html?type=sample&product=VertKleen%20CR2`, { waitUntil: "domcontentloaded" });

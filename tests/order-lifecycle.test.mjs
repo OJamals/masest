@@ -99,17 +99,21 @@ test("generic order edits cannot settle open NET receivables", () => {
   });
 });
 
-test("admin generic status writes use the NET receivable guard", () => {
+test("admin generic status writes cannot bypass explicit economic commands", () => {
   const src = read("functions/api/admin/orders.js");
-  assert.match(src, /planOrderStatusWrite\(before,\s*normalized\.patch\.status\)/);
-  assert.match(src, /planOrderStatusWrite\(before,\s*body\.status\)/);
+  assert.match(src, /error: 'use_explicit_order_action'/);
+  assert.match(src, /if \(body\.status === before\.status\).*unchanged/s);
+  assert.doesNotMatch(src, /\.update\(\{ status: statusPlan\.status \}\)/);
 });
 
-test("admin status dropdown narrows open NET orders to safe generic transitions", () => {
+test("admin UI removes generic status transitions and keeps explicit actions", () => {
   const src = read("js/admin/orders.js");
-  assert.match(src, /OPEN_NET_STATUS_OPTIONS/);
+  assert.doesNotMatch(src, /data-save-order=/);
+  assert.doesNotMatch(src, /data-order-status=/);
+  assert.match(src, /data-mark-net-paid-order/);
+  assert.match(src, /data-cancel-order/);
   assert.match(src, /function orderStatusOptions\(selected,\s*order = \{\}\)/);
-  assert.match(src, /orderStatusOptions\(order\.status,\s*order\)/g);
+  assert.match(src, /const statuses = order\.id \? \[selected\] : MANUAL_CREATE_STATUSES/);
 });
 
 test("dashboard actions use the server lifecycle aggregate", () => {

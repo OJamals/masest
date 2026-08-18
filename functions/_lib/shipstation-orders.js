@@ -9,6 +9,15 @@ import {
   shipStationRequest,
 } from './shipstation.js';
 import { combinePackagesForRates, normalizePackagePlan } from './shipping-packages.js';
+import {
+  resolveShipmentLabel,
+  shipmentLabelOwnership,
+} from './shipment-label-ownership.js';
+import {
+  shipStationOperationKey,
+  shipStationRequestFingerprint,
+} from './shipstation-operation-attempts.js';
+import { ProviderTimeoutError, fetchWithDeadline } from './provider-fetch.js';
 
 const SHIPPABLE_STATUSES = new Set(['paid', 'net_open', 'net_paid', 'fulfilled']);
 const VOID_BLOCKING_TRACKING_STATUSES = new Set(['shipped', 'in_transit', 'out_for_delivery', 'delivered']);
@@ -19,6 +28,21 @@ const LABEL_DOWNLOAD_PREFIXES = [
   ['api.shipstation.com', '/v2/downloads/'],
 ];
 const MASEST_SHIPSTATION_WAREHOUSE_ID = 'se-2287981';
+
+function operationLeaseOwner() {
+  return `shipstation:${crypto.randomUUID()}`;
+}
+
+function attemptHandle(claim) {
+  const operationKey = text(claim?.operation_key, 512);
+  const leaseOwner = text(claim?.lease_owner, 128);
+  return operationKey && leaseOwner ? { operationKey, leaseOwner } : null;
+}
+
+function providerFailureIsProvenRejection(error) {
+  const status = Number(error?.status || 0);
+  return status >= 400 && status < 500 && ![408, 409, 425, 429].includes(status);
+}
 
 function text(value, max = 240) {
   return String(value ?? '').trim().slice(0, max);
@@ -156,6 +180,7 @@ function reason(value) {
 }
 
 function number(value) {
+  if (value == null || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -226,74 +251,33 @@ export async function stablePackageHash(input) {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function existingLabel(order) {
-  return {
-    already_purchased: true,
-    label_id: text(order?.shipstation_label_id, 100),
-    shipment_id: text(order?.shipstation_shipment_id, 100),
-    order_shipment_id: text(order?.shipstation_order_shipment_id, 80) || null,
-    revision: Number.isSafeInteger(Number(order?.shipstation_shipment_revision))
-      ? Number(order.shipstation_shipment_revision)
-      : null,
-    rate_id: text(order?.shipstation_rate_id, 100) || null,
-    status: text(order?.shipstation_label_status, 80) || 'label_purchased',
-    tracking_number: text(order?.tracking_number, 160) || null,
-    tracking_url: text(order?.tracking_url, 1000) || null,
-    cost: money(order?.shipstation_cost),
-    currency: text(order?.currency || 'usd', 8).toLowerCase(),
-  };
-}
-
-function labelHasVoidEvidence(order, labelId) {
-  return Array.isArray(order?.order_financial_entries)
-    && order.order_financial_entries.some((entry) => entry?.source === 'shipstation'
-      && entry?.entry_type === 'postage_void_requested'
-      && text(entry?.provider_object_id, 100) === labelId);
-}
-
-function linkedOutboundLabel(order, { labelId, orderShipmentId, shipmentId } = {}) {
-  if (!Array.isArray(order?.order_provider_links)) return null;
-  return order.order_provider_links.find((link) => {
-    if (link?.provider !== 'shipstation' || link?.object_type !== 'label') return false;
-    const linkedLabelId = text(link?.provider_object_id, 100);
-    if (!linkedLabelId || labelHasVoidEvidence(order, linkedLabelId)) return false;
-    const metadata = link?.metadata && typeof link.metadata === 'object' ? link.metadata : {};
-    if (labelId && linkedLabelId !== labelId) return false;
-    if (orderShipmentId && text(metadata.order_shipment_id, 80) !== orderShipmentId) return false;
-    if (shipmentId && text(metadata.shipment_id, 100) !== shipmentId) return false;
-    return true;
-  }) || null;
-}
-
 function existingLabelForShipment(order, orderShipmentId, shipmentId) {
-  const projectedOrderShipmentId = text(order?.shipstation_order_shipment_id, 80);
-  if ((!projectedOrderShipmentId || projectedOrderShipmentId === orderShipmentId)
-    && text(order?.shipstation_shipment_id, 100) === shipmentId
-    && order?.shipstation_label_id
-    && !['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
-    return existingLabel(order);
-  }
-  const link = linkedOutboundLabel(order, { orderShipmentId, shipmentId });
-  if (!link) return null;
-  const metadata = link.metadata && typeof link.metadata === 'object' ? link.metadata : {};
+  const label = shipmentLabelOwnership(order).outbound.find((entry) => (
+    entry.active
+    && entry.order_shipment_id === orderShipmentId
+    && entry.provider_shipment_id === shipmentId
+  ));
+  if (!label) return null;
+  const link = order.order_provider_links.find((entry) => entry.id === label.provider_link_id);
+  const metadata = link?.metadata && typeof link.metadata === 'object' ? link.metadata : {};
   return {
     already_purchased: true,
-    label_id: text(link.provider_object_id, 100),
-    shipment_id: text(metadata.shipment_id, 100),
-    order_shipment_id: text(metadata.order_shipment_id, 80) || null,
-    revision: Number.isSafeInteger(Number(metadata.revision)) ? Number(metadata.revision) : null,
+    label_id: label.label_id,
+    shipment_id: label.provider_shipment_id,
+    order_shipment_id: label.order_shipment_id,
+    revision: label.revision,
     rate_id: text(metadata.rate_id, 100) || null,
-    status: text(metadata.status, 80) || 'label_purchased',
-    tracking_number: text(metadata.tracking_number, 160) || null,
+    status: label.status,
+    tracking_number: label.tracking_number,
     tracking_url: text(metadata.tracking_url, 1000) || null,
-    cost: money(metadata.cost),
-    currency: text(metadata.currency || order?.currency || 'usd', 8).toLowerCase(),
+    cost: label.cost,
+    currency: text(label.currency || order?.currency || 'usd', 8).toLowerCase(),
   };
 }
 
 async function defaultLoadOrder(env, id) {
   const { data, error } = await adminClient(env).from('orders')
-    .select('id,order_number,status,customer_email,currency,ship_address,created_at,updated_at,shipping_package_plan,paid_shipping_rate_id,paid_shipping_carrier_id,paid_shipping_service_code,shipstation_shipment_id,shipstation_order_shipment_id,shipstation_shipment_revision,shipstation_package_hash,shipstation_shipment_state,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,shipstation_cost,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,tracking_status,carrier,tracking_number,tracking_url,order_items(sku,name,qty,unit_price),order_provider_links(provider,object_type,provider_object_id,metadata),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,metadata)')
+    .select('id,order_number,status,customer_email,currency,ship_address,created_at,updated_at,shipping_package_plan,paid_shipping_rate_id,paid_shipping_carrier_id,paid_shipping_service_code,shipstation_shipment_id,shipstation_order_shipment_id,shipstation_shipment_revision,shipstation_package_hash,shipstation_shipment_state,shipstation_label_id,shipstation_rate_id,shipstation_label_status,shipstation_label_url,shipstation_cost,shipstation_error,shipstation_updated_at,shipstation_return_label_id,shipstation_return_label_status,shipstation_return_cost,shipstation_return_currency,shipstation_return_charge_event,shipstation_return_tracking_number,shipstation_return_error,shipstation_return_updated_at,tracking_status,carrier,tracking_number,tracking_url,order_items(sku,name,qty,unit_price),order_shipments(id,split_key,generation,revision,provider_shipment_id,status,selected_rate_id,item_allocations),order_provider_links(id,provider,object_type,provider_object_id,metadata),order_financial_entries(source,entry_type,provider_object_id,amount,currency,recognition_state,metadata,created_at),shipstation_operation_attempts(operation_key,operation,order_shipment_id,provider_link_id,parent_provider_link_id,provider_object_id,status,result_summary,error_code,provider_succeeded_at,lease_expires_at,created_at)')
     .eq('id', id)
     .single();
   if (error) throw new ShipStationError(error.code === 'PGRST116' ? 'shipping_order_not_found' : 'shipping_database_failed');
@@ -440,7 +424,22 @@ function throwShipmentRpcError(error, fallback = 'shipping_database_failed') {
 }
 
 async function defaultClaimShipmentOperation(env, input) {
-  const { data, error } = await adminClient(env).rpc('claim_order_shipment_operation', {
+  const operationKey = shipStationOperationKey({
+    operation: `shipment_${input.operation}`,
+    orderId: input.orderId,
+    orderShipmentId: input.orderShipmentId || null,
+    revision: input.expectedRevision,
+    discriminator: input.splitKey || 'default',
+  });
+  const requestFingerprint = await shipStationRequestFingerprint({
+    operation: input.operation,
+    split_key: input.splitKey || 'default',
+    expected_revision: input.expectedRevision,
+    package_hash: input.packageHash || null,
+    pending_payload: input.pendingPayload || {},
+  });
+  const leaseOwner = operationLeaseOwner();
+  const { data, error } = await adminClient(env).rpc('claim_order_shipment_operation_attempt', {
     p_order_id: input.orderId,
     p_order_shipment_id: input.orderShipmentId || null,
     p_split_key: input.splitKey || 'default',
@@ -448,12 +447,143 @@ async function defaultClaimShipmentOperation(env, input) {
     p_operation: input.operation,
     p_package_hash: input.packageHash || null,
     p_pending_payload: input.pendingPayload || {},
+    p_operation_key: operationKey,
+    p_request_fingerprint: requestFingerprint,
+    p_lease_owner: leaseOwner,
+    p_lease_seconds: 120,
   });
   if (error) {
     throwShipmentRpcError(error);
   }
+  if (data?.state === 'completed') return data;
+  if (['provider_succeeded', 'reconcile_required'].includes(data?.state)) {
+    throw new ShipStationError('shipstation_shipment_reconciliation_required', 409);
+  }
   if (data?.claimed !== true) throw new ShipStationError('shipstation_shipment_operation_locked', 409);
+  return {
+    ...data,
+    operation_key: text(data?.operation_key, 512) || operationKey,
+    lease_owner: text(data?.lease_owner, 128) || leaseOwner,
+  };
+}
+
+async function defaultMarkAttemptProviderSucceeded(env, input) {
+  const { data, error } = await adminClient(env).rpc('mark_shipstation_operation_provider_succeeded', {
+    p_operation_key: input.operationKey,
+    p_lease_owner: input.leaseOwner,
+    p_provider_object_id: input.providerObjectId || null,
+    p_result_summary: input.resultSummary || {},
+  });
+  if (error || data?.state !== 'provider_succeeded') {
+    throw new ShipStationError('shipstation_operation_evidence_failed');
+  }
   return data;
+}
+
+async function defaultCompleteAttempt(env, input) {
+  const { data, error } = await adminClient(env).rpc('complete_shipstation_operation_attempt', {
+    p_operation_key: input.operationKey,
+    p_lease_owner: input.leaseOwner,
+    p_result_summary: input.resultSummary || {},
+  });
+  if (error || data?.state !== 'completed') {
+    throw new ShipStationError('shipstation_operation_completion_failed');
+  }
+  return data;
+}
+
+async function defaultMarkAttemptReconcileRequired(env, input) {
+  const { data, error } = await adminClient(env).rpc('mark_shipstation_operation_reconcile_required', {
+    p_operation_key: input.operationKey,
+    p_lease_owner: input.leaseOwner,
+    p_error_code: text(input.errorCode || 'shipstation_operation_uncertain', 160),
+  });
+  if (error || data !== true) throw new ShipStationError('shipstation_operation_evidence_failed');
+}
+
+async function defaultReleaseAttempt(env, input) {
+  const actorId = text(input.actorId, 80);
+  const { data, error } = await adminClient(env).rpc('release_shipstation_operation_attempt', {
+    p_operation_key: input.operationKey,
+    p_lease_owner: input.leaseOwner,
+    p_nonacceptance_evidence: input.evidence,
+    p_reason: input.reason,
+    p_actor_id: /^[0-9a-f-]{36}$/i.test(actorId) ? actorId : null,
+    p_actor_email: text(input.actorEmail, 254) || null,
+    p_error_code: text(input.errorCode, 160) || null,
+  });
+  if (error || data?.state !== 'released') {
+    throw new ShipStationError('shipstation_operation_release_failed');
+  }
+  return data;
+}
+
+async function defaultClaimAttemptReconciliation(env, input) {
+  const leaseOwner = operationLeaseOwner();
+  const { data, error } = await adminClient(env).rpc('claim_shipstation_operation_reconciliation', {
+    p_operation_key: input.operationKey,
+    p_lease_owner: leaseOwner,
+    p_lease_seconds: 120,
+  });
+  if (error) throw new ShipStationError('shipstation_operation_reconciliation_failed');
+  if (data?.state !== 'claimed') throw new ShipStationError('shipstation_operation_reconciliation_locked', 409);
+  return { ...data, operation_key: input.operationKey, lease_owner: leaseOwner };
+}
+
+function reconcilableAttempt(attempts, operation, predicate = () => true) {
+  const candidates = (Array.isArray(attempts) ? attempts : []).filter((attempt) => (
+    attempt?.operation === operation
+    && ['provider_succeeded', 'reconcile_required'].includes(text(attempt?.status, 40))
+    && predicate(attempt)
+  ));
+  if (candidates.length > 1) throw new ShipStationError('shipstation_operation_reconciliation_ambiguous', 409);
+  return candidates[0] || null;
+}
+
+async function recordAttemptProviderSucceeded(mark, env, claim, providerObjectId, resultSummary) {
+  const handle = attemptHandle(claim);
+  if (!handle) return;
+  await mark(env, { ...handle, providerObjectId, resultSummary });
+}
+
+async function completeAttempt(complete, env, claim, resultSummary) {
+  const handle = attemptHandle(claim);
+  if (!handle) return;
+  await complete(env, { ...handle, resultSummary });
+}
+
+function shipmentAttemptSummary(result) {
+  return {
+    order_shipment_id: text(result?.order_shipment_id, 80) || null,
+    shipment_id: text(result?.shipment_id, 100) || null,
+    external_shipment_id: text(result?.external_shipment_id, 100) || null,
+    split_key: text(result?.split_key, 40) || null,
+    revision: Number.isSafeInteger(Number(result?.revision)) ? Number(result.revision) : null,
+    status: text(result?.status, 40) || 'rated',
+    package_hash: text(result?.package_hash, 64) || null,
+    package_count: Array.isArray(result?.packages) ? result.packages.length : 0,
+    rate_count: Array.isArray(result?.rates) ? result.rates.length : 0,
+  };
+}
+
+async function recordAttemptFailure(lifecycle, env, claim, error, context, operation, providerAccepted = false) {
+  const handle = attemptHandle(claim);
+  if (!handle) return;
+  const common = {
+    ...handle,
+    errorCode: error?.code || 'shipstation_request_failed',
+  };
+  if (!providerAccepted && providerFailureIsProvenRejection(error)) {
+    await lifecycle.release(env, {
+      ...common,
+      evidence: 'provider_rejected',
+      reason: `Provider rejected ${operation} before acceptance`,
+      actorId: context?.user?.id,
+      actorEmail: context?.user?.email,
+    });
+  } else {
+    await lifecycle.reconcile(env, common);
+  }
 }
 
 async function defaultFinalizeShipmentOperation(env, input) {
@@ -509,7 +639,7 @@ async function recordShipmentFailure(
 
 async function defaultLoadShipmentOperation(env, input) {
   let query = adminClient(env).from('order_shipments')
-    .select('id,order_id,split_key,revision,provider_shipment_id,external_shipment_id,package_hash,status,operation,operation_state,pending_payload,selected_rate_id')
+    .select('id,order_id,split_key,revision,provider_shipment_id,external_shipment_id,package_hash,status,operation,operation_state,pending_payload,selected_rate_id,shipstation_operation_attempts(operation_key,operation,provider_object_id,status,result_summary,error_code,provider_succeeded_at,lease_expires_at,created_at)')
     .eq('order_id', input.orderId);
   query = input.orderShipmentId
     ? query.eq('id', input.orderShipmentId)
@@ -592,8 +722,9 @@ async function defaultListLabels(env, query) {
 }
 
 async function defaultFinalizeReconciliation(env, input) {
-  const { data, error } = await adminClient(env).rpc('finalize_shipstation_label_reconciliation', {
+  const { data, error } = await adminClient(env).rpc('finalize_order_shipment_label_reconciliation', {
     p_order_id: input.orderId,
+    p_order_shipment_id: input.orderShipmentId,
     p_shipment_id: input.shipmentId,
     p_label_id: input.labelId,
     p_rate_id: input.rateId || null,
@@ -619,14 +750,33 @@ async function defaultFetchDocument(url, options) {
 }
 
 async function defaultClaimLabel(env, input) {
-  const { data, error } = await adminClient(env).rpc('claim_order_shipment_label_purchase', {
+  const operationKey = shipStationOperationKey({
+    operation: 'label_purchase', orderId: input.orderId,
+    orderShipmentId: input.orderShipmentId, revision: input.expectedRevision,
+    discriminator: input.rateId,
+  });
+  const requestFingerprint = await shipStationRequestFingerprint({
+    order_shipment_id: input.orderShipmentId,
+    expected_revision: input.expectedRevision,
+    rate_id: input.rateId,
+  });
+  const leaseOwner = operationLeaseOwner();
+  const { data, error } = await adminClient(env).rpc('claim_order_shipment_label_purchase_attempt', {
     p_order_id: input.orderId,
     p_order_shipment_id: input.orderShipmentId,
     p_expected_revision: input.expectedRevision,
     p_rate_id: input.rateId,
+    p_operation_key: operationKey,
+    p_request_fingerprint: requestFingerprint,
+    p_lease_owner: leaseOwner,
+    p_lease_seconds: 120,
   });
   if (error) throw new ShipStationError('shipping_database_failed');
-  return data === true;
+  return {
+    ...data,
+    operation_key: text(data?.operation_key, 512) || operationKey,
+    lease_owner: text(data?.lease_owner, 128) || leaseOwner,
+  };
 }
 
 async function defaultPurchaseLabel(env, rateId, body) {
@@ -637,12 +787,21 @@ async function defaultPurchaseLabel(env, rateId, body) {
 }
 
 async function defaultClaimVoid(env, id, labelId) {
-  const { data, error } = await adminClient(env).rpc('claim_shipstation_label_void', {
+  const operationKey = shipStationOperationKey({
+    operation: 'label_void', orderId: id, discriminator: labelId,
+  });
+  const requestFingerprint = await shipStationRequestFingerprint({ label_id: labelId });
+  const leaseOwner = operationLeaseOwner();
+  const { data, error } = await adminClient(env).rpc('claim_shipstation_label_void_attempt', {
     p_order_id: id,
     p_label_id: labelId,
+    p_operation_key: operationKey,
+    p_request_fingerprint: requestFingerprint,
+    p_lease_owner: leaseOwner,
+    p_lease_seconds: 120,
   });
   if (error) throw new ShipStationError('shipping_database_failed');
-  return data === true;
+  return { ...data, operation_key: operationKey, lease_owner: leaseOwner };
 }
 
 async function defaultVoidLabel(env, labelId) {
@@ -666,13 +825,39 @@ async function defaultFinalizeVoid(env, input) {
   return data;
 }
 
+async function defaultFinalizeVoidReconciliation(env, input) {
+  const { data, error } = await adminClient(env).rpc('finalize_shipstation_label_void_reconciliation', {
+    p_order_id: input.orderId,
+    p_label_id: input.labelId,
+    p_actor_id: input.actorId || null,
+    p_reason: input.reason,
+    p_provider_message: input.providerMessage || null,
+  });
+  if (error || data?.applied !== true) throw new ShipStationError('shipping_database_failed');
+  return data;
+}
+
 async function defaultClaimReturn(env, id, labelId) {
-  const { data, error } = await adminClient(env).rpc('claim_shipstation_return_label', {
+  const operationKey = shipStationOperationKey({
+    operation: 'label_return', orderId: id, discriminator: labelId,
+  });
+  const requestFingerprint = await shipStationRequestFingerprint({
+    outbound_label_id: labelId,
+    charge_event: 'carrier_default',
+    label_layout: '4x6',
+    label_format: 'pdf',
+  });
+  const leaseOwner = operationLeaseOwner();
+  const { data, error } = await adminClient(env).rpc('claim_shipstation_return_label_attempt', {
     p_order_id: id,
-    p_label_id: labelId,
+    p_outbound_label_id: labelId,
+    p_operation_key: operationKey,
+    p_request_fingerprint: requestFingerprint,
+    p_lease_owner: leaseOwner,
+    p_lease_seconds: 120,
   });
   if (error) throw new ShipStationError('shipping_database_failed');
-  return data === true;
+  return { ...data, operation_key: operationKey, lease_owner: leaseOwner };
 }
 
 async function defaultCreateReturn(env, labelId, body) {
@@ -684,6 +869,21 @@ async function defaultCreateReturn(env, labelId, body) {
 
 async function defaultFinalizeReturn(env, input) {
   const { data, error } = await adminClient(env).rpc('finalize_shipstation_return_label', {
+    p_order_id: input.orderId,
+    p_outbound_label_id: input.outboundLabelId,
+    p_return_label_id: input.returnLabelId,
+    p_cost: input.cost,
+    p_currency: input.currency,
+    p_charge_event: input.chargeEvent,
+    p_tracking_number: input.trackingNumber || null,
+    p_reason: input.reason,
+  });
+  if (error || data?.applied !== true) throw new ShipStationError('shipping_database_failed');
+  return data;
+}
+
+async function defaultFinalizeReturnReconciliation(env, input) {
+  const { data, error } = await adminClient(env).rpc('finalize_shipstation_return_label_reconciliation', {
     p_order_id: input.orderId,
     p_outbound_label_id: input.outboundLabelId,
     p_return_label_id: input.returnLabelId,
@@ -770,6 +970,7 @@ async function recordPostagePurchase(recordFinancialEntry, env, order, input) {
     actorId: text(input.actorId, 80) || null,
     reason: null,
     metadata: {
+      order_shipment_id: text(input.orderShipmentId, 80) || null,
       shipment_id: text(input.shipmentId, 100) || null,
       rate_id: text(input.rateId, 100) || null,
     },
@@ -795,32 +996,26 @@ async function recordReturnPostage(recordFinancialEntry, env, order, input) {
     reason: text(input.reason, 280) || null,
     metadata: {
       outbound_label_id: text(input.outboundLabelId, 100),
+      order_shipment_id: text(input.orderShipmentId, 80) || null,
       charge_event: text(input.chargeEvent, 40).toLowerCase(),
     },
   });
 }
 
-function linkedReturnLabel(order, outboundLabelId) {
-  if (!Array.isArray(order?.order_provider_links)) return null;
-  return order.order_provider_links.find((link) => link?.provider === 'shipstation'
-    && link?.object_type === 'return_label'
-    && text(link?.provider_object_id, 100)
-    && text(link?.metadata?.outbound_label_id, 100) === outboundLabelId) || null;
-}
-
 function existingReturnLabel(order, outboundLabelId) {
-  const link = linkedReturnLabel(order, outboundLabelId);
-  const metadata = link?.metadata && typeof link.metadata === 'object' ? link.metadata : {};
-  const chargeEvent = text(order?.shipstation_return_charge_event || metadata.charge_event, 40).toLowerCase()
-    || 'carrier_default';
+  const existing = shipmentLabelOwnership(order).returns.find((entry) => (
+    entry.parent_label_id === outboundLabelId && entry.active
+  ));
+  const chargeEvent = text(existing?.charge_event, 40).toLowerCase() || 'carrier_default';
   return {
     already_created: true,
-    label_id: text(order?.shipstation_return_label_id || link?.provider_object_id, 100),
-    outbound_label_id: text(order?.shipstation_label_id, 100),
-    status: text(order?.shipstation_return_label_status || metadata.status, 80) || 'return_label_created',
-    tracking_number: text(order?.shipstation_return_tracking_number || metadata.tracking_number, 160) || null,
-    cost: money(order?.shipstation_return_cost ?? metadata.cost),
-    currency: text(order?.shipstation_return_currency || metadata.currency || order?.currency || 'usd', 8).toLowerCase(),
+    label_id: text(existing?.label_id, 100),
+    outbound_label_id: text(existing?.parent_label_id, 100),
+    order_shipment_id: text(existing?.order_shipment_id, 80) || null,
+    status: text(existing?.status, 80) || 'return_label_created',
+    tracking_number: text(existing?.tracking_number, 160) || null,
+    cost: existing?.cost ?? null,
+    currency: text(existing?.currency || order?.currency || 'usd', 8).toLowerCase(),
     charge_event: chargeEvent,
     recognition_state: returnRecognitionState(chargeEvent),
   };
@@ -851,18 +1046,8 @@ function safeLabel(label) {
 
 function assertOrderLabel(order, labelId) {
   if (!order) throw new ShipStationError('shipping_order_not_found');
-  const outbound = text(order.shipstation_label_id, 100);
-  const returned = text(order.shipstation_return_label_id, 100);
-  const linkedReturn = Array.isArray(order.order_provider_links)
-    && order.order_provider_links.some((link) => link?.provider === 'shipstation'
-      && link?.object_type === 'return_label'
-      && text(link?.provider_object_id, 100) === labelId);
-  const linkedOutbound = Array.isArray(order.order_provider_links)
-    && order.order_provider_links.some((link) => link?.provider === 'shipstation'
-      && link?.object_type === 'label'
-      && text(link?.provider_object_id, 100) === labelId);
-  if (labelId === outbound || linkedOutbound) return 'outbound';
-  if (labelId === returned || linkedReturn) return 'return';
+  const owned = resolveShipmentLabel(order, labelId);
+  if (owned) return owned.kind;
   throw new ShipStationError('shipstation_label_order_mismatch');
 }
 
@@ -893,26 +1078,7 @@ function documentContentType(format, value) {
   return type;
 }
 
-async function fetchLabelDocument(url, format, fetchDocument) {
-  let current = validDocumentUrl(url);
-  let response = await fetchDocument(current.href, {
-    method: 'GET',
-    redirect: 'manual',
-    headers: { accept: format === 'pdf' ? 'application/pdf' : format === 'png' ? 'image/png' : 'application/zpl' },
-  });
-  if (response.status >= 300 && response.status < 400) {
-    const location = response.headers.get('location');
-    if (!location) throw new ShipStationError('shipstation_label_document_redirect_invalid');
-    current = validDocumentUrl(new URL(location, current).href);
-    response = await fetchDocument(current.href, {
-      method: 'GET',
-      redirect: 'manual',
-      headers: { accept: format === 'pdf' ? 'application/pdf' : format === 'png' ? 'image/png' : 'application/zpl' },
-    });
-  }
-  if (response.status >= 300 && response.status < 400) {
-    throw new ShipStationError('shipstation_label_document_redirect_invalid');
-  }
+async function readLabelDocument(response, format, signal) {
   if (!response.ok) throw new ShipStationError('shipstation_label_document_fetch_failed', response.status);
   const length = Number(response.headers.get('content-length'));
   if (Number.isFinite(length) && length > LABEL_DOCUMENT_MAX_BYTES) {
@@ -921,18 +1087,24 @@ async function fetchLabelDocument(url, format, fetchDocument) {
   const contentType = documentContentType(format, response.headers.get('content-type'));
   if (!response.body?.getReader) throw new ShipStationError('shipstation_label_document_body_invalid');
   const reader = response.body.getReader();
+  const cancel = () => reader.cancel(signal?.reason || 'cancelled').catch(() => {});
+  signal?.addEventListener('abort', cancel, { once: true });
   const chunks = [];
   let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = value instanceof Uint8Array ? value : new Uint8Array(value || 0);
-    total += chunk.byteLength;
-    if (total > LABEL_DOCUMENT_MAX_BYTES) {
-      await reader.cancel('shipstation_label_document_too_large').catch(() => {});
-      throw new ShipStationError('shipstation_label_document_too_large');
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = value instanceof Uint8Array ? value : new Uint8Array(value || 0);
+      total += chunk.byteLength;
+      if (total > LABEL_DOCUMENT_MAX_BYTES) {
+        await reader.cancel('shipstation_label_document_too_large').catch(() => {});
+        throw new ShipStationError('shipstation_label_document_too_large');
+      }
+      chunks.push(chunk);
     }
-    chunks.push(chunk);
+  } finally {
+    signal?.removeEventListener('abort', cancel);
   }
   const bytes = new Uint8Array(total);
   let offset = 0;
@@ -941,6 +1113,45 @@ async function fetchLabelDocument(url, format, fetchDocument) {
     offset += chunk.byteLength;
   }
   return { bytes, contentType };
+}
+
+async function fetchLabelDocument(url, format, fetchDocument, timeoutMs = 12_000) {
+  const current = validDocumentUrl(url);
+  try {
+    return await fetchWithDeadline(async (requestUrl, options) => {
+      let active = validDocumentUrl(requestUrl);
+      let response = await fetchDocument(active.href, {
+        ...options,
+        method: 'GET',
+        redirect: 'manual',
+        headers: { accept: format === 'pdf' ? 'application/pdf' : format === 'png' ? 'image/png' : 'application/zpl' },
+      });
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location) throw new ShipStationError('shipstation_label_document_redirect_invalid');
+        active = validDocumentUrl(new URL(location, active).href);
+        response = await fetchDocument(active.href, {
+          ...options,
+          method: 'GET',
+          redirect: 'manual',
+          headers: { accept: format === 'pdf' ? 'application/pdf' : format === 'png' ? 'image/png' : 'application/zpl' },
+        });
+      }
+      if (response.status >= 300 && response.status < 400) {
+        throw new ShipStationError('shipstation_label_document_redirect_invalid');
+      }
+      return response;
+    }, current.href, {}, {
+      timeoutMs,
+      timeoutCode: 'shipstation_label_document_timeout',
+      consumeResponse: (response, signal) => readLabelDocument(response, format, signal),
+    });
+  } catch (error) {
+    if (error instanceof ProviderTimeoutError) {
+      throw new ShipStationError('shipstation_label_document_timeout', 503);
+    }
+    throw error;
+  }
 }
 
 async function resolveOrderLabel(env, input, dependencies = {}) {
@@ -977,7 +1188,7 @@ export async function downloadOrderLabel(env, input, _context = {}, dependencies
   const source = provider?.label_download?.[format];
   if (!source) throw new ShipStationError('shipstation_label_document_unavailable');
   const fetchDocument = dependencies.fetchDocument || defaultFetchDocument;
-  const document = await fetchLabelDocument(source, format, fetchDocument);
+  const document = await fetchLabelDocument(source, format, fetchDocument, dependencies.documentTimeoutMs);
   const order = await (dependencies.loadOrder || defaultLoadOrder)(env, orderId(input?.order_id));
   const reference = text(order?.order_number || order?.id, 80).replace(/[^A-Za-z0-9_-]+/g, '-');
   const filename = `${reference}-label-${label.label_id}.${format}`;
@@ -1001,6 +1212,12 @@ async function prepareShipment(env, input, order, listCarriers, loadPackageProfi
     order_items: allocatedOrderItems(order, itemAllocations),
   };
   const manualPackages = Array.isArray(input?.packages) && input.packages.length > 0;
+  const manualSplit = orderSplitKey !== 'default'
+    || (Array.isArray(input?.split_items) && input.split_items.length > 0);
+  if (text(order?.shipstation_error, 160) === 'shipping_package_plan_review_required'
+      && !manualPackages && !manualSplit) {
+    throw new ShipStationError('shipping_package_plan_review_required', 409);
+  }
   // Replay the carton plan the buyer was rated on whenever this shipment covers the whole
   // order. Recomputing instead would be a second independent guess at the packing, and any
   // drift means MASEST buys a shipment the buyer did not pay for.
@@ -1065,9 +1282,14 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
   const claimShipmentOperation = dependencies.claimShipmentOperation || defaultClaimShipmentOperation;
   const finalizeShipmentOperation = dependencies.finalizeShipmentOperation || defaultFinalizeShipmentOperation;
   const failShipmentOperation = dependencies.failShipmentOperation || defaultFailShipmentOperation;
+  const markAttemptProviderSucceeded = dependencies.markAttemptProviderSucceeded || defaultMarkAttemptProviderSucceeded;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+  const attemptLifecycle = {
+    reconcile: dependencies.markAttemptReconcileRequired || defaultMarkAttemptReconcileRequired,
+    release: dependencies.releaseOperationAttempt || defaultReleaseAttempt,
+  };
   const order = await loadOrder(env, id);
   assertShippable(order);
-  assertShipmentMutable(order);
 
   const revision = input?.expected_revision == null ? 0 : expectedRevision(input.expected_revision);
   const {
@@ -1089,6 +1311,7 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
     packageHash,
     pendingPayload,
   });
+  if (claim?.state === 'completed') return claim.result_summary || {};
   const providerExternalShipmentId = externalShipmentId(claim?.external_shipment_id);
   payload.shipment.external_shipment_id = providerExternalShipmentId;
 
@@ -1100,6 +1323,16 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
   try {
     const provider = await quoteRates(env, payload);
     providerAccepted = true;
+    await recordAttemptProviderSucceeded(
+      markAttemptProviderSucceeded,
+      env,
+      claim,
+      text(provider?.rate_response?.shipment_id || provider?.shipment_id, 100) || null,
+      {
+        shipment_id: text(provider?.rate_response?.shipment_id || provider?.shipment_id, 100) || null,
+        external_shipment_id: providerExternalShipmentId,
+      },
+    );
     response = provider?.rate_response || provider || {};
     rates = markPaidService(safeRatesForPackages(response, packages, carriers), order).rates;
     shipmentId = text(response?.shipment_id || rates[0]?.shipment_id, 100);
@@ -1117,10 +1350,13 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
       reason: 'Shipment created and rated',
     });
   } catch (error) {
+    await recordAttemptFailure(
+      attemptLifecycle, env, claim, error, context, 'shipment create', providerAccepted,
+    ).catch(() => {});
     await recordShipmentFailure(failShipmentOperation, env, claim, error, providerAccepted, 'create');
     throw error;
   }
-  return {
+  const result = {
     order_shipment_id: claim.id,
     shipment_id: shipmentId,
     external_shipment_id: providerExternalShipmentId,
@@ -1136,15 +1372,22 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
       matched: rates.some((rate) => rate.paid_service === true),
     },
   };
+  await completeAttempt(completeOperationAttempt, env, claim, shipmentAttemptSummary(result));
+  return result;
 }
 
-function assertShipmentMutable(order) {
-  const labelId = text(order?.shipstation_label_id, 100);
-  const labelState = text(order?.shipstation_label_status, 80);
-  if (labelId && !['label_voided', 'voided'].includes(labelState)) {
-    throw new ShipStationError('shipstation_shipment_locked_by_label', 409);
-  }
-  if (['purchasing', 'reconcile_required', 'voiding', 'void_reconcile_required'].includes(labelState)) {
+function assertShipmentMutable(order, orderShipmentId) {
+  const activeForShipment = shipmentLabelOwnership(order).outbound.some((label) => (
+    label.active && label.order_shipment_id === orderShipmentId
+  ));
+  const unresolvedAttempt = (Array.isArray(order?.shipstation_operation_attempts)
+    ? order.shipstation_operation_attempts
+    : []).some((attempt) => (
+    text(attempt?.order_shipment_id, 80) === orderShipmentId
+    && ['label_purchase', 'label_void'].includes(text(attempt?.operation, 40))
+    && ['claimed', 'provider_succeeded', 'reconcile_required'].includes(text(attempt?.status, 40))
+  ));
+  if (activeForShipment || unresolvedAttempt) {
     throw new ShipStationError('shipstation_shipment_locked_by_label', 409);
   }
 }
@@ -1176,9 +1419,15 @@ export async function updateOrderShipment(env, input, context = {}, dependencies
   const quoteRates = dependencies.quoteRates || defaultQuoteRates;
   const finalizeShipmentOperation = dependencies.finalizeShipmentOperation || defaultFinalizeShipmentOperation;
   const failShipmentOperation = dependencies.failShipmentOperation || defaultFailShipmentOperation;
+  const markAttemptProviderSucceeded = dependencies.markAttemptProviderSucceeded || defaultMarkAttemptProviderSucceeded;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+  const attemptLifecycle = {
+    reconcile: dependencies.markAttemptReconcileRequired || defaultMarkAttemptReconcileRequired,
+    release: dependencies.releaseOperationAttempt || defaultReleaseAttempt,
+  };
   const order = await loadOrder(env, id);
   assertShippable(order);
-  assertShipmentMutable(order);
+  assertShipmentMutable(order, orderShipmentId);
 
   const {
     orderSplitKey, shipmentOrder, packages, carrierIds, carriers, packageHash, pendingPayload,
@@ -1192,6 +1441,7 @@ export async function updateOrderShipment(env, input, context = {}, dependencies
     packageHash,
     pendingPayload,
   });
+  if (claim?.state === 'completed') return claim.result_summary || {};
   const providerShipmentId = providerId(claim?.provider_shipment_id, 'shipstation_shipment_required');
   const payload = shipmentPayload(shipmentOrder, packages, warehouseId, input);
   let finalized;
@@ -1200,6 +1450,10 @@ export async function updateOrderShipment(env, input, context = {}, dependencies
   try {
     const provider = await updateShipment(env, providerShipmentId, payload);
     providerAccepted = true;
+    await recordAttemptProviderSucceeded(
+      markAttemptProviderSucceeded, env, claim, providerShipmentId,
+      { shipment_id: text(provider?.shipment_id || providerShipmentId, 100) },
+    );
     const responseId = text(provider?.shipment_id || providerShipmentId, 100);
     if (responseId !== providerShipmentId) throw new ShipStationError('shipstation_shipment_response_invalid');
     const quoted = await quoteRates(env, {
@@ -1221,12 +1475,15 @@ export async function updateOrderShipment(env, input, context = {}, dependencies
       reason: operationReason,
     });
   } catch (error) {
+    await recordAttemptFailure(
+      attemptLifecycle, env, claim, error, context, 'shipment update', providerAccepted,
+    ).catch(() => {});
     await recordShipmentFailure(
       failShipmentOperation, env, claim, error, providerAccepted, 'update', orderShipmentId,
     );
     throw error;
   }
-  return {
+  const result = {
     order_shipment_id: orderShipmentId,
     shipment_id: providerShipmentId,
     revision: finalized.revision,
@@ -1235,6 +1492,8 @@ export async function updateOrderShipment(env, input, context = {}, dependencies
     packages,
     rates,
   };
+  await completeAttempt(completeOperationAttempt, env, claim, shipmentAttemptSummary(result));
+  return result;
 }
 
 export async function cancelOrderShipment(env, input, context = {}, dependencies = {}) {
@@ -1250,9 +1509,15 @@ export async function cancelOrderShipment(env, input, context = {}, dependencies
   const cancelShipment = dependencies.cancelShipment || defaultCancelShipment;
   const finalizeShipmentOperation = dependencies.finalizeShipmentOperation || defaultFinalizeShipmentOperation;
   const failShipmentOperation = dependencies.failShipmentOperation || defaultFailShipmentOperation;
+  const markAttemptProviderSucceeded = dependencies.markAttemptProviderSucceeded || defaultMarkAttemptProviderSucceeded;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+  const attemptLifecycle = {
+    reconcile: dependencies.markAttemptReconcileRequired || defaultMarkAttemptReconcileRequired,
+    release: dependencies.releaseOperationAttempt || defaultReleaseAttempt,
+  };
   const order = await loadOrder(env, id);
   assertShippable(order);
-  assertShipmentMutable(order);
+  assertShipmentMutable(order, orderShipmentId);
   const claim = await claimShipmentOperation(env, {
     orderId: id,
     orderShipmentId,
@@ -1261,12 +1526,20 @@ export async function cancelOrderShipment(env, input, context = {}, dependencies
     operation: 'cancel',
     pendingPayload: {},
   });
+  if (claim?.state === 'completed') return claim.result_summary || {};
   const providerShipmentId = providerId(claim?.provider_shipment_id, 'shipstation_shipment_required');
   let finalized;
   let providerAccepted = false;
   try {
-    await cancelShipment(env, providerShipmentId);
+    const provider = await cancelShipment(env, providerShipmentId);
+    if (provider?.approved === false) {
+      throw new ShipStationError('shipstation_shipment_cancel_rejected', 422);
+    }
     providerAccepted = true;
+    await recordAttemptProviderSucceeded(
+      markAttemptProviderSucceeded, env, claim, providerShipmentId,
+      { shipment_id: providerShipmentId, cancelled: true },
+    );
     finalized = await finalizeShipmentOperation(env, {
       orderShipmentId,
       expectedRevision: Number(claim.revision),
@@ -1279,17 +1552,22 @@ export async function cancelOrderShipment(env, input, context = {}, dependencies
       reason: operationReason,
     });
   } catch (error) {
+    await recordAttemptFailure(
+      attemptLifecycle, env, claim, error, context, 'shipment cancel', providerAccepted,
+    ).catch(() => {});
     await recordShipmentFailure(
       failShipmentOperation, env, claim, error, providerAccepted, 'cancel', orderShipmentId,
     );
     throw error;
   }
-  return {
+  const result = {
     order_shipment_id: orderShipmentId,
     shipment_id: providerShipmentId,
     revision: finalized.revision,
     status: 'cancelled',
   };
+  await completeAttempt(completeOperationAttempt, env, claim, result);
+  return result;
 }
 
 export async function selectOrderShipmentRate(env, input, _context = {}, dependencies = {}) {
@@ -1320,10 +1598,60 @@ export async function reconcileOrderShipment(env, input, context = {}, dependenc
   const listCarriers = dependencies.listCarriers || defaultListCarriers;
   const quoteRates = dependencies.quoteRates || defaultQuoteRates;
   const finalizeShipmentOperation = dependencies.finalizeShipmentOperation || defaultFinalizeShipmentOperation;
+  const claimAttemptReconciliation = dependencies.claimAttemptReconciliation || defaultClaimAttemptReconciliation;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+  const audit = dependencies.audit || defaultAudit;
   const state = await loadShipmentOperation(env, { orderId: id, orderShipmentId });
-  if (state.operation_state !== 'reconcile_required') {
-    throw new ShipStationError('shipstation_shipment_reconciliation_not_required');
+  const shipmentAttempts = (Array.isArray(state.shipstation_operation_attempts)
+    ? state.shipstation_operation_attempts
+    : []).filter((attempt) => (
+    ['shipment_create', 'shipment_update', 'shipment_cancel'].includes(text(attempt?.operation, 40))
+    && ['provider_succeeded', 'reconcile_required'].includes(text(attempt?.status, 40))
+  ));
+  if (shipmentAttempts.length > 1) {
+    throw new ShipStationError('shipstation_operation_reconciliation_ambiguous', 409);
   }
+  const durableAttempt = shipmentAttempts[0] || null;
+  if (state.operation_state !== 'reconcile_required') {
+    const attemptOperation = text(durableAttempt?.operation, 40);
+    const expectedStatus = attemptOperation === 'shipment_cancel' ? 'cancelled' : 'rated';
+    const expectedProviderId = text(
+      durableAttempt?.provider_object_id || durableAttempt?.result_summary?.shipment_id,
+      100,
+    );
+    if (state.operation_state !== 'idle'
+        || durableAttempt?.status !== 'provider_succeeded'
+        || !expectedProviderId
+        || expectedProviderId !== text(state.provider_shipment_id, 100)
+        || text(state.status, 40) !== expectedStatus) {
+      throw new ShipStationError('shipstation_shipment_reconciliation_not_required');
+    }
+    const completedClaim = await claimAttemptReconciliation(env, {
+      operationKey: durableAttempt.operation_key,
+    });
+    const completedResult = {
+      reconciled: true,
+      already_finalized: true,
+      order_shipment_id: orderShipmentId,
+      shipment_id: expectedProviderId,
+      revision: Number(state.revision),
+      status: expectedStatus,
+    };
+    await completeAttempt(completeOperationAttempt, env, completedClaim, completedResult);
+    await audit(env, context, 'shipstation_shipment_attempt_completed', id, {
+      order_shipment_id: orderShipmentId,
+      shipment_id: expectedProviderId,
+      operation: attemptOperation,
+      reason: operationReason,
+    }).catch(() => {});
+    return completedResult;
+  }
+  if (durableAttempt && durableAttempt.operation !== `shipment_${state.operation}`) {
+    throw new ShipStationError('shipstation_shipment_reconciliation_mismatch');
+  }
+  const reconciliationClaim = durableAttempt
+    ? await claimAttemptReconciliation(env, { operationKey: durableAttempt.operation_key })
+    : null;
 
   let provider;
   if (state.provider_shipment_id) {
@@ -1387,13 +1715,15 @@ export async function reconcileOrderShipment(env, input, context = {}, dependenc
     actorEmail: context?.user?.email,
     reason: operationReason,
   });
-  return {
+  const result = {
     reconciled: true,
     order_shipment_id: orderShipmentId,
     shipment_id: providerShipmentId,
     revision: finalized.revision,
     status: finalized.status || (state.operation === 'cancel' ? 'cancelled' : 'rated'),
   };
+  await completeAttempt(completeOperationAttempt, env, reconciliationClaim, result);
+  return result;
 }
 
 export async function buyOrderLabel(env, input, context = {}, dependencies = {}) {
@@ -1417,6 +1747,12 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   const audit = dependencies.audit || defaultAudit;
   const linkProviderObject = dependencies.linkProviderObject || defaultLinkProviderObject;
   const recordFinancialEntry = dependencies.recordFinancialEntry || defaultRecordFinancialEntry;
+  const markAttemptProviderSucceeded = dependencies.markAttemptProviderSucceeded || defaultMarkAttemptProviderSucceeded;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+  const attemptLifecycle = {
+    reconcile: dependencies.markAttemptReconcileRequired || defaultMarkAttemptReconcileRequired,
+    release: dependencies.releaseOperationAttempt || defaultReleaseAttempt,
+  };
   let order = await loadOrder(env, id);
   assertShippable(order);
   const selectedRate = await verifySelectedRate(env, {
@@ -1456,6 +1792,7 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     });
     await recordPostagePurchase(recordFinancialEntry, env, order, {
       labelId: existing.label_id,
+      orderShipmentId,
       shipmentId: requestedShipmentId,
       rateId,
       cost: existing.cost,
@@ -1485,7 +1822,11 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     expectedRevision: revision,
     rateId,
   });
-  if (!claimed) {
+  if (claimed?.state === 'completed') return claimed.result_summary || {};
+  if (['provider_succeeded', 'reconcile_required'].includes(claimed?.state)) {
+    throw new ShipStationError('shipstation_operation_reconciliation_required', 409);
+  }
+  if (claimed !== true && claimed?.claimed !== true) {
     order = await loadOrder(env, id);
     const concurrentExisting = existingLabelForShipment(order, orderShipmentId, requestedShipmentId);
     if (concurrentExisting) return concurrentExisting;
@@ -1493,6 +1834,7 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
   }
 
   let label;
+  let providerAccepted = false;
   try {
     label = await purchaseLabel(env, rateId, {
       validate_address: 'validate_and_clean',
@@ -1501,9 +1843,25 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
       label_download_type: 'url',
       display_scheme: 'label',
     });
+    providerAccepted = true;
+    await recordAttemptProviderSucceeded(
+      markAttemptProviderSucceeded, env, claimed,
+      text(label?.label_id, 100) || null,
+      {
+        label_id: text(label?.label_id, 100) || null,
+        shipment_id: text(label?.shipment_id, 100) || shipmentId,
+        tracking_number: text(label?.tracking_number, 160) || null,
+        status: text(label?.status || label?.label_status, 80).toLowerCase() || null,
+      },
+    );
   } catch (error) {
+    await recordAttemptFailure(
+      attemptLifecycle, env, claimed, error, context, 'label purchase', providerAccepted,
+    ).catch(() => {});
     await persistLabel(env, id, {
-      shipstation_label_status: 'reconcile_required',
+      shipstation_label_status: !providerAccepted && providerFailureIsProvenRejection(error)
+        ? 'rated'
+        : 'reconcile_required',
       shipstation_error: text(error?.code || 'shipstation_label_purchase_failed', 160),
     }).catch(() => {});
     throw error;
@@ -1511,6 +1869,13 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
 
   const labelId = text(label?.label_id, 100);
   if (!labelId) {
+    await persistLabel(env, id, {
+      shipstation_label_status: 'reconcile_required',
+      shipstation_error: 'shipstation_label_response_invalid',
+    });
+    throw new ShipStationError('shipstation_label_response_invalid');
+  }
+  if (text(label?.shipment_id, 100) !== shipmentId) {
     await persistLabel(env, id, {
       shipstation_label_status: 'reconcile_required',
       shipstation_error: 'shipstation_label_response_invalid',
@@ -1531,6 +1896,15 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     });
     throw new ShipStationError('shipstation_label_provider_error');
   }
+  const labelCost = money(label?.shipment_cost);
+  const labelCurrency = text(label?.shipment_cost?.currency, 8).toLowerCase();
+  if (labelCost == null || labelCost < 0 || !/^[a-z]{3}$/.test(labelCurrency)) {
+    await persistLabel(env, id, {
+      shipstation_label_status: 'reconcile_required',
+      shipstation_error: 'shipstation_label_response_invalid',
+    });
+    throw new ShipStationError('shipstation_label_response_invalid');
+  }
   const labelStatus = ['processing', 'pending', 'queued'].includes(providerStatus)
     ? 'label_pending'
     : 'label_purchased';
@@ -1541,7 +1915,7 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     shipstation_carrier_id: text(label?.carrier_id, 100) || null,
     shipstation_service_code: text(label?.service_code, 100) || null,
     shipstation_label_url: labelUrl,
-    shipstation_cost: money(label?.shipment_cost),
+    shipstation_cost: labelCost,
     shipstation_label_status: labelStatus,
     shipstation_error: null,
     tracking_status: 'packing',
@@ -1567,14 +1941,15 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     tracking_url: trackingUrl,
     carrier: patch.carrier,
     cost: patch.shipstation_cost,
-    currency: text(label?.shipment_cost?.currency || order.currency || 'usd', 8).toLowerCase(),
+    currency: labelCurrency,
   });
   await recordPostagePurchase(recordFinancialEntry, env, order, {
     labelId,
+    orderShipmentId,
     shipmentId: patch.shipstation_shipment_id,
     rateId,
     cost: patch.shipstation_cost,
-    currency: label?.shipment_cost?.currency,
+    currency: labelCurrency,
     actorId: context?.user?.id,
   });
   await insertShipmentEvent(env, id, {
@@ -1582,16 +1957,20 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     carrier: patch.carrier,
     tracking_number: trackingNumber,
     note: `ShipStation label ${labelId} purchased`,
+    provider: 'shipstation',
+    provider_event_key: `label-purchase:${labelId}`,
+    order_shipment_id: orderShipmentId,
+    provider_label_id: labelId,
   });
   await audit(env, context, 'shipstation_label_purchased', id, {
     shipment_id: patch.shipstation_shipment_id,
     label_id: labelId,
     rate_id: rateId,
     cost: patch.shipstation_cost,
-    currency: text(label?.shipment_cost?.currency || 'usd', 8).toLowerCase(),
+    currency: labelCurrency,
     status: labelStatus,
   });
-  return {
+  const result = {
     already_purchased: false,
     label_id: labelId,
     shipment_id: patch.shipstation_shipment_id,
@@ -1599,8 +1978,11 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     tracking_number: trackingNumber,
     tracking_url: trackingUrl,
     cost: patch.shipstation_cost,
-    currency: text(label?.shipment_cost?.currency || 'usd', 8).toLowerCase(),
+    currency: labelCurrency,
   };
+  const { tracking_url: _trackingUrl, ...attemptResult } = result;
+  await completeAttempt(completeOperationAttempt, env, claimed, attemptResult);
+  return result;
 }
 
 export async function voidOrderLabel(env, input, context = {}, dependencies = {}) {
@@ -1617,62 +1999,72 @@ export async function voidOrderLabel(env, input, context = {}, dependencies = {}
   const finalizeVoid = dependencies.finalizeVoid || defaultFinalizeVoid;
   const persistLabel = dependencies.persistLabel || defaultPersistLabel;
   const audit = dependencies.audit || defaultAudit;
+  const markAttemptProviderSucceeded = dependencies.markAttemptProviderSucceeded || defaultMarkAttemptProviderSucceeded;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+  const attemptLifecycle = {
+    reconcile: dependencies.markAttemptReconcileRequired || defaultMarkAttemptReconcileRequired,
+    release: dependencies.releaseOperationAttempt || defaultReleaseAttempt,
+  };
 
   let order = await loadOrder(env, id);
   assertShippable(order);
-  const projectedLabel = text(order.shipstation_label_id, 100) === labelId;
-  const linkedLabel = Array.isArray(order.order_provider_links)
-    && order.order_provider_links.some((link) => link?.provider === 'shipstation'
-      && link?.object_type === 'label'
-      && text(link?.provider_object_id, 100) === labelId);
-  if (!projectedLabel && !linkedLabel) {
-    throw new ShipStationError('shipstation_label_order_mismatch');
-  }
-  if ((projectedLabel && ['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40)))
-      || labelHasVoidEvidence(order, labelId)) {
-    if (projectedLabel) {
-      await finalizeVoid(env, {
-        orderId: id,
-        labelId,
-        actorId: text(context?.user?.id, 80) || null,
-        reason,
-        providerMessage: null,
-      });
-    }
+  const ownedLabel = resolveShipmentLabel(order, labelId, { kind: 'outbound' });
+  if (!ownedLabel) throw new ShipStationError('shipstation_label_order_mismatch');
+  if (!ownedLabel.active) {
     return { already_voided: true, label_id: labelId, status: 'label_voided', refund_state: 'pending' };
   }
-  if (VOID_BLOCKING_TRACKING_STATUSES.has(text(order.tracking_status, 40))) {
+  if (VOID_BLOCKING_TRACKING_STATUSES.has(text(ownedLabel.tracking_status, 40))) {
     throw new ShipStationError('shipstation_label_void_blocked');
   }
 
   const claimed = await claimVoid(env, id, labelId);
-  if (!claimed) {
+  if (claimed?.state === 'completed') return claimed.result_summary || {};
+  if (['provider_succeeded', 'reconcile_required'].includes(claimed?.state)) {
+    throw new ShipStationError('shipstation_operation_reconciliation_required', 409);
+  }
+  if (claimed !== true && claimed?.claimed !== true) {
     order = await loadOrder(env, id);
-    if (text(order?.shipstation_label_id, 100) === labelId
-      && ['label_voided', 'voided'].includes(text(order?.shipstation_label_status, 40))) {
-      await finalizeVoid(env, {
-        orderId: id,
-        labelId,
-        actorId: text(context?.user?.id, 80) || null,
-        reason,
-        providerMessage: null,
-      });
+    if (resolveShipmentLabel(order, labelId, { kind: 'outbound' })?.active === false) {
       return { already_voided: true, label_id: labelId, status: 'label_voided', refund_state: 'pending' };
     }
     throw new ShipStationError('shipstation_label_void_locked');
   }
 
   let provider;
+  let providerAccepted = false;
   try {
     provider = await voidLabel(env, labelId);
+    providerAccepted = provider?.approved === true;
+    if (providerAccepted) {
+      await recordAttemptProviderSucceeded(
+        markAttemptProviderSucceeded, env, claimed, labelId,
+        { label_id: labelId, approved: true },
+      );
+    }
   } catch (error) {
+    await recordAttemptFailure(
+      attemptLifecycle, env, claimed, error, context, 'label void', providerAccepted,
+    ).catch(() => {});
     await persistLabel(env, id, {
-      shipstation_label_status: 'void_reconcile_required',
+      shipstation_label_status: providerFailureIsProvenRejection(error)
+        ? 'label_void_failed'
+        : 'void_reconcile_required',
       shipstation_error: text(error?.code || 'shipstation_label_void_failed', 160),
     }).catch(() => {});
     throw error;
   }
   if (provider?.approved !== true) {
+    const handle = attemptHandle(claimed);
+    if (handle) {
+      await attemptLifecycle.release(env, {
+        ...handle,
+        evidence: 'provider_rejected',
+        reason: 'Provider explicitly rejected label void request',
+        actorId: context?.user?.id,
+        actorEmail: context?.user?.email,
+        errorCode: 'shipstation_label_void_rejected',
+      });
+    }
     await persistLabel(env, id, {
       shipstation_label_status: 'label_void_failed',
       shipstation_error: 'shipstation_label_void_rejected',
@@ -1693,12 +2085,114 @@ export async function voidOrderLabel(env, input, context = {}, dependencies = {}
     reason,
     refund_state: 'pending',
   }).catch(() => {});
-  return {
+  const result = {
     already_voided: false,
     label_id: labelId,
     status: 'label_voided',
     refund_state: 'pending',
     message: providerMessage,
+  };
+  await completeAttempt(completeOperationAttempt, env, claimed, {
+    already_voided: false,
+    label_id: labelId,
+    status: 'label_voided',
+    refund_state: 'pending',
+  });
+  return result;
+}
+
+export async function reconcileOrderLabelVoid(env, input, context = {}, dependencies = {}) {
+  const id = orderId(input?.order_id);
+  const labelId = providerId(input?.label_id, 'shipstation_label_required');
+  const operationReason = reason(input?.reason);
+  if (input?.confirm !== true) throw new ShipStationError('shipstation_label_reconcile_confirmation_required');
+  if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
+
+  const loadOrder = dependencies.loadOrder || defaultLoadOrder;
+  const getLabel = dependencies.getLabel || defaultGetLabel;
+  const finalizeVoid = dependencies.finalizeVoidReconciliation || defaultFinalizeVoidReconciliation;
+  const persistLabel = dependencies.persistLabel || defaultPersistLabel;
+  const audit = dependencies.audit || defaultAudit;
+  const claimAttemptReconciliation = dependencies.claimAttemptReconciliation || defaultClaimAttemptReconciliation;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+  const releaseOperationAttempt = dependencies.releaseOperationAttempt || defaultReleaseAttempt;
+
+  const order = await loadOrder(env, id);
+  assertShippable(order);
+  const owned = resolveShipmentLabel(order, labelId, { kind: 'outbound' });
+  if (!owned) throw new ShipStationError('shipstation_label_order_mismatch');
+  const durableAttempt = reconcilableAttempt(
+    order.shipstation_operation_attempts,
+    'label_void',
+    (attempt) => !attempt?.provider_link_id || attempt.provider_link_id === owned.provider_link_id,
+  );
+  if (!durableAttempt && text(order.shipstation_label_status, 40) !== 'void_reconcile_required') {
+    throw new ShipStationError('shipstation_label_reconcile_not_required');
+  }
+  const reconciliationClaim = durableAttempt
+    ? await claimAttemptReconciliation(env, { operationKey: durableAttempt.operation_key })
+    : null;
+
+  const provider = await getLabel(env, labelId);
+  if (text(provider?.label_id, 100) !== labelId || provider?.is_return_label === true) {
+    throw new ShipStationError('shipstation_label_reconciliation_mismatch');
+  }
+  const providerStatus = text(provider?.status || provider?.label_status, 80).toLowerCase();
+  const providerVoided = provider?.voided === true || providerStatus === 'voided';
+  if (providerVoided) {
+    await finalizeVoid(env, {
+      orderId: id,
+      labelId,
+      actorId: text(context?.user?.id, 80) || null,
+      reason: operationReason,
+      providerMessage: 'Provider confirms label voided',
+    });
+    const result = {
+      reconciled: true,
+      accepted: true,
+      label_id: labelId,
+      order_shipment_id: owned.order_shipment_id,
+      status: 'label_voided',
+      refund_state: 'pending',
+    };
+    await completeAttempt(completeOperationAttempt, env, reconciliationClaim, result);
+    await audit(env, context, 'shipstation_label_void_reconciled', id, {
+      label_id: labelId,
+      order_shipment_id: owned.order_shipment_id,
+      reason: operationReason,
+    }).catch(() => {});
+    return result;
+  }
+
+  const positivelyNotAccepted = provider?.voided === false
+    && ['completed', 'purchased', 'label_purchased'].includes(providerStatus);
+  if (!positivelyNotAccepted || durableAttempt?.status === 'provider_succeeded' || !reconciliationClaim) {
+    throw new ShipStationError('shipstation_label_void_reconciliation_unresolved');
+  }
+  await releaseOperationAttempt(env, {
+    ...attemptHandle(reconciliationClaim),
+    evidence: 'provider_rejected',
+    reason: operationReason,
+    actorId: context?.user?.id,
+    actorEmail: context?.user?.email,
+    errorCode: 'shipstation_label_void_not_accepted',
+  });
+  await persistLabel(env, id, {
+    shipstation_label_status: 'label_void_failed',
+    shipstation_error: 'shipstation_label_void_not_accepted',
+  });
+  await audit(env, context, 'shipstation_label_void_released', id, {
+    label_id: labelId,
+    order_shipment_id: owned.order_shipment_id,
+    reason: operationReason,
+  }).catch(() => {});
+  return {
+    reconciled: true,
+    accepted: false,
+    released: true,
+    label_id: labelId,
+    order_shipment_id: owned.order_shipment_id,
+    status: 'label_void_failed',
   };
 }
 
@@ -1714,16 +2208,86 @@ export async function reconcileOrderLabelPurchase(env, input, context = {}, depe
   const persistLabel = dependencies.persistLabel || defaultPersistLabel;
   const finalizeReconciliation = dependencies.finalizeReconciliation || defaultFinalizeReconciliation;
   const audit = dependencies.audit || defaultAudit;
+  const claimAttemptReconciliation = dependencies.claimAttemptReconciliation || defaultClaimAttemptReconciliation;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
   const order = await loadOrder(env, id);
   assertShippable(order);
-  if (!['purchasing', 'reconcile_required'].includes(text(order.shipstation_label_status, 40))) {
+  const requestedOrderShipmentId = input?.order_shipment_id
+    ? rowId(input.order_shipment_id)
+    : null;
+  const purchaseAttempts = (Array.isArray(order.shipstation_operation_attempts)
+    ? order.shipstation_operation_attempts
+    : []).filter((attempt) => (
+    attempt?.operation === 'label_purchase'
+    && ['provider_succeeded', 'reconcile_required'].includes(text(attempt?.status, 40))
+    && (!requestedOrderShipmentId
+      || text(attempt?.order_shipment_id, 80) === requestedOrderShipmentId)
+  ));
+  if (purchaseAttempts.length > 1) {
+    throw new ShipStationError('shipstation_operation_reconciliation_ambiguous', 409);
+  }
+  const durableAttempt = purchaseAttempts[0] || null;
+  const orderShipmentId = rowId(
+    requestedOrderShipmentId
+      || durableAttempt?.order_shipment_id
+      || order.shipstation_order_shipment_id,
+  );
+  const shipment = (Array.isArray(order.order_shipments) ? order.order_shipments : [])
+    .find((candidate) => text(candidate?.id, 80) === orderShipmentId
+      && text(candidate?.status, 40) !== 'cancelled');
+  if (!shipment) throw new ShipStationError('shipstation_order_shipment_not_found');
+  const shipmentId = providerId(shipment.provider_shipment_id, 'shipstation_shipment_required');
+  const projectionIsUncertain = ['purchasing', 'reconcile_required']
+    .includes(text(order.shipstation_label_status, 40))
+    && (!order.shipstation_order_shipment_id
+      || text(order.shipstation_order_shipment_id, 80) === orderShipmentId);
+  if (!durableAttempt && !projectionIsUncertain) {
     throw new ShipStationError('shipstation_label_reconcile_not_required');
   }
-  const shipmentId = providerId(order.shipstation_shipment_id, 'shipstation_shipment_required');
+  const reconciliationClaim = durableAttempt
+    ? await claimAttemptReconciliation(env, { operationKey: durableAttempt.operation_key })
+    : null;
+  const expectedLabelId = text(
+    durableAttempt?.provider_object_id || durableAttempt?.result_summary?.label_id,
+    100,
+  );
+  const canonicalLabels = shipmentLabelOwnership(order).outbound.filter((label) => (
+    label.active && label.order_shipment_id === orderShipmentId
+  ));
+  const completedLabel = expectedLabelId
+    ? canonicalLabels.find((label) => label.label_id === expectedLabelId)
+    : null;
+  if (completedLabel && durableAttempt?.status === 'provider_succeeded') {
+    const result = {
+      reconciled: true,
+      already_finalized: true,
+      order_shipment_id: orderShipmentId,
+      shipment_id: shipmentId,
+      label_id: completedLabel.label_id,
+      status: completedLabel.status,
+      tracking_number: completedLabel.tracking_number,
+      carrier_code: completedLabel.carrier,
+      cost: completedLabel.cost,
+      currency: completedLabel.currency,
+    };
+    await completeAttempt(completeOperationAttempt, env, reconciliationClaim, result);
+    await audit(env, context, 'shipstation_label_purchase_attempt_completed', id, {
+      order_shipment_id: orderShipmentId,
+      shipment_id: shipmentId,
+      label_id: completedLabel.label_id,
+      reason,
+    }).catch(() => {});
+    return result;
+  }
+  if (canonicalLabels.length > 0) {
+    throw new ShipStationError('shipstation_label_reconciliation_mismatch');
+  }
   const nowValue = dependencies.now ? dependencies.now() : new Date();
   const now = nowValue instanceof Date ? nowValue : new Date(nowValue);
   if (Number.isNaN(now.getTime())) throw new ShipStationError('shipstation_label_reconcile_window_invalid');
-  const attempt = new Date(order.shipstation_updated_at || order.updated_at || order.created_at || now);
+  const attempt = new Date(
+    durableAttempt?.created_at || order.shipstation_updated_at || order.updated_at || order.created_at || now,
+  );
   const attemptMs = Number.isNaN(attempt.getTime()) ? now.getTime() : attempt.getTime();
   const start = new Date(Math.max(attemptMs - (15 * 60 * 1000), now.getTime() - (24 * 60 * 60 * 1000)));
   const query = {
@@ -1747,6 +2311,7 @@ export async function reconcileOrderLabelPurchase(env, input, context = {}, depe
       const status = text(label?.status || label?.label_status, 80).toLowerCase();
       if (!/^se-[a-z0-9_-]+$/i.test(labelId)
           || text(label?.shipment_id, 100) !== shipmentId
+          || (expectedLabelId && labelId !== expectedLabelId)
           || label?.is_return_label === true
           || label?.voided === true
           || ['error', 'voided'].includes(status)) continue;
@@ -1795,7 +2360,7 @@ export async function reconcileOrderLabelPurchase(env, input, context = {}, depe
   const patch = {
     shipstation_shipment_id: shipmentId,
     shipstation_label_id: labelId,
-    shipstation_rate_id: text(order.shipstation_rate_id, 100) || null,
+    shipstation_rate_id: text(shipment.selected_rate_id || order.shipstation_rate_id, 100) || null,
     shipstation_carrier_id: text(label?.carrier_id, 100) || null,
     shipstation_service_code: text(label?.service_code, 100) || null,
     shipstation_label_url: text(label?.label_download?.pdf || label?.label_download?.href, 1000) || null,
@@ -1809,6 +2374,7 @@ export async function reconcileOrderLabelPurchase(env, input, context = {}, depe
   };
   await finalizeReconciliation(env, {
     orderId: id,
+    orderShipmentId,
     shipmentId,
     labelId,
     rateId: patch.shipstation_rate_id,
@@ -1825,7 +2391,9 @@ export async function reconcileOrderLabelPurchase(env, input, context = {}, depe
     actorEmail: context?.user?.email,
     reason,
   });
-  return { reconciled: true, ...safeLabel(label), status: labelStatus };
+  const result = { reconciled: true, ...safeLabel(label), status: labelStatus };
+  await completeAttempt(completeOperationAttempt, env, reconciliationClaim, result);
+  return result;
 }
 
 export async function createOrderReturnLabel(env, input, context = {}, dependencies = {}) {
@@ -1844,14 +2412,17 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
   const linkProviderObject = dependencies.linkProviderObject || defaultLinkProviderObject;
   const recordFinancialEntry = dependencies.recordFinancialEntry || defaultRecordFinancialEntry;
   const audit = dependencies.audit || defaultAudit;
+  const markAttemptProviderSucceeded = dependencies.markAttemptProviderSucceeded || defaultMarkAttemptProviderSucceeded;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+  const attemptLifecycle = {
+    reconcile: dependencies.markAttemptReconcileRequired || defaultMarkAttemptReconcileRequired,
+    release: dependencies.releaseOperationAttempt || defaultReleaseAttempt,
+  };
   let order = await loadOrder(env, id);
   assertShippable(order);
-  if (text(order.shipstation_label_id, 100) !== outboundLabelId) {
-    throw new ShipStationError('shipstation_label_order_mismatch');
-  }
-  if (['label_voided', 'voided'].includes(text(order.shipstation_label_status, 40))) {
-    throw new ShipStationError('shipstation_return_outbound_voided');
-  }
+  const outbound = resolveShipmentLabel(order, outboundLabelId, { kind: 'outbound' });
+  if (!outbound) throw new ShipStationError('shipstation_label_order_mismatch');
+  if (!outbound.active) throw new ShipStationError('shipstation_return_outbound_voided');
   const address = order?.ship_address?.address || order?.ship_address || {};
   const country = text(address?.country || address?.country_code, 8).toUpperCase();
   if (!['US', 'USA'].includes(country)) throw new ShipStationError('shipstation_return_domestic_required');
@@ -1866,6 +2437,7 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
       metadata: {
         order_number: order.order_number || null,
         outbound_label_id: outboundLabelId,
+        order_shipment_id: outbound.order_shipment_id,
         status: existing.status,
         tracking_number: existing.tracking_number,
         cost: existing.cost,
@@ -1876,6 +2448,7 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     await recordReturnPostage(recordFinancialEntry, env, order, {
       returnLabelId: existing.label_id,
       outboundLabelId,
+      orderShipmentId: outbound.order_shipment_id,
       cost: existing.cost,
       currency: existing.currency,
       chargeEvent: existing.charge_event,
@@ -1892,12 +2465,23 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     return existing;
   };
   if (existingReturnLabel(order, outboundLabelId).label_id) return repairExisting();
-  if (['return_purchasing', 'return_reconcile_required'].includes(text(order.shipstation_return_label_status, 40))) {
+  if (text(order.shipstation_label_id, 100) === outboundLabelId
+      && ['return_purchasing', 'return_reconcile_required'].includes(text(order.shipstation_return_label_status, 40))) {
     throw new ShipStationError('shipstation_return_locked');
   }
 
-  const claimed = await claimReturn(env, id, outboundLabelId);
-  if (!claimed) {
+  const claimed = await claimReturn(env, id, outboundLabelId, {
+    orderShipmentId: outbound.order_shipment_id,
+    parentProviderLinkId: outbound.provider_link_id,
+    actorId: text(context?.user?.id, 80) || null,
+    actorEmail: text(context?.user?.email, 254) || null,
+    reason,
+  });
+  if (claimed?.state === 'completed') return claimed.result_summary || {};
+  if (['provider_succeeded', 'reconcile_required'].includes(claimed?.state)) {
+    throw new ShipStationError('shipstation_operation_reconciliation_required', 409);
+  }
+  if (claimed !== true && claimed?.claimed !== true) {
     order = await loadOrder(env, id);
     if (existingReturnLabel(order, outboundLabelId).label_id) return repairExisting();
     throw new ShipStationError('shipstation_return_locked');
@@ -1911,11 +2495,28 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     display_scheme: 'label',
   };
   let label;
+  let providerAccepted = false;
   try {
     label = await createReturn(env, outboundLabelId, requestBody);
+    providerAccepted = true;
+    await recordAttemptProviderSucceeded(
+      markAttemptProviderSucceeded, env, claimed,
+      text(label?.label_id, 100) || null,
+      {
+        label_id: text(label?.label_id, 100) || null,
+        outbound_label_id: outboundLabelId,
+        tracking_number: text(label?.tracking_number, 160) || null,
+        status: text(label?.status || label?.label_status, 80).toLowerCase() || null,
+      },
+    );
   } catch (error) {
+    await recordAttemptFailure(
+      attemptLifecycle, env, claimed, error, context, 'return label', providerAccepted,
+    ).catch(() => {});
     await persistReturn(env, id, {
-      shipstation_return_label_status: 'return_reconcile_required',
+      shipstation_return_label_status: !providerAccepted && providerFailureIsProvenRejection(error)
+        ? 'return_failed'
+        : 'return_reconcile_required',
       shipstation_return_error: text(error?.code || 'shipstation_return_failed', 160),
     }).catch(() => {});
     throw error;
@@ -1952,6 +2553,7 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
   await finalizeReturn(env, {
     orderId: id,
     outboundLabelId,
+    orderShipmentId: outbound.order_shipment_id,
     returnLabelId,
     cost,
     currency,
@@ -1968,6 +2570,7 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     metadata: {
       order_number: order.order_number || null,
       outbound_label_id: outboundLabelId,
+      order_shipment_id: outbound.order_shipment_id,
       status,
       tracking_number: trackingNumber,
       cost,
@@ -1978,6 +2581,7 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
   await recordReturnPostage(recordFinancialEntry, env, order, {
     returnLabelId,
     outboundLabelId,
+    orderShipmentId: outbound.order_shipment_id,
     cost,
     currency,
     chargeEvent,
@@ -1986,6 +2590,7 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
   });
   await audit(env, context, 'shipstation_return_label_created', id, {
     outbound_label_id: outboundLabelId,
+    order_shipment_id: outbound.order_shipment_id,
     return_label_id: returnLabelId,
     cost,
     currency,
@@ -2001,7 +2606,7 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     returnLabelId,
     reason,
   });
-  return {
+  const result = {
     already_created: false,
     emailed,
     ...safeLabel(label),
@@ -2010,4 +2615,194 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     status,
     recognition_state: returnRecognitionState(chargeEvent),
   };
+  await completeAttempt(completeOperationAttempt, env, claimed, result);
+  return result;
+}
+
+export async function reconcileOrderReturnLabel(env, input, context = {}, dependencies = {}) {
+  const id = orderId(input?.order_id);
+  const outboundLabelId = providerId(input?.label_id, 'shipstation_label_required');
+  const operationReason = reason(input?.reason);
+  if (input?.confirm !== true) throw new ShipStationError('shipstation_return_reconcile_confirmation_required');
+  if (!text(env?.SHIPSTATION_API_KEY)) throw new ShipStationError('shipstation_not_configured');
+
+  const loadOrder = dependencies.loadOrder || defaultLoadOrder;
+  const listLabels = dependencies.listLabels || defaultListLabels;
+  const finalizeReturn = dependencies.finalizeReturnReconciliation || defaultFinalizeReturnReconciliation;
+  const persistReturn = dependencies.persistReturn || defaultPersistReturn;
+  const linkProviderObject = dependencies.linkProviderObject || defaultLinkProviderObject;
+  const recordFinancialEntry = dependencies.recordFinancialEntry || defaultRecordFinancialEntry;
+  const audit = dependencies.audit || defaultAudit;
+  const claimAttemptReconciliation = dependencies.claimAttemptReconciliation || defaultClaimAttemptReconciliation;
+  const completeOperationAttempt = dependencies.completeOperationAttempt || defaultCompleteAttempt;
+
+  const order = await loadOrder(env, id);
+  assertShippable(order);
+  const outbound = resolveShipmentLabel(order, outboundLabelId, { kind: 'outbound', requireActive: true });
+  if (!outbound) throw new ShipStationError('shipstation_return_outbound_not_owned');
+  const durableAttempt = reconcilableAttempt(
+    order.shipstation_operation_attempts,
+    'label_return',
+    (attempt) => !attempt?.parent_provider_link_id
+      || attempt.parent_provider_link_id === outbound.provider_link_id,
+  );
+  if (!durableAttempt
+      && !(text(order.shipstation_label_id, 100) === outboundLabelId
+        && text(order.shipstation_return_label_status, 40) === 'return_reconcile_required')) {
+    throw new ShipStationError('shipstation_return_reconcile_not_required');
+  }
+  const reconciliationClaim = durableAttempt
+    ? await claimAttemptReconciliation(env, { operationKey: durableAttempt.operation_key })
+    : null;
+
+  const linkedExisting = existingReturnLabel(order, outboundLabelId);
+  if (linkedExisting.label_id) {
+    await recordReturnPostage(recordFinancialEntry, env, order, {
+      returnLabelId: linkedExisting.label_id,
+      outboundLabelId,
+      orderShipmentId: outbound.order_shipment_id,
+      cost: linkedExisting.cost,
+      currency: linkedExisting.currency,
+      chargeEvent: linkedExisting.charge_event,
+      actorId: context?.user?.id,
+      reason: operationReason,
+    });
+    const result = { reconciled: true, ...linkedExisting };
+    await completeAttempt(completeOperationAttempt, env, reconciliationClaim, result);
+    return result;
+  }
+
+  const nowValue = dependencies.now ? dependencies.now() : new Date();
+  const now = nowValue instanceof Date ? nowValue : new Date(nowValue);
+  if (Number.isNaN(now.getTime())) throw new ShipStationError('shipstation_return_reconcile_window_invalid');
+  const attemptTime = new Date(
+    durableAttempt?.created_at || order.shipstation_return_updated_at || order.updated_at || now,
+  );
+  const attemptMs = Number.isNaN(attemptTime.getTime()) ? now.getTime() : attemptTime.getTime();
+  const start = new Date(Math.max(attemptMs - (15 * 60 * 1000), now.getTime() - (24 * 60 * 60 * 1000)));
+  const query = {
+    created_at_start: start.toISOString(),
+    created_at_end: now.toISOString(),
+    page_size: 100,
+    sort_by: 'created_at',
+    sort_dir: 'desc',
+  };
+  const candidates = new Map();
+  let providerPages = 1;
+  for (let page = 1; page <= Math.min(providerPages, 2); page += 1) {
+    const payload = await listLabels(env, { ...query, page });
+    if (!payload || !Array.isArray(payload.labels)) {
+      throw new ShipStationError('shipstation_label_list_invalid');
+    }
+    const pages = number(payload.pages);
+    providerPages = pages && pages > 0 ? Math.floor(pages) : 1;
+    for (const label of payload.labels) {
+      const returnLabelId = text(label?.label_id, 100);
+      const status = text(label?.status || label?.label_status, 80).toLowerCase();
+      if (!/^se-[a-z0-9_-]+$/i.test(returnLabelId)
+          || label?.is_return_label !== true
+          || text(label?.outbound_label_id, 100) !== outboundLabelId
+          || label?.voided === true
+          || ['error', 'voided'].includes(status)) continue;
+      candidates.set(returnLabelId, label);
+    }
+  }
+  if (providerPages > 2) {
+    await persistReturn(env, id, {
+      shipstation_return_label_status: 'return_reconcile_required',
+      shipstation_return_error: 'shipstation_return_reconcile_truncated',
+    });
+    throw new ShipStationError('shipstation_return_reconcile_truncated');
+  }
+  if (candidates.size !== 1) {
+    const code = candidates.size === 0
+      ? 'shipstation_return_reconcile_not_found'
+      : 'shipstation_return_reconcile_ambiguous';
+    await persistReturn(env, id, {
+      shipstation_return_label_status: 'return_reconcile_required',
+      shipstation_return_error: code,
+    });
+    await audit(env, context, 'shipstation_return_label_reconcile_unresolved', id, {
+      outbound_label_id: outboundLabelId,
+      order_shipment_id: outbound.order_shipment_id,
+      candidate_count: candidates.size,
+      reason: operationReason,
+    }).catch(() => {});
+    throw new ShipStationError(code);
+  }
+
+  const label = [...candidates.values()][0];
+  const returnLabelId = providerId(label.label_id, 'shipstation_return_response_invalid');
+  const cost = money(label?.shipment_cost);
+  const currency = text(label?.shipment_cost?.currency || order.currency, 8).toLowerCase();
+  const chargeEvent = text(label?.charge_event || 'carrier_default', 40).toLowerCase();
+  if (cost == null || cost < 0 || !/^[a-z]{3}$/.test(currency)
+      || !['on_creation', 'on_carrier_acceptance', 'carrier_default'].includes(chargeEvent)) {
+    throw new ShipStationError('shipstation_return_response_invalid');
+  }
+  const trackingNumber = text(label?.tracking_number, 160) || null;
+  await finalizeReturn(env, {
+    orderId: id,
+    outboundLabelId,
+    orderShipmentId: outbound.order_shipment_id,
+    returnLabelId,
+    cost,
+    currency,
+    chargeEvent,
+    trackingNumber,
+    reason: operationReason,
+  });
+  await linkProviderObject(env, {
+    orderId: id,
+    provider: 'shipstation',
+    objectType: 'return_label',
+    providerObjectId: returnLabelId,
+    metadata: {
+      order_number: order.order_number || null,
+      outbound_label_id: outboundLabelId,
+      order_shipment_id: outbound.order_shipment_id,
+      status: 'return_label_created',
+      tracking_number: trackingNumber,
+      cost,
+      currency,
+      charge_event: chargeEvent,
+    },
+  });
+  await recordReturnPostage(recordFinancialEntry, env, order, {
+    returnLabelId,
+    outboundLabelId,
+    orderShipmentId: outbound.order_shipment_id,
+    cost,
+    currency,
+    chargeEvent,
+    actorId: context?.user?.id,
+    reason: operationReason,
+  });
+  await audit(env, context, 'shipstation_return_label_reconciled', id, {
+    outbound_label_id: outboundLabelId,
+    order_shipment_id: outbound.order_shipment_id,
+    return_label_id: returnLabelId,
+    cost,
+    currency,
+    charge_event: chargeEvent,
+    reason: operationReason,
+  });
+  const emailed = await (dependencies.sendReturnLabelEmail || sendReturnLabelEmail)(env, order, {
+    labelUrl: text(label?.label_download?.pdf || label?.label_download?.href, 1000) || null,
+    trackingNumber,
+    returnLabelId,
+    reason: operationReason,
+  });
+  const result = {
+    reconciled: true,
+    emailed,
+    ...safeLabel(label),
+    label_id: returnLabelId,
+    outbound_label_id: outboundLabelId,
+    order_shipment_id: outbound.order_shipment_id,
+    status: 'return_label_created',
+    recognition_state: returnRecognitionState(chargeEvent),
+  };
+  await completeAttempt(completeOperationAttempt, env, reconciliationClaim, result);
+  return result;
 }

@@ -41,6 +41,7 @@ const validateAddress = async (value) => ({
   formatted_address: "100 Main St, Melbourne, FL 32901, USA",
   possible_next_action: "ACCEPT",
 });
+const persistShippingQuotes = async (_env, rows) => ({ ok: true, count: rows.length });
 
 test("shipping address normalizes a complete domestic delivery address", () => {
   assert.deepEqual(normalizeShippingAddress({ ...address, state: "fl", country: "us" }), {
@@ -94,6 +95,7 @@ test("live rates use variant package profiles, sort by cost, and issue cart-boun
   }, {
     now: () => 1_700_000_000_000,
     validateAddress,
+    persistShippingQuotes,
     async listCarriers() {
       return { carriers: [{ carrier_id: "se-usps", friendly_name: "USPS" }] };
     },
@@ -192,6 +194,7 @@ test("checkout consolidates quantities above the provider's raw-package limit be
     variants,
   }, {
     validateAddress,
+    persistShippingQuotes,
     async listCarriers() { return { carriers: [{ carrier_id: "se-usps" }] }; },
     async quoteRates(_env, payload) {
       ratedPackages = payload.shipment.packages;
@@ -223,6 +226,7 @@ test("shipping selection tokens reject tampering and expiry", async () => {
   }, {
     now: () => 1_700_000_000_000,
     validateAddress,
+    persistShippingQuotes,
     async listCarriers() { return { carriers: [{ carrier_id: "se-usps" }] }; },
     async quoteRates() {
       return { rate_response: { rates: [{

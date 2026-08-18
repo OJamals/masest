@@ -33,7 +33,7 @@
   font: inherit;
   font-weight: 800;
   letter-spacing: .01em;
-  transition: transform 150ms cubic-bezier(.23, 1, .32, 1), box-shadow 150ms cubic-bezier(.23, 1, .32, 1);
+  transition: transform 150ms cubic-bezier(.23, 1, .32, 1);
 }
 
 .customer-chat__icon { width: 1.35rem; height: 1.35rem; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }

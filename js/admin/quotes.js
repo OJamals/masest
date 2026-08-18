@@ -43,6 +43,12 @@ const OFFER_STATUS_LABELS = {
   payment_pending: 'Payment pending',
   ordered: 'Order placed',
 };
+const DELIVERY_STATUS_LABELS = {
+  queued: 'Delivery queued',
+  delivered: 'Delivered',
+  degraded: 'Delivery degraded',
+  dead: 'Delivery failed',
+};
 
 export function offerStatusLabel(status) {
   const key = String(status || '').trim();
@@ -58,6 +64,20 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
   let dragId = null;
   let urlFiltersInitialized = false;
+  let loadedFilterSignature = '';
+
+  function serverFilterParams() {
+    const params = new URLSearchParams();
+    const values = {
+      search: $('qSearch')?.value.trim() || '',
+      status: $('qFilter')?.value || '',
+      priority: $('qPriority')?.value || '',
+      owner: $('qOwner')?.value.trim() || '',
+      due: $('qDue')?.value || '',
+    };
+    Object.entries(values).forEach(([key, value]) => { if (value) params.set(key, value); });
+    return params;
+  }
 
   function initializeUrlFilters() {
     if (urlFiltersInitialized) return;
@@ -119,14 +139,13 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       b.classList.toggle('is-active', on);
       b.setAttribute('aria-pressed', String(on));
     });
-    // The filter toolbar only drives the List view — showing live-looking dead
-    // controls over Board/Reports reads as broken filtering. Its card header
-    // ("Quote queue · Combine filters…") names those controls, so it goes with them.
+    // List and Board consume the same filtered server page. Reports remain a separate
+    // full-pipeline workspace.
     const panel = quotesPanel();
     const tools = panel?.querySelector('.adm-tools');
-    if (tools) tools.hidden = view !== 'list';
+    if (tools) tools.hidden = view === 'report';
     const toolsHead = panel?.querySelector('.adm-panel-header');
-    if (toolsHead) toolsHead.hidden = view !== 'list';
+    if (toolsHead) toolsHead.hidden = view === 'report';
   }
   function ensureToggle() {
     const panel = quotesPanel();
@@ -187,7 +206,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   }
 
   // ---- Board view ----
-  function boardQuotes() { return (state.quotes || []).filter((q) => q.status !== 'spam'); }
+  function boardQuotes() { return state.quotes || []; }
 
   function forecastHtml(summary) {
     if (!summary) return '';
@@ -259,10 +278,11 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         <b>${fmtMoney(q.deal_value)}</b>
         ${statusBadge(q.priority || 'normal')}
         ${q.assigned_to ? `<span>${esc(q.assigned_to)}</span>` : ''}
+        ${q.delivery_state ? `<span class="badge" data-s="${esc(q.delivery_state)}">${esc(DELIVERY_STATUS_LABELS[q.delivery_state] || q.delivery_state)}</span>` : ''}
         ${overdue ? '<span class="badge badge-warning">Overdue</span>' : ''}
         ${stale ? '<span class="badge badge-warning">Stale</span>' : ''}
       </div>
-      <select class="adm-select" data-card-stage="${id}" aria-label="Move ${esc(q.company || q.name || 'lead')} to stage">
+      <select class="adm-select" name="pipeline_stage" data-card-stage="${id}" aria-label="Move ${esc(q.company || q.name || 'lead')} to stage">
         ${STAGES.map((s) => `<option value="${s}"${s === (q.pipeline_stage || 'new') ? ' selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}
       </select>
     </div>`;
@@ -271,7 +291,11 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   async function renderBoard() {
     const box = $('admQuotes');
     let summary = null;
-    try { summary = (await api('/api/admin/quotes?view=pipeline')).summary; } catch { summary = null; }
+    try {
+      const params = serverFilterParams();
+      params.set('view', 'pipeline');
+      summary = (await api('/api/admin/quotes?' + params.toString())).summary;
+    } catch { summary = null; }
     const cols = STAGES.map((stage) => {
       const items = boardQuotes().filter((q) => (q.pipeline_stage || 'new') === stage);
       const colValue = items.reduce((s, q) => s + (Number(q.deal_value) || 0), 0);
@@ -346,16 +370,16 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     const closeValue = q.expected_close ? String(q.expected_close).slice(0, 10) : '';
     return `<div class="drawer-details">
       ${requestDetailsHtml(q)}
-      <label>Stage <select class="adm-select" data-d-stage>${STAGES.map((s) => `<option value="${s}"${s === (q.pipeline_stage || 'new') ? ' selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}</select></label>
-      <label>Status <select class="adm-select" data-d-status>${QUOTE_STATUSES.map((s) => `<option value="${s}"${s === (q.status || 'new') ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
-      <label>Priority <select class="adm-select" data-d-priority>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}"${p === (q.priority || 'normal') ? ' selected' : ''}>${p}</option>`).join('')}</select></label>
-      <label>Deal value <input class="adm-input" data-d-deal type="number" min="0" step="0.01" value="${q.deal_value ?? ''}"></label>
-      <label>Expected close <input class="adm-input" data-d-close type="date" value="${esc(closeValue)}"></label>
-      <label>Owner <input class="adm-input" data-d-owner value="${esc(q.assigned_to || '')}"></label>
-      <label>Buyer contact <select class="adm-select" data-d-contact aria-label="Buyer contact"><option value="">— none —</option>${q.contact_id ? `<option value="${esc(q.contact_id)}" selected>Linked contact #${esc(q.contact_id)}</option>` : ''}</select></label>
-      <label>Next step <input class="adm-input" data-d-next value="${esc(q.next_step || '')}"></label>
-      <label>Follow-up due <input class="adm-input" data-d-due type="datetime-local" value="${esc(dueValue)}"></label>
-      <label>Notes <textarea class="adm-textarea" data-d-notes>${esc(q.notes || '')}</textarea></label>
+      <label>Stage <select class="adm-select" name="pipeline_stage" data-d-stage>${STAGES.map((s) => `<option value="${s}"${s === (q.pipeline_stage || 'new') ? ' selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}</select></label>
+      <label>Status <select class="adm-select" name="quote_status" data-d-status>${QUOTE_STATUSES.map((s) => `<option value="${s}"${s === (q.status || 'new') ? ' selected' : ''}>${s}</option>`).join('')}</select></label>
+      <label>Priority <select class="adm-select" name="quote_priority" data-d-priority>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}"${p === (q.priority || 'normal') ? ' selected' : ''}>${p}</option>`).join('')}</select></label>
+      <label>Deal value <input class="adm-input" name="deal_value" data-d-deal type="number" min="0" step="0.01" value="${q.deal_value ?? ''}"></label>
+      <label>Expected close <input class="adm-input" name="expected_close" data-d-close type="date" value="${esc(closeValue)}"></label>
+      <label>Owner <input class="adm-input" name="assigned_to" autocomplete="off" data-d-owner value="${esc(q.assigned_to || '')}"></label>
+      <label>Buyer contact <select class="adm-select" name="contact_id" data-d-contact aria-label="Buyer contact"><option value="">— none —</option>${q.contact_id ? `<option value="${esc(q.contact_id)}" selected>Linked contact #${esc(q.contact_id)}</option>` : ''}</select></label>
+      <label>Next step <input class="adm-input" name="next_step" autocomplete="off" data-d-next value="${esc(q.next_step || '')}"></label>
+      <label>Follow-up due <input class="adm-input" name="follow_up_due" data-d-due type="datetime-local" value="${esc(dueValue)}"></label>
+      <label>Notes <textarea class="adm-textarea" name="quote_notes" data-d-notes>${esc(q.notes || '')}</textarea></label>
       <div class="adm-tools" style="justify-content:flex-end;flex-wrap:wrap">
         ${q.email ? `<a class="btn btn-ghost btn-sm" href="mailto:${esc(q.email)}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>` : ''}
         <button class="btn btn-ghost btn-sm" data-drawer-snooze type="button">Snooze 2d</button>
@@ -371,12 +395,12 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       ` : `
         <hr>
         <h4 style="margin:4px 0">Convert to order</h4>
-        <label>Company <select class="adm-select" data-d-co><option value="">Pick company…</option>${companyOptions()}</select></label>
+        <label>Company <select class="adm-select" name="company_id" data-d-co><option value="">Pick company…</option>${companyOptions()}</select></label>
         <div class="adm-tools" style="flex-wrap:wrap">
-          <input class="adm-input" data-d-sku placeholder="SKU" style="max-width:120px">
-          <input class="adm-input" data-d-name placeholder="Item name" style="max-width:150px">
-          <input class="adm-input" data-d-qty type="number" min="1" value="1" style="max-width:64px" aria-label="Qty">
-          <input class="adm-input" data-d-price type="number" min="0" step="0.01" placeholder="Unit $" style="max-width:90px">
+          <input class="adm-input" name="quote_item_sku" autocomplete="off" spellcheck="false" data-d-sku placeholder="SKU…" style="max-width:120px">
+          <input class="adm-input" name="quote_item_name" autocomplete="off" data-d-name placeholder="Item name…" style="max-width:150px">
+          <input class="adm-input" name="quote_item_qty" data-d-qty type="number" min="1" value="1" style="max-width:64px" aria-label="Qty">
+          <input class="adm-input" name="quote_item_unit_price" data-d-price type="number" min="0" step="0.01" placeholder="Unit $…" style="max-width:90px">
           <button class="btn btn-ghost btn-sm" data-drawer-convert type="button">Convert</button>
         </div>
       `}
@@ -386,16 +410,16 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   function quoteWorkspaceHtml(workspace) {
     const lines = (workspace.items || []).map((item) => `
       <div class="adm-tools quote-offer-line" data-quote-offer-line style="align-items:end;flex-wrap:wrap">
-        <input type="hidden" data-offer-sku value="${esc(item.sku)}">
-        <input type="hidden" data-offer-product-sku value="${esc(item.product_sku || item.sku)}">
+        <input type="hidden" name="offer_sku" data-offer-sku value="${esc(item.sku)}">
+        <input type="hidden" name="offer_product_sku" data-offer-product-sku value="${esc(item.product_sku || item.sku)}">
         <label style="flex:1;min-width:180px">Item
-          <input class="adm-input" data-offer-name value="${esc(item.name || item.sku)}" readonly>
+          <input class="adm-input" name="offer_name" autocomplete="off" data-offer-name value="${esc(item.name || item.sku)}" readonly>
         </label>
         <label style="max-width:80px">Qty
-          <input class="adm-input" data-offer-qty type="number" min="1" step="1" value="${esc(item.qty)}">
+          <input class="adm-input" name="offer_qty" data-offer-qty type="number" min="1" step="1" value="${esc(item.qty)}">
         </label>
         <label style="max-width:120px">Unit price
-          <input class="adm-input" data-offer-price type="number" min="0" step="0.01" value="${esc(item.unit_price)}">
+          <input class="adm-input" name="offer_unit_price" data-offer-price type="number" min="0" step="0.01" value="${esc(item.unit_price)}">
         </label>
       </div>`).join('');
     const messages = (workspace.messages || []).map((item) =>
@@ -404,12 +428,20 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       const doc = item.technical_documents || {};
       return `<li>${esc(doc.title || item.document_id || 'Document')} · ${esc(item.status || 'pending')}</li>`;
     }).join('');
+    const delivery = workspace.delivery_state
+      ? ` · ${DELIVERY_STATUS_LABELS[workspace.delivery_state] || workspace.delivery_state}`
+      : '';
+    const minimumExpiry = new Date(Date.now() + 60_000).toISOString().slice(0, 16);
     return `
-      <p class="muted">${esc(workspace.requisition_name || 'Saved requisition')} · ${esc(workspace.currency || 'usd').toUpperCase()}${workspace.offer_status ? ` · ${esc(offerStatusLabel(workspace.offer_status))}` : ''}</p>
+      <p class="muted">${esc(workspace.requisition_name || 'Saved requisition')} · ${esc(workspace.currency || 'usd').toUpperCase()}${workspace.offer_status ? ` · ${esc(offerStatusLabel(workspace.offer_status))}` : ''}${esc(delivery)}</p>
       <div class="quote-offer-lines" aria-label="Quote line items">${lines || '<p class="muted">No line items.</p>'}</div>
-      <div class="adm-tools" style="justify-content:flex-end">
-        <button class="btn btn-primary btn-sm" data-send-quote type="button"${lines && !['accepted', 'ordered', 'payment_pending'].includes(workspace.offer_status) ? '' : ' disabled'}>${workspace.offer_status === 'ordered' ? 'Order placed' : (workspace.offer_status === 'payment_pending' ? 'Payment pending' : (workspace.offer_status === 'accepted' ? 'Buyer accepted' : (workspace.offer_status === 'sent' ? 'Resend quote' : 'Send quote')))}</button>
+      <div class="adm-tools" style="justify-content:flex-end;align-items:end;flex-wrap:wrap">
+        <label>Offer expires
+          <input class="adm-input" name="offer_expires_at" data-offer-expiry type="datetime-local" min="${minimumExpiry}" required aria-describedby="offer-expiry-help">
+        </label>
+        <button class="btn btn-primary btn-sm" data-send-quote type="button"${lines && !['accepted', 'ordered', 'payment_pending'].includes(workspace.offer_status) ? '' : ' disabled'}>${workspace.offer_status === 'ordered' ? 'Order placed' : (workspace.offer_status === 'payment_pending' ? 'Payment pending' : (workspace.offer_status === 'accepted' ? 'Buyer accepted' : (workspace.offer_status ? 'Revise quote' : 'Send quote')))}</button>
       </div>
+      <p class="muted" id="offer-expiry-help">Required for every send or revision. The Buyer cannot act at or after this exact time.</p>
       <div class="drawer-details">
         <section><h4>Messages</h4>${messages ? `<ul>${messages}</ul>` : '<p class="muted">No company messages.</p>'}</section>
         <section><h4>Documents</h4>${documents ? `<ul>${documents}</ul>` : '<p class="muted">No document requests.</p>'}</section>
@@ -441,17 +473,30 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       status.dataset.state = 'err';
       return;
     }
+    const expiryInput = dlg.querySelector('[data-offer-expiry]');
+    const expiryTime = Date.parse(expiryInput?.value || '');
+    if (!Number.isFinite(expiryTime) || expiryTime <= Date.now()) {
+      status.textContent = 'Choose a future offer expiry before sending.';
+      status.dataset.state = 'err';
+      expiryInput?.focus();
+      return;
+    }
     button.disabled = true;
     try {
       const res = await api('/api/admin/quotes', {
         method: 'POST',
-        body: { id: quote.id, action: 'send_quote', items },
+        body: {
+          id: quote.id,
+          action: 'send_quote',
+          items,
+          expires_at: new Date(expiryTime).toISOString(),
+        },
       });
       if (res.quote) Object.assign(quote, res.quote);
-      status.textContent = 'Quote sent. Buyer can accept and check out.';
+      status.textContent = 'Quote committed. Buyer notification, message, and email are queued for delivery.';
       status.dataset.state = 'ok';
       await loadQuoteWorkspace(dlg, quote);
-      await renderQuotePipeline({ refetch: false });
+      await renderQuotePipeline({ refetch: true });
     } catch (err) {
       status.textContent = err.data?.error || 'Could not send the quote.';
       status.dataset.state = 'err';
@@ -657,27 +702,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     const box = $('admQuotes');
     const snap = captureDirty(box);
     const quotesPager = admListPager('data-load-more-quotes', state.quotes.length, state.quotesTotal, state.quotesHasMore);
-    const q = $('qSearch').value.trim().toLowerCase();
-    const filter = $('qFilter').value;
-    const priority = $('qPriority')?.value || '';
-    const ownerFilter = $('qOwner')?.value.trim().toLowerCase() || '';
-    const dueFilter = $('qDue')?.value || '';
-    const now = Date.now();
-    const quotes = state.quotes.filter((quote) => {
-      const text = [quote.name, quote.email, quote.company, quote.phone, quote.product, quote.industry, quote.location, quote.message, quote.notes, quote.next_step, quote.assigned_to].filter(Boolean).join(' ').toLowerCase();
-      const ownerMatch = !ownerFilter || String(quote.assigned_to || '').toLowerCase().includes(ownerFilter);
-      const dueAt = quote.due_at ? new Date(quote.due_at).getTime() : null;
-      const active = !['closed', 'spam'].includes(quote.status);
-      const dueMatch = !dueFilter
-        || (dueFilter === 'overdue' && active && dueAt && dueAt <= now)
-        || (dueFilter === 'upcoming' && active && dueAt && dueAt > now)
-        || (dueFilter === 'unscheduled' && active && !dueAt);
-      return (!q || text.includes(q))
-        && (!filter || quote.status === filter)
-        && (!priority || quote.priority === priority)
-        && ownerMatch
-        && dueMatch;
-    });
+    const quotes = state.quotes || [];
 
     if (!quotes.length) {
       box.innerHTML = admEmpty('ph-chats-circle', 'No quotes', 'Quote requests from the site appear here.') + quotesPager;
@@ -685,10 +710,10 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     }
 
     const bulkBar = `<div class="adm-tools adm-tools-flush" data-capability-scope="admin.write" style="flex-wrap:wrap">
-      <label class="admin-select-all"><input type="checkbox" id="qAll" aria-label="Select all"> Select all</label>
-      <select class="adm-select adm-select-sm" id="qBulkStage" aria-label="Set stage for selected leads"><option value="">Set stage…</option>${STAGES.map((s) => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}</select>
-      <select class="adm-select adm-select-sm" id="qBulkPriority" aria-label="Set priority for selected leads"><option value="">Set priority…</option>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}">${p}</option>`).join('')}</select>
-      <input class="adm-input" id="qBulkOwner" placeholder="Assign owner" aria-label="Assign selected leads to owner" style="max-width:160px">
+      <label class="admin-select-all"><input type="checkbox" id="qAll" name="select_all_quotes" aria-label="Select all"> Select all</label>
+      <select class="adm-select adm-select-sm" id="qBulkStage" name="bulk_stage" aria-label="Set stage for selected leads"><option value="">Set stage…</option>${STAGES.map((s) => `<option value="${s}">${STAGE_LABELS[s]}</option>`).join('')}</select>
+      <select class="adm-select adm-select-sm" id="qBulkPriority" name="bulk_priority" aria-label="Set priority for selected leads"><option value="">Set priority…</option>${['urgent', 'high', 'normal', 'low'].map((p) => `<option value="${p}">${p}</option>`).join('')}</select>
+      <input class="adm-input" id="qBulkOwner" name="bulk_owner" autocomplete="off" placeholder="Assign owner…" aria-label="Assign selected leads to owner" style="max-width:160px">
       <button class="btn btn-ghost btn-sm" id="qBulkApply" type="button">Apply to selected</button>
     </div>`;
 
@@ -700,13 +725,14 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       const score = Number.isFinite(Number(quote.lead_score)) ? Number(quote.lead_score) : 0;
       const meta = [
         quote.assigned_to ? `Owner ${quote.assigned_to}` : '',
+        quote.delivery_state ? (DELIVERY_STATUS_LABELS[quote.delivery_state] || quote.delivery_state) : '',
         quote.next_step ? `Next: ${quote.next_step}` : '',
         quote.due_at ? `Due ${dateTime(quote.due_at)}` : '',
       ].filter(Boolean).join(' · ');
       return `
         <details class="quote-item">
           <summary>
-            <label class="q-check-wrap"><input type="checkbox" class="q-check" value="${id}" aria-label="Select lead"></label>
+            <label class="q-check-wrap"><input type="checkbox" class="q-check" name="selected_quote" value="${id}" aria-label="Select lead"></label>
             <b>${esc(quote.company || quote.name || quote.email)}</b>
             ${axisBadge('Stage', quote.pipeline_stage || 'new', STAGE_LABELS[quote.pipeline_stage] || STAGE_LABELS.new)}
             ${axisBadge('Status', quote.status || 'new', quote.status || 'new')}
@@ -718,7 +744,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
           ${meta ? `<p class="muted" style="margin:4px 0 0">${esc(meta)}</p>` : ''}
           <div class="adm-tools" style="margin-top:8px;align-items:end;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" data-open-quote="${id}" type="button">Open deal</button>
-            <select class="adm-select adm-select-sm" data-quote-stage="${id}" data-capability="admin.write" aria-label="Stage">
+            <select class="adm-select adm-select-sm" name="pipeline_stage" data-quote-stage="${id}" data-capability="admin.write" aria-label="Stage">
               ${STAGES.map((s) => `<option value="${s}" ${s === (quote.pipeline_stage || 'new') ? 'selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}
             </select>
             <a class="btn btn-ghost btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>
@@ -735,14 +761,21 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     if (!box) return;
     initializeUrlFilters();
     if (!append) syncUrlFilters();
+    const filterParams = serverFilterParams();
+    const filterSignature = filterParams.toString();
+    if (filterSignature !== loadedFilterSignature) {
+      refetch = true;
+      append = false;
+      syncUrlFilters();
+    }
     if (refetch) {
       const seq = ++quotesFetchSeq; // drop stale responses when fetches overlap
       if (!append) { state.quotes = []; state.quotesOffset = 0; box.innerHTML = admSkeleton(); }
       let data;
       try {
-        const params = new URLSearchParams({ limit: '100', offset: String(state.quotesOffset || 0) });
-        const searchTerm = $('qSearch')?.value.trim();
-        if (searchTerm) params.set('search', searchTerm);
+        const params = new URLSearchParams(filterParams);
+        params.set('limit', '100');
+        params.set('offset', String(state.quotesOffset || 0));
         data = await api('/api/admin/quotes?' + params.toString());
       } catch {
         if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load quotes. Reload to retry.</p>';
@@ -754,6 +787,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       state.quotesTotal = data.total;
       state.quotesHasMore = !!data.has_more;
       state.quotesNeedsMigration = !!data.needs_migration;
+      loadedFilterSignature = filterSignature;
       badge('aBadgeQuotes', data.urgent_count || data.new_count || 0);
       state.loaded.add('quotes');
     }
@@ -792,8 +826,8 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       if (q) openQuoteDrawer(q);
     });
     delegate(box, 'change', '[data-card-stage]', (event, sel) => moveStage(sel.dataset.cardStage, sel.value));
-    delegate(box, 'dragstart', '[data-card-id]', (event, card) => { dragId = card.dataset.cardId; card.classList.add('is-dragging'); });
-    delegate(box, 'dragend', '[data-card-id]', (event, card) => card.classList.remove('is-dragging'));
+    delegate(box, 'dragstart', '[data-card-id]', (event, card) => { dragId = card.dataset.cardId; card.inert = true; card.classList.add('is-dragging'); });
+    delegate(box, 'dragend', '[data-card-id]', (event, card) => { card.inert = false; card.classList.remove('is-dragging'); });
     delegate(box, 'dragover', '[data-col]', (event, col) => { event.preventDefault(); col.classList.add('is-over'); });
     delegate(box, 'dragleave', '[data-col]', (event, col) => col.classList.remove('is-over'));
     delegate(box, 'drop', '[data-col]', (event, col) => {

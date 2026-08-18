@@ -90,6 +90,8 @@ test('ShipStation admin endpoint gates label reads, emits no-store, and dispatch
       return { order_id: input.order_id, shipments: [] };
     },
     reconcileLabel: async (_env, input) => { calls.push(['reconcile', input]); return { reconciled: true }; },
+    reconcileLabelVoid: async (_env, input) => { calls.push(['reconcile-void', input]); return { reconciled: true }; },
+    reconcileReturnLabel: async (_env, input) => { calls.push(['reconcile-return', input]); return { reconciled: true }; },
     returnLabel: async (_env, input) => { calls.push(['return', input]); return { label_id: 'se-return-1' }; },
   });
 
@@ -114,7 +116,15 @@ test('ShipStation admin endpoint gates label reads, emits no-store, and dispatch
   assert.equal((await handler({
     request: request('POST', { action: 'return_label', order_id: 'order-1', label_id: 'se-label-1', confirm: true, reason: 'Customer return' }), env: {},
   })).status, 200);
-  assert.deepEqual(calls.map(([action]) => action), ['get', 'download', 'shipments', 'reconcile', 'return']);
+  assert.equal((await handler({
+    request: request('POST', { action: 'reconcile_label_void', order_id: 'order-1', label_id: 'se-label-1', confirm: true, reason: 'Repair void timeout' }), env: {},
+  })).status, 200);
+  assert.equal((await handler({
+    request: request('POST', { action: 'reconcile_return_label', order_id: 'order-1', label_id: 'se-label-1', confirm: true, reason: 'Repair return timeout' }), env: {},
+  })).status, 200);
+  assert.deepEqual(calls.map(([action]) => action), [
+    'get', 'download', 'shipments', 'reconcile', 'return', 'reconcile-void', 'reconcile-return',
+  ]);
 
   const readOnly = createShipStationAdminHandler({
     requireStaff: async () => ({ user: { id: 'staff-1' }, staff: true, role: 'read_only' }),
@@ -127,6 +137,26 @@ test('ShipStation admin endpoint gates label reads, emits no-store, and dispatch
   assert.equal((await readOnly({
     request: request('POST', { action: 'reconcile_label_purchase', order_id: 'order-1', confirm: true, reason: 'Repair timeout' }), env: {},
   })).status, 403);
+});
+
+test('ShipStation reconciliation conflicts preserve 409 instead of becoming provider 502s', async () => {
+  const handler = createShipStationAdminHandler({
+    requireStaff: async () => ({ user: { id: 'staff-1' }, staff: true, role: 'owner' }),
+    reconcileReturnLabel: async () => {
+      throw Object.assign(new Error('multiple exact candidates'), {
+        code: 'shipstation_return_reconcile_ambiguous',
+      });
+    },
+  });
+  const response = await handler({
+    request: request('POST', {
+      action: 'reconcile_return_label', order_id: 'order-1', label_id: 'se-label-1',
+      confirm: true, reason: 'Resolve ambiguous return',
+    }),
+    env: {},
+  });
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), { error: 'shipstation_return_reconcile_ambiguous' });
 });
 
 test('ShipStation label read auth and errors are no-store', async () => {

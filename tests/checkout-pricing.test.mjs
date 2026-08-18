@@ -14,14 +14,16 @@ const CART_JS = readFileSync(new URL("../js/cart.js", import.meta.url), "utf8");
 // Regression: the browser cart client and the checkout API must agree on the request
 // payload key. A prior refactor renamed the server read to `body.cart` while js/cart.js
 // still posted `items`, so every live checkout returned 400 cart_empty.
-// Regression: userFromRequest returns an object { user, token }. checkout.js must
-// destructure it; assigning the raw wrapper to `user` makes `user.id` undefined, which
-// silently broke NET checkout (company lookup) and dropped company_id from Stripe orders.
-test("checkout destructures userFromRequest (never uses the raw wrapper as the user)", () => {
+// Regression: authentication, Company, pricing, and tax used to be independently loaded,
+// which allowed one failed read to silently downgrade a Buyer. Checkout must consume the
+// one typed commerce snapshot instead of assigning a userFromRequest wrapper directly.
+test("checkout consumes one typed commerce snapshot", () => {
   assert.doesNotMatch(SRC, /\bconst\s+user\s*=\s*await\s+userFromRequest\b/,
     "checkout.js must not assign the userFromRequest wrapper directly to `user`");
-  assert.match(SRC, /const\s*\{\s*user\s*\}\s*=\s*await\s+getUserFromRequest\(/,
-    "checkout.js must destructure { user } from userFromRequest");
+  assert.match(SRC, /commerce\s*=\s*await\s+getCommerceContext\(request,\s*env\)/,
+    "checkout.js must resolve the commerce context once");
+  assert.match(SRC, /const\s*\{[^}]*\bsb\b[^}]*\buser\b[^}]*\bcompany\b[^}]*\bcompanyId\b[^}]*\btier\b[^}]*\btaxExempt\b[^}]*\}\s*=\s*commerce/,
+    "checkout.js must derive identity, account, pricing, and tax from that snapshot");
 });
 
 test("client cart payload key matches what the checkout API reads", () => {
@@ -49,7 +51,7 @@ test("prices are loaded from product_variants in the database", () => {
 });
 
 test("tier discounts are applied from server-side price_tiers, not the client", () => {
-  assert.match(SRC, /getTierForRequest\(\s*request\s*,\s*env\s*\)/);
+  assert.match(SRC, /const\s*\{[^}]*\btier\b[^}]*\}\s*=\s*commerce/);
   assert.match(SRC, /getTierPriceMap\(\s*sb\s*,\s*tier\s*\)/, "overrides must be loaded server-side");
   assert.match(SRC, /line\.price\s*=\s*overrides\.get\(\s*line\.sku\s*\)/,
     "a tier override replaces the line price from the server map");

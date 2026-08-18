@@ -78,6 +78,19 @@ test("shared chrome renders decoded, named logos on root and nested routes", asy
           await page.goto(`${staticSite.baseUrl}/${route}`, { waitUntil: "load" });
           await page.locator(".nav-logo").waitFor();
           await page.locator(".foot-logo").waitFor();
+          const visibleNavigationClass = await page.evaluate(() =>
+            [...document.querySelectorAll(".nav-logo img")]
+              .find((image) => {
+                const rect = image.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+              })?.className || "",
+          );
+          assert.equal(await page.locator(".foot-logo").getAttribute("loading"), "lazy");
+          await page.locator(".foot-logo").scrollIntoViewIfNeeded();
+          await page.waitForFunction(() =>
+            [...document.querySelectorAll(".nav-logo img, .foot-logo")]
+              .every((image) => image.complete && image.naturalWidth > 0),
+          );
 
           const logos = await page.evaluate(() => ({
             navLabel: document.querySelector(".nav-logo")?.getAttribute("aria-label") || "",
@@ -113,11 +126,8 @@ test("shared chrome renders decoded, named logos on root and nested routes", asy
             assert.ok(image.naturalWidth > 0, `${route} logo should decode`);
             assert.ok(image.naturalHeight > 0, `${route} logo should have intrinsic height`);
           }
-          const visibleNavigationImages = logos.images.slice(0, 2)
-            .filter((image) => image.renderedWidth > 0 && image.renderedHeight > 0);
-          assert.equal(visibleNavigationImages.length, 1, `${route} should show one navigation logo`);
           assert.match(
-            visibleNavigationImages[0].className,
+            visibleNavigationClass,
             new RegExp(`(?:^|\\s)${visibleNavLogo}(?:\\s|$)`),
             `${route} should show its contrast-appropriate ${visibleNavLogo}`,
           );

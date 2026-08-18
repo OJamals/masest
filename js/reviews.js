@@ -138,10 +138,10 @@ async function mountWriteForm(slot, sku, kind, token) {
         </select>
       </label>
       <label class="rv-field">Title (optional)
-        <input name="title" maxlength="120" placeholder="Sum it up in a few words">
+        <input name="title" autocomplete="off" maxlength="120" placeholder="Sum it up in a few words…">
       </label>
       <label class="rv-field">Review
-        <textarea name="body" maxlength="4000" rows="4" placeholder="How did it work for you?"></textarea>
+        <textarea name="body" autocomplete="off" maxlength="4000" rows="4" placeholder="How did it work for you?…"></textarea>
       </label>
       <button type="submit" class="btn btn-secondary btn-sm">Submit review</button>
       <span class="rv-msg" role="status" aria-live="polite"></span>

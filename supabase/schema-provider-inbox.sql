@@ -462,14 +462,21 @@ declare
   v_effect public.integration_effects%rowtype;
   v_event public.integration_events%rowtype;
   v_order public.orders%rowtype;
+  v_label record;
+  v_match_count integer;
   v_history_id bigint;
   v_occurred_at timestamptz;
   v_result jsonb;
   v_stale boolean;
+  v_label_status text;
   v_next_status text;
   v_order_status text;
   v_shipped_at timestamptz;
   v_notify boolean;
+  v_any_label boolean;
+  v_all_terminal boolean;
+  v_all_delivered boolean;
+  v_any_blocked boolean;
 begin
   select * into v_effect from public.integration_effects where id = p_effect_id for update;
   if not found or v_effect.status <> 'processing'
@@ -489,86 +496,144 @@ begin
   exception when others then
     raise exception 'invalid_shipstation_projection_time';
   end;
-  select * into v_order
-    from public.orders
-   where tracking_number = v_effect.payload ->> 'tracking_number'
-   order by created_at desc
-   limit 1
-   for update;
-
-  -- A return label's scans carry their own tracking number. They belong on the order's
-  -- history, but they must never drive the OUTBOUND tracking_status — a returning parcel
-  -- is not the order shipping again.
-  if not found then
-    select * into v_order
-      from public.orders
-     where shipstation_return_tracking_number = v_effect.payload ->> 'tracking_number'
-     order by created_at desc
-     limit 1
-     for update;
-    if found then
-      insert into public.shipment_events (
-        order_id, status, carrier, tracking_number, note, provider, provider_event_key,
-        provider_occurred_at, provider_status_code, provider_event_code, payload_sha256
-      ) values (
-        v_order.id,
-        v_effect.payload ->> 'tracking_status',
-        v_order.carrier,
-        v_effect.payload ->> 'tracking_number',
-        coalesce(nullif(v_effect.payload ->> 'note', ''), 'Return shipment update'),
-        'shipstation',
-        v_effect.payload ->> 'event_key',
-        v_occurred_at,
-        nullif(v_effect.payload ->> 'status_code', ''),
-        nullif(v_effect.payload ->> 'event_code', ''),
-        v_event.payload_sha256
-      ) on conflict do nothing returning id into v_history_id;
-      v_result := jsonb_build_object(
-        'found', true,
-        'applied', false,
-        'return_shipment', true,
-        'history_inserted', v_history_id is not null,
-        'order_id', v_order.id,
-        'notify', false
-      );
-      return public.finish_integration_projection(p_effect_id, p_worker_id, v_result);
-    end if;
+  -- Resolve tracking identity only through the canonical label-to-split view. Order
+  -- tracking columns are a latest-action projection and cannot authorize a carrier event.
+  select count(*) into v_match_count
+    from public.order_shipment_label_ownership ownership
+   where ownership.tracking_number = v_effect.payload ->> 'tracking_number';
+  if v_match_count <> 1 then
     v_result := jsonb_build_object(
-      'found', false, 'applied', false, 'notify', false, 'skipped', 'unmatched_order'
+      'found', false, 'applied', false, 'notify', false,
+      'skipped', case when v_match_count = 0 then 'unmatched_label' else 'ambiguous_label_identity' end,
+      'candidate_count', v_match_count
     );
     return public.finish_integration_projection(p_effect_id, p_worker_id, v_result);
   end if;
 
+  select * into v_label
+    from public.order_shipment_label_ownership ownership
+   where ownership.tracking_number = v_effect.payload ->> 'tracking_number';
+  select * into v_order from public.orders where id = v_label.order_id for update;
+  if not found then raise exception 'invalid_shipstation_projection_order'; end if;
+
   insert into public.shipment_events (
     order_id, status, carrier, tracking_number, note, provider, provider_event_key,
-    provider_occurred_at, provider_status_code, provider_event_code, payload_sha256
+    provider_occurred_at, provider_status_code, provider_event_code, payload_sha256,
+    order_shipment_id, provider_label_id
   ) values (
     v_order.id,
     v_effect.payload ->> 'tracking_status',
-    v_order.carrier,
+    v_label.carrier,
     v_effect.payload ->> 'tracking_number',
-    nullif(v_effect.payload ->> 'note', ''),
+    coalesce(
+      nullif(v_effect.payload ->> 'note', ''),
+      case when v_label.label_kind = 'return' then 'Return shipment update' else null end
+    ),
     'shipstation',
     v_effect.payload ->> 'event_key',
     v_occurred_at,
     nullif(v_effect.payload ->> 'status_code', ''),
     nullif(v_effect.payload ->> 'event_code', ''),
-    v_event.payload_sha256
+    v_event.payload_sha256,
+    v_label.order_shipment_id,
+    v_label.label_id
   ) on conflict do nothing returning id into v_history_id;
 
-  v_stale := v_order.tracking_provider_occurred_at is not null
-    and (v_occurred_at is null or v_occurred_at < v_order.tracking_provider_occurred_at);
+  v_stale := v_label.tracking_occurred_at is not null
+    and (v_occurred_at is null or v_occurred_at < v_label.tracking_occurred_at);
   if v_stale then
     v_result := jsonb_build_object(
-      'found', true, 'applied', false, 'notify', false, 'skipped', 'stale_event'
+      'found', true, 'applied', false, 'notify', false, 'skipped', 'stale_event',
+      'order_id', v_order.id, 'order_shipment_id', v_label.order_shipment_id,
+      'label_id', v_label.label_id, 'history_inserted', v_history_id is not null
     );
     return public.finish_integration_projection(p_effect_id, p_worker_id, v_result);
   end if;
-  v_next_status := case
-    when v_order.tracking_status = 'delivered' then 'delivered'
+
+  v_label_status := case
+    when v_label.tracking_status = 'delivered' then 'delivered'
     when v_effect.payload ->> 'tracking_status' = 'packing'
-      and v_order.tracking_status not in ('processing', 'packing') then v_order.tracking_status
+      and coalesce(v_label.tracking_status, 'processing') not in ('processing', 'packing')
+      then v_label.tracking_status
     else v_effect.payload ->> 'tracking_status'
+  end;
+
+  update public.order_provider_links
+     set metadata = metadata || jsonb_strip_nulls(jsonb_build_object(
+           'tracking_number', v_effect.payload ->> 'tracking_number',
+           'tracking_status', v_label_status,
+           'tracking_occurred_at', v_occurred_at,
+           'tracking_status_code', nullif(v_effect.payload ->> 'status_code', ''),
+           'tracking_event_code', nullif(v_effect.payload ->> 'event_code', '')
+         )),
+         updated_at = now()
+   where id = v_label.provider_link_id;
+
+  -- Return scans retain exact split history but never advance outbound fulfillment.
+  if v_label.label_kind = 'return' then
+    v_result := jsonb_build_object(
+      'found', true, 'applied', true, 'return_shipment', true,
+      'history_inserted', v_history_id is not null,
+      'order_id', v_order.id, 'order_shipment_id', v_label.order_shipment_id,
+      'label_id', v_label.label_id, 'tracking_status', v_label_status, 'notify', false
+    );
+    return public.finish_integration_projection(p_effect_id, p_worker_id, v_result);
+  end if;
+
+  -- Aggregate every non-cancelled required split. One scan can update one label, but
+  -- cannot fulfill the Order while another split has no active terminal label.
+  select
+    exists (
+      select 1 from public.order_shipment_label_ownership label
+       where label.order_id = v_order.id and label.label_kind = 'outbound' and label.active
+    ),
+    not exists (
+      select 1 from public.order_shipments required
+       where required.order_id = v_order.id and required.status <> 'cancelled'
+         and (
+           not exists (
+             select 1 from public.order_shipment_label_ownership label
+              where label.order_shipment_id = required.id
+                and label.label_kind = 'outbound' and label.active
+           )
+           or exists (
+             select 1 from public.order_shipment_label_ownership label
+              where label.order_shipment_id = required.id
+                and label.label_kind = 'outbound' and label.active
+                and coalesce(label.tracking_status, 'packing') not in ('shipped', 'delivered')
+           )
+         )
+    ),
+    not exists (
+      select 1 from public.order_shipments required
+       where required.order_id = v_order.id and required.status <> 'cancelled'
+         and (
+           not exists (
+             select 1 from public.order_shipment_label_ownership label
+              where label.order_shipment_id = required.id
+                and label.label_kind = 'outbound' and label.active
+           )
+           or exists (
+             select 1 from public.order_shipment_label_ownership label
+              where label.order_shipment_id = required.id
+                and label.label_kind = 'outbound' and label.active
+                and coalesce(label.tracking_status, 'packing') <> 'delivered'
+           )
+         )
+    ),
+    exists (
+      select 1 from public.order_shipment_label_ownership label
+       where label.order_id = v_order.id and label.label_kind = 'outbound'
+         and label.active and label.tracking_status = 'blocked'
+    )
+  into v_any_label, v_all_terminal, v_all_delivered, v_any_blocked;
+
+  v_next_status := case
+    when v_any_label and v_all_delivered then 'delivered'
+    when v_any_label and v_all_terminal then 'shipped'
+    when v_any_blocked then 'blocked'
+    when v_any_label then 'packing'
+    else 'processing'
   end;
 
   -- shipped_at is the clock the review-reminder sweep and the fulfilment SLA both read.
@@ -584,10 +649,7 @@ begin
   -- receivable silently disappears from the company's outstanding credit.
   v_order_status := v_order.status::text;
   if v_order_status in ('paid', 'net_paid', 'fulfilled')
-     and (
-       v_next_status = 'delivered'
-       or (v_next_status = 'shipped' and coalesce(trim(v_order.tracking_number), '') <> '')
-     ) then
+     and v_any_label and v_all_terminal then
     v_order_status := 'fulfilled';
   end if;
 
@@ -600,7 +662,13 @@ begin
      set tracking_status = v_next_status,
          status = v_order_status::public.order_status,
          shipped_at = v_shipped_at,
-         tracking_provider_occurred_at = coalesce(v_occurred_at, tracking_provider_occurred_at),
+         tracking_number = v_effect.payload ->> 'tracking_number',
+         carrier = coalesce(v_label.carrier, carrier),
+         tracking_provider_occurred_at = case
+           when tracking_provider_occurred_at is null then v_occurred_at
+           when v_occurred_at is null then tracking_provider_occurred_at
+           else greatest(tracking_provider_occurred_at, v_occurred_at)
+         end,
          estimated_delivery_at = coalesce(
            nullif(v_effect.payload ->> 'estimated_delivery_at', '')::timestamptz,
            estimated_delivery_at
@@ -613,6 +681,8 @@ begin
     'applied', true,
     'history_inserted', v_history_id is not null,
     'order_id', v_order.id,
+    'order_shipment_id', v_label.order_shipment_id,
+    'label_id', v_label.label_id,
     'order_number', v_order.order_number,
     'previous_tracking_status', v_order.tracking_status,
     'tracking_status', v_next_status,

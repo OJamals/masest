@@ -25,13 +25,28 @@ create table if not exists public.quotes (
   handled_by  text
 );
 
+alter table public.quotes add column if not exists intake_id uuid;
+alter table public.quotes add column if not exists intake_fingerprint text;
+
+do $$ begin
+  alter table public.quotes add constraint quotes_intake_identity_shape_chk check (
+    (intake_id is null and intake_fingerprint is null)
+    or (intake_id is not null and intake_fingerprint ~ '^[a-f0-9]{64}$')
+  );
+exception when duplicate_object then null; end $$;
+
 create index if not exists quotes_status_idx  on public.quotes (status, created_at desc);
 create index if not exists quotes_created_idx on public.quotes (created_at desc);
-create unique index if not exists quotes_open_requisition_unique_idx
+drop index if exists public.quotes_open_requisition_unique_idx;
+create unique index quotes_open_requisition_unique_idx
   on public.quotes ((payload ->> 'requisition_id'))
   where source = 'requisition'
     and status not in ('closed', 'spam')
+    and coalesce(payload ->> 'offer_status', '') not in ('declined', 'expired', 'ordered')
     and payload ? 'requisition_id';
+create unique index if not exists quotes_intake_id_unique_idx
+  on public.quotes (intake_id)
+  where intake_id is not null;
 
 alter table public.quotes add column if not exists priority text default 'normal';
 alter table public.quotes add column if not exists next_step text;

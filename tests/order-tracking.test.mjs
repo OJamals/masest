@@ -65,6 +65,7 @@ test("staff shipment tracking promotes settled orders while preserving open NET 
     ADMIN_ORDERS,
     /if\s*\(fulfilled\)\s*\{\s*update\.status\s*=\s*'fulfilled';\s*\}/
   );
+  assert.match(ADMIN_ORDERS, /rpc\('update_order_tracking_guarded'/);
 });
 
 test("staff console surfaces tracking controls on each order", () => {

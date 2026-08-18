@@ -1,17 +1,10 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS } from "./catalog-data.js?v=20260808b";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260808b";
 import { smoothPref } from "./engagement.js";
 
-const IMAGE_DIMS = {
-  "img/products/masest-poster-transparent.png": [1193, 610],
-  "img/products/dbnpa-studio.webp": [900, 822],
-  "img/products/crs-studio.webp": [899, 1200],
-  "img/products/neutral-studio.webp": [919, 1200],
-};
-
 function imageDimsAttr(src) {
-  const [width, height] = IMAGE_DIMS[src] || [900, 1200];
+  const { width, height } = catalogImageDimensions(src);
   return `width="${width}" height="${height}"`;
 }
 
@@ -237,7 +230,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
     const first = row.variants[0].vsku;
     const quoteHref = `/contact?type=quote&product=${encodeURIComponent(p?.name || id)}`;
     return `<span class="commerce-buy" data-commerce-buy="${id}">`
-      + `<select class="commerce-vol" aria-label="Volume for ${p?.name || id}">${opts}</select>`
+      + `<select class="commerce-vol" name="volume" aria-label="Volume for ${p?.name || id}">${opts}</select>`
       + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
       + `<a class="${btnClass} commerce-quote-swap" hidden href="${quoteHref}#quoteForm" data-quote-base="${quoteHref}" aria-label="Request a bulk quote for ${p?.name || id}">Request quote</a>`
       + `</span>`;
@@ -509,7 +502,18 @@ export function initShop() {
   });
 
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
-  const state = { group: "all", sort: "featured", search: "", expanded: false };
+  const initialParams = new URLSearchParams(location.search);
+  const initialGroup = initialParams.get("category") || "all";
+  const initialSort = initialParams.get("sort") || "featured";
+  const initialSearch = (initialParams.get("q") || "").trim();
+  const state = {
+    group: initialGroup === "all" || CATALOG_GROUPS.some((g) => g.key === initialGroup) ? initialGroup : "all",
+    sort: ["featured", "az"].includes(initialSort) ? initialSort : "featured",
+    search: initialSearch.toLowerCase(),
+    expanded: false,
+  };
+  if (searchEl) searchEl.value = initialSearch;
+  if (sortSel) sortSel.value = state.sort;
 
   const chips = [{ key: "all", label: "All products" }, ...CATALOG_GROUPS.map((g) => ({ key: g.key, label: g.label }))];
   chipsBox.innerHTML = chips
@@ -551,7 +555,20 @@ export function initShop() {
     return ids;
   };
 
+  const syncUrl = () => {
+    const params = new URLSearchParams(location.search);
+    if (state.group === "all") params.delete("category");
+    else params.set("category", state.group);
+    if (state.sort === "featured") params.delete("sort");
+    else params.set("sort", state.sort);
+    if (!state.search) params.delete("q");
+    else params.set("q", state.search);
+    const query = params.toString();
+    history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+  };
+
   const apply = () => {
+    syncUrl();
     const ids = visibleIds();
     const canCollapse = state.group === "all" && !state.search && ids.length > 6;
     const collapsed = canCollapse && !state.expanded;
@@ -631,9 +648,9 @@ export function initShop() {
   const catHash = (location.hash.match(/^#cat-(.+)$/) || [])[1];
   if (catHash && CATALOG_GROUPS.some((g) => g.key === catHash)) {
     state.group = catHash;
-    syncChips();
   }
 
+  syncChips();
   apply();
   if (!isLocalStaticCommerceSuppressed()) {
     loadCommerceCatalog().then(apply);

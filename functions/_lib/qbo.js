@@ -430,6 +430,79 @@ function qboHeaders(accessToken) {
   };
 }
 
+// Invoice void is intentionally its own adapter instead of a generic update helper.
+// Cancellation must read QBO's latest SyncToken and current balance immediately before
+// the irreversible write; locally cached document state cannot prove that the receivable
+// is still unpaid.
+export async function voidQboInvoice(env, accessToken, realmId, invoiceId, options = {}) {
+  const opts = qboOptions(options);
+  const fetchImpl = opts.fetchImpl || fetch;
+  const realm = cleanText(realmId, 80);
+  const id = cleanText(invoiceId, 80);
+  if (!accessToken || !realm || !id) throw new Error('qbo_invoice_void_input_invalid');
+
+  const base = `${qboBaseUrl(env)}/v3/company/${encodeURIComponent(realm)}`;
+  const readResponse = await fetchImpl(
+    `${base}/invoice/${encodeURIComponent(id)}?minorversion=70`,
+    { headers: qboHeaders(accessToken) },
+  );
+  const readTid = recordIntuitTid(opts, readResponse, 'read:Invoice');
+  if (!readResponse.ok) {
+    throw new Error(`qbo_invoice_read_failed:${readResponse.status}${intuitTidSuffix(readTid)}`);
+  }
+  const readBody = await readResponse.json().catch(() => null);
+  const invoice = readBody?.Invoice;
+  if (!invoice || String(invoice.Id || '') !== id || invoice.SyncToken === undefined) {
+    throw new Error('qbo_invoice_state_invalid');
+  }
+
+  const total = Number(invoice.TotalAmt);
+  const balance = Number(invoice.Balance);
+  if (!Number.isFinite(total) || !Number.isFinite(balance) || total < 0 || balance < 0) {
+    throw new Error('qbo_invoice_state_invalid');
+  }
+  if (total === 0 && balance === 0) {
+    return {
+      invoiceId: id,
+      syncToken: String(invoice.SyncToken),
+      voided: true,
+      duplicate: true,
+      intuitTid: readTid || undefined,
+    };
+  }
+  if (Math.abs(total - balance) > 0.001) {
+    throw new Error('qbo_invoice_payment_state_ambiguous');
+  }
+
+  const voidResponse = await fetchImpl(
+    `${base}/invoice?operation=void&minorversion=70`,
+    {
+      method: 'POST',
+      headers: qboHeaders(accessToken),
+      body: JSON.stringify({ Id: id, SyncToken: String(invoice.SyncToken) }),
+    },
+  );
+  const voidTid = recordIntuitTid(opts, voidResponse, 'void:Invoice');
+  if (!voidResponse.ok) {
+    throw new Error(`qbo_invoice_void_failed:${voidResponse.status}${intuitTidSuffix(voidTid)}`);
+  }
+  const voidBody = await voidResponse.json().catch(() => null);
+  const voided = voidBody?.Invoice;
+  if (!voided
+      || String(voided.Id || '') !== id
+      || Number(voided.TotalAmt) !== 0
+      || Number(voided.Balance) !== 0) {
+    throw new Error('qbo_invoice_void_unverified');
+  }
+  return {
+    invoiceId: id,
+    syncToken: String(voided.SyncToken ?? invoice.SyncToken),
+    voided: true,
+    duplicate: false,
+    intuitTid: voidTid || undefined,
+  };
+}
+
 function qboString(value) {
   return String(value || '').replaceAll("'", "\\'");
 }

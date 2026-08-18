@@ -7,11 +7,19 @@ import {
 } from './quote-convert.js';
 import { guardQuoteOffer, requisitionQuoteMayBeSent } from './quote-order.js';
 import { companyEmails } from './supabase.js';
+import { quoteOfferEffects, toIntegrationEffectRows } from './integration-effects.js';
+import {
+  canTransitionOffer,
+  offerExpiryReached,
+  quoteDeliveryState,
+  quoteExpirationPatch,
+  staffTerminalTransitionConflict,
+} from './quote-lifecycle.js';
 
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const MUTATION_SELECT = 'id,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,contact_id,email,product,company,type';
+const MUTATION_SELECT = 'id,source,payload,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,contact_id,email,product,company,type';
 
 function dueAt(value) {
   if (value === null || value === '') return null;
@@ -87,15 +95,25 @@ function appendNote(existing, note) {
   return [existing, note].filter(Boolean).join('\n').slice(0, 4000);
 }
 
+function offerExpiry(value, now) {
+  const raw = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw)) return null;
+  const timestamp = Date.parse(raw);
+  return Number.isFinite(timestamp) && timestamp > now.getTime()
+    ? new Date(timestamp).toISOString()
+    : null;
+}
+
 export function createQuoteLeadLifecycle({
   store,
   stageChanged = async () => {},
   sendFollowUp = async () => {},
   handoff = async () => ({ posted: false, reason: 'not_configured' }),
   sendDueNotice = async () => false,
-  offerReady = async () => {},
   converted = async () => {},
   audit = async () => {},
+  prepareCheckoutChange = null,
+  releaseCheckoutChange = async () => {},
   now = () => new Date(),
 } = {}) {
   if (!store) throw new Error('quote_lead_store_required');
@@ -111,6 +129,16 @@ export function createQuoteLeadLifecycle({
     let stageActuallyChanged = false;
 
     try {
+      const requestsTerminal = ['closed', 'spam'].includes(changes.status)
+        || ['won', 'lost'].includes(changes.pipeline_stage);
+      let terminalSnapshot = null;
+      if (requestsTerminal) {
+        terminalSnapshot = await store.lifecycleQuote(id);
+        if (!terminalSnapshot) return { ok: false, error: 'quote_not_found', status: 404 };
+        if (staffTerminalTransitionConflict(terminalSnapshot, changes, at.getTime())) {
+          return { ok: false, error: 'live_offer_requires_resolution', status: 409 };
+        }
+      }
       if (changes.pipeline_stage !== undefined) {
         const currentStage = await store.currentStage(id);
         stageActuallyChanged = (currentStage || 'new') !== changes.pipeline_stage;
@@ -122,11 +150,23 @@ export function createQuoteLeadLifecycle({
           }, at);
           if (stage.error) return { ok: false, error: stage.error };
           Object.assign(patch, stage.patch);
+          if (['won', 'lost'].includes(changes.pipeline_stage)) {
+            Object.assign(patch, {
+              status: 'closed',
+              handled_at: at.toISOString(),
+              handled_by: actor || null,
+            });
+          }
         }
       }
       if (!Object.keys(patch).length) return { ok: false, error: 'nothing_to_update' };
 
-      const quote = await store.updateQuote(id, patch);
+      const quote = terminalSnapshot
+        ? await store.updateQuoteIfCurrent(id, patch, terminalSnapshot)
+        : await store.updateQuote(id, patch);
+      if (terminalSnapshot && !quote) {
+        return { ok: false, error: 'quote_changed', status: 409 };
+      }
       if (stageActuallyChanged && quote?.email) {
         await Promise.allSettled([stageChanged(quote, changes.pipeline_stage, 'pipeline')]);
       }
@@ -156,10 +196,47 @@ export function createQuoteLeadLifecycle({
     if (!Object.keys(bulk).length && !stage) return { ok: false, error: 'nothing_to_update' };
 
     try {
+      const quotes = changes.pipeline_stage !== undefined
+        || ['closed', 'spam'].includes(changes.status)
+        ? await store.quotesForStage(selectedIds)
+        : [];
+      if (quotes.some((quote) => staffTerminalTransitionConflict(quote, changes, at.getTime()))) {
+        return { ok: false, error: 'live_offer_requires_resolution', status: 409 };
+      }
+      if (stage && ['won', 'lost'].includes(changes.pipeline_stage)) {
+        Object.assign(stage.patch, {
+          status: 'closed',
+          handled_at: at.toISOString(),
+          handled_by: actor || null,
+        });
+      }
+      const terminal = ['closed', 'spam'].includes(changes.status)
+        || ['won', 'lost'].includes(changes.pipeline_stage);
+      if (terminal) {
+        const terminalPatch = { ...bulk, ...(stage?.patch || {}) };
+        const updated = await Promise.all(quotes.map((quote) => (
+          store.updateQuoteIfCurrent(quote.id, terminalPatch, quote)
+        )));
+        if (updated.some((quote) => !quote)) {
+          return { ok: false, error: 'quote_changed', status: 409 };
+        }
+        const moved = stage
+          ? quotes.filter((quote) => (quote.pipeline_stage || 'new') !== changes.pipeline_stage)
+          : [];
+        if (stage) {
+          await Promise.allSettled(moved
+            .filter((quote) => quote.email)
+            .map((quote) => stageChanged(quote, changes.pipeline_stage, 'pipeline_bulk')));
+        }
+        return {
+          ok: true,
+          updated: selectedIds.length,
+          stage_moved: stage ? moved.length : undefined,
+        };
+      }
       if (Object.keys(bulk).length) await store.updateQuotes(selectedIds, bulk);
       let moved = [];
       if (stage) {
-        const quotes = await store.quotesForStage(selectedIds);
         moved = quotes.filter((quote) => (quote.pipeline_stage || 'new') !== changes.pipeline_stage);
         if (moved.length) {
           await store.updateQuotes(moved.map((quote) => quote.id), stage.patch);
@@ -233,10 +310,32 @@ export function createQuoteLeadLifecycle({
     }
   }
 
+  async function expireDue({ batch } = {}) {
+    const at = now();
+    const nowIso = at.toISOString();
+    try {
+      const candidates = await store.expirableOffers(nowIso, batchLimit(batch));
+      let expired_offers = 0;
+      for (const quote of candidates) {
+        if (!offerExpiryReached(quote, at.getTime())) continue;
+        const expired = await store.expireOffer({
+          quote,
+          patch: quoteExpirationPatch(quote, nowIso),
+        });
+        if (expired) expired_offers += 1;
+      }
+      return { ok: true, expired_offers };
+    } catch (error) {
+      return { ok: false, error: error?.message || String(error) };
+    }
+  }
+
   async function sweepDue({ actor, batch } = {}) {
     const at = now();
     const nowIso = at.toISOString();
     try {
+      const expired = await expireDue({ batch });
+      if (!expired.ok) return expired;
       const quotes = await store.dueQuotes(nowIso, batchLimit(batch));
       const results = [];
       let buyer_reminders = 0;
@@ -284,6 +383,7 @@ export function createQuoteLeadLifecycle({
         processed: quotes.length,
         buyer_reminders,
         staff_alerts,
+        expired_offers: expired.expired_offers,
         results,
       };
     } catch (error) {
@@ -296,8 +396,15 @@ export function createQuoteLeadLifecycle({
       return { status: 400, body: { error: 'invalid_id' } };
     }
     try {
-      const quote = await store.workspaceQuote(id);
+      let quote = await store.workspaceQuote(id);
       if (!quote) return { status: 404, body: { error: 'not_found' } };
+      if (offerExpiryReached(quote, now().getTime())) {
+        const patch = quoteExpirationPatch(quote, now().toISOString());
+        const transitioned = await store.expireOffer({ quote, patch });
+        quote = transitioned
+          ? { ...quote, ...patch, ...transitioned }
+          : (await store.workspaceQuote(id) || quote);
+      }
       const requisitionId = String(quote.payload?.requisition_id || '');
       const requesterId = String(quote.payload?.requester_id || '');
       const companyId = String(quote.payload?.company_id || '');
@@ -316,6 +423,9 @@ export function createQuoteLeadLifecycle({
       if (!data.requisition) {
         return { status: 409, body: { error: 'requisition_unavailable' } };
       }
+      const deliveryEffects = quote.payload?.offer_delivery_event_id
+        ? await store.deliveryEffects(quote.payload.offer_delivery_event_id)
+        : [];
       const pricedOrder = data.offer || data.requisition;
       return {
         status: 200,
@@ -328,6 +438,8 @@ export function createQuoteLeadLifecycle({
             requisition_name: data.requisition.requisition_name,
             offer_order_id: data.offer?.id || null,
             offer_status: quote.payload?.offer_status || null,
+            offer_expires_at: quote.payload?.offer_expires_at || null,
+            delivery_state: quoteDeliveryState(deliveryEffects),
             currency: pricedOrder.currency || 'usd',
             subtotal: Number(pricedOrder.subtotal || 0),
             total: Number(pricedOrder.total || 0),
@@ -342,13 +454,18 @@ export function createQuoteLeadLifecycle({
     }
   }
 
-  async function sendOffer({ id, items, actor, user, appUrl } = {}) {
+  async function sendOffer({ id, items, expiresAt: requestedExpiresAt, actor, user } = {}) {
     let order = null;
     let committed = false;
+    let checkoutMutation = null;
+    let checkoutMutationIdentity = null;
     try {
+      const atDate = now();
+      const expiresAt = offerExpiry(requestedExpiresAt, atDate);
+      if (!expiresAt) return { status: 400, body: { error: 'future_offer_expiry_required' } };
       const quote = await store.offerQuote(id);
       if (!quote) return { status: 404, body: { error: 'quote_not_found' } };
-      if (!requisitionQuoteMayBeSent(quote)) {
+      if (!requisitionQuoteMayBeSent(quote, atDate.getTime())) {
         return { status: 409, body: { error: 'quote_closed' } };
       }
       const requisitionId = String(quote.payload?.requisition_id || '');
@@ -383,26 +500,77 @@ export function createQuoteLeadLifecycle({
       }));
       await store.insertOrderItems(order.id, clean);
 
-      const at = now().toISOString();
+      const at = atDate.toISOString();
       const previousOfferOrderId = String(quote.payload?.offer_order_id || '');
+      const nextOfferStatus = quote.payload?.offer_status ? 'revised' : 'sent';
+      if (!canTransitionOffer(quote, nextOfferStatus, atDate.getTime())) {
+        await store.deleteOrder(order.id);
+        return { status: 409, body: { error: 'quote_changed' } };
+      }
+      if (UUID.test(previousOfferOrderId)) {
+        if (!prepareCheckoutChange || !Number.isSafeInteger(Number(quote.offer_revision))
+          || Number(quote.offer_revision) < 1) {
+          await store.deleteOrder(order.id);
+          return { status: 503, body: { error: 'quote_checkout_attempt_unavailable', retryable: true } };
+        }
+        try {
+          checkoutMutationIdentity = {
+            quoteId: quote.id,
+            quoteOrderId: previousOfferOrderId,
+            requesterId,
+            companyId,
+            offerRevision: Number(quote.offer_revision),
+            offerStatus: String(quote.payload?.offer_status || ''),
+          };
+          checkoutMutation = await prepareCheckoutChange({
+            kind: 'revise',
+            identity: checkoutMutationIdentity,
+          });
+        } catch (error) {
+          await store.deleteOrder(order.id);
+          return {
+            status: Number(error?.status) || 503,
+            body: {
+              error: error?.code || 'quote_checkout_attempt_unavailable',
+              ...(error?.retryable ? { retryable: true } : {}),
+            },
+          };
+        }
+        if (!UUID.test(String(checkoutMutation?.mutationId || ''))) {
+          await store.deleteOrder(order.id);
+          return { status: 503, body: { error: 'quote_checkout_attempt_unavailable', retryable: true } };
+        }
+      }
       const payload = quotePayloadWithOffer(quote.payload, {
         orderId: order.id,
-        status: 'sent',
+        status: nextOfferStatus,
         at,
+        expiresAt,
       });
-      const patch = {
+      const effects = toIntegrationEffectRows(quoteOfferEffects({
+        quoteId: quote.id,
+        companyId,
+        email: quote.email,
+        product: quote.product,
+      }));
+      const updated = await store.commitOffer({
+        quote,
         payload,
-        status: 'contacted',
-        pipeline_stage: 'proposal',
-        stage_changed_at: at,
-        handled_at: at,
-        handled_by: actor || null,
-        deal_value: built.subtotal,
-        next_step: 'Buyer review and checkout',
-        due_at: null,
-      };
-      const updated = await store.updateOffer({ quote, patch });
+        orderId: order.id,
+        actor,
+        dealValue: built.subtotal,
+        expiresAt,
+        eventId: `quote:${quote.id}:${order.id}`,
+        effects,
+        checkoutMutationId: checkoutMutation?.mutationId || null,
+      });
       if (!updated) {
+        if (checkoutMutation?.mutationId) {
+          await releaseCheckoutChange({
+            mutationId: checkoutMutation.mutationId,
+            identity: checkoutMutationIdentity,
+          }).catch(() => {});
+        }
         await store.deleteOrder(order.id);
         return { status: 409, body: { error: 'quote_changed' } };
       }
@@ -416,33 +584,34 @@ export function createQuoteLeadLifecycle({
           requisitionName: null,
         }).catch(() => {});
       }
-      await store.notify({
-        company_id: companyId,
-        type: 'quote',
-        title: 'Your quote is ready',
-        body: `${quote.product || 'Requested pricing'} is ready to review and accept.`,
-        link: '/dashboard.html#quotes',
-      });
-      await handoff({
-        quote,
-        companyId,
-        text: 'Your requested pricing is ready to review and accept in the Quotes tab.',
-        actor: actor || 'staff',
-      });
-      if (quote.email) await offerReady({ quote, appUrl });
-      await audit({
+      await Promise.allSettled([audit({
         user,
-        action: 'quote.send',
+        action: nextOfferStatus === 'revised' ? 'quote.revise' : 'quote.send',
         targetType: 'quote',
         targetId: quote.id,
-        detail: { company_id: companyId, order_id: order.id, subtotal: built.subtotal },
-      });
+        detail: {
+          company_id: companyId,
+          order_id: order.id,
+          subtotal: built.subtotal,
+          expires_at: expiresAt,
+          delivery: 'queued',
+        },
+      })]);
       return {
-        status: 200,
-        body: { ok: true, order_id: order.id, quote: updated },
+        status: 202,
+        body: { ok: true, order_id: order.id, quote: updated, delivery_state: 'queued' },
       };
     } catch (error) {
+      if (checkoutMutation?.mutationId && !committed) {
+        await releaseCheckoutChange({
+          mutationId: checkoutMutation.mutationId,
+          identity: checkoutMutationIdentity,
+        }).catch(() => {});
+      }
       if (order && !committed) await store.deleteOrder(order.id).catch(() => {});
+      if (error?.code === '23505' && /quotes_open_requisition_unique_idx/.test(error?.message || '')) {
+        return { status: 409, body: { error: 'open_quote_exists' } };
+      }
       return { status: 500, body: { error: error?.message || String(error) } };
     }
   }
@@ -508,6 +677,7 @@ export function createQuoteLeadLifecycle({
     update,
     bulkUpdate,
     followUp,
+    expireDue,
     sweepDue,
     workspace,
     sendOffer,
@@ -516,7 +686,11 @@ export function createQuoteLeadLifecycle({
 }
 
 function checked(result) {
-  if (result.error) throw new Error(result.error.message);
+  if (result.error) {
+    const error = new Error(result.error.message);
+    error.code = result.error.code;
+    throw error;
+  }
   return result.data;
 }
 
@@ -527,12 +701,31 @@ export function createSupabaseQuoteLeadStore(sb) {
       const data = checked(await sb.from('quotes').select('pipeline_stage').eq('id', id).single());
       return data?.pipeline_stage || null;
     },
+    async lifecycleQuote(id) {
+      return checked(await sb.from('quotes')
+        .select('id,source,status,pipeline_stage,payload')
+        .eq('id', id)
+        .maybeSingle());
+    },
     async updateQuote(id, patch) {
       return checked(await sb.from('quotes').update(patch).eq('id', id).select(MUTATION_SELECT).single());
     },
+    async updateQuoteIfCurrent(id, patch, current) {
+      let currentQuery = sb.from('quotes').update(patch)
+        .eq('id', id)
+        .eq('status', current.status);
+      currentQuery = current.pipeline_stage == null
+        ? currentQuery.is('pipeline_stage', null)
+        : currentQuery.eq('pipeline_stage', current.pipeline_stage);
+      let query = guardQuoteOffer(currentQuery, current.payload);
+      query = current.source
+        ? query.eq('source', current.source)
+        : query.is('source', null);
+      return checked(await query.select(MUTATION_SELECT).maybeSingle());
+    },
     async quotesForStage(ids) {
       return checked(await sb.from('quotes')
-        .select('id,email,pipeline_stage,deal_value,product,company,type')
+        .select('id,source,status,payload,email,pipeline_stage,deal_value,product,company,type')
         .in('id', ids)) || [];
     },
     async updateQuotes(ids, patch) {
@@ -559,6 +752,25 @@ export function createSupabaseQuoteLeadStore(sb) {
         .order('due_at', { ascending: true })
         .limit(limit)) || [];
     },
+    async expirableOffers(nowIso, limit) {
+      return checked(await sb.from('quotes')
+        .select('id,source,status,pipeline_stage,payload')
+        .in('payload->>offer_status', ['sent', 'revised', 'accepted'])
+        // Query only rows that may already be due so a large set of older future offers
+        // cannot starve newer expired offers behind the bounded sweep page. Missing
+        // validity is included and fails closed in the canonical lifecycle predicate.
+        .or(`payload->>offer_expires_at.is.null,payload->>offer_expires_at.lte.${nowIso}`)
+        .order('payload->>offer_expires_at', { ascending: true, nullsFirst: true })
+        .limit(limit)) || [];
+    },
+    async expireOffer({ quote, patch }) {
+      let update = sb.from('quotes').update(patch).eq('id', quote.id).eq('status', quote.status);
+      update = quote.pipeline_stage == null
+        ? update.is('pipeline_stage', null)
+        : update.eq('pipeline_stage', quote.pipeline_stage);
+      const query = guardQuoteOffer(update, quote.payload);
+      return checked(await query.select('id,payload').maybeSingle());
+    },
     async updateDueQuote(id, patch) {
       const { error } = await sb.from('quotes').update(patch).eq('id', id);
       return error?.message || null;
@@ -568,6 +780,11 @@ export function createSupabaseQuoteLeadStore(sb) {
         .select('id,source,payload,email,company,product,status,pipeline_stage')
         .eq('id', id)
         .maybeSingle());
+    },
+    async deliveryEffects(eventId) {
+      return checked(await sb.from('integration_effects')
+        .select('status,provider_result')
+        .eq('event_id', eventId)) || [];
     },
     async workspaceData({
       requisitionId,
@@ -620,7 +837,7 @@ export function createSupabaseQuoteLeadStore(sb) {
     },
     async offerQuote(id) {
       return checked(await sb.from('quotes')
-        .select('id,source,payload,email,company,product,status')
+        .select('id,source,payload,email,company,product,status,pipeline_stage,offer_revision,checkout_mutation_id,checkout_mutation_kind')
         .eq('id', id)
         .maybeSingle());
     },
@@ -641,13 +858,32 @@ export function createSupabaseQuoteLeadStore(sb) {
       checked(await sb.from('order_items')
         .insert(items.map((item) => ({ order_id: orderId, ...item }))));
     },
-    async updateOffer({ quote, patch }) {
-      const query = sb.from('quotes').update(patch)
-        .eq('id', quote.id)
-        .eq('status', quote.status);
-      return checked(await guardQuoteOffer(query, quote.payload)
-        .select('id,status,pipeline_stage,payload,deal_value,next_step')
-        .maybeSingle());
+    async commitOffer({
+      quote,
+      payload,
+      orderId,
+      actor,
+      dealValue,
+      expiresAt,
+      eventId,
+      effects,
+      checkoutMutationId,
+    }) {
+      return checked(await sb.rpc('commit_quote_offer', {
+        p_quote_id: quote.id,
+        p_expected_status: quote.status,
+        p_expected_offer_order_id: quote.payload?.offer_order_id || null,
+        p_expected_offer_status: quote.payload?.offer_status || null,
+        p_offer_order_id: orderId,
+        p_payload: payload,
+        p_actor: actor || null,
+        p_deal_value: dealValue,
+        p_expires_at: expiresAt,
+        p_event_id: eventId,
+        p_effects: effects,
+        p_expected_offer_revision: Number(quote.offer_revision),
+        p_checkout_mutation_id: checkoutMutationId || null,
+      }));
     },
     async deleteOrder(id, scope = {}) {
       let query = sb.from('orders').delete().eq('id', id);

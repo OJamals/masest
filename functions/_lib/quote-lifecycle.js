@@ -1,14 +1,14 @@
-// Canonical quote lifecycle, mirroring order-lifecycle.js.
+// Canonical quote lifecycle, actionability, ownership, and delivery policy.
 //
-// Quote state is spread across three fields that were introduced at different times:
-// `quotes.status` (intake triage), `quotes.pipeline_stage` (CRM), and
-// `payload.offer_status` (the priced offer). Staff and buyers each used to derive their own
-// label from those, which is how a buyer can see "Quote ready" while the CRM shows "lost".
-// This module derives one stage, and both surfaces render it.
+// Quote state spans intake status, CRM pipeline stage, and the priced offer stored in
+// payload. Every handler and UI consumes these predicates so a label cannot disagree
+// with whether the same offer may be acted on.
 
 const OFFER_STATES = new Set([
   'sent', 'accepted', 'declined', 'expired', 'revised', 'payment_pending', 'ordered',
 ]);
+const EXPIRABLE_OFFER_STATES = new Set(['sent', 'revised', 'accepted']);
+const LIVE_OFFER_STATES = new Set(['sent', 'revised', 'accepted', 'payment_pending']);
 
 const STAGE_LABELS = {
   received: 'Received',
@@ -23,7 +23,6 @@ const STAGE_LABELS = {
   closed: 'Closed',
 };
 
-// What staff should do next. Drives the admin queue's ordering and its per-row prompt.
 const STAGE_ACTIONS = {
   received: 'triage_quote',
   in_review: 'price_quote',
@@ -41,28 +40,55 @@ function clean(value) {
   return String(value || '').trim();
 }
 
+function timeValue(value) {
+  if (value instanceof Date) return value.getTime();
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && value !== '') return numeric;
+  return Date.parse(String(value || ''));
+}
+
+// Stored status is kept separate from effective status because CAS guards must compare
+// the exact database value even when the expiry boundary makes it unavailable on read.
 export function offerStatus(quote) {
   const status = clean(quote?.payload?.offer_status);
   return OFFER_STATES.has(status) ? status : null;
 }
 
-export function quoteLifecycle(quote = {}) {
+export function offerExpiryReached(quote, now = Date.now()) {
+  if (!EXPIRABLE_OFFER_STATES.has(offerStatus(quote))) return false;
+  return offerValidityExpired(quote, now);
+}
+
+export function offerValidityExpired(quote, now = Date.now()) {
+  if (!offerStatus(quote)) return false;
+  const expiresAt = Date.parse(clean(quote?.payload?.offer_expires_at));
+  const boundary = timeValue(now);
+  // Missing or malformed validity is not a permanent offer. New sends cannot create
+  // this state, and legacy/malformed rows fail closed until staff revises them.
+  return !Number.isFinite(expiresAt) || !Number.isFinite(boundary) || expiresAt <= boundary;
+}
+
+export function effectiveOfferStatus(quote, now = Date.now()) {
+  return offerExpiryReached(quote, now) ? 'expired' : offerStatus(quote);
+}
+
+export function quoteLifecycle(quote = {}, now = Date.now()) {
   const status = clean(quote.status);
   const pipeline = clean(quote.pipeline_stage);
-  const offer = offerStatus(quote);
+  const storedOffer = offerStatus(quote);
+  const offer = effectiveOfferStatus(quote, now);
 
   let stage;
-  // The offer, when one exists, is the most specific truth: a priced offer that the buyer
-  // has acted on outranks intake triage.
+  // Completed offer outcomes remain the most specific truth. A malformed staff terminal
+  // move, however, must fail closed instead of leaving a live offer actionable.
   if (offer === 'ordered') stage = 'ordered';
-  else if (offer === 'payment_pending') stage = 'payment_pending';
-  else if (offer === 'accepted') stage = 'accepted';
   else if (offer === 'declined') stage = 'declined';
   else if (offer === 'expired') stage = 'expired';
+  else if (pipeline === 'lost' || pipeline === 'won' || status === 'closed' || status === 'spam') stage = 'closed';
+  else if (offer === 'payment_pending') stage = 'payment_pending';
+  else if (offer === 'accepted') stage = 'accepted';
   else if (offer === 'revised') stage = 'revised';
   else if (offer === 'sent') stage = 'quote_ready';
-  else if (pipeline === 'lost' || status === 'closed') stage = 'closed';
-  else if (pipeline === 'won') stage = 'quote_ready';
   else if (status === 'contacted' || (pipeline && pipeline !== 'new')) stage = 'in_review';
   else stage = 'received';
 
@@ -71,42 +97,106 @@ export function quoteLifecycle(quote = {}) {
     stage,
     label: STAGE_LABELS[stage] || stage,
     offer_status: offer,
+    stored_offer_status: storedOffer,
     next_action: STAGE_ACTIONS[stage] || 'review_quote',
-    // A buyer may act on a live offer; everything else is staff-side work.
     buyer_actionable: ['quote_ready', 'revised'].includes(stage),
     is_active: !closed,
     is_won: stage === 'ordered',
   };
 }
 
-export function decorateQuoteLifecycle(quote = {}) {
-  return { ...quote, lifecycle: quoteLifecycle(quote) };
+export function decorateQuoteLifecycle(quote = {}, now = Date.now()) {
+  return { ...quote, lifecycle: quoteLifecycle(quote, now) };
 }
 
-// Which offer transitions are legal from the current state. Both the buyer endpoint and
-// the admin endpoint check against this, so neither can invent a state the other rejects.
 const OFFER_TRANSITIONS = {
   null: ['sent'],
   sent: ['accepted', 'declined', 'expired', 'revised'],
   revised: ['accepted', 'declined', 'expired', 'revised'],
-  accepted: ['payment_pending', 'ordered', 'declined', 'revised'],
+  accepted: ['payment_pending', 'ordered', 'declined', 'expired', 'revised'],
   declined: ['revised', 'sent'],
   expired: ['revised', 'sent'],
-  payment_pending: ['ordered', 'accepted'],
-  // Terminal: an order exists. Reopening it would orphan the order it produced.
+  payment_pending: ['ordered', 'accepted', 'expired'],
   ordered: [],
 };
 
-export function canTransitionOffer(quote, nextStatus) {
-  const current = offerStatus(quote);
+export function canTransitionOffer(quote, nextStatus, now = Date.now()) {
+  const current = effectiveOfferStatus(quote, now);
   const allowed = OFFER_TRANSITIONS[current === null ? 'null' : current] || [];
   return allowed.includes(clean(nextStatus));
 }
 
-// A quote whose offer has an expiry in the past and is still awaiting the buyer.
 export function offerIsExpired(quote, now = Date.now()) {
-  const stage = quoteLifecycle(quote).stage;
-  if (!['quote_ready', 'revised'].includes(stage)) return false;
-  const expiresAt = Date.parse(clean(quote?.payload?.offer_expires_at));
-  return Number.isFinite(expiresAt) && expiresAt <= now;
+  return offerExpiryReached(quote, now);
+}
+
+export function quoteBuyerOwns(quote, { userId, companyId } = {}) {
+  return quote?.source === 'requisition'
+    && Boolean(clean(userId))
+    && Boolean(clean(companyId))
+    && clean(quote?.payload?.requester_id) === clean(userId)
+    && clean(quote?.payload?.company_id) === clean(companyId);
+}
+
+export function quoteBuyerActions(quote, {
+  userId,
+  companyId,
+  hasOffer = false,
+  now = Date.now(),
+} = {}) {
+  const owned = quoteBuyerOwns(quote, { userId, companyId });
+  const status = effectiveOfferStatus(quote, now);
+  const available = owned && hasOffer && ['sent', 'revised', 'accepted'].includes(status)
+    && quoteLifecycle(quote, now).stage !== 'closed';
+  return {
+    can_accept: available,
+    can_decline: available,
+    can_checkout: available && status === 'accepted',
+  };
+}
+
+export function quoteIsOpenRequisition(quote, now = Date.now()) {
+  if (quote?.source !== 'requisition') return false;
+  if (['closed', 'spam'].includes(clean(quote.status))) return false;
+  if (['lost', 'won'].includes(clean(quote.pipeline_stage))) return false;
+  return !['declined', 'expired', 'ordered'].includes(effectiveOfferStatus(quote, now));
+}
+
+export function quoteExpirationPatch(quote, at = new Date().toISOString()) {
+  const payload = {
+    ...(quote?.payload && typeof quote.payload === 'object' && !Array.isArray(quote.payload)
+      ? quote.payload
+      : {}),
+    offer_status: 'expired',
+    offer_expired_at: at,
+  };
+  delete payload.final_order_id;
+  return {
+    payload,
+    status: 'contacted',
+    pipeline_stage: 'proposal',
+    handled_at: at,
+    next_step: 'Offer expired; revise or close',
+    due_at: null,
+  };
+}
+
+export function staffTerminalTransitionConflict(quote, changes = {}, now = Date.now()) {
+  const terminal = ['closed', 'spam'].includes(clean(changes.status))
+    || ['won', 'lost'].includes(clean(changes.pipeline_stage));
+  return terminal && LIVE_OFFER_STATES.has(effectiveOfferStatus(quote, now));
+}
+
+// Delivery is independent of offer availability. A skipped provider result (for example,
+// a suppressed email) is degraded even though the durable worker completed the effect.
+export function quoteDeliveryState(effects = []) {
+  const rows = Array.isArray(effects) ? effects : [];
+  if (!rows.length) return null;
+  const dead = rows.filter((row) => row?.status === 'dead').length;
+  const completed = rows.filter((row) => row?.status === 'completed').length;
+  const skipped = rows.some((row) => Boolean(row?.provider_result?.skipped));
+  if (dead === rows.length) return 'dead';
+  if (dead || skipped) return 'degraded';
+  if (completed === rows.length) return 'delivered';
+  return 'queued';
 }

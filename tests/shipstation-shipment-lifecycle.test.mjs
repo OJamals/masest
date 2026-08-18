@@ -118,7 +118,30 @@ test('updateOrderShipment blocks any active label before claim or provider mutat
       },
       { user: { id: 'staff-1' } },
       {
-        loadOrder: async () => ({ ...order, shipstation_label_id: 'se-label-1', shipstation_label_status: 'label_purchased' }),
+        loadOrder: async () => ({
+          ...order,
+          shipstation_label_id: 'se-label-1',
+          shipstation_label_status: 'label_purchased',
+          order_shipments: [{
+            id: 'a024352e-2dc8-4a6c-ad44-eb57e7701408',
+            split_key: 'default',
+            status: 'rated',
+            provider_shipment_id: 'se-shipment-1',
+          }],
+          order_provider_links: [{
+            id: 'label-link-1',
+            provider: 'shipstation',
+            object_type: 'label',
+            provider_object_id: 'se-label-1',
+            metadata: {
+              order_shipment_id: 'a024352e-2dc8-4a6c-ad44-eb57e7701408',
+              shipment_id: 'se-shipment-1',
+              status: 'label_purchased',
+              tracking_status: 'packing',
+            },
+          }],
+          order_financial_entries: [],
+        }),
         claimShipmentOperation: async () => assert.fail('active label must block claim'),
         updateShipment: async () => assert.fail('active label must block provider mutation'),
       },
@@ -195,6 +218,45 @@ test('cancelOrderShipment requires confirmation/reason and finalizes provider ca
   );
   assert.deepEqual(calls, [['provider', 'se-shipment-1'], ['finalize', 'cancelled']]);
   assert.equal(result.status, 'cancelled');
+});
+
+test('cancelOrderShipment releases an explicitly rejected provider cancellation', async () => {
+  let released;
+  let failed;
+  await assert.rejects(
+    cancelOrderShipment(
+      { SHIPSTATION_API_KEY: 'secret' },
+      {
+        order_id: order.id,
+        order_shipment_id: 'a024352e-2dc8-4a6c-ad44-eb57e7701408',
+        expected_revision: 4,
+        confirm: true,
+        reason: 'Customer changed fulfillment plan',
+      },
+      { user: { id: 'staff-1', email: 'staff@example.com' } },
+      {
+        loadOrder: async () => order,
+        claimShipmentOperation: async () => ({
+          claimed: true,
+          id: 'a024352e-2dc8-4a6c-ad44-eb57e7701408',
+          revision: 4,
+          provider_shipment_id: 'se-shipment-1',
+          operation_key: 'shipment_cancel:attempt-1',
+          lease_owner: 'worker-1',
+        }),
+        cancelShipment: async () => ({ approved: false, message: 'Cancellation rejected' }),
+        releaseOperationAttempt: async (_env, input) => { released = input; },
+        failShipmentOperation: async (_env, input) => { failed = input; },
+        markAttemptProviderSucceeded: async () => assert.fail('rejection is not provider success'),
+        finalizeShipmentOperation: async () => assert.fail('rejection must not cancel locally'),
+      },
+    ),
+    (error) => error.code === 'shipstation_shipment_cancel_rejected',
+  );
+  assert.equal(released.evidence, 'provider_rejected');
+  assert.equal(released.operationKey, 'shipment_cancel:attempt-1');
+  assert.equal(failed.reconcile, false);
+  assert.equal(failed.errorCode, 'shipstation_shipment_cancel_rejected');
 });
 
 test('provider timeout leaves update locked for reconciliation', async () => {
@@ -375,6 +437,51 @@ test('reconcileOrderShipment rejects mismatched update and cancel provider IDs',
       (error) => error.code === 'shipstation_shipment_reconciliation_mismatch',
     );
   }
+});
+
+test('reconcileOrderShipment closes a provider-success attempt after canonical finalization', async () => {
+  const orderShipmentId = 'a024352e-2dc8-4a6c-ad44-eb57e7701408';
+  let completed;
+  const result = await reconcileOrderShipment(
+    { SHIPSTATION_API_KEY: 'secret' },
+    {
+      order_id: order.id,
+      order_shipment_id: orderShipmentId,
+      confirm: true,
+      reason: 'Close the durable attempt after local finalization',
+    },
+    { user: { id: 'staff-1' } },
+    {
+      loadShipmentOperation: async () => ({
+        id: orderShipmentId,
+        order_id: order.id,
+        revision: 4,
+        provider_shipment_id: 'se-shipment-finalized',
+        status: 'rated',
+        operation: null,
+        operation_state: 'idle',
+        shipstation_operation_attempts: [{
+          operation_key: 'shipment_update:completed-locally',
+          operation: 'shipment_update',
+          provider_object_id: 'se-shipment-finalized',
+          status: 'provider_succeeded',
+          result_summary: { shipment_id: 'se-shipment-finalized' },
+        }],
+      }),
+      claimAttemptReconciliation: async () => ({
+        operation_key: 'shipment_update:completed-locally', lease_owner: 'reconciler-completion',
+      }),
+      completeOperationAttempt: async (_env, input) => { completed = input; },
+      getShipment: async () => assert.fail('canonical completion must not query the provider'),
+      getShipmentByExternalId: async () => assert.fail('canonical completion must not query the provider'),
+      finalizeShipmentOperation: async () => assert.fail('canonical completion must not finalize twice'),
+      audit: async () => {},
+    },
+  );
+
+  assert.equal(result.already_finalized, true);
+  assert.equal(result.shipment_id, 'se-shipment-finalized');
+  assert.equal(completed.operationKey, 'shipment_update:completed-locally');
 });
 
 test('normalized shipment migration is service-only, revisioned, minor-unit safe, and reversible', async () => {

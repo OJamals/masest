@@ -42,10 +42,10 @@ export function createTrafficRenderer({ $, api, admSkeleton, pct }) {
       }
       box.innerHTML = `<div class="adm-traffic-report">
         <div class="adm-grid">
-          <div class="adm-card adm-stat"><i class="ph ph-eye"></i><b>${esc(data.total)}</b><span class="muted">Tracked events</span></div>
-          <div class="adm-card adm-stat"><i class="ph ph-users-three"></i><b>${esc(data.unique)}</b><span class="muted">Known visitors</span></div>
-          <div class="adm-card adm-stat"><i class="ph ph-arrow-square-out"></i><b>${esc((data.events || []).find((row) => row.key === 'quote_submit')?.count || 0)}</b><span class="muted">Quote submits</span></div>
-          <div class="adm-card adm-stat"><i class="ph ph-shopping-cart"></i><b>${esc((data.events || []).find((row) => row.key === 'checkout_start')?.count || 0)}</b><span class="muted">Checkout starts</span></div>
+          <div class="adm-card adm-stat"><i class="ph ph-eye" aria-hidden="true"></i><b>${esc(data.total)}</b><span class="muted">Tracked events</span></div>
+          <div class="adm-card adm-stat"><i class="ph ph-users-three" aria-hidden="true"></i><b>${esc(data.unique)}</b><span class="muted">Known visitors</span></div>
+          <div class="adm-card adm-stat"><i class="ph ph-arrow-square-out" aria-hidden="true"></i><b>${esc((data.events || []).find((row) => row.key === 'quote_submit')?.count || 0)}</b><span class="muted">Quote submits</span></div>
+          <div class="adm-card adm-stat"><i class="ph ph-shopping-cart" aria-hidden="true"></i><b>${esc((data.events || []).find((row) => row.key === 'checkout_start')?.count || 0)}</b><span class="muted">Checkout starts</span></div>
         </div>
         <div class="adm-report-grid">
           ${renderTrafficFunnel(data.funnel || [])}

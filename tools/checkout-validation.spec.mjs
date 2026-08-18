@@ -54,6 +54,39 @@ async function expectDescribedError(page, id) {
   await expect(page.locator(`#${id}Error`)).not.toBeEmpty();
 }
 
+async function fillValidCheckout(page, postalCode = "33601") {
+  await page.locator("#firstName").fill("Pat");
+  await page.locator("#lastName").fill("Buyer");
+  await page.locator("#checkoutEmail").fill("pat@example.test");
+  await page.locator("#phone").fill("8135550142");
+  const manual = page.locator("#shippingManualToggle");
+  if (await manual.isVisible()) await manual.click();
+  await page.locator("#shippingAddress1").fill("500 Industrial Way");
+  await page.locator("#shippingCity").fill("Tampa");
+  await page.locator("#shippingState").fill("FL");
+  await page.locator("#shippingPostalCode").fill(postalCode);
+}
+
+function shippingQuote(postalCode, amountMinor) {
+  const address = {
+    name: "Pat Buyer", company: "", phone: "8135550142",
+    address1: "500 Industrial Way", address2: "", city: "Tampa", state: "FL",
+    postal_code: postalCode, country: "US", residential: false,
+  };
+  return {
+    address,
+    billing_address: address,
+    billing_same_as_shipping: true,
+    address_validation: { corrected: false, possible_next_action: "ACCEPT" },
+    package_count: 1,
+    fulfillment: { ship_date: "2026-08-18" },
+    rates: [{
+      rate_id: `rate-${postalCode}`, carrier_name: "UPS", service_type: "Ground",
+      service_code: "ups_ground", amount_minor: amountMinor, currency: "usd", token: `token-${postalCode}`,
+    }],
+  };
+}
+
 test("blank checkout submit reports every required field, not just the address", async ({ page }) => {
   let ratesCalled = false;
   await page.route("**/api/shipping-rates", (route) => {
@@ -151,4 +184,43 @@ test("separate billing address is validated, and its errors clear when it is swi
   for (const id of ["billingAddress1", "billingCity", "billingState", "billingPostalCode"]) {
     await expect(page.locator(`#${id}Error`)).toHaveCount(0);
   }
+});
+
+test("a delayed old address response cannot re-enable payment after the Buyer edits and rerates", async ({ page }) => {
+  let releaseFirst;
+  const firstGate = new Promise((resolve) => { releaseFirst = resolve; });
+  const calls = [];
+  await page.route("**/api/shipping-rates", async (route) => {
+    const body = route.request().postDataJSON();
+    const postalCode = body.address.postal_code;
+    calls.push(postalCode);
+    if (postalCode === "33601") await firstGate;
+    try {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(shippingQuote(postalCode, postalCode === "33601" ? 1111 : 2222)),
+      });
+    } catch {
+      // The old browser request is expected to be aborted before this route is released.
+    }
+  });
+
+  await openCheckoutWithCart(page);
+  await fillValidCheckout(page, "33601");
+  await page.locator("#calculateShipping").click();
+  await expect.poll(() => calls.length).toBe(1);
+
+  await page.locator("#shippingPostalCode").fill("33602");
+  await expect(page.locator("#checkoutPay")).toBeDisabled();
+  await expect(page.locator("#calculateShipping")).toBeEnabled();
+  await page.locator("#calculateShipping").click();
+
+  await expect(page.locator("#checkoutPay")).toBeEnabled();
+  await expect(page.locator("#shippingRates")).toContainText("$22.22");
+  releaseFirst();
+  await page.waitForTimeout(100);
+  await expect(page.locator("#shippingRates")).toContainText("$22.22");
+  await expect(page.locator("#shippingRates")).not.toContainText("$11.11");
+  expect(calls).toEqual(["33601", "33602"]);
 });

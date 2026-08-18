@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { repriceCart } from '../functions/_lib/reorder.js';
+import { handleAccountOrderPost } from '../functions/api/account/order.js';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
@@ -55,4 +56,80 @@ test('dashboard reorder calls the endpoint and offers a receipt link', () => {
   assert.match(src, /data-receipt/, 'orders expose a receipt control');
   assert.match(src, /safeUrl\(receipt_url\)/, 'receipt popup must sanitize returned URL');
   assert.match(src, /window\.open\(receiptUrl,/, 'receipt popup opens only sanitized URL variable');
+});
+
+test('reorder propagates a catalog read failure as retryable instead of unavailable items', async () => {
+  const sb = {
+    from(table) {
+      if (table === 'orders') return {
+        select() { return this; }, eq() { return this; },
+        async maybeSingle() {
+          return { data: {
+            id: 'order-1', user_id: 'buyer-1', status: 'paid',
+            order_items: [{ sku: 'VK-1', name: 'VertKleen', qty: 1, unit_price: 25 }],
+          }, error: null };
+        },
+      };
+      if (table === 'product_variants') return {
+        select() { return this; },
+        async in() { return { data: null, error: { code: '08006' } }; },
+      };
+      throw new Error(`unexpected table ${table}`);
+    },
+  };
+  const response = await handleAccountOrderPost({
+    request: new Request('https://masest.test/api/account/order', {
+      method: 'POST', body: JSON.stringify({ id: 'order-1' }),
+    }),
+    env: {},
+  }, {
+    requireCommerceUser: async () => ({ companyId: 'company-1', user: { id: 'buyer-1' }, sb }),
+    readBody: async () => ({ id: 'order-1' }),
+  });
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: 'catalog_unavailable', retryable: true });
+});
+
+test('profileless retail reorder is authorized by the persisted Auth Buyer id', async () => {
+  const filters = [];
+  const orderQuery = {
+    select() { return this; },
+    eq(column, value) { filters.push([column, value]); return this; },
+    async maybeSingle() {
+      return {
+        data: {
+          id: 'order-1', user_id: 'buyer-1', status: 'paid',
+          order_items: [{ sku: 'VK-1', name: 'VertKleen', qty: 1, unit_price: 25 }],
+        },
+        error: null,
+      };
+    },
+  };
+  const sb = {
+    from(table) {
+      if (table === 'orders') return orderQuery;
+      if (table === 'product_variants') return {
+        select() { return this; },
+        async in() { return { data: [{ vsku: 'VK-1', price: 25, active: true }], error: null }; },
+      };
+      throw new Error(`unexpected table ${table}`);
+    },
+  };
+  const response = await handleAccountOrderPost({
+    request: new Request('https://masest.test/api/account/order', {
+      method: 'POST', body: JSON.stringify({ id: 'order-1' }),
+    }),
+    env: {},
+  }, {
+    requireCommerceUser: async () => ({ companyId: null, user: { id: 'buyer-1' }, sb }),
+    readBody: async () => ({ id: 'order-1' }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(filters, [['id', 'order-1'], ['user_id', 'buyer-1']]);
+  assert.deepEqual(await response.json(), {
+    lines: [{ sku: 'VK-1', name: 'VertKleen', qty: 1, unit_price: 25 }],
+    issues: [],
+  });
 });

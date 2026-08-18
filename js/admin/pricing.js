@@ -9,7 +9,7 @@ function moneyValue(value) {
 }
 
 function priceInput(value, attributes, label) {
-  return `<input class="adm-input adm-price-input" type="number" min="0" step="0.01" value="${esc(moneyValue(value))}" ${attributes} aria-label="${esc(label)}">`;
+  return `<input class="adm-input adm-price-input" name="price" type="number" min="0" step="0.01" value="${esc(moneyValue(value))}" ${attributes} aria-label="${esc(label)}">`;
 }
 
 export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty }) {
@@ -97,8 +97,8 @@ export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty
       <div class="adm-table-wrap"><table class="adm"><thead><tr><th>Program</th><th>Monthly display</th><th>Annual display</th><th></th></tr></thead><tbody>${programs.map((program) => `
         <tr data-price-resource="program" data-slug="${esc(program.slug)}" data-version="${esc(program.version)}" data-capability-scope="product.write">
           <td>${esc(program.title || program.slug)}</td>
-          <td><input class="adm-input" value="${esc(program.price)}" data-program-price aria-label="${esc(program.title)} monthly price"></td>
-          <td><input class="adm-input" value="${esc(program.annual)}" data-program-annual aria-label="${esc(program.title)} annual price"></td>
+          <td><input class="adm-input" name="program_monthly_price" autocomplete="off" value="${esc(program.price)}" data-program-price aria-label="${esc(program.title)} monthly price"></td>
+          <td><input class="adm-input" name="program_annual_price" autocomplete="off" value="${esc(program.annual)}" data-program-annual aria-label="${esc(program.title)} annual price"></td>
           <td><button class="btn btn-primary btn-sm" type="button" data-price-save="program">Save</button></td>
         </tr>
       `).join('')}</tbody></table></div>

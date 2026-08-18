@@ -403,7 +403,7 @@ test("scrolly opener states the VertKleen mechanism early", () => {
   const actOneCopy = actOne.replace(/<[^>]+>/g, "");
 
   assert.match(actOne, /class="story-promise"/);
-  assert.match(actOneCopy, /Industrial cleaning power without the harsh-chemical tradeoff/);
+  assert.match(actOneCopy, /Industrial Cleaning Power Without the Harsh-Chemical Tradeoff/);
   assert.match(actOneCopy, /removes scale, rust, grease, oil, and industrial buildup/);
   assert.match(storyCss, /\.story-promise/);
 });

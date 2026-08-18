@@ -12,6 +12,7 @@ const rollback = readFileSync(new URL('../supabase/rollback-commerce-integration
 const adminOrders = readFileSync(new URL('../functions/api/admin/orders.js', import.meta.url), 'utf8');
 const stripeWebhook = readFileSync(new URL('../functions/api/stripe-webhook.js', import.meta.url), 'utf8');
 const qboSync = readFileSync(new URL('../functions/api/qbo-sync.js', import.meta.url), 'utf8');
+const reversalSchema = readFileSync(new URL('../supabase/schema-order-reversals.sql', import.meta.url), 'utf8');
 
 test('orderReference prefers the immutable public order number and retains UUID fallback', () => {
   assert.equal(orderReference({ order_number: 'MST-00000123', id: 'internal-uuid' }), 'MST-00000123');
@@ -88,7 +89,8 @@ test('commerce rollback removes all new integration objects in dependency order'
 });
 
 test('refund and credit-memo objects join the same cross-provider order ledger', () => {
-  assert.match(adminOrders, /provider:\s*'stripe'[\s\S]*objectType:\s*'refund'[\s\S]*providerObjectId:\s*stripeRefund\?\.id/);
+  assert.match(adminOrders, /queueRefundCommand/);
+  assert.match(reversalSchema, /record_order_refund_provider_success[\s\S]*link_order_provider_object\([\s\S]*'stripe', 'refund'/i);
   assert.match(stripeWebhook, /objectType:\s*'refund'[\s\S]*providerObjectId:\s*refund\.id/);
   assert.match(qboSync, /provider:\s*'quickbooks'[\s\S]*objectType:\s*'credit_memo'[\s\S]*providerObjectId:\s*result\.creditMemoId/);
 });

@@ -54,7 +54,7 @@ function promptTestEmail(defaultVal = '') {
     dlg.className = 'confirm-dialog';
     dlg.innerHTML = `<form method="dialog" class="confirm-dialog-body">
       <p class="confirm-dialog-msg">Send a test email to:</p>
-      <label>Email <input class="adm-input" name="test_email" type="email" autocomplete="email" data-nl-test-email value="${esc(defaultVal)}" placeholder="you@masest.co"></label>
+      <label>Email <input class="adm-input" name="test_email" type="email" autocomplete="email" spellcheck="false" data-nl-test-email value="${esc(defaultVal)}" placeholder="you@masest.co…"></label>
       <menu class="confirm-dialog-actions">
         <button value="cancel" class="btn btn-ghost btn-sm" type="submit">Cancel</button>
         <button value="ok" class="btn btn-primary btn-sm" type="submit">Send test</button>
@@ -205,7 +205,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     return `
       <div class="adm-card" data-capability-scope="admin.write">
         <h2>Settings</h2>
-        <label class="adm-content-check"><input type="checkbox" id="nlAutoSend"${auto ? ' checked' : ''}> Automatically email the latest blog post to subscribers on publish</label>
+        <label class="adm-content-check"><input type="checkbox" id="nlAutoSend" name="newsletter_auto_send"${auto ? ' checked' : ''}> Automatically email the latest blog post to subscribers on publish</label>
         <p id="nlSettingsStatus" class="adm-status" role="status" aria-live="polite"></p>
       </div>
     `;
@@ -246,13 +246,13 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
         <p class="adm-status" id="nlRecipCounts"></p>
         <div class="nl-recip-import" data-capability-scope="admin.write">
           <label class="full">Import emails (paste a list, CSV, or newline-separated)
-            <textarea class="adm-textarea" id="nlRecipImport" rows="3" placeholder="a@x.com, b@x.com…"></textarea>
+            <textarea class="adm-textarea" id="nlRecipImport" name="recipient_import" autocomplete="off" rows="3" placeholder="a@x.com, b@x.com…"></textarea>
           </label>
           <button class="btn btn-secondary btn-sm" type="button" data-nl-recip="import"><i class="ph ph-upload-simple" aria-hidden="true"></i> Import</button>
         </div>
         <div class="nl-recip-add" data-capability-scope="admin.write" style="margin-top:10px">
-          <input class="adm-input" id="nlRecipEmail" type="email" placeholder="add one: email@company.com">
-          <input class="adm-input" id="nlRecipName" type="text" placeholder="Name (optional)">
+          <input class="adm-input" id="nlRecipEmail" name="recipient_email" type="email" autocomplete="email" spellcheck="false" placeholder="add one: email@company.com…">
+          <input class="adm-input" id="nlRecipName" name="recipient_name" type="text" autocomplete="name" placeholder="Name (optional)…">
           <button class="btn btn-ghost btn-sm" type="button" data-nl-recip="add"><i class="ph ph-plus" aria-hidden="true"></i> Add</button>
         </div>
         <div id="nlRecipList" style="margin-top:14px">${admSkeleton()}</div>
@@ -272,7 +272,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       list.innerHTML = `<table class="adm-table"><thead><tr><th>Email</th><th>Name</th><th>Source</th><th>Subscribed</th><th></th></tr></thead><tbody>${rows.map((r) => `
         <tr>
           <td>${esc(r.email)}</td><td>${esc(r.name || '')}</td><td>${esc(r.source || '')}</td>
-          <td><input type="checkbox" aria-label="Include ${esc(r.email)} in newsletters" data-nl-recip-sub="${esc(r.email)}" data-capability="admin.write"${r.subscribed ? ' checked' : ''}></td>
+          <td><input type="checkbox" name="recipient_subscribed" aria-label="Include ${esc(r.email)} in newsletters" data-nl-recip-sub="${esc(r.email)}" data-capability="admin.write"${r.subscribed ? ' checked' : ''}></td>
           <td><button class="btn btn-ghost btn-sm" type="button" aria-label="Remove ${esc(r.email)} from imported recipients" data-nl-recip-remove="${esc(r.email)}" data-capability="admin.write"><i class="ph ph-trash" aria-hidden="true"></i></button></td>
         </tr>`).join('')}</tbody></table>`;
     } catch { const list = $('nlRecipList'); if (list) list.innerHTML = '<p class="adm-status" data-state="err">Could not load recipients.</p>'; }

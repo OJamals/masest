@@ -3,6 +3,7 @@
 // the buyer returns. The canonical number is resolved best-effort from Stripe metadata or DB.
 import Stripe from 'stripe';
 import { adminClient, json } from '../_lib/supabase.js';
+import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
 
 const RESPONSE_HEADERS = {
   'cache-control': 'private, no-store',
@@ -52,7 +53,7 @@ export async function onRequestGet({ request, env }) {
     const amountShipping = (s.shipping_cost?.amount_subtotal ?? s.total_details?.amount_shipping ?? 0) / 100;
     return response(200, {
       order_number: orderNumber,
-      email_hint: maskEmail(s.customer_details?.email || s.customer_email),
+      email_hint: maskEmail(buyerEmailFromStripeSession(s)),
       currency: (s.currency || 'usd').toUpperCase(),
       amount_total: (s.amount_total ?? 0) / 100,
       amount_subtotal: (s.amount_subtotal ?? 0) / 100,

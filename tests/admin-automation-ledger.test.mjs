@@ -125,6 +125,33 @@ test('every scheduled job records to the ledger', () => {
   assert.equal(wired.length, AUTOMATION_JOBS.length, 'every known job is wired');
 });
 
+test('the integration effects route can construct its automation ledger client', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('[]', {
+    status: 201,
+    headers: { 'content-type': 'application/json' },
+  });
+  try {
+    const { onRequestPost } = await import('../functions/api/admin/integration-effects.js');
+    const response = await onRequestPost({
+      request: new Request('https://masest.co/api/admin/integration-effects?limit=25', {
+        method: 'POST',
+      }),
+      env: {
+        STRIPE_EFFECTS_WORKER_SECRET: '',
+        SUPABASE_URL: 'https://example.invalid',
+        SUPABASE_SERVICE_ROLE_KEY: 'test-service-role-key',
+      },
+    });
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), {
+      error: 'integration_effects_worker_not_configured',
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('the admin surface degrades when the ledger schema is absent', () => {
   const api = read('functions/api/admin/automation.js');
   assert.match(api, /if \(!user\) return json\(401/);

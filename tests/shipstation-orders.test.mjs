@@ -25,6 +25,9 @@ const order = {
   shipstation_label_status: null,
   shipstation_cost: null,
   tracking_status: 'processing',
+  order_shipments: [],
+  order_provider_links: [],
+  order_financial_entries: [],
 };
 
 const normalizedShipmentId = 'a024352e-2dc8-4a6c-ad44-eb57e7701408';
@@ -365,6 +368,23 @@ test('rateOrderShipment requires Masest warehouse se-2287981 before provider acc
   );
 });
 
+test('rateOrderShipment fails closed for a legacy checkout package plan until staff supplies packages or a split', async () => {
+  await assert.rejects(
+    rateOrderShipment(
+      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+      { order_id: order.id },
+      {},
+      {
+        loadOrder: async () => ({ ...order, shipstation_error: 'shipping_package_plan_review_required' }),
+        listCarriers: async () => assert.fail('review marker must stop before provider discovery'),
+        loadPackageProfiles: async () => assert.fail('review marker must stop before package inference'),
+        claimShipmentOperation: async () => assert.fail('review marker must stop before mutation claim'),
+      },
+    ),
+    (error) => error.code === 'shipping_package_plan_review_required' && error.status === 409,
+  );
+});
+
 test('rateOrderShipment locks uncertain create for reconciliation instead of blind retry', async () => {
   let failure;
   await assert.rejects(
@@ -533,8 +553,92 @@ test('buyOrderLabel purchases a selected nondefault shipment even when legacy or
     state: 'recognized',
     actorId: 'staff-1',
     reason: null,
-    metadata: { shipment_id: 'se-shipment-1', rate_id: 'se-rate-1' },
+    metadata: {
+      order_shipment_id: normalizedShipmentId,
+      shipment_id: 'se-shipment-1',
+      rate_id: 'se-rate-1',
+    },
   }]);
+});
+
+test('buyOrderLabel rejects a purchased label returned for a different shipment', async () => {
+  let persisted;
+  let providerEvidence;
+  await assert.rejects(
+    buyOrderLabel(
+      { SHIPSTATION_API_KEY: 'secret' },
+      labelInput(),
+      { user: { id: 'staff-1' } },
+      {
+        loadOrder: async () => order,
+        verifySelectedRate: async () => selectedRateSnapshot,
+        getRate: async () => providerRate,
+        claimLabel: async () => ({
+          claimed: true,
+          operation_key: 'label_purchase:attempt-1',
+          lease_owner: 'worker-1',
+        }),
+        purchaseLabel: async () => ({
+          label_id: 'se-label-wrong-shipment',
+          shipment_id: 'se-shipment-other',
+          status: 'completed',
+          shipment_cost: { currency: 'usd', amount: 41.22 },
+        }),
+        markAttemptProviderSucceeded: async (_env, input) => { providerEvidence = input; },
+        persistLabel: async (_env, _orderId, patch) => { persisted = patch; },
+        linkProviderObject: async () => assert.fail('mismatched label must not acquire ownership'),
+        recordFinancialEntry: async () => assert.fail('mismatched label must not create finance evidence'),
+        insertShipmentEvent: async () => assert.fail('mismatched label must not create a shipment event'),
+        audit: async () => assert.fail('mismatched label must not be recorded as purchased'),
+      },
+    ),
+    (error) => error.code === 'shipstation_label_response_invalid',
+  );
+  assert.equal(providerEvidence.providerObjectId, 'se-label-wrong-shipment');
+  assert.deepEqual(persisted, {
+    shipstation_label_status: 'reconcile_required',
+    shipstation_error: 'shipstation_label_response_invalid',
+  });
+});
+
+test('buyOrderLabel requires valid provider postage evidence after purchase', async () => {
+  for (const shipmentCost of [undefined, { currency: 'US_DOLLARS', amount: 41.22 }]) {
+    let persisted;
+    await assert.rejects(
+      buyOrderLabel(
+        { SHIPSTATION_API_KEY: 'secret' },
+        labelInput(),
+        { user: { id: 'staff-1' } },
+        {
+          loadOrder: async () => order,
+          verifySelectedRate: async () => selectedRateSnapshot,
+          getRate: async () => providerRate,
+          claimLabel: async () => ({
+            claimed: true,
+            operation_key: 'label_purchase:postage-attempt',
+            lease_owner: 'worker-1',
+          }),
+          purchaseLabel: async () => ({
+            label_id: 'se-label-postage-invalid',
+            shipment_id: 'se-shipment-1',
+            status: 'completed',
+            ...(shipmentCost === undefined ? {} : { shipment_cost: shipmentCost }),
+          }),
+          markAttemptProviderSucceeded: async () => {},
+          persistLabel: async (_env, _orderId, patch) => { persisted = patch; },
+          linkProviderObject: async () => assert.fail('invalid postage must not acquire ownership'),
+          recordFinancialEntry: async () => assert.fail('invalid postage must not enter the ledger'),
+          insertShipmentEvent: async () => assert.fail('invalid postage must not create a shipment event'),
+          audit: async () => assert.fail('invalid postage must not be recorded as purchased'),
+        },
+      ),
+      (error) => error.code === 'shipstation_label_response_invalid',
+    );
+    assert.deepEqual(persisted, {
+      shipstation_label_status: 'reconcile_required',
+      shipstation_error: 'shipstation_label_response_invalid',
+    });
+  }
 });
 
 test('buyOrderLabel blocks shipment mismatch before claim or charge', async () => {
@@ -568,6 +672,35 @@ test('buyOrderLabel is idempotent after a label exists', async () => {
     shipstation_label_url: 'https://api.shipstation.com/v2/downloads/existing.pdf',
     tracking_number: '9400111899223856928499',
     shipstation_cost: 12.34,
+    order_shipments: [{
+      id: normalizedShipmentId,
+      split_key: 'default',
+      revision: 0,
+      provider_shipment_id: 'se-shipment-1',
+      status: 'rated',
+    }],
+    order_provider_links: [{
+      id: 'link-label-existing',
+      provider: 'shipstation',
+      object_type: 'label',
+      provider_object_id: 'se-label-existing',
+      metadata: {
+        order_shipment_id: normalizedShipmentId,
+        shipment_id: 'se-shipment-1',
+        revision: 0,
+        rate_id: 'se-rate-1',
+        status: 'label_purchased',
+        tracking_number: '9400111899223856928499',
+        tracking_status: 'packing',
+        cost: 12.34,
+        currency: 'usd',
+      },
+    }],
+    order_financial_entries: [{
+      source: 'shipstation', entry_type: 'postage_purchase',
+      provider_object_id: 'se-label-existing', amount: 12.34,
+      currency: 'usd', recognition_state: 'recognized',
+    }],
   };
   const result = await buyOrderLabel(
     { SHIPSTATION_API_KEY: 'secret' },
@@ -605,11 +738,19 @@ test('buyOrderLabel permits one active label per normalized split and retries th
     shipstation_shipment_id: 'se-shipment-other',
     shipstation_label_id: 'se-label-other',
     shipstation_label_status: 'label_purchased',
+    order_shipments: [{
+      id: otherShipmentId, split_key: 'other', revision: 0,
+      provider_shipment_id: 'se-shipment-other', status: 'rated',
+    }, {
+      id: normalizedShipmentId, split_key: 'default', revision: 0,
+      provider_shipment_id: 'se-shipment-1', status: 'rated',
+    }],
     order_provider_links: [{
+      id: 'link-label-other',
       provider: 'shipstation',
       object_type: 'label',
       provider_object_id: 'se-label-other',
-      metadata: { order_shipment_id: otherShipmentId, shipment_id: 'se-shipment-other', status: 'label_purchased' },
+      metadata: { order_shipment_id: otherShipmentId, shipment_id: 'se-shipment-other', status: 'label_purchased', tracking_status: 'packing' },
     }],
     order_financial_entries: [],
   };
@@ -640,6 +781,7 @@ test('buyOrderLabel permits one active label per normalized split and retries th
   const linkedRetry = {
     ...projection,
     order_provider_links: [...projection.order_provider_links, {
+      id: 'link-label-split-b',
       provider: 'shipstation',
       object_type: 'label',
       provider_object_id: 'se-label-split-b',
@@ -648,6 +790,7 @@ test('buyOrderLabel permits one active label per normalized split and retries th
         shipment_id: 'se-shipment-1',
         rate_id: 'se-rate-1',
         status: 'label_purchased',
+        tracking_status: 'packing',
         cost: 41.22,
         currency: 'usd',
       },
@@ -761,6 +904,35 @@ const labeledOrder = {
   carrier: 'ups',
   tracking_number: '1Z999AA10123456784',
   tracking_url: 'https://www.ups.com/track?loc=en_US&tracknum=1Z999AA10123456784',
+  order_shipments: [{
+    id: normalizedShipmentId,
+    split_key: 'default',
+    revision: 0,
+    provider_shipment_id: 'se-shipment-1',
+    status: 'rated',
+  }],
+  order_provider_links: [{
+    id: 'link-label-1',
+    provider: 'shipstation',
+    object_type: 'label',
+    provider_object_id: 'se-label-1',
+    metadata: {
+      order_shipment_id: normalizedShipmentId,
+      shipment_id: 'se-shipment-1',
+      revision: 0,
+      rate_id: 'se-rate-1',
+      status: 'label_purchased',
+      tracking_number: '1Z999AA10123456784',
+      tracking_status: 'packing',
+      carrier: 'ups',
+      cost: 41.22,
+      currency: 'usd',
+    },
+  }],
+  order_financial_entries: [{
+    source: 'shipstation', entry_type: 'postage_purchase', provider_object_id: 'se-label-1',
+    amount: 41.22, currency: 'usd', recognition_state: 'recognized',
+  }],
 };
 
 test('voidOrderLabel claims once, confirms provider void, and records pending refund evidence', async () => {
@@ -804,11 +976,19 @@ test('voidOrderLabel accepts an exact linked split label even when legacy projec
         ...order,
         shipstation_label_id: 'se-label-split-b',
         shipstation_label_status: 'label_purchased',
+        order_shipments: [{
+          id: normalizedShipmentId, split_key: 'split_a', revision: 0,
+          provider_shipment_id: 'se-shipment-1', status: 'rated',
+        }],
         order_provider_links: [{
+          id: 'link-label-split-a',
           provider: 'shipstation',
           object_type: 'label',
           provider_object_id: 'se-label-split-a',
-          metadata: { order_shipment_id: normalizedShipmentId, shipment_id: 'se-shipment-1' },
+          metadata: {
+            order_shipment_id: normalizedShipmentId, shipment_id: 'se-shipment-1',
+            status: 'label_purchased', tracking_status: 'packing',
+          },
         }],
         order_financial_entries: [],
       }),
@@ -828,7 +1008,14 @@ test('voidOrderLabel is idempotent after same label is voided', async () => {
     { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Retry after timeout' },
     { user: { id: 'staff-1' } },
     {
-      loadOrder: async () => ({ ...labeledOrder, shipstation_label_status: 'label_voided' }),
+      loadOrder: async () => ({
+        ...labeledOrder,
+        shipstation_label_status: 'label_voided',
+        order_financial_entries: [...labeledOrder.order_financial_entries, {
+          source: 'shipstation', entry_type: 'postage_void_requested', provider_object_id: 'se-label-1',
+          amount: -41.22, currency: 'usd', recognition_state: 'pending',
+        }],
+      }),
       finalizeVoid: async () => {},
       claimVoid: async () => assert.fail('already voided must not claim'),
       voidLabel: async () => assert.fail('already voided must not call provider'),
@@ -846,7 +1033,13 @@ test('voidOrderLabel blocks carrier movement before claim/provider access', asyn
       { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Customer changed address' },
       { user: { id: 'staff-1' } },
       {
-        loadOrder: async () => ({ ...labeledOrder, tracking_status: 'in_transit' }),
+        loadOrder: async () => ({
+          ...labeledOrder,
+          tracking_status: 'in_transit',
+          order_provider_links: labeledOrder.order_provider_links.map((link) => ({
+            ...link, metadata: { ...link.metadata, tracking_status: 'in_transit' },
+          })),
+        }),
         claimVoid: async () => { claimed = true; return true; },
         voidLabel: async () => assert.fail('moving shipment must not call provider'),
       },
@@ -859,7 +1052,7 @@ test('voidOrderLabel blocks carrier movement before claim/provider access', asyn
 test('voidOrderLabel records rejected and ambiguous provider outcomes without refund evidence', async () => {
   for (const fixture of [
     { provider: async () => ({ approved: false, message: 'Carrier denied void' }), code: 'shipstation_label_void_rejected', state: 'label_void_failed' },
-    { provider: async () => { throw Object.assign(new Error('bad request'), { code: 'shipstation_http_400', status: 400 }); }, code: 'shipstation_http_400', state: 'void_reconcile_required' },
+    { provider: async () => { throw Object.assign(new Error('bad request'), { code: 'shipstation_http_400', status: 400 }); }, code: 'shipstation_http_400', state: 'label_void_failed' },
     { provider: async () => { throw Object.assign(new Error('conflict'), { code: 'shipstation_http_409', status: 409 }); }, code: 'shipstation_http_409', state: 'void_reconcile_required' },
     { provider: async () => { throw Object.assign(new Error('throttled'), { code: 'shipstation_http_429', status: 429 }); }, code: 'shipstation_http_429', state: 'void_reconcile_required' },
     { provider: async () => { throw Object.assign(new Error('provider timeout'), { code: 'shipstation_http_503', status: 503 }); }, code: 'shipstation_http_503', state: 'void_reconcile_required' },
@@ -951,32 +1144,50 @@ test('voidOrderLabel retry repairs atomic finalization without a second provider
     { order_id: order.id, label_id: 'se-label-1', confirm: true, reason: 'Repair pending ledger' },
     { user: { id: 'staff-1' } },
     {
-      loadOrder: async () => ({ ...labeledOrder, shipstation_label_status: 'label_voided' }),
+      loadOrder: async () => ({
+        ...labeledOrder,
+        shipstation_label_status: 'label_voided',
+        order_financial_entries: [...labeledOrder.order_financial_entries, {
+          source: 'shipstation', entry_type: 'postage_void_requested', provider_object_id: 'se-label-1',
+          amount: -41.22, currency: 'usd', recognition_state: 'pending',
+        }],
+      }),
       finalizeVoid: async () => { finalized += 1; },
       claimVoid: async () => assert.fail('already voided must not claim'),
       voidLabel: async () => assert.fail('already voided must not call provider'),
     },
   );
   assert.equal(result.already_voided, true);
-  assert.equal(finalized, 1);
+  assert.equal(finalized, 0);
 });
 
 test('buyOrderLabel permits replacement after a confirmed void', async () => {
   let purchased = false;
+  let providerEvidence;
+  let completed;
   const result = await buyOrderLabel(
     { SHIPSTATION_API_KEY: 'secret' },
-    labelInput('se-rate-2'),
+    labelInput(),
     { user: { id: 'staff-1' } },
     {
-      loadOrder: async () => ({ ...labeledOrder, shipstation_label_status: 'label_voided' }),
-      verifySelectedRate: async () => ({ ...selectedRateSnapshot, amount_minor: 4000 }),
-      getRate: async () => ({
-        rate_id: 'se-rate-2',
-        shipment_id: 'se-shipment-1',
-        shipping_amount: { currency: 'usd', amount: 40 },
+      loadOrder: async () => ({
+        ...labeledOrder,
+        shipstation_label_status: 'label_voided',
+        order_financial_entries: [...labeledOrder.order_financial_entries, {
+          source: 'shipstation', entry_type: 'postage_void_requested', provider_object_id: 'se-label-1',
+          amount: -41.22, currency: 'usd', recognition_state: 'pending',
+        }],
       }),
-      claimLabel: async () => true,
-      purchaseLabel: async () => { purchased = true; return { label_id: 'se-label-2', shipment_id: 'se-shipment-1', status: 'completed', shipment_cost: { currency: 'usd', amount: 40 } }; },
+      verifySelectedRate: async () => selectedRateSnapshot,
+      getRate: async () => providerRate,
+      claimLabel: async () => ({
+        claimed: true,
+        operation_key: 'label_purchase:default:purchase:1',
+        lease_owner: 'replacement-worker',
+      }),
+      purchaseLabel: async () => { purchased = true; return { label_id: 'se-label-2', shipment_id: 'se-shipment-1', status: 'completed', shipment_cost: { currency: 'usd', amount: 41.22 } }; },
+      markAttemptProviderSucceeded: async (_env, input) => { providerEvidence = input; },
+      completeOperationAttempt: async (_env, input) => { completed = input; },
       persistLabel: async () => {},
       linkProviderObject: async () => {},
       insertShipmentEvent: async () => {},
@@ -986,4 +1197,6 @@ test('buyOrderLabel permits replacement after a confirmed void', async () => {
   );
   assert.equal(purchased, true);
   assert.equal(result.label_id, 'se-label-2');
+  assert.equal(providerEvidence.operationKey, 'label_purchase:default:purchase:1');
+  assert.equal(completed.operationKey, 'label_purchase:default:purchase:1');
 });

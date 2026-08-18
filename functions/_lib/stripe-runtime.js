@@ -2,6 +2,7 @@ const STRIPE_API = 'https://api.stripe.com/v1';
 
 export const REQUIRED_STRIPE_WEBHOOK_EVENTS = Object.freeze([
   'checkout.session.completed',
+  'checkout.session.expired',
   'checkout.session.async_payment_succeeded',
   'checkout.session.async_payment_failed',
   'customer.subscription.updated',

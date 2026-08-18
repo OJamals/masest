@@ -13,7 +13,7 @@ test("dashboard business panel avoids blank setup cards and cramped inline forms
   assert.match(html, /data-tab="business"/, "business tools should live in the dashboard sidebar");
   assert.match(html, /class="biz-inline-form"/, "business forms need reusable inline form layout");
   assert.match(html, /id="bulkNotes"[^>]+placeholder="Timing notes \(optional\)"/, "bulk-order timing placeholder should fit mobile input width");
-  assert.match(js, /class="field"><select data-role-for=/, "team role controls should reuse shared touch-sized field styling");
+  assert.match(js, /class="field"><select[^>]*data-role-for=/, "team role controls should reuse shared touch-sized field styling");
   assert.match(html, /\.biz-inv-table\s*\{[^}]*table-layout:\s*fixed/, "invoice columns should stay inside mobile cards");
   assert.match(html, /@media \(max-width: 640px\)[\s\S]*#bizTeam \.biz-row > :first-child\s*\{\s*flex:\s*0 1 auto/, "mobile team rows should drop desktop column flex-basis");
   assert.doesNotMatch(businessPanel, /style="/, "business panel should not rely on inline style polish");

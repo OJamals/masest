@@ -1,6 +1,7 @@
 import { orderReference } from './order-integrations.js';
 import { normalizeShipStationTrackingUpdate } from './shipstation-tracking.js';
 import { ingestShipStationTrackingUpdate } from './shipstation-tracking-ingest.js';
+import { ProviderTimeoutError, fetchWithDeadline } from './provider-fetch.js';
 
 const API_BASE_URL = 'https://api.shipstation.com/v2';
 
@@ -152,16 +153,38 @@ export async function shipStationRequest(env, path, options = {}, dependencies =
   if (!apiKey) throw new ShipStationError('shipstation_not_configured');
   const route = `/${text(path).replace(/^\/+/, '')}`;
   const fetchImpl = dependencies.fetchImpl || fetch;
-  const response = await fetchImpl(`${API_BASE_URL}${route}`, {
-    method: options.method || 'GET',
-    headers: {
-      'API-Key': apiKey,
-      accept: 'application/json',
-      ...(options.body == null ? {} : { 'content-type': 'application/json' }),
-    },
-    ...(options.body == null ? {} : { body: JSON.stringify(options.body) }),
-  });
-  const payload = await response.json().catch(() => ({}));
+  let response;
+  let payload;
+  try {
+    ({ response, payload } = await fetchWithDeadline(fetchImpl, `${API_BASE_URL}${route}`, {
+      method: options.method || 'GET',
+      headers: {
+        'API-Key': apiKey,
+        accept: 'application/json',
+        ...(options.body == null ? {} : { 'content-type': 'application/json' }),
+      },
+      ...(options.body == null ? {} : { body: JSON.stringify(options.body) }),
+      ...(options.signal ? { signal: options.signal } : {}),
+    }, {
+      timeoutMs: dependencies.timeoutMs || 12_000,
+      timeoutCode: 'shipstation_timeout',
+      consumeResponse: async (providerResponse, signal) => {
+        let providerPayload;
+        try {
+          providerPayload = await providerResponse.json();
+        } catch (error) {
+          if (signal.aborted) throw error;
+          providerPayload = {};
+        }
+        return { response: providerResponse, payload: providerPayload };
+      },
+    }));
+  } catch (error) {
+    if (error instanceof ProviderTimeoutError) {
+      throw new ShipStationError('shipstation_timeout', 503);
+    }
+    throw error;
+  }
   if (!response.ok) {
     const detail = providerErrorDetail(payload);
     if (detail) console.error('shipstation_request_failed', route, response.status, detail);

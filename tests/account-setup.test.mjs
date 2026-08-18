@@ -203,14 +203,20 @@ test("buyers can create their first company but cannot mutate an existing compan
 
 test("checkout maps only stored Company tax status to Stripe Customer exemption", () => {
   const checkout = read("functions/api/checkout.js");
+  const commerceContext = read("functions/_lib/commerce-context.js");
   assert.match(
-    checkout,
-    /\.from\('companies'\)[\s\S]+?\.select\('id,name,tax_exempt,stripe_customer_id'\)[\s\S]+?company = data \|\| null/,
-    "checkout should read tax_exempt from the authenticated buyer's stored Company",
+    commerceContext,
+    /\.from\('companies'\)[\s\S]+?\.select\('id,name,status,price_tier,tax_exempt,stripe_customer_id'\)/,
+    "the typed commerce snapshot should read tax_exempt from the authenticated Buyer's stored Company",
+  );
+  assert.match(
+    commerceContext,
+    /taxExempt:\s*company\.tax_exempt\s*===\s*true/,
+    "the context should normalize only an explicit stored true as exempt",
   );
   assert.match(
     checkout,
-    /stripe\.customers\.update\(customerId,\s*\{\s*tax_exempt:\s*company\.tax_exempt\s*\?\s*'exempt'\s*:\s*'none'\s*\}\)/,
+    /stripe\.customers\.update\(customerId,\s*\{\s*tax_exempt:\s*taxExempt\s*\?\s*'exempt'\s*:\s*'none'\s*\}\)/,
     "checkout should map stored Company tax status unchanged",
   );
 });

@@ -32,6 +32,28 @@ export function smoothPref() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 }
 
+function quoteSubmissionId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function attachSubmissionIdentity(form, data) {
+  const signature = [...data.entries()]
+    .filter(([key]) => !["cf-turnstile-response", "submission_id"].includes(key))
+    .map(([key, value]) => [key, String(value)])
+    .sort(([ak, av], [bk, bv]) => ak.localeCompare(bk) || av.localeCompare(bv));
+  const fingerprint = JSON.stringify(signature);
+  if (!form.dataset.submissionId || form.dataset.submissionFingerprint !== fingerprint) {
+    form.dataset.submissionId = quoteSubmissionId();
+    form.dataset.submissionFingerprint = fingerprint;
+  }
+  data.set("submission_id", form.dataset.submissionId);
+}
+
 async function submitRequest(form, data) {
   const endpoint = form.dataset.endpoint;
   if (!endpoint) return { fallbackOnly: true };
@@ -42,6 +64,7 @@ async function submitRequest(form, data) {
       Object.keys(utm).forEach((k) => { if (utm[k]) data.append(k, utm[k]); });
     }
   } catch (e) { /* attribution is best-effort */ }
+  attachSubmissionIdentity(form, data);
   // Abort a hung endpoint so the user is never stranded on a disabled button.
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 12000);
@@ -52,7 +75,11 @@ async function submitRequest(form, data) {
       body: data,
       signal: ctrl.signal
     });
-    if (!res.ok) throw new Error("Request failed");
+    let acknowledgement = null;
+    try { acknowledgement = await res.json(); } catch (e) { /* invalid acknowledgement */ }
+    if (!res.ok || acknowledgement?.ok !== true || acknowledgement?.durable !== true || !acknowledgement?.quote_id) {
+      throw new Error("Request was not durably acknowledged");
+    }
     try {
       if (typeof window.mtrack === "function") {
         window.mtrack("quote_submit", {
@@ -62,7 +89,7 @@ async function submitRequest(form, data) {
         });
       }
     } catch (e) { /* funnel event best-effort */ }
-    return { fallbackOnly: false };
+    return { fallbackOnly: false, acknowledgement };
   } finally {
     clearTimeout(timer);
   }
@@ -72,23 +99,37 @@ export function initProofFilters() {
   const filters = [...document.querySelectorAll("[data-proof-filter]")];
   if (!filters.length) return;
 
+  const applyFilter = (filter) => {
+    const kind = filter.dataset.proofFilter;
+    const cards = [...document.querySelectorAll("[data-proof-card]")];
+    filters.forEach((item) => {
+      const active = item === filter;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    cards.forEach((card) => {
+      const visible = kind === "all" || card.dataset.proofKind === kind;
+      card.hidden = !visible;
+    });
+    const params = new URLSearchParams(location.search);
+    if (kind === "all") params.delete("proof");
+    else params.set("proof", kind);
+    const query = params.toString();
+    history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+  };
+
   filters.forEach((filter) => {
     if (filter.dataset.proofFilterWired === "true") return;
     filter.dataset.proofFilterWired = "true";
-    filter.addEventListener("click", () => {
-      const kind = filter.dataset.proofFilter;
-      const cards = [...document.querySelectorAll("[data-proof-card]")];
-      filters.forEach((item) => {
-        const active = item === filter;
-        item.classList.toggle("active", active);
-        item.setAttribute("aria-pressed", active ? "true" : "false");
-      });
-      cards.forEach((card) => {
-        const visible = kind === "all" || card.dataset.proofKind === kind;
-        card.hidden = !visible;
-      });
-    });
+    filter.addEventListener("click", () => applyFilter(filter));
   });
+
+  const params = new URLSearchParams(location.search);
+  const requestedKind = params.get("proof");
+  const initial = filters.find((filter) => filter.dataset.proofFilter === requestedKind)
+    || filters.find((filter) => filter.classList.contains("active"))
+    || filters[0];
+  applyFilter(initial);
 }
 
 const discoveryTokens = (value) => new Set(

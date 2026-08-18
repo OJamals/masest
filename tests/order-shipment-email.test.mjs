@@ -21,8 +21,9 @@ test("orders persist buyer email for shipment notifications", () => {
   assert.match(ORDER_INTEGRITY,
     /function\s+public\.place_net_order_v2[\s\S]*customer_email[\s\S]*p_email/i);
   // The Stripe paid-order row is built by order-shape.js; the webhook resolves the
-  // buyer email and passes it into orderRowFromSession.
-  assert.match(STRIPE_WEBHOOK, /orderRowFromSession\(s,\s*buyerEmailFromStripeSession\(s\)\)/);
+  // bound current-version Buyer email and passes it into orderRowFromSession.
+  assert.match(STRIPE_WEBHOOK, /const buyerEmail = shippingContract === '3' \? boundBuyerEmail : buyerEmailFromStripeSession\(s\)/);
+  assert.match(STRIPE_WEBHOOK, /orderRowFromSession\(s,\s*buyerEmail\)/);
   assert.match(ORDER_SHAPE, /customer_email:\s*customerEmail/);
 });
 

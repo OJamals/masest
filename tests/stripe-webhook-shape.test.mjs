@@ -59,6 +59,7 @@ test("cartMetadataEntries round-trips through assemble+parse and every chunk fit
   }));
   const entries = cartMetadataEntries(cart);
   assert.ok(Object.keys(entries).length > 1, "expected a multi-chunk cart");
+  assert.ok(Object.keys(entries).length <= 17, "cart chunks must leave room for fixed Session metadata");
   for (const [k, v] of Object.entries(entries)) assert.ok(v.length <= 500, `${k} exceeds 500 chars`);
   const parsed = parseCartMetadata(assembleCartMetadata(entries));
   assert.equal(parsed.length, cart.length);
@@ -85,6 +86,7 @@ test("orderRowFromSession mirrors the paid-order insert incl. qbo + customer_ema
   };
   assert.deepEqual(orderRowFromSession(session, "buyer@x.com"), {
     company_id: "co-9",
+    user_id: null,
     status: "paid",
     payment_method: "stripe",
     qbo_sync_status: "pending",

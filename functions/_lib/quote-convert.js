@@ -80,6 +80,7 @@ export function quotePayloadWithOffer(payload, {
   status,
   at,
   finalOrderId,
+  expiresAt,
 }) {
   const next = payload && typeof payload === "object" && !Array.isArray(payload)
     ? { ...payload }
@@ -88,5 +89,6 @@ export function quotePayloadWithOffer(payload, {
   next.offer_status = status;
   if (at) next[`offer_${status}_at`] = at;
   if (finalOrderId) next.final_order_id = finalOrderId;
+  if (expiresAt) next.offer_expires_at = expiresAt;
   return next;
 }

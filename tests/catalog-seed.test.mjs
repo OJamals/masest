@@ -312,7 +312,7 @@ test("site copy respects documentation claim guardrails", () => {
     "every offered product must retain its confirmed HMIS 0-0-0 rating",
   );
   assert.match(publicMarketingCopy, /HMIS 0-0-0 across every product|Every VertKleen product is HMIS 0-0-0/i);
-  assert.match(productsHtml, /Every VertKleen product we (?:offer|sell) is HMIS 0-0-0/i);
+  assert.match(productsHtml, /Every VertKleen product (?:we (?:offer|sell)|available here) is HMIS 0-0-0/i);
   assert.doesNotMatch(`${programsHtml}\n${readSite("contact.html")}`, /\bDBNPA\b/i);
   assert.doesNotMatch(resourcesHtml, /Boeing\/Airbus certified degreaser/);
   assert.doesNotMatch(catalogJs, /EPA-registered/);

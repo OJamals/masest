@@ -1,13 +1,21 @@
 // POST /api/stripe-webhook — Stripe event sink. Verifies signature, records paid orders.
 // Configure in Stripe Dashboard → Webhooks → endpoint <your-domain>/api/stripe-webhook,
-// events checkout.session.completed + checkout.session.async_payment_succeeded +
-// checkout.session.async_payment_failed (the async pair settles ACH debits that clear
-// or fail days after the session completes). Signing secret in STRIPE_WEBHOOK_SECRET.
+// events checkout.session.completed + checkout.session.expired +
+// checkout.session.async_payment_succeeded + checkout.session.async_payment_failed
+// (the async pair settles ACH debits that clear or fail days after the session completes).
+// Signing secret in STRIPE_WEBHOOK_SECRET.
 // On the Workers runtime signature verification must use the SubtleCrypto provider.
 import Stripe from 'stripe';
 import { adminClient, json, htmlEscape } from '../_lib/supabase.js';
-import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
-import { loadShippingQuotePlan } from '../_lib/checkout-shipping.js';
+import {
+  buyerEmailFromStripeSession,
+  normalizeCheckoutBuyerEmail,
+} from '../_lib/checkout-session.js';
+import {
+  assertShippingPlanSelection,
+  CheckoutShippingError,
+  loadShippingQuotePlan,
+} from '../_lib/checkout-shipping.js';
 import {
   isDelinquentStatus,
   planFailedPayment,
@@ -44,6 +52,10 @@ import {
   markQuotePaymentPending,
   reopenQuoteAfterPaymentFailure,
 } from '../_lib/quote-order.js';
+import {
+  finishQuoteCheckoutAttemptFromSession,
+  preflightQuoteCheckoutAttemptFromSession,
+} from '../_lib/quote-checkout-attempt.js';
 
 export { htmlEscape as escapeHtml } from '../_lib/supabase.js';
 
@@ -87,6 +99,23 @@ async function enrichLineNames(sb, lines) {
   }
 }
 
+function orderShippingAddressFromPlan(address = {}) {
+  return {
+    name: address.name || null,
+    company: address.company || null,
+    phone: address.phone || null,
+    address: {
+      line1: address.address1 || null,
+      line2: address.address2 || null,
+      city: address.city || null,
+      state: address.state || null,
+      postal_code: address.postal_code || null,
+      country: address.country || 'US',
+    },
+    residential: address.residential === true,
+  };
+}
+
 function qboRefundRowsFromCharge(charge, order, plan) {
   if (!order?.id || !plan?.amount || order.qbo_sync_status === 'skipped') return [];
   const total = Number(order.total) || 0;
@@ -127,6 +156,10 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const finalizeQuotedOrder = dependencies.finalizeQuoteOrder || finalizeQuoteOrder;
   const markQuotedOrderPending = dependencies.markQuotePaymentPending || markQuotePaymentPending;
   const reopenQuotedOrder = dependencies.reopenQuoteAfterPaymentFailure || reopenQuoteAfterPaymentFailure;
+  const finishQuotedAttempt = dependencies.finishQuoteCheckoutAttempt
+    || finishQuoteCheckoutAttemptFromSession;
+  const preflightQuotedAttempt = dependencies.preflightQuoteCheckoutAttempt
+    || preflightQuoteCheckoutAttemptFromSession;
   const constructEvent = dependencies.constructEvent || (async ({ raw, sig, whSecret }) => {
     const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
     const cryptoProvider = Stripe.createSubtleCryptoProvider();
@@ -156,6 +189,15 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     // Signature failures are unauthenticated input. Do not reflect Stripe parser
     // details that could help an attacker distinguish configuration or payload issues.
     return json(400, { error: 'invalid_signature' });
+  }
+
+  if (event.type === 'checkout.session.expired') {
+    const result = await finishQuotedAttempt(getAdminClient(env), event.data.object, {
+      terminalStatus: 'expired',
+      reason: 'provider_expired_webhook',
+    });
+    if (result?.error) return json(503, { error: 'quote_checkout_attempt_finish_failed' });
+    return json(200, { received: true });
   }
 
   if (event.type === 'checkout.session.completed') {
@@ -198,14 +240,37 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     // Hydrate from Stripe before persistence whenever the cart or buyer identity is
     // absent; acknowledging the reduced event would create an unfulfillable paid order.
     let cart = parseCartMetadata(assembleCartMetadata(s.metadata));
-    if (!cart.length || !buyerEmailFromStripeSession(s)) {
+    let boundBuyerEmail = normalizeCheckoutBuyerEmail(s.metadata?.buyer_email).value || '';
+    if (!cart.length || !buyerEmailFromStripeSession(s)
+      || (s.metadata?.shipping_contract_version === '3' && !boundBuyerEmail)) {
       try {
         s = await retrieveCheckoutSession(s.id);
         cart = parseCartMetadata(assembleCartMetadata(s.metadata));
+        boundBuyerEmail = normalizeCheckoutBuyerEmail(s.metadata?.buyer_email).value || '';
       } catch (error) {
         console.error('checkout_session_hydrate_failed', error?.code || error?.name || 'unknown');
         return json(503, { error: 'checkout_session_hydrate_failed' });
       }
+    }
+    const attemptPreflight = await preflightQuotedAttempt(sb, s, event.id);
+    if (attemptPreflight?.error) {
+      return json(503, { error: 'quote_checkout_attempt_preflight_failed' });
+    }
+    if (attemptPreflight?.action === 'duplicate') {
+      return json(200, { received: true, duplicate: true });
+    }
+    if (attemptPreflight?.action === 'stale') {
+      return json(200, { received: true, duplicate: true, stale: true });
+    }
+    if (attemptPreflight?.legacy) {
+      s = {
+        ...s,
+        metadata: {
+          ...(s.metadata || {}),
+          quote_checkout_attempt_id: attemptPreflight.attemptId,
+          quote_offer_revision: String(attemptPreflight.offerRevision),
+        },
+      };
     }
     if (!cart.length) {
       console.error('checkout_session_cart_missing', s?.id || 'unknown');
@@ -224,12 +289,60 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     let lines = cart.length ? cartLines(cart) : [];
     if (lines.length) await enrichLineNames(sb, lines);
     const itemRows = orderItemRows(lines, null);
-    const orderRow = orderRowFromSession(s, buyerEmailFromStripeSession(s));
-    // Carry the exact carton plan the buyer was rated on into the order, so the label is
-    // bought for the shipment that was actually paid for. Absent (older session, expired
-    // snapshot) the fulfillment side recomputes with the same consolidation module.
-    const quotePlan = await loadShippingPlan(env, s.metadata?.shipping_rate_id);
-    if (quotePlan?.packages) orderRow.shipping_package_plan = quotePlan.packages;
+    const shippingContract = String(s.metadata?.shipping_contract_version || 'legacy_unmarked');
+    const buyerEmail = shippingContract === '3' ? boundBuyerEmail : buyerEmailFromStripeSession(s);
+    if (!buyerEmail) {
+      console.error('checkout_session_buyer_missing', s?.id || 'unknown');
+      return json(503, { error: 'checkout_session_incomplete' });
+    }
+    const orderRow = orderRowFromSession(s, buyerEmail);
+    if (shippingContract === '3') {
+      const selection = {
+        v: 3,
+        plan_id: s.metadata?.shipping_plan_id,
+        plan_digest: s.metadata?.shipping_plan_digest,
+        cart_digest: s.metadata?.shipping_cart_digest,
+        address_digest: s.metadata?.shipping_address_digest,
+        rate: {
+          rate_id: s.metadata?.shipping_rate_id,
+          carrier_id: s.metadata?.shipping_carrier_id,
+          service_code: s.metadata?.shipping_service_code,
+          amount_minor: Number(s.metadata?.shipping_amount_minor),
+          currency: s.metadata?.shipping_currency,
+        },
+      };
+      try {
+        const result = await loadShippingPlan(env, selection.plan_id, { sb });
+        const plan = assertShippingPlanSelection(selection, result, {
+          notFoundStatus: 503,
+          cart,
+        });
+        const paidShippingMinor = Number(s.shipping_cost?.amount_subtotal ?? s.total_details?.amount_shipping ?? 0);
+        if (paidShippingMinor !== Number(plan.amount_minor)) {
+          throw new CheckoutShippingError('shipping_plan_mismatch', 503);
+        }
+        // The durable, digested plan is the shipping authority. Session metadata is useful
+        // for Stripe display, but must not be able to detach the paid Order from the exact
+        // validated destination whose cartons and rate were selected.
+        orderRow.ship_address = orderShippingAddressFromPlan(plan.address);
+        orderRow.shipping_package_plan = plan.packages;
+        orderRow.fulfillment_contract_status = 'bound';
+        orderRow.shipstation_error = null;
+      } catch (error) {
+        const code = error instanceof CheckoutShippingError
+          ? error.code : 'shipping_plan_store_unavailable';
+        console.error('checkout_shipping_plan_recovery_failed', code);
+        return json(503, { error: code });
+      }
+    } else if (['legacy_unmarked', 'legacy_v2', 'legacy_static'].includes(shippingContract)) {
+      // Sessions created before the v3 carton contract remain recoverable, but the Order is
+      // visibly held for a human carton review. Fulfillment must never silently recompute it.
+      orderRow.fulfillment_contract_status = 'legacy_review_required';
+      orderRow.shipstation_error = 'shipping_package_plan_review_required';
+    } else {
+      console.error('checkout_shipping_contract_unsupported', shippingContract);
+      return json(503, { error: 'shipping_contract_unsupported' });
+    }
     const { data: persisted, error: persistErr } = await sb.rpc('persist_stripe_order', {
       p_order: orderRow,
       p_items: itemRows,
@@ -249,11 +362,17 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     // the order id, enqueue the same unique rows, and only then acknowledge.
     if (insertOutcome === 'duplicate') {
       const { data: existingOrder, error: lookupError } = await sb.from('orders')
-        .select('id,order_number,company_id')
+        .select('id,order_number,company_id,status')
         .eq('stripe_payment_intent', s.payment_intent)
         .maybeSingle();
       if (lookupError || !existingOrder) {
         return json(503, { error: 'order_effect_recovery_failed' });
+      }
+      // An ACH failure can be processed and acknowledged before an at-least-once replay
+      // of the earlier completed event arrives. Never let that stale completion move the
+      // reopened Quote back to payment_pending or requeue successful-payment effects.
+      if (!settled && existingOrder.status === 'cancelled') {
+        return json(200, { received: true, duplicate: true, stale: true });
       }
       order = existingOrder;
     } else {
@@ -312,6 +431,11 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       sb, s, order.id, settled ? finalizeQuotedOrder : markQuotedOrderPending, 'quote_transition_failed',
     );
     if (quoteTransitionError) return quoteTransitionError;
+    const attemptResult = await finishQuotedAttempt(sb, s, {
+      terminalStatus: 'completed',
+      reason: settled ? 'payment_completed' : 'payment_pending',
+    });
+    if (attemptResult?.error) return json(503, { error: 'quote_checkout_attempt_finish_failed' });
     // QBO invoice + linked payment are created asynchronously by /api/qbo-sync
     // (order tagged qbo_sync_status='pending' on insert above).
     return json(200, {
@@ -331,6 +455,13 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       .eq('stripe_payment_intent', s.payment_intent).maybeSingle();
     // completed hasn't landed yet (out-of-order delivery): 5xx so Stripe re-delivers.
     if (!order) return json(503, { error: 'order_not_recorded_yet' });
+    const attemptPreflight = await preflightQuotedAttempt(sb, s, event.id);
+    if (attemptPreflight?.error) {
+      return json(503, { error: 'quote_checkout_attempt_preflight_failed' });
+    }
+    if (attemptPreflight?.action === 'stale') {
+      return json(200, { received: true, duplicate: true, stale: true });
+    }
     let effectOrder = order;
     let duplicate = order.status !== 'pending_payment';
     if (order.status === 'pending_payment') {
@@ -370,6 +501,11 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       sb, s, effectOrder.id, finalizeQuotedOrder, 'quote_finalize_failed',
     );
     if (quoteTransitionError) return quoteTransitionError;
+    const attemptResult = await finishQuotedAttempt(sb, s, {
+      terminalStatus: 'completed',
+      reason: 'async_payment_succeeded',
+    });
+    if (attemptResult?.error) return json(503, { error: 'quote_checkout_attempt_finish_failed' });
     return json(200, { received: true, ...(duplicate ? { duplicate: true } : {}) });
   }
 
@@ -383,6 +519,13 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       .select('id,status,company_id')
       .eq('stripe_payment_intent', s.payment_intent).maybeSingle();
     if (!order) return json(503, { error: 'order_not_recorded_yet' });
+    const attemptPreflight = await preflightQuotedAttempt(sb, s, event.id);
+    if (attemptPreflight?.error) {
+      return json(503, { error: 'quote_checkout_attempt_preflight_failed' });
+    }
+    if (attemptPreflight?.action === 'stale') {
+      return json(200, { received: true, duplicate: true, stale: true });
+    }
     let effectOrder = order;
     let duplicate = order.status !== 'pending_payment';
     if (order.status === 'pending_payment') {
@@ -413,6 +556,11 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       sb, s, effectOrder.id, reopenQuotedOrder, 'quote_reopen_failed',
     );
     if (quoteTransitionError) return quoteTransitionError;
+    const attemptResult = await finishQuotedAttempt(sb, s, {
+      terminalStatus: 'failed',
+      reason: 'async_payment_failed',
+    });
+    if (attemptResult?.error) return json(503, { error: 'quote_checkout_attempt_finish_failed' });
     return json(200, { received: true, ...(duplicate ? { duplicate: true } : {}) });
   }
 

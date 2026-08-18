@@ -16,10 +16,10 @@ test('getFilters captures every quotes filter input + view mode', () => {
   assert.match(src, /view: state\.quotesView \|\| 'list'/);
 });
 
-test('applyFilters writes inputs back + re-renders without refetch', () => {
+test('applyFilters writes inputs back + refetches the server-filtered page', () => {
   assert.match(src, /\$\('qSearch'\)\.value = f\.search/);
   assert.match(src, /reflectToggle\(\);/);
-  assert.match(src, /renderQuotePipeline\(\{ refetch: false \}\)/);
+  assert.match(src, /Search is a server query param[\s\S]{0,160}renderQuotePipeline\(\{ refetch: true \}\)/);
 });
 
 test('saved-views control mounts in the render path', () => {

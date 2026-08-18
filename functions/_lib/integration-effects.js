@@ -16,6 +16,7 @@ import { orderReference } from './order-integrations.js';
 import { routeInboundMessageReply } from './resend-inbound.js';
 import { computeRefund, qboFullDocumentRefund } from './refund.js';
 import { linkOrderProviderObject } from './order-integrations.js';
+import { getAccessToken, voidQboInvoice } from './qbo.js';
 import { voidOrderLabel } from './shipstation-orders.js';
 import Stripe from 'stripe';
 
@@ -70,12 +71,17 @@ const PAYLOAD_KEYS = Object.freeze({
     'event_key',
   ]),
   shipment_notification: new Set(['tracking_number', 'tracking_status']),
-  order_label_void: new Set(['order_id', 'label_id', 'reason']),
-  order_refund: new Set(['order_id', 'amount']),
-  order_restock: new Set(['order_id']),
+  order_label_void: new Set(['order_id', 'command_id', 'label_id', 'reason']),
+  order_refund: new Set(['order_id', 'command_id', 'amount']),
+  order_restock: new Set(['order_id', 'command_id']),
+  order_accounting_reversal: new Set(['order_id', 'command_id']),
+  order_refund_email: new Set(['order_id', 'command_id']),
+  order_reversal_complete: new Set(['order_id', 'command_id']),
   order_credit_memo: new Set(['order_id']),
-  order_cancelled: new Set(['order_id', 'reason']),
-  order_cancellation_email: new Set(['order_id', 'reason']),
+  order_cancelled: new Set(['order_id', 'command_id', 'reason']),
+  order_cancellation_email: new Set(['order_id', 'command_id', 'reason']),
+  quote_message: new Set(['quote_id', 'company_id']),
+  quote_offer_email: new Set(['quote_id', 'email', 'product']),
   resend_delivery_projection: new Set([
     'resend_id',
     'event_type',
@@ -112,9 +118,14 @@ const EFFECT_PROVIDERS = Object.freeze({
   order_label_void: MASEST,
   order_refund: MASEST,
   order_restock: MASEST,
+  order_accounting_reversal: MASEST,
+  order_refund_email: MASEST,
+  order_reversal_complete: MASEST,
   order_credit_memo: MASEST,
   order_cancelled: MASEST,
   order_cancellation_email: MASEST,
+  quote_message: MASEST,
+  quote_offer_email: MASEST,
 });
 
 function effect(effectKey, effectType, payload, dependsOnEffectKey = null) {
@@ -249,6 +260,30 @@ export function disputeEffects({
     reason,
     status,
   })];
+}
+
+export function quoteOfferEffects({
+  quoteId,
+  companyId,
+  email,
+  product = '',
+}) {
+  return [
+    companyNotification('quote-notification', 'quote_ready', { companyId }),
+    effect('quote-message', 'quote_message', {
+      quote_id: quoteId,
+      company_id: companyId,
+    }),
+    effect('quote-email', 'quote_offer_email', {
+      quote_id: quoteId,
+      email: String(email || '').trim().toLowerCase(),
+      product: String(product || '').trim().slice(0, 500),
+    }),
+  ].filter(Boolean).map((entry) => ({
+    ...entry,
+    aggregate_type: 'quote',
+    aggregate_id: quoteId,
+  }));
 }
 
 function cleanPayload(effectType, payload) {
@@ -506,6 +541,24 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
   });
 }
 
+async function sendQuoteOfferEffect(env, effectRow, send) {
+  const email = String(effectRow.payload?.email || '').trim().toLowerCase();
+  if (!email) return { skipped: 'no_recipients' };
+  const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
+  return send(env, {
+    to: [email],
+    subject: 'Your MASEST quote is ready',
+    html: emailLayout({
+      heading: 'Your quote is ready',
+      bodyHtml: `<p>Review the pricing for ${htmlEscape(effectRow.payload?.product || 'your saved requisition')}, accept it, and continue to secure checkout.</p>`,
+      ctaText: 'Review your quote',
+      ctaUrl: `${appUrl}/dashboard.html#orders`,
+    }),
+    category: 'quote',
+    idempotencyKey: effectIdempotencyKey(effectRow),
+  });
+}
+
 async function dependencyResult(sb, effectRow) {
   const { data, error } = await sb.from('integration_effects')
     .select('provider_result')
@@ -593,26 +646,31 @@ async function voidLabelEffect(env, sb, effectRow, dependencies) {
   const labelId = effectRow.payload.label_id;
   if (!labelId) return { skipped: 'no_label_to_void' };
   const voidLabel = dependencies.voidOrderLabel || voidOrderLabel;
-  try {
-    const result = await voidLabel(env, {
-      order_id: effectRow.payload.order_id,
-      label_id: labelId,
-      confirm: true,
-      reason: effectRow.payload.reason || 'Order cancelled by MASEST staff',
-    }, { user: { email: 'system@masest.co' } });
-    return { voided: true, label_id: labelId, refunded: result?.refunded ?? null };
-  } catch (error) {
-    // Already voided, or the carrier refuses because the parcel moved. Neither is worth
-    // blocking the refund the buyer is waiting on — record it and continue the chain.
-    const code = String(error?.code || '');
-    if (code === 'shipstation_label_already_voided' || code === 'shipstation_label_void_not_allowed') {
-      return { skipped: code, label_id: labelId };
-    }
-    throw error;
-  }
+  const result = await voidLabel(env, {
+    order_id: effectRow.payload.order_id,
+    label_id: labelId,
+    confirm: true,
+    reason: effectRow.payload.reason || 'Order cancelled by MASEST staff',
+  }, { user: { email: 'system@masest.co' } });
+  // Success means the provider void was durably finalized, or canonical ownership was
+  // reloaded and proved this exact label inactive. Refusals must block dependent effects.
+  return { voided: true, label_id: labelId, refunded: result?.refunded ?? null };
 }
 
-async function refundOrderEffect(env, sb, effectRow, dependencies) {
+async function loadReversalCommand(sb, effectRow) {
+  const commandId = String(effectRow.payload?.command_id || '').trim();
+  const orderId = String(effectRow.payload?.order_id || '').trim();
+  if (!commandId || !orderId) throw errorWithCode('reversal_command_identity_missing');
+  const { data: command, error } = await sb.from('order_reversal_commands')
+    .select('id,order_id,type,status,amount_minor,currency,reason,provider_idempotency_key,provider_object_id,provider_result,accounting_result,snapshot')
+    .eq('id', commandId)
+    .eq('order_id', orderId)
+    .maybeSingle();
+  if (error || !command) throw errorWithCode('reversal_command_not_found');
+  return command;
+}
+
+async function legacyRefundOrderEffect(env, sb, effectRow, dependencies) {
   const amount = Number(effectRow.payload.amount) || 0;
   if (amount <= 0) return { skipped: 'nothing_to_refund' };
   const { data: order, error } = await sb.from('orders')
@@ -667,6 +725,74 @@ async function refundOrderEffect(env, sb, effectRow, dependencies) {
   };
 }
 
+async function refundOrderEffect(env, sb, effectRow, dependencies) {
+  // Pre-cutover cancellation events carried an amount directly. Keep them drainable;
+  // every new admin command carries only immutable command identity.
+  if (!effectRow.payload?.command_id) {
+    return legacyRefundOrderEffect(env, sb, effectRow, dependencies);
+  }
+  const command = await loadReversalCommand(sb, effectRow);
+  const amountCents = Number(command.amount_minor);
+  if (!Number.isSafeInteger(amountCents) || amountCents < 0) {
+    throw errorWithCode('reversal_command_amount_invalid');
+  }
+  if (amountCents === 0) return { skipped: 'nothing_to_refund', command_id: command.id };
+  if (command.provider_object_id) {
+    if (!command.provider_result) throw errorWithCode('refund_provider_result_missing');
+    return command.provider_result;
+  }
+  const paymentIntent = String(command.snapshot?.stripe_payment_intent || '').trim();
+  const idempotencyKey = String(command.provider_idempotency_key || '').trim();
+  if (!paymentIntent || !idempotencyKey) throw errorWithCode('refund_command_provider_identity_missing');
+
+  const createRefund = dependencies.createStripeRefund || defaultCreateStripeRefund;
+  const refund = await createRefund(env, { paymentIntent, amountCents, idempotencyKey });
+  if (!refund?.id) throw errorWithCode('stripe_refund_id_missing');
+
+  // Persist provider success and the cumulative Order projection under one DB lock before
+  // returning to the generic effect worker. Response loss after this point reuses both the
+  // command and Stripe idempotency key; it cannot add money twice.
+  return rpcData(sb, 'record_order_refund_provider_success', {
+    p_command_id: command.id,
+    p_stripe_refund_id: refund.id,
+  });
+}
+
+async function accountingReversalEffect(env, sb, effectRow, dependencies) {
+  const command = await loadReversalCommand(sb, effectRow);
+  if (command.accounting_result) return command.accounting_result;
+  const accounting = command.snapshot?.accounting || {};
+  const action = String(accounting.action || '').trim();
+  if (action === 'review') throw errorWithCode('accounting_review_required');
+  if (!['credit_memo', 'void_invoice', 'skip_pending_invoice', 'skip'].includes(action)) {
+    throw errorWithCode('accounting_reversal_action_invalid');
+  }
+
+  let providerObjectId = null;
+  let providerResult = {};
+  if (action === 'void_invoice') {
+    providerObjectId = String(accounting.document_id || '').trim();
+    if (!providerObjectId) throw errorWithCode('accounting_document_identity_missing');
+    const loadAccess = dependencies.getQboAccessToken || getAccessToken;
+    const voidInvoice = dependencies.voidQboInvoice || voidQboInvoice;
+    const credentials = await loadAccess(sb, env);
+    const options = dependencies.fetch ? { fetchImpl: dependencies.fetch } : {};
+    providerResult = await voidInvoice(
+      env,
+      credentials.accessToken,
+      credentials.realmId,
+      providerObjectId,
+      options,
+    );
+  }
+  return rpcData(sb, 'record_order_accounting_reversal_success', {
+    p_command_id: command.id,
+    p_action: action,
+    p_provider_object_id: providerObjectId,
+    p_result: providerResult,
+  });
+}
+
 async function creditMemoEffect(sb, effectRow) {
   const refund = await dependencyResult(sb, effectRow);
   if (!refund.refunded || !refund.stripe_refund_id) {
@@ -685,7 +811,61 @@ async function creditMemoEffect(sb, effectRow) {
   return { queued: true, duplicate: error?.code === '23505' };
 }
 
+function reversalRecipients(command) {
+  const snapshot = command?.snapshot || {};
+  const source = Array.isArray(snapshot.notification?.recipients)
+    ? snapshot.notification.recipients
+    : [snapshot.recipient, snapshot.notification?.buyer];
+  return [...new Set(source
+    .map((value) => String(value || '').trim().toLowerCase())
+    .filter((value) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)))];
+}
+
+async function sendRefundEmailEffect(env, sb, effectRow, send) {
+  const command = await loadReversalCommand(sb, effectRow);
+  if (!command.provider_object_id) throw errorWithCode('refund_provider_identity_missing');
+  const recipients = reversalRecipients(command);
+  if (!recipients.length) return { skipped: 'no_recipient' };
+  const reference = String(command.snapshot?.order_number || command.order_id);
+  const amount = Number(command.amount_minor) / 100;
+  const currency = String(command.currency || 'usd').toUpperCase();
+  const fullyRefunded = command.provider_result?.fully_refunded === true;
+  return send(env, {
+    to: recipients,
+    bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
+    subject: `${fullyRefunded ? 'Refund' : 'Partial refund'} issued for MASEST order ${reference}`,
+    html: billingEmailHtml(env, `${fullyRefunded ? 'Refund' : 'Partial refund'} issued`, [
+      `A refund of <b>${htmlEscape(currency)} ${amount.toFixed(2)}</b> was issued for order <b>${htmlEscape(reference)}</b>.`,
+      'The amount is returning to the original payment method. Card refunds usually post within 5–10 business days.',
+    ]),
+    category: 'order',
+    idempotencyKey: effectIdempotencyKey(effectRow),
+  });
+}
+
 async function sendCancellationEmailEffect(env, sb, effectRow, send) {
+  if (effectRow.payload?.command_id) {
+    const command = await loadReversalCommand(sb, effectRow);
+    const recipients = reversalRecipients(command);
+    if (!recipients.length) return { skipped: 'no_recipient' };
+    const reference = String(command.snapshot?.order_number || command.order_id);
+    const refunded = Number(command.amount_minor) / 100;
+    const currency = String(command.currency || 'usd').toUpperCase();
+    return send(env, {
+      to: recipients,
+      bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
+      subject: `Your MASEST order ${reference} was cancelled`,
+      html: billingEmailHtml(env, `Order ${htmlEscape(reference)} cancelled`, [
+        `Order <b>${htmlEscape(reference)}</b> has been cancelled and nothing else will ship.`,
+        refunded > 0
+          ? `A refund of <b>${htmlEscape(currency)} ${refunded.toFixed(2)}</b> is returning to the original payment method.`
+          : 'No Stripe payment was captured for this cancellation.',
+        command.reason ? `Reason: ${htmlEscape(command.reason)}` : 'Reply to this email if you would like help reordering.',
+      ], { url: `${String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '')}/cart.html`, text: 'Start a new order' }),
+      category: 'order',
+      idempotencyKey: effectIdempotencyKey(effectRow),
+    });
+  }
   const cancellation = await dependencyResult(sb, effectRow);
   if (cancellation.skipped === 'already_refunded') return { skipped: 'already_refunded' };
   const { order } = await loadOrder(sb, effectRow.payload.order_id);
@@ -825,6 +1005,14 @@ function notificationFromEffect(effectRow) {
         body: 'A bank payment for your order failed, so the order was cancelled.',
         link: '/dashboard.html#orders',
       };
+    case 'quote_ready':
+      return {
+        company_id: payload.company_id,
+        type: 'offer',
+        title: 'Your quote is ready',
+        body: 'Requested pricing is ready to review and accept.',
+        link: '/dashboard.html#orders',
+      };
     case 'billing_failed':
       return {
         company_id: payload.company_id,
@@ -854,6 +1042,7 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
     shipstation_tracking_projection: 'apply_shipstation_tracking_integration_effect',
     resend_delivery_projection: 'apply_resend_delivery_integration_effect',
     qbo_change_projection: 'apply_qbo_change_integration_effect',
+    quote_message: 'deliver_quote_message_effect',
   }[effectRow.effect_type];
   if (localProjectionRpc) {
     const result = await rpcData(sb, localProjectionRpc, {
@@ -890,6 +1079,22 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
   // Cancellation chain. The two database-owned steps (restock, close) record their own
   // success inside the transaction that performs them; the provider-calling steps report
   // back so the next link can read their result.
+  const reversalRpc = effectRow.payload?.command_id ? {
+    order_restock: 'apply_order_reversal_restock_effect',
+    order_cancelled: 'apply_order_reversal_cancellation_effect',
+    order_reversal_complete: 'apply_order_reversal_complete_effect',
+  }[effectRow.effect_type] : null;
+  if (reversalRpc) {
+    const result = await rpcData(sb, reversalRpc, {
+      p_effect_id: effectRow.id,
+      p_worker_id: effectRow.lease_owner,
+    });
+    return {
+      providerRecorded: true,
+      providerResult: result || {},
+      skipped: Boolean(result?.skipped),
+    };
+  }
   const cancellationRpc = {
     order_restock: 'apply_order_restock_effect',
     order_cancelled: 'apply_order_cancellation_effect',
@@ -911,6 +1116,10 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
   }
   if (effectRow.effect_type === 'order_refund') {
     const result = await refundOrderEffect(env, sb, effectRow, dependencies);
+    return { providerRecorded: false, providerResult: result, skipped: Boolean(result.skipped) };
+  }
+  if (effectRow.effect_type === 'order_accounting_reversal') {
+    const result = await accountingReversalEffect(env, sb, effectRow, dependencies);
     return { providerRecorded: false, providerResult: result, skipped: Boolean(result.skipped) };
   }
   if (effectRow.effect_type === 'order_credit_memo') {
@@ -957,8 +1166,12 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
     delivered = await sendBillingRecoveryEffect(env, sb, effectRow, send);
   } else if (effectRow.effect_type === 'dispute_alert') {
     delivered = await sendDisputeEffect(env, effectRow, send);
+  } else if (effectRow.effect_type === 'order_refund_email') {
+    delivered = await sendRefundEmailEffect(env, sb, effectRow, send);
   } else if (effectRow.effect_type === 'order_cancellation_email') {
     delivered = await sendCancellationEmailEffect(env, sb, effectRow, send);
+  } else if (effectRow.effect_type === 'quote_offer_email') {
+    delivered = await sendQuoteOfferEffect(env, effectRow, send);
   } else {
     throw errorWithCode('unknown_integration_effect_type');
   }

@@ -66,12 +66,12 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
         <div class="site-support__conversation-body"><div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div></div>
         <div class="site-support__settings" id="siteSupportSettings" hidden>
           <p class="site-support__settings-intro">Choose when you get support email alerts. These apply to your staff account only.</p>
-          ${SUPPORT_PREFS.map(([id, key, title, help]) => `<label><input id="${id}" type="checkbox" data-support-pref="${key}"><span><b>${title}</b><small>${help}</small></span></label>`).join("")}
+          ${SUPPORT_PREFS.map(([id, key, title, help]) => `<label><input id="${id}" name="support_${key}" type="checkbox" data-support-pref="${key}"><span><b>${title}</b><small>${help}</small></span></label>`).join("")}
           <p class="site-support__settings-status" id="adminSupportSettingsStatus" role="status" aria-live="polite"></p>
         </div>
       </div>
     </section>
-    <button class="site-support__launcher" type="button" aria-label="Open customer support" aria-expanded="false" aria-controls="adminSupportConsole"><i class="ph ph-lifebuoy" aria-hidden="true"></i><span>Customer support</span><b data-support-count hidden>0</b></button>`;
+    <button class="site-support__launcher" type="button" title="Customer support" aria-label="Open customer support" aria-expanded="false" aria-controls="adminSupportConsole"><i class="ph ph-lifebuoy" aria-hidden="true"></i><span>Customer support</span><b data-support-count hidden>0</b></button>`;
   document.body.append(shell);
 
   document.querySelectorAll("[data-customer-chat-open]").forEach((link) => {

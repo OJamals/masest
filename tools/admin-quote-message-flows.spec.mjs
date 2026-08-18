@@ -211,6 +211,9 @@ test("staff reviews a requisition workspace and sends all priced lines", async (
   await expect(drawer.locator("[data-quote-workspace]")).toContainText("Need delivery by August.");
   await expect(drawer.locator("[data-quote-workspace]")).toContainText("HCR SDS");
   await drawer.locator("[data-offer-price]").first().fill("42.50");
+  const expiresAtValue = "2099-01-01T12:00";
+  const expiresAt = new Date(expiresAtValue).toISOString();
+  await drawer.locator("[data-offer-expiry]").fill(expiresAtValue);
 
   const sendResponse = page.waitForResponse((response) =>
     response.url().includes("/api/admin/quotes") && response.request().postDataJSON()?.action === "send_quote");
@@ -224,8 +227,9 @@ test("staff reviews a requisition workspace and sends all priced lines", async (
       { sku: "VK-HCR-5", product_sku: "hcr", name: "VertKleen HCR - 5 gal", qty: "2", unit_price: "42.50" },
       { sku: "VK-DBNPA-1", product_sku: "dbnpa", name: "VertKleen DBNPA - 1 gal", qty: "1", unit_price: "30" },
     ],
+    expires_at: expiresAt,
   });
-  await expect(drawer.locator("[data-drawer-status]")).toHaveText("Quote sent. Buyer can accept and check out.");
+  await expect(drawer.locator("[data-drawer-status]")).toHaveText("Quote committed. Buyer notification, message, and email are queued for delivery.");
 });
 
 test("staff replies to a support thread with the expected payload", async ({ page }) => {

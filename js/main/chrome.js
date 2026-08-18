@@ -414,7 +414,7 @@ export function renderChrome({
     <div class="wrap">
       <div class="foot-grid">
         <div>
-          <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="/img/masest-logo.png" alt="MASEST" width="469" height="585"></a>
+          <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="/img/masest-logo.png" alt="MASEST" width="469" height="585" loading="lazy" decoding="async"></a>
           <div class="foot-brand" translate="no">MASEST VertKleen&trade;</div>
           <p>Industrial cleaning candidates with current-SDS routing, controlled-trial planning, and quote support from Florida's Space Coast.</p>
         </div>

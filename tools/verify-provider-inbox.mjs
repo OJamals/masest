@@ -10,6 +10,7 @@ const envValue = (key) => {
   return match[1].trim().replace(/^['"]|['"]$/g, '');
 };
 const schema = fs.readFileSync('supabase/schema-provider-inbox.sql', 'utf8');
+const ownershipSchema = fs.readFileSync('supabase/schema-shipment-label-ownership.sql', 'utf8');
 const rollback = fs.readFileSync('supabase/rollback-provider-inbox.sql', 'utf8');
 const client = new pg.Client({ connectionString: envValue('SUPABASE_DB_URL') });
 
@@ -111,7 +112,7 @@ async function behavioralProof() {
     'shipstation_tracking_projection',
     'apply_shipstation_tracking_integration_effect',
   );
-  if (shipResult?.skipped !== 'unmatched_order') throw new Error('ShipStation unmatched proof failed');
+  if (shipResult?.skipped !== 'unmatched_label') throw new Error('ShipStation unmatched proof failed');
 
   const qboEvent = async (id, occurredAt, operation) => {
     const raw = JSON.stringify({ id, occurredAt, operation });
@@ -340,7 +341,11 @@ try {
     console.log(JSON.stringify({ providerInbox: 'STATUS', state: await state() }));
   } else if (mode === '--apply') {
     await client.query('begin');
-    try { await client.query(schema); await client.query('commit'); } catch (error) { await client.query('rollback'); throw error; }
+    try {
+      await client.query(ownershipSchema);
+      await client.query(schema);
+      await client.query('commit');
+    } catch (error) { await client.query('rollback'); throw error; }
     console.log(JSON.stringify({ providerInbox: 'APPLIED', state: await state() }));
   } else if (mode === '--rollback') {
     await client.query('begin');
@@ -350,6 +355,7 @@ try {
     const baseline = await state();
     await client.query('begin');
     try {
+      await client.query(ownershipSchema);
       await client.query(schema);
       const installed = await state();
       const verification = await behavioralProof();

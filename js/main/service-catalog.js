@@ -291,7 +291,7 @@ function updateSummary(catalog, items) {
   });
 }
 
-function activateServiceTab(root, tab, { focus = false } = {}) {
+function activateServiceTab(root, tab, { focus = false, syncUrl = true } = {}) {
   const category = tab.getAttribute("data-service-tab");
   root.querySelectorAll("[data-service-tab]").forEach((button) => {
     const active = button === tab;
@@ -303,6 +303,9 @@ function activateServiceTab(root, tab, { focus = false } = {}) {
   root.querySelectorAll("[data-service-panel]").forEach((panel) => {
     panel.hidden = panel.getAttribute("data-service-panel") !== category;
   });
+  if (syncUrl) {
+    history.replaceState(null, "", `${location.pathname}${location.search}#service-${slugify(category)}`);
+  }
   if (focus) tab.focus();
 }
 
@@ -360,6 +363,11 @@ function renderCatalog(root, catalog) {
     </div>
   `;
   bindTabs(root);
+  let requestedHash = location.hash;
+  try { requestedHash = decodeURIComponent(requestedHash); } catch { /* ignore malformed external fragments */ }
+  const requestedTab = [...root.querySelectorAll("[data-service-tab]")]
+    .find((tab) => requestedHash === `#service-${slugify(tab.dataset.serviceTab)}`);
+  if (requestedTab) activateServiceTab(root, requestedTab, { syncUrl: false });
 
   // Reviews: compact star badge per line item/package, hydrated once the cards
   // above exist. Dynamic import keeps auth.js (and the Supabase SDK it pulls

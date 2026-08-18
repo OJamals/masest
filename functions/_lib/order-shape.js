@@ -92,6 +92,7 @@ export function orderRowFromSession(session, customerEmail = null) {
   const settled = !s.payment_status || s.payment_status === "paid";
   return {
     company_id: s.metadata?.company_id || null,
+    user_id: s.metadata?.buyer_user_id || null,
     status: settled ? "paid" : "pending_payment",
     payment_method: "stripe",
     // null keeps unsettled ACH orders out of the QBO claim queue (claim_qbo_orders

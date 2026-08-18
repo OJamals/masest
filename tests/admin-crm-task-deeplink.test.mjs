@@ -22,14 +22,15 @@ test('backend: QUOTE_SELECT const is defined and used in the list branch', () =>
   assert.match(QUOTES_API, /\.select\(QUOTE_SELECT\)\.eq\('id'/);
 });
 
-test('backend: ?id= single-fetch returns { quote } or { error }', () => {
-  assert.match(QUOTES_API, /\{\s*quote:\s*data\s*\}/);
+test('backend: ?id= single-fetch decorates and returns { quote } or { error }', () => {
+  assert.match(QUOTES_API, /const \[quote\] = await quotesWithDelivery\(sb, \[data\]\)/);
+  assert.match(QUOTES_API, /json\(200, \{\s*quote\s*\}\)/);
   assert.match(QUOTES_API, /\{\s*error:\s*'not_found'\s*\}/);
 });
 
 test('backend: ?id= branch is gated — requires id AND no view AND not export=csv', () => {
-  assert.match(QUOTES_API, /_singleId && !new URL\(request\.url\)\.searchParams\.get\('view'\)/);
-  assert.match(QUOTES_API, /searchParams\.get\('export'\) !== 'csv'/);
+  assert.match(QUOTES_API, /const view = searchParams\.get\('view'\)/);
+  assert.match(QUOTES_API, /_singleId && !view && searchParams\.get\('export'\) !== 'csv'/);
 });
 
 test('backend: ?id= branch uses maybeSingle and returns needs_migration on schema error', () => {

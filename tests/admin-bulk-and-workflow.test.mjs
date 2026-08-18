@@ -44,11 +44,14 @@ test('orders bulk-accept is bounded, audited, and reports what it skipped', () =
   assert.match(ordersUi, /skipped \(already accepted or closed\)/);
 });
 
-test('status moves stay per-row so each keeps its transition guard', () => {
-  // Accept is safe to batch because it stamps ownership only. A bulk status
-  // endpoint would bypass planOrderStatusWrite.
+test('economic status moves require explicit per-order commands', () => {
+  // Accept is safe to batch because it stamps ownership only. Economic status
+  // changes remain per-order and cannot bypass refund/cancel/settlement commands.
   assert.doesNotMatch(ordersApi, /action === 'bulk_status'|action === 'update_orders'/);
-  assert.match(ordersApi, /planOrderStatusWrite\(before, normalized\.patch\.status\)/);
+  assert.match(ordersApi, /error: 'use_explicit_order_action'/);
+  assert.match(ordersApi, /queueRefundCommand\(/);
+  assert.match(ordersApi, /confirmCancellationCommand\(/);
+  assert.doesNotMatch(ordersUi, /data-order-status=/);
 });
 
 test('manual order entry uses a business picker and structured line items', () => {

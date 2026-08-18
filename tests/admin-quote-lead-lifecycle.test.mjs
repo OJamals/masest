@@ -10,6 +10,10 @@ function lifecycleStore(overrides = {}) {
       calls.push(['currentStage', id]);
       return 'qualified';
     },
+    async lifecycleQuote(id) {
+      calls.push(['lifecycleQuote', id]);
+      return { id, source: 'contact', status: 'new', pipeline_stage: 'new', payload: {} };
+    },
     async updateQuote(id, patch) {
       calls.push(['updateQuote', id, patch]);
       return { id, email: 'buyer@example.com', product: 'HCR', company: 'Acme', type: 'quote', ...patch };
@@ -48,6 +52,14 @@ function lifecycleStore(overrides = {}) {
         { id: 'q2', email: '', name: 'No Email', status: 'contacted', next_step: '', notes: 'Keep' },
       ];
     },
+    async expirableOffers(limit) {
+      calls.push(['expirableOffers', limit]);
+      return [];
+    },
+    async expireOffer(input) {
+      calls.push(['expireOffer', input]);
+      return { id: input.quote.id };
+    },
     async updateDueQuote(id, patch) {
       calls.push(['updateDueQuote', id, patch]);
       return null;
@@ -63,6 +75,7 @@ function lifecycleStore(overrides = {}) {
           company_id: '33333333-3333-4333-8333-333333333333',
           offer_order_id: '44444444-4444-4444-8444-444444444444',
           offer_status: 'sent',
+          offer_expires_at: '2099-01-01T00:00:00.000Z',
         },
       };
     },
@@ -119,9 +132,9 @@ function lifecycleStore(overrides = {}) {
     async insertOrderItems(orderId, items) {
       calls.push(['insertOrderItems', orderId, items]);
     },
-    async updateOffer(input) {
-      calls.push(['updateOffer', input]);
-      return { id: input.quote.id, ...input.patch };
+    async commitOffer(input) {
+      calls.push(['commitOffer', input]);
+      return { id: input.quote.id, payload: input.payload, delivery_state: 'queued' };
     },
     async deleteOrder(id, scope) {
       calls.push(['deleteOrder', id, scope]);
@@ -318,6 +331,7 @@ test('due sweep owns reminder policy and rescheduling outcomes', async () => {
     processed: 2,
     buyer_reminders: 1,
     staff_alerts: 1,
+    expired_offers: 0,
     results: [
       { id: 'q1', ok: true, emailed: true, error: undefined },
       { id: 'q2', ok: true, emailed: false, error: undefined },
@@ -348,37 +362,36 @@ test('workspace exposes requisition and active offer through lifecycle interface
   assert.deepEqual(result.body.workspace.messages, [{ id: 'm1' }]);
 });
 
-test('send offer links canonical Order, advances proposal, and emits effects', async () => {
+test('send offer links canonical Order and atomically queues delivery effects', async () => {
   const store = lifecycleStore();
   const effects = [];
   const lifecycle = createQuoteLeadLifecycle({
     store,
     now: () => new Date('2026-07-29T12:00:00Z'),
-    handoff: async (input) => {
-      effects.push(['handoff', input]);
-      return { posted: true };
-    },
-    offerReady: async (input) => effects.push(['offerReady', input]),
     audit: async (input) => effects.push(['audit', input]),
   });
 
   const result = await lifecycle.sendOffer({
     id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     items: [{ sku: 'A', qty: 2, unit_price: 25 }],
+    expiresAt: '2026-08-01T12:00:00.000Z',
     actor: 'owner@masest.co',
     user: { email: 'owner@masest.co' },
     appUrl: 'https://masest.co',
   });
 
-  assert.equal(result.status, 200);
+  assert.equal(result.status, 202);
   assert.equal(result.body.order_id, '55555555-5555-4555-8555-555555555555');
   const create = store.calls.find(([name]) => name === 'createOrder');
   assert.equal(create[1].status, 'cart');
   assert.equal(create[1].total, 50);
-  const offer = store.calls.find(([name]) => name === 'updateOffer');
-  assert.equal(offer[1].patch.pipeline_stage, 'proposal');
-  assert.equal(offer[1].patch.payload.offer_status, 'sent');
-  assert.deepEqual(effects.map(([name]) => name), ['handoff', 'offerReady', 'audit']);
+  const offer = store.calls.find(([name]) => name === 'commitOffer');
+  assert.equal(offer[1].payload.offer_status, 'sent');
+  assert.equal(offer[1].payload.offer_expires_at, '2026-08-01T12:00:00.000Z');
+  assert.deepEqual(offer[1].effects.map((effect) => effect.effect_type), [
+    'company_notification', 'quote_message', 'quote_offer_email',
+  ]);
+  assert.deepEqual(effects.map(([name]) => name), ['audit']);
 });
 
 test('convert links a canonical NET Order and closes lead as won', async () => {

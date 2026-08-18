@@ -28,6 +28,12 @@ if (!configuredMediaBase && !publicSupabaseUrl) {
 const cmsMediaBase = configuredMediaBase
   || `${publicSupabaseUrl}/storage/v1/object/public/content-assets/site`;
 const rewritableExtensions = new Set(['.css', '.html', '.js', '.json', '.xml']);
+const CRITICAL_FONT_PRELOAD = '<link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/satoshi/satoshi-01.woff2">';
+
+function ensureCriticalFontPreload(html) {
+  if (/rel=["']preload["'][^>]+satoshi-01\.woff2/i.test(html)) return html;
+  return html.replace(/<head(\s[^>]*)?>/i, (head) => `${head}\n${CRITICAL_FONT_PRELOAD}`);
+}
 
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
@@ -59,7 +65,8 @@ for (const f of files) {
   mkdirSync(dirname(dest), { recursive: true });
   if (rewritableExtensions.has(extname(f).toLowerCase()) && f !== 'data/content/site-images.json') {
     const source = readFileSync(f, 'utf8');
-    const compiled = rewriteCmsImageReferences(source, siteImagePaths, cmsMediaBase);
+    let compiled = rewriteCmsImageReferences(source, siteImagePaths, cmsMediaBase);
+    if (extname(f).toLowerCase() === '.html') compiled = ensureCriticalFontPreload(compiled);
     writeFileSync(dest, compiled);
     if (compiled !== source) rewritten++;
   } else {

@@ -108,7 +108,7 @@ export function openImageLibraryPicker({
       </div>
       <section class="shared-image-upload" data-shared-image-upload hidden>
         <p data-shared-image-file-name class="muted"></p>
-        <label class="confirm-dialog-field"><span>Alt text</span><input class="adm-input" name="image_alt" autocomplete="off" data-shared-image-alt maxlength="300" placeholder="Describe the image"></label>
+        <label class="confirm-dialog-field"><span>Alt text</span><input class="adm-input" name="image_alt" autocomplete="off" data-shared-image-alt maxlength="300" placeholder="Describe the image…"></label>
         <button class="btn btn-primary" type="button" data-shared-image-upload-submit>Upload and use image</button>
       </section>` : ""}
       ${manage ? '<input type="file" name="replacement_image_file" accept=".avif,.jpg,.jpeg,.png,.webp,image/avif,image/jpeg,image/png,image/webp" data-shared-image-replace-file hidden>' : ""}
@@ -121,7 +121,7 @@ export function openImageLibraryPicker({
           <label class="search-field shared-image-library-search">
             <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
             <span class="sr-only">Search site images</span>
-            <input type="search" name="site_image_search" placeholder="Search by name or alt text" data-shared-image-search>
+            <input type="search" name="site_image_search" autocomplete="off" placeholder="Search by name or alt text…" data-shared-image-search>
           </label>
           ${manage ? `<select class="adm-select" name="asset_status" aria-label="Filter asset status" data-shared-image-status-filter>
             <option value="available">Available</option>
@@ -140,7 +140,7 @@ export function openImageLibraryPicker({
               <strong data-shared-image-preview-name></strong>
               <small data-shared-image-preview-meta></small>
               <label>Alt text
-                <input class="adm-input" name="preview_alt" type="text" maxlength="300" data-shared-image-preview-alt>
+                <input class="adm-input" name="preview_alt" type="text" autocomplete="off" maxlength="300" data-shared-image-preview-alt>
               </label>
               <div data-shared-image-impact></div>
               <div class="shared-image-preview-actions">

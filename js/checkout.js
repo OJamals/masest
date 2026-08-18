@@ -1,4 +1,10 @@
 import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260808b';
+import { catalogImageDimensions } from './main/catalog-data.js?v=20260808b';
+import {
+  createShippingRequestCoordinator,
+  fetchShippingJson,
+  shippingRequestSnapshot,
+} from './shipping-request.js?v=20260808b';
 
 const money = (amount, currency = 'usd') => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: String(currency).toUpperCase(),
@@ -51,10 +57,12 @@ function checkoutError(error) {
     shipping_domestic_only: 'Online checkout ships within the United States. Request a quote for international freight.',
     address_not_deliverable: 'Google could not confirm this delivery address. Review the street, unit, city, state, and ZIP.',
     address_validation_unavailable: 'Address verification is temporarily unavailable. Try again.',
+    address_validation_timeout: 'Address verification took too long. Try again.',
     address_validation_not_configured: 'Address verification is offline. Contact MASEST and we will place this order for you.',
     shipping_package_profile_missing: 'A cart item is missing shipping dimensions. Return to the cart and request a freight quote.',
     shipping_cart_too_large: 'This cart needs freight planning. Send a quote request for a consolidated shipment.',
     shipping_rates_unavailable: 'No live carrier rate is available for this address and cart.',
+    shipping_rates_timeout: 'Carrier rates took too long to respond. Try again.',
     shipping_rates_not_configured: 'Live shipping rates are offline. Contact MASEST and we will place this order for you.',
     shipping_quote_not_configured: 'Live shipping rates are offline. Contact MASEST and we will place this order for you.',
     shipping_carriers_unavailable: 'No carrier is available right now. Try again shortly.',
@@ -62,6 +70,13 @@ function checkoutError(error) {
     shipping_quote_cart_changed: 'Cart changed. Recalculate shipping before payment.',
     shipping_quote_required: 'Calculate shipping before continuing to payment.',
     shipping_quote_invalid: 'Shipping selection could not be verified. Recalculate rates.',
+    shipping_quote_legacy: 'Shipping rate needs to be refreshed. Recalculate rates.',
+    shipping_plan_not_found: 'The saved carton plan is no longer available. Recalculate shipping.',
+    shipping_plan_mismatch: 'Shipping details changed. Recalculate rates before payment.',
+    shipping_plan_integrity_failed: 'Shipping details could not be verified. Recalculate rates before payment.',
+    shipping_plan_store_unavailable: 'Shipping details could not be saved. Try calculating rates again.',
+    buyer_email_invalid: 'Enter a valid email address for order updates.',
+    commerce_context_unavailable: 'Your account pricing is temporarily unavailable. Try again before payment.',
     shipping_product_unavailable: `An item in your cart is not available for online checkout${skuList}. Request a quote instead.`,
     out_of_stock: `Not enough stock for every item${skuList}. Adjust quantities in the cart or request a quote.`,
     not_purchasable: `These items need bulk freight review before checkout${skuList}. Use the quote form.`,
@@ -70,17 +85,26 @@ function checkoutError(error) {
     request_too_large: 'This cart is too large to process here. Request a quote instead.',
     stripe_customer_setup_failed: 'Stripe could not update this account address. Try again.',
     net_checkout_unavailable: 'Ordering on account is arranged by your MASEST account team. Request a quote to order on NET terms.',
+    quote_checkout_window_too_short: 'This quote expires too soon to open secure payment. Ask your account team for a revised expiry.',
+    quote_checkout_processing: 'Stripe already completed this payment session. We are finishing the order now; refresh your Orders list shortly.',
+    quote_checkout_busy: 'Your quote payment session changed in another tab. Wait a moment and try again.',
+    quote_checkout_attempt_unavailable: 'Your quote payment session could not be verified. Try again before opening another payment.',
+    quote_checkout_expiry_unverified: 'The prior quote payment session could not be closed safely. Try again shortly.',
     stripe_error: 'Stripe could not start payment. Try again.',
   })[code] || 'Checkout could not continue. Review the form and try again.';
 }
 
 function productMeta(parent, variant) {
+  const imageUrl = parent.image_url || variant.image_url || '';
+  const dimensions = catalogImageDimensions(imageUrl);
   return {
     name: `${parent.name || variant.name || variant.vsku} - ${variant.label || 'Each'}`,
     price: Number(variant.price),
     currency: variant.currency || parent.currency || 'usd',
-    imageUrl: parent.image_url || variant.image_url || '',
+    imageUrl,
     imageAlt: parent.photo_alt || `${parent.name || variant.name || 'Product'} product photo`,
+    imageWidth: Number(parent.image_width || variant.image_width) || dimensions.width,
+    imageHeight: Number(parent.image_height || variant.image_height) || dimensions.height,
   };
 }
 
@@ -255,7 +279,7 @@ async function boot() {
   const { mountAddressAutocomplete } = autocompleteModule;
   const { api, getToken, me } = authModule;
   const { isStaffAccount, replaceBuyerSurface } = staffModule;
-  const cart = items();
+  let cart = items();
   const empty = document.getElementById('checkoutEmpty');
   const shell = document.getElementById('checkoutShell');
   if (!cart.length) { empty.hidden = false; return; }
@@ -287,7 +311,11 @@ async function boot() {
   const sameBilling = document.getElementById('billingSameAsShipping');
   const billingFields = document.getElementById('billingAddressFields');
   const shippingPending = document.getElementById('shippingPending');
-  const state = { catalog: new Map(), saved: [], token: null, quote: null, selectedRate: null };
+  const rateRequests = createShippingRequestCoordinator();
+  const state = {
+    catalog: new Map(), saved: [], token: null, quote: null, selectedRate: null,
+    quoteSnapshot: null,
+  };
 
   function showStatus(message, kind = '') {
     status.textContent = message;
@@ -342,9 +370,11 @@ async function boot() {
   }
 
   function invalidateRates() {
+    rateRequests.cancel();
     const hadQuote = Boolean(state.quote);
     state.quote = null;
     state.selectedRate = null;
+    state.quoteSnapshot = null;
     rateOptions.replaceChildren();
     ratesBox.hidden = true;
     pay.disabled = true;
@@ -352,11 +382,25 @@ async function boot() {
     shippingPending.textContent = '';
     shippingPending.hidden = true;
     calculate.classList.add('btn-primary');
+    calculate.disabled = false;
     calculate.classList.remove('btn-secondary', 'checkout-recalculate');
     calculate.textContent = 'Confirm address & view rates';
     showStatus('');
     if (hadQuote) renderTotals();
   }
+
+  function currentRateInput() {
+    const values = formValues(form);
+    return {
+      cart: items().map((line) => ({ sku: line.sku, qty: line.qty })),
+      email: clean(values.email),
+      address: checkoutAddress(values, 'shipping'),
+      billing_same_as_shipping: sameBilling.checked,
+      billing_address: sameBilling.checked ? null : checkoutAddress(values, 'billing'),
+    };
+  }
+
+  const rateSnapshot = (input = currentRateInput()) => shippingRequestSnapshot(input);
 
   // The dispatch date the rates were quoted against, as returned by /api/shipping-rates.
   const shipDate = () => state.quote?.fulfillment?.ship_date || null;
@@ -384,7 +428,7 @@ async function boot() {
     document.getElementById('checkoutLines').innerHTML = cart.map((line) => {
       const product = state.catalog.get(line.sku);
       const media = product?.imageUrl
-        ? `<figure class="checkout-line-media"><img src="${escapeHtml(product.imageUrl)}" alt="${escapeHtml(product.imageAlt)}"></figure>`
+        ? `<figure class="checkout-line-media"><img src="${escapeHtml(product.imageUrl)}" alt="${escapeHtml(product.imageAlt)}" loading="lazy" decoding="async" width="${product.imageWidth}" height="${product.imageHeight}"></figure>`
         : '';
       return `<article class="checkout-line">${media}<span><b>${escapeHtml(product?.name || line.sku)}</b><small>${escapeHtml(line.sku)}</small><small>Qty: ${line.qty}</small></span><strong>${product ? money(product.price * line.qty, product.currency) : 'At payment'}</strong></article>`;
     }).join('');
@@ -635,6 +679,12 @@ async function boot() {
     syncFieldError(event.target);
     if (rateBoundFields.has(event.target.name)) invalidateRates();
   });
+  // Cart changes can arrive from another storefront control in this document or another
+  // tab. Disable payment immediately; the click-time snapshot check remains the final guard.
+  document.addEventListener('cart:updated', invalidateRates);
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'masest_cart') invalidateRates();
+  });
   // Re-check on blur so a field the buyer filled and then emptied re-reports without waiting
   // for another submit, and so a corrected value drops its message immediately.
   form.addEventListener('focusout', (event) => {
@@ -689,21 +739,19 @@ async function boot() {
     calculate.disabled = true;
     calculate.textContent = 'Verifying address & calculating…';
     showStatus('Google is verifying the address and ShipEngine is comparing live carrier rates.');
-    const values = formValues(form);
+    const input = currentRateInput();
+    const requestSnapshot = rateSnapshot(input);
+    const rateRequest = rateRequests.begin(requestSnapshot);
     try {
-      const response = await fetch('/api/shipping-rates', {
+      const result = await fetchShippingJson('/api/shipping-rates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}) },
-        body: JSON.stringify({
-          cart,
-          email: clean(values.email),
-          address: checkoutAddress(values, 'shipping'),
-          billing_same_as_shipping: sameBilling.checked,
-          billing_address: sameBilling.checked ? null : checkoutAddress(values, 'billing'),
-        }),
+        body: JSON.stringify(input),
+      }, {
+        signal: rateRequest.signal,
       });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw Object.assign(new Error(result.error), { status: response.status, data: result });
+      if (!rateRequests.isCurrent(rateRequest, rateSnapshot())) return;
+      cart = input.cart;
       state.quote = result;
       state.selectedRate = 0;
       fillAddress('shipping', result.address);
@@ -712,12 +760,18 @@ async function boot() {
         fillAddress('billing', result.billing_address);
         showAddressDetails('billing');
       }
+      state.quoteSnapshot = rateSnapshot();
       renderRates();
     } catch (error) {
+      if (error?.code === 'shipping_request_cancelled') return;
+      if (!rateRequests.isCurrent(rateRequest, rateSnapshot())) return;
       showStatus(checkoutError(error), 'err');
     } finally {
-      calculate.disabled = false;
-      calculate.textContent = state.quote ? 'Recalculate rates' : 'Confirm address & view rates';
+      if (rateRequests.isCurrent(rateRequest, requestSnapshot)) {
+        calculate.disabled = false;
+        calculate.textContent = state.quote ? 'Recalculate rates' : 'Confirm address & view rates';
+        rateRequests.finish(rateRequest);
+      }
     }
   });
 
@@ -735,6 +789,11 @@ async function boot() {
   pay.addEventListener('click', async () => {
     const rate = state.quote?.rates?.[state.selectedRate];
     if (!rate) { showStatus('Calculate and select shipping before payment.', 'err'); return; }
+    if (state.quoteSnapshot !== rateSnapshot()) {
+      invalidateRates();
+      showStatus('Address or cart changed. Recalculate shipping before payment.', 'err');
+      return;
+    }
     pay.disabled = true;
     pay.textContent = 'Opening secure payment…';
     showStatus('Saving verified order details and opening Stripe.');
@@ -750,7 +809,16 @@ async function boot() {
         purchaseOrderNumber: clean(values.purchaseOrderNumber), shippingQuoteToken: rate.token,
       });
     } catch (error) {
-      if (['shipping_quote_expired', 'shipping_quote_cart_changed'].includes(error?.code)) invalidateRates();
+      if ([
+        'shipping_quote_expired',
+        'shipping_quote_cart_changed',
+        'shipping_quote_invalid',
+        'shipping_quote_legacy',
+        'shipping_quote_required',
+        'shipping_plan_not_found',
+        'shipping_plan_mismatch',
+        'shipping_plan_integrity_failed',
+      ].includes(error?.code)) invalidateRates();
       showStatus(checkoutError(error), 'err');
       pay.disabled = !state.quote;
       pay.innerHTML = 'Continue to payment <i class="ph ph-lock-key" aria-hidden="true"></i>';

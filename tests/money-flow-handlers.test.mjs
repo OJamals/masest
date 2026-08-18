@@ -20,10 +20,14 @@ const variant = {
 };
 
 function jsonRequest(url, body, headers = {}) {
+  const payload = String(url).endsWith('/api/checkout')
+    && body && typeof body === 'object' && !Array.isArray(body) && body.email == null
+    ? { ...body, email: 'buyer@example.test' }
+    : body;
   return new Request(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -145,7 +149,7 @@ function boundaryCheckoutHandler(calls = []) {
 }
 
 function checkoutJsonWithByteLength(byteLength) {
-  const body = { cart: [{ sku: 'VK-1', qty: 1 }], padding: '' };
+  const body = { email: 'buyer@example.test', cart: [{ sku: 'VK-1', qty: 1 }], padding: '' };
   const empty = JSON.stringify(body);
   body.padding = 'x'.repeat(byteLength - encoder.encode(empty).byteLength);
   const source = JSON.stringify(body);
@@ -195,6 +199,11 @@ test('paid checkout verifies a signed carrier selection and bypasses legacy fixe
   const calls = [];
   let sessionParams;
   const shippingSelection = {
+    v: 3,
+    plan_id: 'se-rate-ground',
+    plan_digest: 'plan-digest',
+    cart_digest: 'cart-digest',
+    address_digest: 'address-digest',
     address: {
       name: 'Omar Buyer', company: 'Acme HVAC', phone: '321-555-0100',
       address1: '100 Main St', address2: '', city: 'Melbourne', state: 'FL',
@@ -206,6 +215,24 @@ test('paid checkout verifies a signed carrier selection and bypasses legacy fixe
       amount_minor: 2450, currency: 'usd', delivery_days: 5,
     },
   };
+  const storedPlan = {
+    contract_version: 3,
+    plan_id: shippingSelection.plan_id,
+    plan_digest: shippingSelection.plan_digest,
+    cart_digest: shippingSelection.cart_digest,
+    address_digest: shippingSelection.address_digest,
+    rate_id: shippingSelection.rate.rate_id,
+    carrier_id: shippingSelection.rate.carrier_id,
+    service_code: shippingSelection.rate.service_code,
+    amount_minor: shippingSelection.rate.amount_minor,
+    currency: shippingSelection.rate.currency,
+    cart: [{ sku: 'VK-1', qty: 2 }],
+    address: shippingSelection.address,
+    billing_address: shippingSelection.address,
+    billing_same_as_shipping: true,
+    rate: shippingSelection.rate,
+    packages: [{ package_code: 'package', weight: { value: 20, unit: 'pound' } }],
+  };
   const handler = createCheckoutHandler({
     adminClient: () => checkoutDb(calls),
     tierForRequest: async () => ({ tier: 'retail' }),
@@ -215,6 +242,7 @@ test('paid checkout verifies a signed carrier selection and bypasses legacy fixe
       assert.deepEqual(cart, [{ sku: 'VK-1', qty: 2 }]);
       return shippingSelection;
     },
+    loadShippingQuotePlan: async () => ({ outcome: 'found', plan: storedPlan }),
     createStripe: () => ({
       checkout: { sessions: { async create(params) {
         calls.push('stripe.session.create');
@@ -567,7 +595,7 @@ function paidSession() {
   };
 }
 
-function webhookDb(calls, persistResults, effectResults = []) {
+function webhookDb(calls, persistResults, effectResults = [], recoveredOrder = {}) {
   return {
     async rpc(name, args) {
       calls.push([`rpc.${name}`, args]);
@@ -595,7 +623,16 @@ function webhookDb(calls, persistResults, effectResults = []) {
           eq() { return this; },
           async maybeSingle() {
             calls.push('orders.effect-recovery');
-            return { data: { id: 'order-1', order_number: 'MST-00000123', company_id: null }, error: null };
+            return {
+              data: {
+                id: 'order-1',
+                order_number: 'MST-00000123',
+                company_id: null,
+                status: 'paid',
+                ...recoveredOrder,
+              },
+              error: null,
+            };
           },
         };
       }
@@ -617,6 +654,64 @@ test('webhook rejects invalid signature before DB access', async () => {
   });
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
   assert.deepEqual(result, { status: 400, body: { error: 'invalid_signature' } });
+});
+
+test('expired Checkout webhook terminalizes the exact persisted Quote attempt', async () => {
+  const finished = [];
+  const session = paidSession();
+  session.status = 'expired';
+  session.metadata.quote_checkout_attempt_id = 'attempt-1';
+  session.metadata.quote_id = 'quote-1';
+  session.metadata.quote_order_id = 'draft-1';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_checkout_expired',
+      type: 'checkout.session.expired',
+      data: { object: session },
+    }),
+    adminClient: () => ({}),
+    finishQuoteCheckoutAttempt: async (_sb, exactSession, terminal) => {
+      finished.push({ session: exactSession, terminal });
+      return { status: 'expired' };
+    },
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.deepEqual(result, { status: 200, body: { received: true } });
+  assert.equal(finished[0].session.id, session.id);
+  assert.deepEqual(finished[0].terminal, {
+    terminalStatus: 'expired',
+    reason: 'provider_expired_webhook',
+  });
+});
+
+test('quoted Checkout preflight rejects a mismatched Session before any Order or effect mutation', async () => {
+  const calls = [];
+  const transitions = [];
+  const session = paidSession();
+  session.metadata.quote_id = 'quote-1';
+  session.metadata.quote_order_id = 'draft-1';
+  session.metadata.quote_checkout_attempt_id = 'attempt-1';
+  session.metadata.quote_offer_revision = '2';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_quote_wrong_session',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    }),
+    adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
+    preflightQuoteCheckoutAttempt: async (_sb, exactSession, eventId) => {
+      calls.push(['attempt.preflight', exactSession.id, eventId]);
+      return { error: 'quote_checkout_session_identity_conflict' };
+    },
+    finalizeQuoteOrder: async (...args) => { transitions.push(args); return { ok: true }; },
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+
+  assert.deepEqual(result, { status: 503, body: { error: 'quote_checkout_attempt_preflight_failed' } });
+  assert.deepEqual(calls, [['attempt.preflight', session.id, 'evt_quote_wrong_session']]);
+  assert.deepEqual(transitions, []);
 });
 
 test('webhook hydrates an incomplete checkout event before persisting the paid order', async () => {
@@ -695,6 +790,45 @@ test('duplicate webhook delivery recovers and enqueues the same effects before 2
   });
 });
 
+test('stale completed replay cannot resurrect a quoted ACH attempt after payment failure', async () => {
+  const calls = [];
+  const transitions = [];
+  const attempts = [];
+  const session = paidSession();
+  session.payment_status = 'unpaid';
+  session.metadata.quote_id = 'quote-1';
+  session.metadata.quote_order_id = 'draft-1';
+  session.metadata.quote_checkout_attempt_id = 'attempt-failed';
+  session.metadata.quote_offer_revision = '1';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_completed_stale',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    }),
+    updateCheckoutSession: async () => { throw new Error('stale event must stop before provider update'); },
+    adminClient: () => webhookDb(
+      calls,
+      [{ data: null, error: { code: '23505' } }],
+      [],
+      { status: 'cancelled' },
+    ),
+    preflightQuoteCheckoutAttempt: async () => ({ action: 'stale' }),
+    markQuotePaymentPending: async (...args) => { transitions.push(args); return { ok: true }; },
+    finishQuoteCheckoutAttempt: async (...args) => { attempts.push(args); return { status: 'completed' }; },
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+
+  assert.deepEqual(result, {
+    status: 200,
+    body: { received: true, duplicate: true, stale: true },
+  });
+  assert.deepEqual(transitions, []);
+  assert.deepEqual(attempts, []);
+  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.ingest'), false);
+});
+
 test('webhook persistence failure retries; effects enqueue only after durable order', async () => {
   const calls = [];
   const persistResults = [
@@ -743,10 +877,13 @@ test('quoted Stripe sessions finalize card orders but retain ACH drafts while pe
   for (const paymentStatus of ['paid', 'unpaid']) {
     const calls = [];
     const transitions = [];
+    const attempts = [];
     const session = paidSession();
     session.payment_status = paymentStatus;
     session.metadata.quote_id = 'quote-1';
     session.metadata.quote_order_id = 'draft-1';
+    session.metadata.quote_checkout_attempt_id = `attempt-${paymentStatus}`;
+    session.metadata.quote_offer_revision = '1';
     const handler = createStripeWebhookHandler({
       constructEvent: async () => ({
         id: `evt_${paymentStatus}`,
@@ -755,6 +892,7 @@ test('quoted Stripe sessions finalize card orders but retain ACH drafts while pe
       }),
       updateCheckoutSession: async () => {},
       adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
+      preflightQuoteCheckoutAttempt: async () => ({ action: 'process' }),
       finalizeQuoteOrder: async (_sb, input) => {
         transitions.push(['finalize', input]);
         return { ok: true };
@@ -762,6 +900,10 @@ test('quoted Stripe sessions finalize card orders but retain ACH drafts while pe
       markQuotePaymentPending: async (_sb, input) => {
         transitions.push(['pending', input]);
         return { ok: true };
+      },
+      finishQuoteCheckoutAttempt: async (_sb, exactSession, terminal) => {
+        attempts.push({ sessionId: exactSession.id, terminal });
+        return { status: 'completed' };
       },
     });
 
@@ -772,6 +914,13 @@ test('quoted Stripe sessions finalize card orders but retain ACH drafts while pe
       draftOrderId: 'draft-1',
       finalOrderId: 'order-1',
     }]]);
+    assert.deepEqual(attempts, [{
+      sessionId: session.id,
+      terminal: {
+        terminalStatus: 'completed',
+        reason: paymentStatus === 'paid' ? 'payment_completed' : 'payment_pending',
+      },
+    }]);
   }
 });
 
@@ -849,6 +998,8 @@ test('successful quoted ACH payment finalizes the pending quote', async () => {
     adminClient: () => achDb(calls, [
       { data: { id: 'order-1', status: 'paid', company_id: null }, error: null },
     ]),
+    preflightQuoteCheckoutAttempt: async () => ({ action: 'duplicate' }),
+    finishQuoteCheckoutAttempt: async () => ({ status: 'completed' }),
     finalizeQuoteOrder: async (_sb, input) => {
       finalized.push(input);
       return { ok: true };
@@ -862,6 +1013,29 @@ test('successful quoted ACH payment finalizes the pending quote', async () => {
     draftOrderId: 'draft-1',
     finalOrderId: 'order-1',
   }]);
+});
+
+test('quoted ACH settlement preflights the exact attempt before changing the Order', async () => {
+  const calls = [];
+  const session = paidSession();
+  session.metadata.quote_id = '11111111-1111-4111-8111-111111111111';
+  session.metadata.quote_order_id = '22222222-2222-4222-8222-222222222222';
+  session.metadata.quote_checkout_attempt_id = '33333333-3333-4333-8333-333333333333';
+  session.metadata.quote_offer_revision = '1';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_quoted_ach_preflight',
+      type: 'checkout.session.async_payment_succeeded',
+      data: { object: session },
+    }),
+    adminClient: () => achDb(calls, []),
+    preflightQuoteCheckoutAttempt: async () => ({ error: 'identity_conflict' }),
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.deepEqual(result, { status: 503, body: { error: 'quote_checkout_attempt_preflight_failed' } });
+  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'orders.claim'), false);
+  assert.equal(calls.some((call) => Array.isArray(call) && call[0] === 'effects.ingest'), false);
 });
 
 test('ACH claim failure returns retryable 503 before stock decrement', async () => {
@@ -905,9 +1079,11 @@ test('test-mode ACH settlement remains outside the production QBO queue', async 
 test('failed quoted ACH payment reopens the accepted draft after cancelling its order', async () => {
   const calls = [];
   const reopened = [];
+  const attempts = [];
   const session = paidSession();
   session.metadata.quote_id = 'quote-1';
   session.metadata.quote_order_id = 'draft-1';
+  session.metadata.quote_checkout_attempt_id = 'attempt-failed';
   const handler = createStripeWebhookHandler({
     constructEvent: async () => ({
       id: 'evt_ach_failed',
@@ -917,9 +1093,14 @@ test('failed quoted ACH payment reopens the accepted draft after cancelling its 
     adminClient: () => achDb(calls, [
       { data: { id: 'order-1', status: 'cancelled', company_id: null }, error: null },
     ]),
+    preflightQuoteCheckoutAttempt: async () => ({ action: 'duplicate' }),
     reopenQuoteAfterPaymentFailure: async (_sb, input) => {
       reopened.push(input);
       return { ok: true };
+    },
+    finishQuoteCheckoutAttempt: async (_sb, exactSession, terminal) => {
+      attempts.push({ sessionId: exactSession.id, terminal });
+      return { status: 'failed' };
     },
   });
 
@@ -929,6 +1110,10 @@ test('failed quoted ACH payment reopens the accepted draft after cancelling its 
     quoteId: 'quote-1',
     draftOrderId: 'draft-1',
     finalOrderId: 'order-1',
+  }]);
+  assert.deepEqual(attempts, [{
+    sessionId: session.id,
+    terminal: { terminalStatus: 'failed', reason: 'async_payment_failed' },
   }]);
 });
 

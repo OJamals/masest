@@ -1,5 +1,18 @@
 const PRODUCT_FALLBACK_IMAGE = "img/products/masest-poster-transparent.png";
 
+const CATALOG_IMAGE_DIMENSIONS = Object.freeze({
+  "img/products/masest-poster-transparent.png": [1193, 610],
+  "img/products/dbnpa-studio.webp": [900, 822],
+  "img/products/crs-studio.webp": [899, 1200],
+  "img/products/neutral-studio.webp": [919, 1200],
+});
+
+export function catalogImageDimensions(src) {
+  const key = String(src || "").replace(/^\/+/, "");
+  const [width, height] = CATALOG_IMAGE_DIMENSIONS[key] || [900, 1200];
+  return { width, height };
+}
+
 export const PRODUCTS = {
   hcr: {
     name: "VertKleen CIP HCR",

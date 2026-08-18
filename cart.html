@@ -56,7 +56,7 @@
             <label for="shipEstimateZip">Estimate shipping</label>
             <div class="cart-ship-estimate-row">
               <input id="shipEstimateZip" name="postal_code" type="text" inputmode="numeric"
-                autocomplete="postal-code" maxlength="10" placeholder="Delivery ZIP"
+                autocomplete="postal-code" maxlength="10" placeholder="Delivery ZIP…"
                 aria-describedby="shipEstimateNote">
               <button class="btn btn-secondary" id="shipEstimateGo" type="submit">Estimate</button>
             </div>
@@ -93,7 +93,7 @@
                 <small>Keep these canonical order lines for repeat purchasing.</small>
               </div>
               <label class="field-label" for="requisitionName">Save this cart</label>
-              <input id="requisitionName" name="requisition_name" class="cart-input" type="text" maxlength="80" autocomplete="off" placeholder="Monthly plant supplies">
+              <input id="requisitionName" name="requisition_name" class="cart-input" type="text" maxlength="80" autocomplete="off" placeholder="Monthly plant supplies…">
               <p class="cart-field-help">Save a named requisition to your buyer account for fast repeat orders.</p>
               <div class="cart-actions"><button class="btn btn-secondary" id="saveRequisition" type="submit">Save requisition</button></div>
               <p id="requisitionStatus" class="cart-field-help" role="status" aria-live="polite"></p>
@@ -111,6 +111,7 @@
   import { safeUrl } from "./js/util.js";
   import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260808b";
   import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260808b";
+  import { createShippingRequestCoordinator, fetchShippingJson, shippingRequestSnapshot } from "./js/shipping-request.js?v=20260808b";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -196,6 +197,7 @@
   // Cheapest estimated rate for the cart as it currently stands, or null. Cleared whenever
   // the lines change, so the Shipping row can never show a price for a different cart.
   let shipEstimate = null;
+  const shipEstimateRequests = createShippingRequestCoordinator();
   function productName(sku) {
     const fallback = fallbackNames[String(sku).toLowerCase()];
     const name = vmap.get(sku)?.name || fallback || sku;
@@ -336,6 +338,7 @@
     shipping_cart_too_large: "This cart needs freight planning. Request a quote for a consolidated shipment.",
     shipping_package_profile_missing: "An item is missing shipping dimensions. Request a quote for this cart.",
     shipping_rates_unavailable: "No carrier rate came back for that ZIP. The exact rate is calculated at checkout.",
+    shipping_rates_timeout: "Carrier rates took too long to respond. Try the estimate again.",
     shipping_rates_not_configured: "Estimates are offline right now. The exact rate is calculated at checkout.",
     rate_limited: "Too many estimates. Wait a moment, then try again.",
   };
@@ -346,10 +349,14 @@
 
   // Any change to the lines invalidates a price quoted for the previous cart.
   function clearShipEstimate() {
-    if (!shipEstimate) return;
+    shipEstimateRequests.cancel();
+    shipEstimateGo.disabled = false;
+    const hadEstimate = Boolean(shipEstimate);
     shipEstimate = null;
-    setEstimateNote("Cart changed. Estimate again for an updated rate.");
+    if (hadEstimate) setEstimateNote("Cart changed. Estimate again for an updated rate.");
   }
+
+  shipEstimateZip?.addEventListener("input", clearShipEstimate);
 
   shipEstimateForm?.addEventListener("submit", async event => {
     event.preventDefault();
@@ -361,24 +368,24 @@
     }
     const cartItems = items();
     if (!cartItems.length) return;
+    const input = {
+      cart: cartItems.map(item => ({ sku: item.sku, qty: item.qty })),
+      destination: { postal_code: postalCode },
+    };
+    const requestSnapshot = shippingRequestSnapshot({ cart: input.cart, postal_code: postalCode });
+    const estimateRequest = shipEstimateRequests.begin(requestSnapshot);
     shipEstimateGo.disabled = true;
     setEstimateNote("Checking carrier rates…");
     try {
-      const response = await fetch("/api/shipping-estimate", {
+      const result = await fetchShippingJson("/api/shipping-estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cart: cartItems.map(item => ({ sku: item.sku, qty: item.qty })),
-          destination: { postal_code: postalCode },
-        }),
+        body: JSON.stringify(input),
+      }, {
+        signal: estimateRequest.signal,
       });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        shipEstimate = null;
-        setEstimateNote(ESTIMATE_MESSAGES[result?.error] || "Could not estimate shipping. The exact rate is calculated at checkout.");
-        updateSubtotal();
-        return;
-      }
+      const currentSnapshot = shippingRequestSnapshot({ cart: items(), postal_code: String(shipEstimateZip?.value || "").trim() });
+      if (!shipEstimateRequests.isCurrent(estimateRequest, currentSnapshot)) return;
       const [cheapest] = result.rates || [];
       if (!cheapest) {
         shipEstimate = null;
@@ -391,12 +398,18 @@
       const transit = days ? `, about ${days} business ${days === 1 ? "day" : "days"}` : "";
       setEstimateNote(`Cheapest to ${postalCode}: ${shippingServiceSummary(cheapest)}${transit}. Exact rate at checkout.`);
       updateSubtotal();
-    } catch {
+    } catch (error) {
+      if (error?.code === "shipping_request_cancelled") return;
+      const currentSnapshot = shippingRequestSnapshot({ cart: items(), postal_code: String(shipEstimateZip?.value || "").trim() });
+      if (!shipEstimateRequests.isCurrent(estimateRequest, currentSnapshot)) return;
       shipEstimate = null;
-      setEstimateNote("Could not reach the rate service. The exact rate is calculated at checkout.");
+      setEstimateNote(ESTIMATE_MESSAGES[error?.code] || "Could not reach the rate service. The exact rate is calculated at checkout.");
       updateSubtotal();
     } finally {
-      shipEstimateGo.disabled = false;
+      if (shipEstimateRequests.isCurrent(estimateRequest, requestSnapshot)) {
+        shipEstimateGo.disabled = false;
+        shipEstimateRequests.finish(estimateRequest);
+      }
     }
   });
 

@@ -174,13 +174,23 @@ test("admin products management keeps inline controls readable on desktop and mo
         try {
           await page.goto(`${BASE_URL}/admin.html#products`, { waitUntil: "domcontentloaded" });
           await page.waitForSelector("#admProducts [data-product]", { timeout: 10000 });
-          const metrics = await page.evaluate(() => {
-            const productInputs = [...document.querySelectorAll("#admProducts [data-product] [data-field='name']")]
-              .map((el) => Math.round(el.getBoundingClientRect().width));
-            const variantInputs = [...document.querySelectorAll("#admProducts [data-variant] [data-vfield='label'], #admProducts [data-variant] [data-vfield='price']")]
-              .map((el) => Math.round(el.getBoundingClientRect().width));
+          const metrics = await page.evaluate(async () => {
+            const productInputs = [];
+            const variantInputs = [];
+            const cards = [...document.querySelectorAll("#admProducts [data-product]")];
+            for (const card of cards) {
+              const detail = card.querySelector("details.product-admin-editor");
+              if (detail) detail.open = true;
+              card.scrollIntoView({ block: "center" });
+              await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+              const name = card.querySelector("[data-field='name']");
+              if (name) productInputs.push(Math.round(name.getBoundingClientRect().width));
+              for (const input of card.querySelectorAll("[data-variant] [data-vfield='label'], [data-variant] [data-vfield='price']")) {
+                variantInputs.push(Math.round(input.getBoundingClientRect().width));
+              }
+            }
             return {
-              productCards: document.querySelectorAll("#admProducts [data-product]").length,
+              productCards: cards.length,
               minProductInput: Math.min(...productInputs),
               minVariantInput: Math.min(...variantInputs),
               tableCount: document.querySelectorAll("#admProducts table.adm").length,
@@ -208,6 +218,8 @@ test("admin products remove volume variants from the Products tab without reload
     let navigations = 0;
     try {
       await page.goto(`${BASE_URL}/admin.html#products`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("#admProducts details.product-admin-editor", { timeout: 10000 });
+      await page.locator("#admProducts details.product-admin-editor").first().evaluate((detail) => { detail.open = true; });
       await page.waitForSelector("#admProducts [data-variant]", { timeout: 10000 });
       page.on("framenavigated", (frame) => {
         if (frame === page.mainFrame()) navigations += 1;

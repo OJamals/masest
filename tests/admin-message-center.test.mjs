@@ -61,7 +61,7 @@ test('admin inbox surfaces unanswered threads, lifecycle controls, and notificat
   // a support panel at all.
   assert.match(threads, /"adminNotifySupportRequests", "notify_admin_support_requests"/);
   assert.match(threads, /"adminNotifyMessages", "notify_admin_messages"/);
-  assert.match(threads, /<input id="\$\{id\}" type="checkbox" data-support-pref="\$\{key\}">/);
+  assert.match(threads, /<input id="\$\{id\}"[^>]*type="checkbox"[^>]*data-support-pref="\$\{key\}">/);
   assert.doesNotMatch(html, /data-panel="support-settings"/);
   assert.match(threads, /unanswered/);
   assert.match(threads, /Mark resolved/);

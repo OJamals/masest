@@ -299,13 +299,18 @@
   .gbtn:hover { color: var(--accent); }
   .gbtn:active { transform: scale(.96); }
   .product-admin-list { display: grid; gap: 14px; }
-  .product-admin-card { display: grid; gap: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: clamp(14px, 2vw, 18px); box-shadow: var(--shadow-xs); }
+  .product-admin-card { display: grid; gap: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: clamp(14px, 2vw, 18px); box-shadow: var(--shadow-xs); content-visibility: auto; contain-intrinsic-size: auto 176px; }
   .product-admin-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; }
   .product-admin-media { display: grid; gap: 8px; align-content: start; width: 132px; }
   .product-admin-title { min-width: 0; }
   .product-admin-title h3 { margin: 4px 0 0; font-size: 1rem; line-height: 1.25; overflow-wrap: anywhere; }
   .product-admin-sku { display: inline-flex; border-radius: 999px; background: var(--panel); color: var(--ink-soft); padding: 3px 8px; font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
   .product-admin-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
+  .product-admin-editor { min-width: 0; }
+  .product-admin-editor:not([open]) > :not(summary) { display: none !important; }
+  .product-admin-editor > summary { width: fit-content; cursor: pointer; color: var(--accent-ink); font-size: .82rem; font-weight: 800; }
+  .product-admin-editor > summary::marker { color: var(--accent); }
+  .product-admin-editor[open] > summary { margin-bottom: 14px; }
   .product-active-toggle,
   .variant-active { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-soft); font-size: .82rem; font-weight: 700; white-space: nowrap; }
   .product-admin-fields { display: grid; grid-template-columns: minmax(190px, 1.25fr) minmax(120px, .65fr) minmax(110px, .5fr) minmax(110px, .5fr); gap: 10px; }
@@ -710,7 +715,7 @@
   }
 </style>
 </head>
-<body class="site-soft-bg">
+<body class="site-soft-bg admin-page">
 <a class="skip-link" href="#main">Skip to content</a>
 <!-- Staff chrome is injected by js/admin/chrome.js from the admin entrypoint.
      This page deliberately does not load the storefront main bundle: no
@@ -724,7 +729,7 @@
       <h2 id="gateTitle">Staff sign in</h2>
       <p id="gateMsg" class="muted">Sign in with a MASEST staff account.</p>
       <form onsubmit="return false" id="gateForm" class="adm-form-grid" method="post" autocomplete="on">
-        <label class="wide">Email <input id="gEmail" name="email" class="adm-input" type="email" autocomplete="username" required></label>
+        <label class="wide">Email <input id="gEmail" name="email" class="adm-input" type="email" autocomplete="username" spellcheck="false" required></label>
         <label class="wide">Password <input id="gPass" name="password" class="adm-input" type="password" autocomplete="current-password" required></label>
         <button class="btn btn-primary" type="submit">Sign in</button>
       </form>
@@ -800,7 +805,7 @@
         <div class="adm-panel-title">
           <div><h2>Analytics &amp; site health</h2><p class="muted">Traffic, conversion signals, campaigns, and public-page SEO checks.</p></div>
           </div>
-        <div id="admSeo" class="adm-card">Scanning pages...</div>
+        <div id="admSeo" class="adm-card">Scanning pages…</div>
         <div id="admTraffic" class="adm-card">Loading…</div>
       </section>
 
@@ -834,7 +839,7 @@
           <div class="adm-panel-header"><div><h3>Order queue</h3><p class="muted">Filters and saved views stay scoped to this queue.</p></div></div>
           <div class="adm-tools">
             <select id="ordFilter" name="order_status" class="adm-select adm-select-sm" aria-label="Filter orders by status"><option value="">All statuses</option></select>
-            <input id="ordSearch" name="order_search" class="adm-search" type="search" autocomplete="off" placeholder="Search order, customer, or company" aria-label="Search orders">
+            <input id="ordSearch" name="order_search" class="adm-search" type="search" autocomplete="off" placeholder="Search order, customer, or company…" aria-label="Search orders">
             <button id="ordExport" class="btn btn-ghost btn-sm" type="button"><i class="ph ph-download-simple" aria-hidden="true"></i> Export CSV</button>
           </div>
           <div id="admOrders" class="adm-table-wrap">Loading…</div>
@@ -844,7 +849,7 @@
           <summary><span class="adm-summary-icon"><i class="ph ph-plus" aria-hidden="true"></i></span><span class="adm-summary-copy"><b>Create manual order</b><small>Use for phone, invoice, or staff-assisted orders that did not originate in checkout.</small></span><i class="ph ph-caret-down adm-summary-caret" aria-hidden="true"></i></summary>
           <form onsubmit="return false" id="ordCreateForm" class="adm-form-grid">
             <label class="wide">Customer email <input id="ordCreateEmail" name="customer_email" class="adm-input" type="email" autocomplete="off" spellcheck="false"></label>
-            <label class="wide">Find business <input id="ordCreateCompanySearch" name="company_search" class="adm-input" type="search" autocomplete="off" spellcheck="false" placeholder="Type a business name"></label>
+            <label class="wide">Find business <input id="ordCreateCompanySearch" name="company_search" class="adm-input" type="search" autocomplete="off" spellcheck="false" placeholder="Type a business name…"></label>
             <label class="wide">Business <select id="ordCreateCompany" name="company_id" class="adm-select"><option value="">No business (guest order)</option></select></label>
             <label>Status <select id="ordCreateStatus" name="status" class="adm-select"><option value="net_open">NET open</option><option value="paid">Paid</option><option value="pending_payment">Pending payment</option><option value="net_paid">NET paid</option><option value="fulfilled">Fulfilled</option><option value="cancelled">Cancelled</option></select></label>
             <label>Payment <select id="ordCreatePayment" name="payment_method" class="adm-select"><option value="net">NET / invoice</option><option value="stripe">Card / external</option></select></label>
@@ -876,7 +881,7 @@
         </div>
         <div id="admAcctUsers" data-acct-panel="users"></div>
         <div data-acct-panel="companies" hidden>
-          <input id="coSearch" name="account_search" class="adm-search" type="search" autocomplete="off" placeholder="Search accounts" aria-label="Search accounts">
+          <input id="coSearch" name="account_search" class="adm-search" type="search" autocomplete="off" placeholder="Search accounts…" aria-label="Search accounts">
           <div id="admCompanies" class="adm-table-wrap">Loading…</div>
           <div id="companyDetail" class="adm-card" hidden></div>
         </div>
@@ -915,7 +920,7 @@
           <p>Use the Pricing workspace for product, customer-tier, service, and program prices. Catalog seed files are bootstrap and recovery data only.</p>
         </div>
         <div class="adm-card adm-workspace-card adm-catalog-browser">
-          <div class="adm-panel-header"><div><h2>Product catalog</h2><p class="muted">Search first, then edit the matching product or variant in place.</p></div><input id="prodSearch" name="product_search" class="adm-search" type="search" autocomplete="off" placeholder="Search name, SKU, or variant" aria-label="Search products"></div>
+          <div class="adm-panel-header"><div><h2>Product catalog</h2><p class="muted">Search first, then edit the matching product or variant in place.</p></div><input id="prodSearch" name="product_search" class="adm-search" type="search" autocomplete="off" placeholder="Search name, SKU, or variant…" aria-label="Search products"></div>
           <div id="admProducts" class="adm-table-wrap">Loading…</div>
           <p id="prodStatus" class="adm-status" role="status" aria-live="polite"></p>
         </div>
@@ -927,8 +932,8 @@
             <label>Mode <select id="npMode" name="mode" class="adm-select"><option value="buy">Buy</option><option value="quote">Quote</option></select></label>
             <label>Price <input id="npPrice" name="price" class="adm-input" value="Managed in Pricing" readonly aria-describedby="catalogPriceGovernance"></label>
             <label>Stock <input id="npStock" name="stock" class="adm-input" type="number" min="0" step="1"></label>
-            <label class="wide">Photo URL <input id="npImageUrl" name="image_url" class="adm-input" type="url" autocomplete="off" spellcheck="false" placeholder="img/products/example.webp"></label>
-            <label class="wide">Photo alt <input id="npPhotoAlt" name="image_alt" class="adm-input" autocomplete="off" placeholder="VertKleen HCR bottle"></label>
+            <label class="wide">Photo URL <input id="npImageUrl" name="image_url" class="adm-input" type="url" autocomplete="off" spellcheck="false" placeholder="img/products/example.webp…"></label>
+            <label class="wide">Photo alt <input id="npPhotoAlt" name="image_alt" class="adm-input" autocomplete="off" placeholder="VertKleen HCR bottle…"></label>
             <button class="btn btn-primary" type="submit">Save product</button>
           </form>
           <p id="prodCreateStatus" class="adm-status" role="status" aria-live="polite"></p>
@@ -938,7 +943,7 @@
           <form onsubmit="return false" id="variantForm" class="adm-form-grid">
             <label>Product SKU <input id="nvProductSku" name="product_sku" class="adm-input" autocomplete="off" spellcheck="false" required></label>
             <label>Variant SKU <input id="nvSku" name="variant_sku" class="adm-input" autocomplete="off" spellcheck="false" required></label>
-            <label>Label <input id="nvLabel" name="label" class="adm-input" autocomplete="off" placeholder="5 gal pail" required></label>
+            <label>Label <input id="nvLabel" name="label" class="adm-input" autocomplete="off" placeholder="5 gal pail…" required></label>
             <label>Gallons <input id="nvGallons" name="gallons" class="adm-input" type="number" min="0" step="0.01"></label>
             <label>Price <input id="nvPrice" name="price" class="adm-input" value="Managed in Pricing" readonly aria-describedby="catalogPriceGovernance"></label>
             <label>Stock <input id="nvStock" name="stock" class="adm-input" type="number" min="0" step="1"></label>
@@ -957,7 +962,7 @@
         <div class="adm-card" id="admInventory" data-capability-scope="admin.write">
           <div class="adm-panel-header"><h2>Inventory</h2><button id="invReorderCsv" class="btn btn-ghost btn-sm" type="button">Reorder CSV</button></div>
           <p class="muted">Bulk-set stock: one <code>vsku,stock</code> per line (a header row is ignored).</p>
-          <textarea id="invCsv" name="stock_csv" class="adm-textarea" placeholder="VK-1,120&#10;VK-2,0" aria-label="Bulk stock CSV"></textarea>
+          <textarea id="invCsv" name="stock_csv" class="adm-textarea" placeholder="VK-1,120&#10;VK-2,0…" aria-label="Bulk stock CSV"></textarea>
           <div class="adm-inline-actions"><button id="invApply" class="btn btn-primary btn-sm" type="button">Apply stock</button><span id="invStatus" class="adm-status" role="status" aria-live="polite"></span></div>
           <h3 class="adm-inv-subhead">Low stock</h3>
           <div id="invLow" class="adm-list">Loading…</div>
@@ -968,11 +973,11 @@
           <div class="adm-panel-header"><h2>Promo codes</h2></div>
           <p class="muted">Stripe promotion codes — buyers enter them at card checkout. (NET on-account orders don't take promo codes.)</p>
           <div class="adm-inline-actions adm-coupon-form">
-            <input id="cpCode" name="promo_code" class="adm-input" autocomplete="off" spellcheck="false" placeholder="CODE" aria-label="Promo code">
-            <input id="cpPercent" name="percent_off" class="adm-input" type="number" min="1" max="100" step="1" placeholder="% off" aria-label="Percent off">
-            <input id="cpAmount" name="amount_off" class="adm-input" type="number" min="0" step="0.01" placeholder="$ off" aria-label="Amount off">
-            <input id="cpMin" name="minimum_order" class="adm-input" type="number" min="0" step="0.01" placeholder="Min order $" aria-label="Minimum order">
-            <input id="cpMax" name="maximum_uses" class="adm-input" type="number" min="1" step="1" placeholder="Max uses" aria-label="Max redemptions">
+            <input id="cpCode" name="promo_code" class="adm-input" autocomplete="off" spellcheck="false" placeholder="CODE…" aria-label="Promo code">
+            <input id="cpPercent" name="percent_off" class="adm-input" type="number" min="1" max="100" step="1" placeholder="% off…" aria-label="Percent off">
+            <input id="cpAmount" name="amount_off" class="adm-input" type="number" min="0" step="0.01" placeholder="$ off…" aria-label="Amount off">
+            <input id="cpMin" name="minimum_order" class="adm-input" type="number" min="0" step="0.01" placeholder="Min order $…" aria-label="Minimum order">
+            <input id="cpMax" name="maximum_uses" class="adm-input" type="number" min="1" step="1" placeholder="Max uses…" aria-label="Max redemptions">
             <input id="cpExpires" name="expires_at" class="adm-input" type="date" aria-label="Expires">
             <button id="cpCreate" class="btn btn-primary btn-sm" type="button">Create code</button>
             <span id="cpStatus" class="adm-status" role="status" aria-live="polite"></span>
@@ -980,7 +985,7 @@
           <div id="cpList" class="adm-list">Loading…</div>
         </div>
         <div class="adm-card">
-          <input id="priceSearch" name="variant_search" type="search" class="adm-search" autocomplete="off" placeholder="Search variants" aria-label="Search variants">
+          <input id="priceSearch" name="variant_search" type="search" class="adm-search" autocomplete="off" placeholder="Search variants…" aria-label="Search variants">
           <p id="pricingStatus" class="adm-status" role="status" aria-live="polite"></p>
           <div id="admPricing">Loading…</div>
         </div>
@@ -1023,9 +1028,9 @@
           <div class="adm-tools">
             <select id="qFilter" name="quote_status" class="adm-select adm-select-sm" aria-label="Filter quotes by status"><option value="">All quotes</option><option>new</option><option>contacted</option><option>closed</option><option>spam</option></select>
             <select id="qPriority" name="quote_priority" class="adm-select adm-select-xs" aria-label="Filter quotes by priority"><option value="">All priorities</option><option>urgent</option><option>high</option><option>normal</option><option>low</option></select>
-            <input id="qOwner" name="quote_owner" class="adm-search" type="search" autocomplete="off" placeholder="Owner" aria-label="Filter quotes by owner">
+            <input id="qOwner" name="quote_owner" class="adm-search" type="search" autocomplete="off" placeholder="Owner…" aria-label="Filter quotes by owner">
             <select id="qDue" name="quote_due" class="adm-select adm-select-md" aria-label="Filter quotes by follow-up timing"><option value="">All follow-ups</option><option value="overdue">Overdue</option><option value="upcoming">Upcoming</option><option value="unscheduled">Unscheduled</option></select>
-            <input id="qSearch" name="quote_search" class="adm-search" type="search" autocomplete="off" placeholder="Search company, contact, or request" aria-label="Search quotes">
+            <input id="qSearch" name="quote_search" class="adm-search" type="search" autocomplete="off" placeholder="Search company, contact, or request…" aria-label="Search quotes">
           </div>
           <div id="admQuotes" class="adm-panel-list">Loading…</div>
           <p id="qStatus" class="adm-status" role="status" aria-live="polite"></p>

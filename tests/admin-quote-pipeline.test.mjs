@@ -53,10 +53,11 @@ test("admin quotes API reads and updates pipeline fields", () => {
   assert.match(QUOTE_LEADS, /changes\.due_at/);
 });
 
-test("admin quote inbox supports lead owner assignment", () => {
+test("admin quote inbox sends owner filters to the server and supports assignment", () => {
   assert.match(ADMIN_HTML, /id="qOwner"/);
-  assert.match(QUOTES_JS, /const ownerFilter = \$\('qOwner'\)\?\.value/);
-  assert.match(QUOTES_JS, /ownerMatch/);
+  assert.match(QUOTES_JS, /owner:\s*\$\('qOwner'\)\?\.value\.trim\(\) \|\| ''/);
+  assert.match(QUOTES_JS, /serverFilterParams\(\)/);
+  assert.match(ADMIN_QUOTES, /filtered = filtered\.ilike\('assigned_to'/);
   // S3: owner editing moved off the list rows into the deal drawer.
   assert.match(QUOTES_JS, /data-d-owner/);
   assert.match(QUOTES_JS, /assigned_to:\s*v\('\[data-d-owner\]'\)/);
@@ -144,10 +145,10 @@ test("admin quote inbox exposes pipeline controls", () => {
   assert.match(QUOTES_JS, /data-d-priority/);
   assert.match(QUOTES_JS, /data-d-next/);
   assert.match(QUOTES_JS, /data-d-due/);
-  assert.match(QUOTES_JS, /const dueFilter = \$\('qDue'\)\?\.value \|\| ''/);
-  assert.match(QUOTES_JS, /dueFilter === 'overdue'/);
-  assert.match(QUOTES_JS, /dueFilter === 'upcoming'/);
-  assert.match(QUOTES_JS, /dueFilter === 'unscheduled'/);
+  assert.match(QUOTES_JS, /due:\s*\$\('qDue'\)\?\.value \|\| ''/);
+  assert.match(ADMIN_QUOTES, /filters\.due === 'overdue'/);
+  assert.match(ADMIN_QUOTES, /filters\.due === 'upcoming'/);
+  assert.match(ADMIN_QUOTES, /filters\.due === 'unscheduled'/);
   assert.match(QUOTES_JS, /priority:\s*v\('\[data-d-priority\]'\)/);
   assert.match(QUOTES_JS, /next_step:\s*v\('\[data-d-next\]'\)/);
   assert.match(QUOTES_JS, /due_at:\s*v\('\[data-d-due\]'\)/);

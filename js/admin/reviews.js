@@ -52,7 +52,7 @@ export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty
     // Moderation is a batch job: a queue of pending reviews is read once and
     // dispositioned together, so selection + one apply beats two clicks per row.
     const bulkBar = `<div class="adm-tools adm-tools-flush" data-capability-scope="admin.write">
-      <label class="admin-select-all"><input type="checkbox" id="rvAll" aria-label="Select all reviews"> Select all</label>
+      <label class="admin-select-all"><input type="checkbox" id="rvAll" name="select_all_reviews" aria-label="Select all reviews"> Select all</label>
       <button class="btn btn-ghost btn-sm" data-review-bulk="approve" type="button">Approve selected</button>
       <button class="btn btn-ghost btn-sm" data-review-bulk="reject" type="button">Reject selected</button>
     </div>`;
@@ -60,7 +60,7 @@ export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty
       const id = esc(r.id);
       return `<article class="quote-item" data-review-id="${id}" data-capability-scope="admin.write">
         <div class="dash-row">
-          <span><label class="admin-select-all"><input type="checkbox" class="rv-check" value="${id}" aria-label="Select review by ${esc(r.author_name || 'anonymous')}"></label> <b>${esc(r.kind)}:${esc(r.sku)}</b> ${stars(r.rating)} ${statusBadge(r.status)}</span>
+          <span><label class="admin-select-all"><input type="checkbox" class="rv-check" name="selected_review" value="${id}" aria-label="Select review by ${esc(r.author_name || 'anonymous')}"></label> <b>${esc(r.kind)}:${esc(r.sku)}</b> ${stars(r.rating)} ${statusBadge(r.status)}</span>
           <span class="muted">${esc(date(r.created_at))}</span>
         </div>
         <p class="muted" style="margin:4px 0">
@@ -78,9 +78,9 @@ export function createReviewsTab({ $, api, state, message, admSkeleton, admEmpty
         <details class="adm-track">
           <summary>Edit</summary>
           <div class="adm-track-controls">
-            <input class="adm-input" data-review-edit-author="${id}" value="${esc(r.author_name || '')}" placeholder="Author name" aria-label="Edit author name">
-            <input class="adm-input admin-input-wide" data-review-edit-title="${id}" value="${esc(r.title || '')}" placeholder="Title" aria-label="Edit title">
-            <textarea class="adm-textarea" data-review-edit-body="${id}" placeholder="Body" aria-label="Edit body">${esc(r.body || '')}</textarea>
+            <input class="adm-input" name="review_author" autocomplete="name" data-review-edit-author="${id}" value="${esc(r.author_name || '')}" placeholder="Author name…" aria-label="Edit author name">
+            <input class="adm-input admin-input-wide" name="review_title" autocomplete="off" data-review-edit-title="${id}" value="${esc(r.title || '')}" placeholder="Title…" aria-label="Edit title">
+            <textarea class="adm-textarea" name="review_body" autocomplete="off" data-review-edit-body="${id}" placeholder="Body…" aria-label="Edit body">${esc(r.body || '')}</textarea>
             <button class="btn btn-ghost btn-sm" data-review-save="${id}" type="button">Save edit</button>
           </div>
         </details>

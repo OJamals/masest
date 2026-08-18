@@ -1,6 +1,12 @@
 // GET /api/products - public catalog. Returns active products with mode,
 // media fields, tier-effective prices, and nested variants.
-import { adminClient, json, tierForRequest, tierPriceMap } from '../_lib/supabase.js';
+import {
+  adminClient,
+  CommerceContextError,
+  json,
+  resolveCommerceContext,
+  tierPriceMap,
+} from '../_lib/supabase.js';
 
 const BASE_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,allow_backorder,sort)';
 const MEDIA_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,image_url,photo_alt,gallery,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,allow_backorder,sort)';
@@ -11,6 +17,18 @@ function missingMediaColumn(error) {
 
 export async function onRequestGet({ request, env }) {
   const sb = adminClient(env);
+  const hasAuth = (request.headers.get('authorization') || '').startsWith('Bearer ');
+  let tier = 'retail';
+  if (hasAuth) {
+    try {
+      tier = (await resolveCommerceContext(request, env, { adminClient: () => sb })).tier;
+    } catch (error) {
+      if (error instanceof CommerceContextError || error?.code === 'commerce_context_unavailable') {
+        return json(503, { error: 'commerce_context_unavailable', retryable: true });
+      }
+      return json(503, { error: 'commerce_context_unavailable', retryable: true });
+    }
+  }
   const query = (columns) => sb
     .from('products')
     .select(columns)
@@ -25,9 +43,14 @@ export async function onRequestGet({ request, env }) {
 
   if (error) return json(500, { error: 'server_error' });
 
-  const hasAuth = (request.headers.get('authorization') || '').startsWith('Bearer ');
-  const tier = hasAuth ? (await tierForRequest(request, env)).tier : 'retail';
-  const overrides = await tierPriceMap(sb, tier);
+  let overrides = new Map();
+  if (tier !== 'retail') {
+    try {
+      overrides = await tierPriceMap(sb, tier);
+    } catch {
+      return json(503, { error: 'commerce_context_unavailable', retryable: true });
+    }
+  }
   const products = (data || []).map((product) => ({
     ...product,
     tier,

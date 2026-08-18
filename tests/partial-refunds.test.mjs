@@ -84,16 +84,22 @@ test('stockIncrements tolerates null/empty input', () => {
   assert.deepEqual(stockIncrements([]), []);
 });
 
-// ---- source contract: orders.js refund action wiring ----
-test('refund action accepts amount + uses computeRefund + audits partial', () => {
-  const src = read('functions/api/admin/orders.js');
-  assert.match(src, /computeRefund\(/, 'must delegate refund math to computeRefund');
-  assert.match(src, /amount:\s*plan\.amountCents/, 'must pass the cents amount to Stripe');
-  assert.match(src, /order\.refund_partial/, 'must audit partial refunds distinctly');
-  assert.match(src, /increment_variant_stock/, 'must re-increment stock on full refund');
-  assert.match(src, /refunded_amount:\s*plan\.newRefundedAmount/, 'must persist cumulative refunded_amount');
-  assert.match(src, /qboFullDocumentRefund\(/, 'QBO full credit memo decision must be separate from cumulative order refund status');
-  assert.match(src, /stripe_refund_id:\s*stripeRefund\?\.id \|\| null/, 'QBO refund rows should carry Stripe refund ids for idempotency');
+// ---- source contract: immutable command owns refund math and recovery ----
+test('refund action queues one atomic command with stable identity and durable effects', () => {
+  const api = read('functions/api/admin/orders.js');
+  const service = read('functions/_lib/order-reversal-service.js');
+  const effects = read('functions/_lib/integration-effects.js');
+  const sql = read('supabase/schema-order-reversals.sql');
+  assert.match(api, /queueRefundCommand\(\{/);
+  assert.match(api, /requestId:\s*body\.request_id/);
+  assert.match(api, /lines:\s*body\.lines/);
+  assert.match(api, /order\.refund_queued/);
+  assert.match(service, /refundCommandPlan\(order/);
+  assert.match(sql, /create or replace function public\.claim_order_refund_command/i);
+  assert.match(sql, /for update/i);
+  assert.match(sql, /record_order_refund_provider_success/);
+  assert.match(effects, /provider_idempotency_key/);
+  assert.match(effects, /record_order_refund_provider_success/);
 });
 
 // ---- migration ----
@@ -108,4 +114,6 @@ test('schema-refunds.sql adds refunded_amount + increment_variant_stock', () => 
 test('admin refund control exposes an amount field', () => {
   const src = read('js/admin/orders.js'); // Orders tab moved in #36
   assert.match(src, /data-refund-amount/, 'refund UI must let staff enter a partial amount');
+  assert.match(src, /data-refund-line-order/, 'refund UI must accept exact sold-line quantities');
+  assert.match(src, /request_id:\s*identity\.requestId/, 'refund retries must keep one client request identity');
 });

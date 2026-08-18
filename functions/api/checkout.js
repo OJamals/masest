@@ -2,23 +2,70 @@
 // Card/ACH only. NET (on-account) orders are not self-serve: sales raises them from an
 // accepted quote via functions/api/admin/quotes.js -> _lib/quote-convert.js netOrderRow().
 import Stripe from 'stripe';
-import { adminClient, userFromRequest, json, tierForRequest, tierPriceMap } from '../_lib/supabase.js';
+import {
+  adminClient,
+  CommerceContextError,
+  json,
+  resolveCommerceContext,
+  tierPriceMap,
+} from '../_lib/supabase.js';
 import {
   buildStripeCheckoutSessionParams,
+  normalizeCheckoutBuyerEmail,
   normalizePurchaseOrderNumber,
   parseStripeShippingRateIds,
   shippingRateIdsFromContentEntries,
 } from '../_lib/checkout-session.js';
 import { ensureCompanyStripeCustomer } from '../_lib/stripe-customer.js';
 import { guestStripeCustomer, stripeCustomerAddress } from '../_lib/stripe-customer.js';
-import { CheckoutShippingError, verifyShippingSelectionToken } from '../_lib/checkout-shipping.js';
+import {
+  assertShippingPlanSelection,
+  CheckoutShippingError,
+  loadShippingQuotePlan,
+  verifyShippingSelectionToken,
+} from '../_lib/checkout-shipping.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
 import { stripeRuntimeError, stripeShippingRatesError } from '../_lib/stripe-runtime.js';
+import { expireQuoteOfferIfDue } from '../_lib/quote-order.js';
+import { quoteBuyerActions, quoteBuyerOwns } from '../_lib/quote-lifecycle.js';
+import {
+  createSupabaseQuoteCheckoutAttemptStore,
+  openQuoteCheckoutSession,
+  QuoteCheckoutAttemptError,
+} from '../_lib/quote-checkout-attempt.js';
 
 const CHECKOUT_BODY_MAX_BYTES = 64 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Stripe rejects expires_at values less than 30 minutes in the future. Keep a one-minute
+// transport margin so a Quote that passed local validation cannot cross that boundary
+// while customer/shipping setup and the provider request are still in flight.
+const STRIPE_MIN_CHECKOUT_WINDOW_MS = 31 * 60 * 1000;
+const STRIPE_MAX_CHECKOUT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function quoteOrderCheckoutSnapshot(order) {
+  return {
+    id: String(order.id),
+    company_id: String(order.company_id),
+    user_id: String(order.user_id),
+    status: 'cart',
+    requisition_name: null,
+    subtotal: Number(order.subtotal),
+    total: Number(order.total),
+    currency: String(order.currency || 'usd').toLowerCase(),
+    items: [...(order.order_items || [])]
+      .map((item) => ({
+        sku: String(item.sku),
+        product_sku: item.product_sku == null ? null : String(item.product_sku),
+        name: String(item.name),
+        qty: Number(item.qty),
+        unit_price: Number(item.unit_price),
+        line_total: Number(item.line_total),
+      }))
+      .sort((left, right) => left.sku.localeCompare(right.sku)),
+  };
+}
 
 function variantIsStocked(variant, qty) {
   return !(variant.track_stock && variant.stock != null && Number(variant.stock) < qty);
@@ -26,9 +73,12 @@ function variantIsStocked(variant, qty) {
 
 export async function handleCheckout({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
-  const getUserFromRequest = dependencies.userFromRequest || userFromRequest;
-  const getTierForRequest = dependencies.tierForRequest || tierForRequest;
   const getTierPriceMap = dependencies.tierPriceMap || tierPriceMap;
+  const getCommerceContext = dependencies.resolveCommerceContext
+    || ((runtimeRequest, runtimeEnv) => resolveCommerceContext(runtimeRequest, runtimeEnv, {
+      adminClient: getAdminClient,
+      userFromRequest: dependencies.userFromRequest,
+    }));
   const getStripeCustomer = dependencies.ensureCompanyStripeCustomer || ensureCompanyStripeCustomer;
   const createGuestCustomer = dependencies.guestStripeCustomer || guestStripeCustomer;
   const checkRateLimit = dependencies.rateLimit || rateLimit;
@@ -37,6 +87,9 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     || ((secret) => new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() }));
   const validateShippingRates = dependencies.validateShippingRates || stripeShippingRatesError;
   const verifyShippingSelection = dependencies.verifyShippingSelectionToken || verifyShippingSelectionToken;
+  const loadShippingPlan = dependencies.loadShippingQuotePlan || loadShippingQuotePlan;
+  const clock = dependencies.now || (() => new Date());
+  const openQuotedSession = dependencies.openQuoteCheckoutSession || openQuoteCheckoutSession;
 
   const rl = await checkRateLimit(env, 'checkout', clientIp(request), { limit: 20, windowSec: 60 });
   if (!rl.ok) {
@@ -88,9 +141,39 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     return json(400, { error: 'shipping_quote_required' });
   }
 
-  const sb = getAdminClient(env);
-  const { user } = await getUserFromRequest(request, env);
-  let profile = null;
+  let commerce;
+  try {
+    commerce = await getCommerceContext(request, env);
+  } catch (error) {
+    if (error instanceof CommerceContextError || error?.code === 'commerce_context_unavailable') {
+      return json(503, { error: 'commerce_context_unavailable', retryable: true });
+    }
+    return json(503, { error: 'commerce_context_unavailable', retryable: true });
+  }
+  const { sb, user, profile, company, companyId, tier, taxExempt } = commerce;
+  const buyerEmail = normalizeCheckoutBuyerEmail(body.email || user?.email);
+  if (buyerEmail.error) return json(400, { error: buyerEmail.error });
+
+  if (shippingSelection) {
+    try {
+      const result = await loadShippingPlan(env, shippingSelection.plan_id, { sb });
+      const plan = assertShippingPlanSelection(shippingSelection, result);
+      // The stored row is the fulfillment authority; the token proves the buyer selected
+      // this exact digest and lets Checkout safely hydrate the same immutable snapshot.
+      shippingSelection = {
+        ...shippingSelection,
+        cart: plan.cart,
+        address: plan.address,
+        billing_address: plan.billing_address,
+        billing_same_as_shipping: plan.billing_same_as_shipping !== false,
+        rate: plan.rate,
+      };
+    } catch (error) {
+      if (error instanceof CheckoutShippingError) return json(error.status, { error: error.code, retryable: error.status >= 500 });
+      return json(503, { error: 'shipping_plan_store_unavailable', retryable: true });
+    }
+  }
+
   const quoteId = String(body.quote_id || '');
   const quoteOrderId = String(body.quote_order_id || '');
   const hasQuoteIdentity = Boolean(quoteId || quoteOrderId);
@@ -100,23 +183,17 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       return json(400, { error: 'invalid_quote_identity' });
     }
     if (!user) return json(401, { error: 'auth_required_for_quote' });
-    const { data, error: profileError } = await sb.from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .maybeSingle();
-    if (profileError) return json(500, { error: 'server_error' });
-    profile = data || null;
-    if (!profile?.company_id) return json(403, { error: 'quote_unavailable' });
+    if (!companyId) return json(403, { error: 'quote_unavailable' });
 
     const quoteQuery = sb.from('quotes')
-      .select('id,payload,status')
+      .select('id,source,payload,status,pipeline_stage,offer_revision,checkout_mutation_id')
       .eq('id', quoteId)
       .neq('status', 'spam')
       .maybeSingle();
     const orderQuery = sb.from('orders')
-      .select('id,company_id,user_id,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
+      .select('id,company_id,user_id,status,requisition_name,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
       .eq('id', quoteOrderId)
-      .eq('company_id', profile.company_id)
+      .eq('company_id', companyId)
       .eq('user_id', user.id)
       .eq('status', 'cart')
       .is('requisition_name', null)
@@ -127,12 +204,34 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     ] = await Promise.all([quoteQuery, orderQuery]);
     if (quoteError || quoteOrderError) return json(500, { error: 'server_error' });
     if (!quote || !quoteOrder
-      || quote.status === 'closed'
-      || quote.payload?.offer_order_id !== quoteOrder.id
-      || quote.payload?.requester_id !== user.id
-      || quote.payload?.company_id !== profile.company_id
-      || quote.payload?.offer_status !== 'accepted') {
+      || !quoteBuyerOwns(quote, { userId: user.id, companyId })
+      || quote.payload?.offer_order_id !== quoteOrder.id) {
       return json(409, { error: 'quote_unavailable' });
+    }
+    const checkoutAt = clock().toISOString();
+    const expiry = await expireQuoteOfferIfDue(sb, quote, { at: checkoutAt });
+    if (expiry.error) return json(500, { error: 'server_error' });
+    const currentQuote = expiry.quote;
+    const actions = quoteBuyerActions(currentQuote, {
+      userId: user.id,
+      companyId,
+      hasOffer: Boolean(quoteOrder.order_items?.length),
+      now: Date.parse(checkoutAt),
+    });
+    if (!actions.can_checkout) return json(409, { error: 'quote_unavailable' });
+    const offerRevision = Number(currentQuote.offer_revision);
+    if (!Number.isSafeInteger(offerRevision) || offerRevision < 1
+      || currentQuote.checkout_mutation_id) {
+      return json(409, { error: 'quote_unavailable' });
+    }
+    const offerExpiresAt = String(currentQuote.payload?.offer_expires_at || '');
+    const offerExpiryMs = Date.parse(offerExpiresAt);
+    if (!Number.isFinite(offerExpiryMs)
+      || offerExpiryMs - Date.parse(checkoutAt) < STRIPE_MIN_CHECKOUT_WINDOW_MS) {
+      return json(409, {
+        error: 'quote_checkout_window_too_short',
+        message: 'This offer expires too soon to open a secure payment session. Ask your account team for a revision.',
+      });
     }
 
     const quotedItemsBySku = new Map();
@@ -151,7 +250,11 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     quoteContext = {
       quoteId,
       quoteOrderId,
-      companyId: profile.company_id,
+      companyId,
+      requesterId: user.id,
+      offerExpiresAt,
+      offerRevision,
+      orderSnapshot: quoteOrderCheckoutSnapshot(quoteOrder),
       currency: String(quoteOrder.currency || 'usd').toLowerCase(),
       quotedItemsBySku,
     };
@@ -221,9 +324,16 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       line.stripe_price_id = null;
     }
   } else {
-    const { tier } = await getTierForRequest(request, env);
     if (tier !== 'retail') {
-      const overrides = await getTierPriceMap(sb, tier);
+      let overrides;
+      try {
+        overrides = await getTierPriceMap(sb, tier);
+      } catch (error) {
+        if (error instanceof CommerceContextError || error?.code === 'commerce_context_unavailable') {
+          return json(503, { error: 'commerce_context_unavailable', retryable: true });
+        }
+        return json(503, { error: 'commerce_context_unavailable', retryable: true });
+      }
       for (const line of sellable) {
         if (overrides.has(line.sku)) {
           line.price = overrides.get(line.sku);
@@ -236,7 +346,10 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   // One order = one currency (Stripe forbids mixed-currency sessions, and the subtotal sum
   // would be meaningless). Catalog is USD today; this guards a future non-USD variant.
   const currencies = new Set(sellable.map((p) => (p.currency || 'usd').toLowerCase()));
-  if (currencies.size > 1) {
+  const [orderCurrency] = currencies;
+  if (currencies.size > 1
+    || (shippingSelection
+      && String(shippingSelection.rate?.currency || '').toLowerCase() !== orderCurrency)) {
     return json(409, { error: 'mixed_currency', message: 'Items in your cart use different currencies. Order them separately.' });
   }
 
@@ -268,28 +381,13 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
 
   const taxEnabled = env.STRIPE_TAX_ENABLED === 'true';
 
-  let companyId = null;
-  let company = null;
-  if (user) {
-    if (!profile) {
-      const { data } = await sb.from('profiles').select('company_id').eq('id', user.id).maybeSingle();
-      profile = data || null;
-    }
-    companyId = profile?.company_id || null;
-    if (companyId) {
-      const { data } = await sb.from('companies')
-        .select('id,name,tax_exempt,stripe_customer_id').eq('id', companyId).maybeSingle();
-      company = data || null;
-    }
-  }
-
   // Bind B2B checkouts to the company's Stripe Customer so tax is computed against it.
   // When tax is live, mark a tax_exempt company's Customer 'exempt' so it isn't charged.
   let customerId = null;
   if (company) {
     try {
       customerId = await getStripeCustomer({
-        stripe, sb, company, email: body.email || user?.email,
+        stripe, sb, company, email: buyerEmail.value,
       });
     } catch {
       return json(502, { error: 'stripe_customer_setup_failed' });
@@ -297,7 +395,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     if (taxEnabled) {
       try {
         await stripe.customers.update(customerId, {
-          tax_exempt: company.tax_exempt ? 'exempt' : 'none'
+          tax_exempt: taxExempt ? 'exempt' : 'none'
         });
       } catch {
         return json(502, { error: 'stripe_customer_setup_failed' });
@@ -328,7 +426,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     try {
       customerId = await createGuestCustomer({
         stripe,
-        email: body.email || user?.email || '',
+        email: buyerEmail.value,
         shippingAddress: shippingSelection.address,
         billingAddress: shippingSelection.billing_address || shippingSelection.address,
         rateId: shippingSelection.rate?.rate_id || null,
@@ -338,22 +436,70 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     }
   }
 
+  const sessionParams = buildStripeCheckoutSessionParams({
+    appUrl,
+    email: buyerEmail.value,
+    companyId,
+    buyerUserId: commerce.userId,
+    sellable,
+    qtyBySku,
+    taxEnabled,
+    customerId,
+    shippingRateIds,
+    shippingSelection,
+    purchaseOrderNumber,
+    quoteId: quoteContext?.quoteId || null,
+    quoteOrderId: quoteContext?.quoteOrderId || null,
+    allowPromotionCodes: !quoteContext,
+  });
+
+  if (quoteContext) {
+    const offerExpiryMs = Date.parse(quoteContext.offerExpiresAt);
+    const remainingMs = offerExpiryMs - clock().getTime();
+    const providerParams = { ...sessionParams };
+    // Stripe permits an explicit Checkout Session expiry only within its 30-minute to
+    // 24-hour window. A nearer Quote fails closed above; a farther Quote uses Stripe's
+    // earlier default expiry and can safely claim another attempt afterward.
+    if (remainingMs <= STRIPE_MAX_CHECKOUT_WINDOW_MS) {
+      providerParams.expires_at = Math.floor(offerExpiryMs / 1000);
+    }
+    try {
+      const opened = await openQuotedSession({
+        stripe,
+        store: dependencies.quoteCheckoutAttemptStore
+          || createSupabaseQuoteCheckoutAttemptStore(sb),
+        identity: {
+          quoteId: quoteContext.quoteId,
+          quoteOrderId: quoteContext.quoteOrderId,
+          requesterId: quoteContext.requesterId,
+          companyId: quoteContext.companyId,
+          offerRevision: quoteContext.offerRevision,
+          orderSnapshot: quoteContext.orderSnapshot,
+        },
+        requestParams: providerParams,
+        // Provider expiry placement can change as the offer moves inside Stripe's
+        // 24-hour window; it is not a Buyer input and must not rotate an identical retry.
+        fingerprintValue: {
+          params: sessionParams,
+          offer_expires_at: quoteContext.offerExpiresAt,
+        },
+        ...(dependencies.randomUUID ? { attemptIdFactory: dependencies.randomUUID } : {}),
+      });
+      return json(200, { url: opened.url, quote_checkout_attempt_id: opened.attemptId });
+    } catch (error) {
+      if (error instanceof QuoteCheckoutAttemptError) {
+        return json(error.status, {
+          error: error.code,
+          ...(error.retryable ? { retryable: true } : {}),
+          ...(error.providerCode ? { code: error.providerCode } : {}),
+        });
+      }
+      return json(503, { error: 'quote_checkout_attempt_unavailable', retryable: true });
+    }
+  }
+
   try {
-    const session = await stripe.checkout.sessions.create(buildStripeCheckoutSessionParams({
-      appUrl,
-      email: body.email || user?.email || '',
-      companyId,
-      sellable,
-      qtyBySku,
-      taxEnabled,
-      customerId,
-      shippingRateIds,
-      shippingSelection,
-      purchaseOrderNumber,
-      quoteId: quoteContext?.quoteId || null,
-      quoteOrderId: quoteContext?.quoteOrderId || null,
-      allowPromotionCodes: !quoteContext,
-    }), quoteContext ? { idempotencyKey: `quote-checkout:${quoteContext.quoteOrderId}` } : undefined);
+    const session = await stripe.checkout.sessions.create(sessionParams);
     return json(200, { url: session.url });
   } catch (err) {
     return json(502, { error: 'stripe_error', code: err?.code || null });
