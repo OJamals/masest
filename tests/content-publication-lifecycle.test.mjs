@@ -69,7 +69,7 @@ test("publication lifecycle keeps permissions beside workflow actions", async ()
   assert.deepEqual(repository.calls, []);
 });
 
-test("publication lifecycle publishes and records rebuild outcomes", async () => {
+test("publication lifecycle routes a blog publish only to its commit workflow", async () => {
   const repository = publicationRepository();
   const effects = [];
   const lifecycle = createContentPublicationLifecycle({
@@ -92,9 +92,9 @@ test("publication lifecycle publishes and records rebuild outcomes", async () =>
   });
 
   assert.equal(response.status, 200);
-  assert.deepEqual(response.result.publish_hook, { ok: true, status: 202 });
+  assert.equal(response.result.publish_hook, undefined);
   assert.deepEqual(response.result.blog_workflow, { ok: true, status: 204 });
-  assert.deepEqual(effects.map(([name]) => name), ["publishHook", "blogWorkflow"]);
+  assert.deepEqual(effects.map(([name]) => name), ["blogWorkflow"]);
 });
 
 test("publication lifecycle validates and normalizes scheduled transitions", async () => {
@@ -163,4 +163,31 @@ test("archive shares conflict mapping and rebuild outcome policy", async () => {
 
   assert.equal(response.status, 200);
   assert.deepEqual(response.result.publish_hook, { ok: true, status: 202 });
+});
+
+test("archiving a blog routes only to the blog commit workflow", async () => {
+  const repository = publicationRepository();
+  const effects = [];
+  const lifecycle = createContentPublicationLifecycle({
+    repository,
+    publishHook: async (entry) => {
+      effects.push(["publishHook", entry]);
+      return { ok: true, status: 202 };
+    },
+    blogWorkflow: async (entry) => {
+      effects.push(["blogWorkflow", entry]);
+      return { ok: true, status: 204 };
+    },
+  });
+
+  const response = await lifecycle.archive({
+    entry: { type: "blog_post", slug: "news" },
+    role: "owner",
+    userId: "u1",
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.result.publish_hook, undefined);
+  assert.deepEqual(response.result.blog_workflow, { ok: true, status: 204 });
+  assert.deepEqual(effects.map(([name]) => name), ["blogWorkflow"]);
 });

@@ -12,33 +12,36 @@ const entry = {
   title: "Water analysis",
 };
 
-test("publish hook posts CMS publish identity to the configured deploy hook", async () => {
+test("publish hook dispatches general CMS changes to the medicux deployment workflow", async () => {
   const calls = [];
   const result = await triggerContentPublishBuild(
-    { CONTENT_PUBLISH_HOOK_URL: "https://deploy.example/hooks/cms" },
+    { GITHUB_DISPATCH_TOKEN: "tok" },
     entry,
     async (url, options) => {
       calls.push({ url, options });
-      return new Response(JSON.stringify({ ok: true }), { status: 202 });
+      return { ok: true, status: 204 };
     },
   );
 
-  assert.deepEqual(result, { ok: true, skipped: false, status: 202 });
+  assert.deepEqual(result, { ok: true, skipped: false, status: 204 });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "https://deploy.example/hooks/cms");
+  assert.equal(calls[0].url, "https://api.github.com/repos/medicux/masest/dispatches");
   assert.equal(calls[0].options.method, "POST");
-  assert.equal(calls[0].options.headers["content-type"], "application/json");
+  assert.equal(calls[0].options.headers.authorization, "Bearer tok");
   assert.deepEqual(JSON.parse(calls[0].options.body), {
-    source: "cms_publish",
-    type: "service",
-    slug: "water-analysis",
-    locale: "en",
-    status: "published",
-    version: 4,
+    event_type: "site-content-published",
+    client_payload: {
+      source: "cms_publish",
+      type: "service",
+      slug: "water-analysis",
+      locale: "en",
+      status: "published",
+      version: 4,
+    },
   });
 });
 
-test("publish hook reports skipped when no deploy hook is configured", async () => {
+test("publish hook reports skipped when GitHub dispatch is not configured", async () => {
   let called = false;
   const result = await triggerContentPublishBuild({}, entry, async () => {
     called = true;
@@ -51,15 +54,15 @@ test("publish hook reports skipped when no deploy hook is configured", async () 
 
 test("publish hook reports non-blocking failure details", async () => {
   const result = await triggerContentPublishBuild(
-    { CLOUDFLARE_PAGES_DEPLOY_HOOK_URL: "https://deploy.example/hooks/cms" },
+    { GITHUB_DISPATCH_TOKEN: "tok" },
     entry,
-    async () => new Response("rate limited", { status: 429 }),
+    async () => ({ ok: false, status: 429 }),
   );
 
   assert.equal(result.ok, false);
   assert.equal(result.skipped, false);
   assert.equal(result.status, 429);
-  assert.match(result.error, /deploy_hook_failed/);
+  assert.match(result.error, /github_dispatch_failed/);
 });
 
 test("content publish API and editor surface static rebuild hook state", () => {
@@ -71,13 +74,14 @@ test("content publish API and editor surface static rebuild hook state", () => {
   assert.match(api, /createContentPublicationLifecycle/);
   assert.match(api, /triggerContentPublishBuild/);
   assert.match(api, /publishHook:\s*\(entry\)\s*=>\s*triggerContentPublishBuild\(env, entry\)/);
-  assert.match(lifecycle, /result\.publish_hook\s*=\s*await publishHook\(result\.entry\)/);
+  assert.match(lifecycle, /result\.entry\?\.type === "blog_post"/);
   assert.match(ui, /publish_hook/);
   assert.match(ui, /Static rebuild/);
   assert.match(ui, /public pages keep the previous export until a build runs/);
   assert.match(ui, /publishStatusKind/);
   assert.match(ui, /hook\?\.skipped\) return "warn"/);
-  assert.match(env, /CONTENT_PUBLISH_HOOK_URL/);
+  assert.match(env, /GITHUB_DISPATCH_TOKEN/);
+  assert.match(env, /GITHUB_DISPATCH_REPO=medicux\/masest/);
 });
 
 test("content archive delegates the static rebuild hook to the publication lifecycle", () => {
@@ -86,7 +90,8 @@ test("content archive delegates the static rebuild hook to the publication lifec
 
   assert.match(api, /publication\.archive\(/);
   assert.match(lifecycle, /async function archive\(/);
-  assert.match(lifecycle, /result\.publish_hook\s*=\s*await publishHook\(result\.entry\)/);
+  assert.match(lifecycle, /result\.entry\?\.type === "blog_post"/);
+  assert.match(lifecycle, /result\.blog_workflow\s*=\s*await blogWorkflow\(result\.entry\)/);
 });
 
 import { triggerBlogPublishWorkflow } from "../functions/_lib/content.js";
@@ -111,13 +116,13 @@ test("blog workflow dispatch: no-op without a token", async () => {
 test("blog workflow dispatch: POSTs a content-published repository_dispatch when configured", async () => {
   let captured = null;
   const res = await triggerBlogPublishWorkflow(
-    { GITHUB_DISPATCH_TOKEN: "tok", GITHUB_DISPATCH_REPO: "OJamals/masest" },
+    { GITHUB_DISPATCH_TOKEN: "tok" },
     blogEntry,
     async (url, opts) => { captured = { url, opts }; return { ok: true, status: 204 }; },
   );
   assert.equal(res.ok, true);
   assert.equal(res.skipped, false);
-  assert.equal(captured.url, "https://api.github.com/repos/OJamals/masest/dispatches");
+  assert.equal(captured.url, "https://api.github.com/repos/medicux/masest/dispatches");
   assert.equal(captured.opts.method, "POST");
   assert.equal(captured.opts.headers.authorization, "Bearer tok");
   const body = JSON.parse(captured.opts.body);

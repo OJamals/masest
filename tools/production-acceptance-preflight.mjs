@@ -54,8 +54,7 @@ export const acceptanceEnvGroups = [
   {
     id: "cms_publish",
     label: "CMS publish trigger",
-    required: [],
-    oneOf: [["CONTENT_PUBLISH_HOOK_URL", "CF_PAGES_DEPLOY_HOOK_URL"]],
+    required: ["GITHUB_DISPATCH_TOKEN", "GITHUB_DISPATCH_REPO"],
   },
 ];
 

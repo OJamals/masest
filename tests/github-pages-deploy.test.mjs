@@ -1,0 +1,52 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const root = new URL("../", import.meta.url);
+const read = (path) => readFileSync(new URL(path, root), "utf8");
+
+test("medicux main pushes verify before deploying the existing Pages project", () => {
+  const workflow = read(".github/workflows/verify.yml");
+  const refreshStep = workflow.indexOf("- name: Refresh production CMS snapshots");
+  const verifyStep = workflow.indexOf("- name: Verify");
+  const deployStep = workflow.indexOf("- name: Deploy production to Cloudflare Pages");
+  const newsletterStep = workflow.indexOf("- name: Email newly published blog posts");
+
+  assert.ok(refreshStep >= 0 && refreshStep < verifyStep, "production snapshots must refresh before verification");
+  assert.ok(verifyStep >= 0, "workflow must retain the full verification gate");
+  assert.ok(deployStep > verifyStep, "production deploy must run only after verification");
+  assert.match(
+    workflow,
+    /if: github\.repository == 'medicux\/masest' && github\.ref == 'refs\/heads\/main' && github\.event_name != 'pull_request'/,
+    "only medicux/masest main push or workflow-dispatch runs may deploy production",
+  );
+  assert.match(workflow, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
+  assert.match(workflow, /repository_dispatch:\s+types: \[site-content-published\]/);
+  assert.match(workflow, /SUPABASE_URL: \$\{\{ secrets\.SUPABASE_URL \}\}/);
+  assert.match(workflow, /SUPABASE_SERVICE_ROLE_KEY: \$\{\{ secrets\.SUPABASE_SERVICE_ROLE_KEY \}\}/);
+  assert.match(workflow, /run: npm run build:content/);
+  assert.match(
+    workflow,
+    /npx wrangler pages deploy dist --project-name=masest-commerce --branch=main --commit-hash="\$GITHUB_SHA" --commit-dirty=false/,
+  );
+  assert.ok(newsletterStep > deployStep, "blog email may run only after the new static page is deployed");
+  assert.match(workflow, /blog_newsletter:\s+description:[^\n]+\s+required: false\s+type: boolean\s+default: false/);
+  assert.match(workflow, /if: github\.event_name == 'workflow_dispatch' && inputs\.blog_newsletter/);
+  assert.match(workflow, /BLOG_NEWSLETTER_SECRET: \$\{\{ secrets\.BLOG_NEWSLETTER_SECRET \}\}/);
+});
+
+test("automated content commits explicitly dispatch the verified medicux deployment", () => {
+  const workflow = read(".github/workflows/publish-blog.yml");
+
+  assert.match(workflow, /permissions:\s+actions: write\s+contents: write/);
+  assert.match(workflow, /- name: Commit \+ push if changed\s+id: content_commit/);
+  assert.match(workflow, /echo "changed=false" >> "\$GITHUB_OUTPUT"/);
+  assert.match(workflow, /echo "changed=true" >> "\$GITHUB_OUTPUT"/);
+  assert.match(workflow, /git commit -m "content: publish blog updates"/);
+  assert.doesNotMatch(workflow, /\[(?:skip ci|ci skip|no ci)\]/i);
+  assert.match(workflow, /if: steps\.content_commit\.outputs\.changed == 'true'/);
+  assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(workflow, /gh workflow run verify\.yml --repo medicux\/masest --ref main -f blog_newsletter=true/);
+  assert.doesNotMatch(workflow, /sleep 75|Email new posts to the newsletter list/);
+});

@@ -191,7 +191,8 @@ export async function onRequestPost({ request, env }, dependencies = {}) {
   if (!quoteBuyerOwns(quote, { userId: user.id, companyId: profile?.company_id })) {
     return json(403, { error: 'forbidden' });
   }
-  const actionAt = clock().toISOString();
+  const actionNow = clock();
+  const actionAt = actionNow.toISOString();
   const expiry = await expireQuoteOfferIfDue(sb, quote, { at: actionAt });
   if (expiry.error) return json(500, { error: 'server_error' });
   const currentQuote = expiry.quote;
@@ -215,6 +216,7 @@ export async function onRequestPost({ request, env }, dependencies = {}) {
     userId: user.id,
     companyId: profile?.company_id,
     hasOffer: Boolean(offer?.order_items?.length),
+    now: actionNow.getTime(),
   });
 
   // Declining closes the loop without touching the draft order: staff may still revise and

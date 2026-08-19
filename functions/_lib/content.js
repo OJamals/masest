@@ -120,56 +120,13 @@ export function publicContentSnapshot(entries = []) {
     }, {});
 }
 
-function contentPublishHookUrl(env = {}) {
-  return String(
-    env.CONTENT_PUBLISH_HOOK_URL
-      || env.CLOUDFLARE_PAGES_DEPLOY_HOOK_URL
-      || env.CF_PAGES_DEPLOY_HOOK_URL
-      || "",
-  ).trim();
-}
-
-export async function triggerContentPublishBuild(env = {}, entry = {}, fetchImpl = fetch) {
-  const hookUrl = contentPublishHookUrl(env);
-  if (!hookUrl) return { ok: true, skipped: true };
-
-  try {
-    const response = await fetchImpl(hookUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        source: "cms_publish",
-        type: entry.type || "",
-        slug: entry.slug || "",
-        locale: entry.locale || "en",
-        status: entry.status || "published",
-        version: Number.isFinite(Number(entry.version)) ? Number(entry.version) : null,
-      }),
-    });
-    if (response.ok) return { ok: true, skipped: false, status: response.status };
-    return { ok: false, skipped: false, status: response.status, error: "deploy_hook_failed" };
-  } catch (error) {
-    return {
-      ok: false,
-      skipped: false,
-      error: "deploy_hook_failed",
-      message: String(error?.message || error || "unknown error"),
-    };
-  }
-}
-
 function githubDispatchConfig(env = {}) {
   const token = String(env.GITHUB_DISPATCH_TOKEN || "").trim();
-  const repo = String(env.GITHUB_DISPATCH_REPO || "OJamals/masest").trim();
+  const repo = String(env.GITHUB_DISPATCH_REPO || "medicux/masest").trim();
   return token && repo ? { token, repo } : null;
 }
 
-// Blog posts render to committed static pages by tools/build-blog.mjs, which the
-// Cloudflare build does NOT run — so a CMS blog publish needs the GitHub Actions
-// "content-published" workflow (publish-blog-ci -> build-blog -> commit) to fire.
-// Best-effort: no-ops without a token; the scheduled run is the fallback.
-export async function triggerBlogPublishWorkflow(env = {}, entry = {}, fetchImpl = fetch) {
-  if (entry.type !== "blog_post") return { ok: true, skipped: true };
+async function triggerGithubRepositoryDispatch(env, eventType, clientPayload, fetchImpl) {
   const cfg = githubDispatchConfig(env);
   if (!cfg) return { ok: true, skipped: true };
   try {
@@ -181,16 +138,45 @@ export async function triggerBlogPublishWorkflow(env = {}, entry = {}, fetchImpl
         "content-type": "application/json",
         "user-agent": "masest-cms",
       },
-      body: JSON.stringify({
-        event_type: "content-published",
-        client_payload: { slug: entry.slug || "", status: entry.status || "published" },
-      }),
+      body: JSON.stringify({ event_type: eventType, client_payload: clientPayload }),
     });
-    if (response.ok || response.status === 204) return { ok: true, skipped: false, status: response.status };
+    if (response.ok || response.status === 204) {
+      return { ok: true, skipped: false, status: response.status };
+    }
     return { ok: false, skipped: false, status: response.status, error: "github_dispatch_failed" };
   } catch (error) {
-    return { ok: false, skipped: false, error: "github_dispatch_failed", message: String(error?.message || error) };
+    return {
+      ok: false,
+      skipped: false,
+      error: "github_dispatch_failed",
+      message: String(error?.message || error || "unknown error"),
+    };
   }
+}
+
+// General CMS changes are exported from Supabase by the verified medicux/masest
+// production workflow before it uploads dist/ to the existing Pages project.
+export async function triggerContentPublishBuild(env = {}, entry = {}, fetchImpl = fetch) {
+  return triggerGithubRepositoryDispatch(env, "site-content-published", {
+    source: "cms_publish",
+    type: entry.type || "",
+    slug: entry.slug || "",
+    locale: entry.locale || "en",
+    status: entry.status || "published",
+    version: Number.isFinite(Number(entry.version)) ? Number(entry.version) : null,
+  }, fetchImpl);
+}
+
+// Blog posts render to committed static pages by tools/build-blog.mjs, which the
+// Cloudflare build does NOT run — so a CMS blog publish needs the GitHub Actions
+// "content-published" workflow (publish-blog-ci -> build-blog -> commit) to fire.
+// Best-effort: no-ops without a token; the scheduled run is the fallback.
+export async function triggerBlogPublishWorkflow(env = {}, entry = {}, fetchImpl = fetch) {
+  if (entry.type !== "blog_post") return { ok: true, skipped: true };
+  return triggerGithubRepositoryDispatch(env, "content-published", {
+    slug: entry.slug || "",
+    status: entry.status || "published",
+  }, fetchImpl);
 }
 
 async function existingEntry(sb, { type, slug, locale }) {
@@ -668,7 +654,8 @@ export function createContentPublicationLifecycle({
     try {
       const result = await repository.publishScheduledDue(type ? { type } : {}, userId);
       if (result.ok && result.count > 0) {
-        result.publish_hook = await publishHook(result.entries[0]);
+        const generalEntry = result.entries.find((entry) => entry?.type !== "blog_post");
+        if (generalEntry) result.publish_hook = await publishHook(generalEntry);
         const blogEntry = result.entries.find((entry) => entry?.type === "blog_post");
         if (blogEntry) result.blog_workflow = await blogWorkflow(blogEntry);
       }
@@ -742,8 +729,11 @@ export function createContentPublicationLifecycle({
       } else if (action === "publish") {
         result = await repository.publish(entry, userId);
         if (result.ok) {
-          result.publish_hook = await publishHook(result.entry);
-          result.blog_workflow = await blogWorkflow(result.entry);
+          if (result.entry?.type === "blog_post") {
+            result.blog_workflow = await blogWorkflow(result.entry);
+          } else {
+            result.publish_hook = await publishHook(result.entry);
+          }
         }
       } else {
         result = await repository.saveDraft(entry, userId);
@@ -758,7 +748,13 @@ export function createContentPublicationLifecycle({
     if (!staffCan(role, "content.write")) return denied("archive");
     try {
       const result = await repository.archive(entry, userId);
-      if (result.ok) result.publish_hook = await publishHook(result.entry);
+      if (result.ok) {
+        if (result.entry?.type === "blog_post") {
+          result.blog_workflow = await blogWorkflow(result.entry);
+        } else {
+          result.publish_hook = await publishHook(result.entry);
+        }
+      }
       return publicationResponse(result);
     } catch (error) {
       return { status: 500, result: { error: error.message } };

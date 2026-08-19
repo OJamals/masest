@@ -44,7 +44,7 @@ New tables `messages`, `notifications`, `offers`, `page_views`; new columns
    else `account/billing-portal` errors. `STRIPE_SECRET_KEY` must be set (already used by checkout).
 4. **(optional) `RESEND_API_KEY` + `RESEND_FROM`** to let admin offers also email recipients.
 5. **(optional) direct email replies:** use Resend's managed `*.resend.app` receiving address for `RESEND_INBOUND_DOMAIN` (do not change the Outlook/GoDaddy MX records for `masest.co`), set `MESSAGE_REPLY_SECRET`, then configure Resend's signed `email.received` webhook for `/api/resend-webhook`. Buyer email replies are verified against their company and appear in the Messages thread.
-6. Redeploy: push to `main` (Cloudflare Pages auto-builds it via `node tools/cf-build.mjs`).
+6. Redeploy: push to `medicux/masest` `main`; the Verify workflow runs the full gate and uploads `dist/` to Cloudflare Pages.
    Verify env presence at `/api/health`.
 
 ## Security notes

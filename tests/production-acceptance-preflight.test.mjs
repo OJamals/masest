@@ -31,7 +31,8 @@ const completeEnv = {
   QBO_SYNC_SECRET: "sync_secret",
   QBO_INCOME_ACCOUNT_ID: "79",
   QBO_ENVIRONMENT: "production",
-  CONTENT_PUBLISH_HOOK_URL: "https://deploy-hook.example",
+  GITHUB_DISPATCH_TOKEN: "github_dispatch_secret",
+  GITHUB_DISPATCH_REPO: "medicux/masest",
 };
 
 test("redactValue reports presence without leaking secret values", () => {
@@ -61,6 +62,10 @@ test("acceptanceEnvGroups names the live integration gates", () => {
   assert.deepEqual(
     acceptanceEnvGroups.find((group) => group.id === "google_address").required,
     ["GC_AUTOCOMPLETE_API_KEY"],
+  );
+  assert.deepEqual(
+    acceptanceEnvGroups.find((group) => group.id === "cms_publish").required,
+    ["GITHUB_DISPATCH_TOKEN", "GITHUB_DISPATCH_REPO"],
   );
 });
 
@@ -261,7 +266,8 @@ test("buildPreflightReport can use Cloudflare Pages env presence for production 
           "SHIPSTATION_WAREHOUSE_ID",
           "SHIPSTATION_WEBHOOK_TOKEN",
           "GC_AUTOCOMPLETE_API_KEY",
-          "CONTENT_PUBLISH_HOOK_URL",
+          "GITHUB_DISPATCH_TOKEN",
+          "GITHUB_DISPATCH_REPO",
         ].map((key) => [key, { type: "secret_text" }])),
       },
     },
@@ -316,7 +322,8 @@ test("buildPreflightReport accepts a Cloudflare QBO connect key bundle", () => {
           SHIPSTATION_WAREHOUSE_ID: { type: "plain_text", value: "se-warehouse-1" },
           SHIPSTATION_WEBHOOK_TOKEN: { type: "secret_text" },
           GC_AUTOCOMPLETE_API_KEY: { type: "secret_text" },
-          CONTENT_PUBLISH_HOOK_URL: { type: "secret_text" },
+          GITHUB_DISPATCH_TOKEN: { type: "secret_text" },
+          GITHUB_DISPATCH_REPO: { type: "plain_text", value: "medicux/masest" },
           QBO_CONNECT_KEY: { type: "secret_text" },
         },
       },
