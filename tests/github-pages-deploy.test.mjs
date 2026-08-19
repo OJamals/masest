@@ -50,3 +50,12 @@ test("automated content commits explicitly dispatch the verified medicux deploym
   assert.match(workflow, /gh workflow run verify\.yml --repo medicux\/masest --ref main -f blog_newsletter=true/);
   assert.doesNotMatch(workflow, /sleep 75|Email new posts to the newsletter list/);
 });
+
+test("GitHub workflows use Node 24 action runtimes", () => {
+  for (const path of [".github/workflows/verify.yml", ".github/workflows/publish-blog.yml"]) {
+    const workflow = read(path);
+    assert.match(workflow, /actions\/checkout@v5/, `${path} must use checkout v5`);
+    assert.match(workflow, /actions\/setup-node@v5/, `${path} must use setup-node v5`);
+    assert.doesNotMatch(workflow, /actions\/(?:checkout|setup-node)@v4/);
+  }
+});
