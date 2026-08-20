@@ -32,6 +32,7 @@ const STAFF_CAPABILITIES = {
   "order.delete": ["owner"],
   "order.refund": ["owner", "finance"],
   "company.credit": ["owner", "finance"],
+  "promotion.write": ["owner", "finance"],
   "company.view_as": ["owner", "finance", "support"],
   "product.write": ["owner"],
   "content.assets": ["owner"],

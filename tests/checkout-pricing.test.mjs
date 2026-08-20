@@ -60,8 +60,10 @@ test("tier discounts are applied from server-side price_tiers, not the client", 
 test("Stripe line amounts are computed from the server price", () => {
   assert.match(SRC, /buildStripeCheckoutSessionParams\(\{/,
     "checkout API must create Stripe sessions through the shared checkout-session builder");
-  assert.match(CHECKOUT_SESSION, /unit_amount:\s*Math\.round\(\s*Number\(\s*product\.price\s*\)\s*\*\s*100\s*\)/,
-    "Stripe unit_amount must be derived from the server price product.price");
+  assert.match(CHECKOUT_SESSION, /unitAmountMinor:\s*Math\.round\(\s*Number\(\s*product\.price\s*\)\s*\*\s*100\s*\)/,
+    "the undiscounted minor-unit amount must be derived from server price product.price");
+  assert.match(CHECKOUT_SESSION, /unit_amount:\s*unitAmountMinor/,
+    "Stripe unit_amount must use the server-derived or exact account-credit allocation");
   // Reuse a pre-created Stripe Price id when present, else price_data from product.price — both server-sourced.
   assert.match(CHECKOUT_SESSION, /product\.stripe_price_id/);
 });

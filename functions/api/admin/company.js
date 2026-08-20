@@ -2,6 +2,7 @@
 // Returns the company, its members (+ emails), recent orders, message count, pending invites.
 import { adminClient, requireStaff, json, emailsByIds } from '../../_lib/supabase.js';
 import { buildCompanySetup } from '../../_lib/setup.js';
+import { companyStoreCreditSummary } from '../../_lib/store-credit.js';
 
 // Short-lived signed URL for a resale cert in the private 'resale-certs' bucket.
 async function signResaleCert(env, path, expiresIn = 300) {
@@ -64,11 +65,34 @@ export async function onRequestGet({ request, env }) {
   const { data: invites } = await sb.from('company_invites')
     .select('id,email,role,status').eq('company_id', id).eq('status', 'pending');
 
+  let store_credit = null;
+  try {
+    const [summary, { data: entries, error: entriesError }] = await Promise.all([
+      companyStoreCreditSummary(sb, id),
+      sb.from('company_store_credit_entries')
+        .select('id,amount_minor,currency,kind,reason,order_id,created_at')
+        .eq('company_id', id)
+        .order('created_at', { ascending: false })
+        .limit(50),
+    ]);
+    if (entriesError) throw entriesError;
+    store_credit = {
+      currency: summary.currency || 'usd',
+      balance_minor: Number(summary.balance_minor) || 0,
+      reserved_minor: Number(summary.reserved_minor) || 0,
+      available_minor: Number(summary.available_minor) || 0,
+      entries: entries || [],
+    };
+  } catch {
+    store_credit = null;
+  }
+
   return json(200, {
     company: { ...company, ...business, setup: buildCompanySetup(company, profiles || []) },
     members,
     orders: orders || [],
     message_count,
     invites: invites || [],
+    store_credit,
   });
 }

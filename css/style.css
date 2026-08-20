@@ -4246,6 +4246,19 @@ body.checkout-flow-page::before { display: none; }
 .checkout-totals .cart-total-row { margin-top: 4px; padding-top: 22px; border-top-color: var(--line); }
 .checkout-totals .cart-total-row dt { font-size: 1rem; }
 .checkout-totals .cart-total-row dd { font-size: 1.55rem; }
+.checkout-store-credit {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.checkout-store-credit .checkout-switch-row { width: 100%; align-items: flex-start; }
+.checkout-store-credit .checkout-switch { margin-top: 1px; }
+.checkout-store-credit-copy { display: grid; gap: 3px; }
+.checkout-store-credit-copy b { color: var(--ink); font-size: .9rem; }
+.checkout-store-credit-copy small { color: var(--muted); font-size: .78rem; font-weight: 500; line-height: 1.4; }
+.checkout-promo-note { margin: 14px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
 .checkout-rates { margin: 22px 0; }
 .checkout-rates h3 { margin: 0 0 6px; font-size: 1rem; }
 .checkout-verified { margin: 0 0 12px; color: var(--status-success-ink); font-size: .8rem; line-height: 1.45; }

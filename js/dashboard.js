@@ -8,9 +8,9 @@ import {
   replaceWithQuote,
 } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, restoreFocusOnClose, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
-import { initBusinessHub } from './business.js?v=20260808b';
-import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260808b';
-import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260808b';
+import { initBusinessHub } from './business.js?v=20260820a';
+import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260820a';
+import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260820a';
 
 const $ = (id) => document.getElementById(id);
 
@@ -231,7 +231,8 @@ async function renderOverview() {
     <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : (c ? 'Under review' : 'Set up business')}</b></div>
     <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + esc(c?.net_terms_days) : '<a href="contact.html?type=quote">Request NET terms</a>'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
     <div class="dash-row"><span>Balance owed</span><b>${money(ACCOUNT.credit.net_outstanding, 'usd')}</b></div>
-    <div class="dash-row"><span>Credit available</span><b>${money(ACCOUNT.credit.credit_available, 'usd')}</b></div>` : ''}`;
+    <div class="dash-row"><span>NET credit available</span><b>${money(ACCOUNT.credit.credit_available, 'usd')}</b></div>` : ''}${Number(ACCOUNT?.store_credit?.balance_minor) > 0 ? `
+    <div class="dash-row"><span>Account credit</span><b>${money((Number(ACCOUNT.store_credit.available_minor) || 0) / 100, ACCOUNT.store_credit.currency || 'usd')}</b></div>` : ''}`;
 
   // Quick stats: pull counts in the background.
   const stats = $('ovStats');

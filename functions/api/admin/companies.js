@@ -115,6 +115,22 @@ function buildCompanyPatch(body, { creating = false } = {}) {
   return { patch };
 }
 
+export async function companyDeletionState(sb, companyId) {
+  const results = await Promise.all([
+    sb.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
+    sb.from('orders').select('id', { count: 'exact', head: true }).eq('company_id', companyId).neq('status', 'cart'),
+    sb.from('company_store_credit_entries').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
+    sb.from('company_store_credit_reservations').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
+  ]);
+  if (results.some(({ error }) => error)) {
+    return { blocked: true, error: 'company_dependency_check_failed' };
+  }
+  return {
+    blocked: results.some(({ count }) => Number(count || 0) > 0),
+    error: null,
+  };
+}
+
 export async function onRequest({ request, env }) {
   const { user, staff, role } = await requireStaff(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
@@ -186,12 +202,13 @@ export async function onRequest({ request, env }) {
     if (action === 'delete_company') {
       const id = String(body.id || '').trim();
       if (!id) return json(400, { error: 'company_id_required' });
-      const [memberRes, orderRes] = await Promise.all([
-        sb.from('profiles').select('id', { count: 'exact', head: true }).eq('company_id', id),
-        sb.from('orders').select('id', { count: 'exact', head: true }).eq('company_id', id).neq('status', 'cart'),
-      ]);
-      if ((memberRes.count || 0) > 0 || (orderRes.count || 0) > 0) {
-        return json(409, { error: 'company_not_empty', message: 'Remove users from this business and preserve any order history before deleting it.' });
+      const dependencyState = await companyDeletionState(sb, id);
+      if (dependencyState.error) return json(503, { error: dependencyState.error });
+      if (dependencyState.blocked) {
+        return json(409, {
+          error: 'company_not_empty',
+          message: 'Remove users and preserve order or account-credit history before deleting this business.',
+        });
       }
       const { data, error } = await sb.from('companies').delete().eq('id', id).select('id,name').maybeSingle();
       if (error) return json(500, { error: error.message || 'company_delete_failed' });

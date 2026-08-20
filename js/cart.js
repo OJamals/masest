@@ -99,7 +99,7 @@ export function replaceWithQuote({ quoteId, orderId, items: offerItems } = {}) {
   }));
 }
 
-function acceptedQuoteContext(lines) {
+export function acceptedQuoteContext(lines) {
   try {
     const value = JSON.parse(localStorage.getItem(QUOTE_KEY) || "null");
     if (!value || typeof value !== "object"
@@ -122,6 +122,8 @@ export async function checkout({
   token,
   purchaseOrderNumber,
   shippingQuoteToken,
+  applyStoreCredit = false,
+  checkoutIntentId = null,
 } = {}) {
   const line = items();
   if (!line.length) throw new Error("cart_empty");
@@ -139,7 +141,14 @@ export async function checkout({
     cart: line,
   };
   const quote = acceptedQuoteContext(line);
-  if (quote) Object.assign(payload, quote);
+  if (quote) {
+    Object.assign(payload, quote);
+  } else if (applyStoreCredit === true) {
+    const intentId = String(checkoutIntentId || '').trim();
+    if (!intentId) throw new Error('checkout_intent_id_required');
+    payload.apply_store_credit = true;
+    payload.checkout_intent_id = intentId;
+  }
 
   const response = await fetch("/api/checkout", {
     method: "POST",

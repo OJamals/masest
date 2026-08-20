@@ -92,6 +92,25 @@ test("checkout always asks for card/ACH and never carries a NET request key", as
   assert.equal(store.has("masest_net_request_v1"), false, "no NET request key may be stored");
 });
 
+test("account credit request carries one explicit checkout identity", async () => {
+  installBrowserGlobals();
+  const bodies = [];
+  globalThis.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return new Response(JSON.stringify({ order_id: "ord_credit" }), { status: 201 });
+  };
+
+  const cart = await freshCartModule();
+  cart.add("hcr", 1);
+  await cart.checkout({
+    applyStoreCredit: true,
+    checkoutIntentId: "11111111-1111-4111-8111-111111111111",
+  });
+
+  assert.equal(bodies[0].apply_store_credit, true);
+  assert.equal(bodies[0].checkout_intent_id, "11111111-1111-4111-8111-111111111111");
+});
+
 test("accepted quote checkout sends only quote identity and invalidates it on cart changes", async () => {
   installBrowserGlobals();
   const bodies = [];
@@ -109,7 +128,10 @@ test("accepted quote checkout sends only quote identity and invalidates it on ca
       { sku: "VK-2", qty: 1, unit_price: 999 },
     ],
   });
-  await cart.checkout();
+  await cart.checkout({
+    applyStoreCredit: true,
+    checkoutIntentId: "11111111-1111-4111-8111-111111111111",
+  });
 
   assert.deepEqual(bodies[0].cart, [
     { sku: "VK-1", qty: 2 },
@@ -118,6 +140,8 @@ test("accepted quote checkout sends only quote identity and invalidates it on ca
   assert.equal(bodies[0].quote_id, "quote-1");
   assert.equal(bodies[0].quote_order_id, "draft-1");
   assert.equal("unit_price" in bodies[0].cart[0], false);
+  assert.equal(bodies[0].apply_store_credit, undefined);
+  assert.equal(bodies[0].checkout_intent_id, undefined);
 
   cart.replaceWithQuote({
     quoteId: "quote-2",

@@ -7,11 +7,12 @@
 // Stripe caps every metadata value at 500 characters, so the cart is stored in a
 // compact shape (short keys, no display names — the webhook re-derives names from
 // product_variants) and split across cart, cart2, cart3… keys. The Session carries 33
-// fixed metadata keys, leaving at most 16 cart chunks under Stripe's 50-key limit.
+// fixed metadata keys, leaving at most 14 cart chunks under Stripe's 50-key limit.
 import { checkoutFulfillmentStripeTransport } from './checkout-fulfillment-contract.js';
+import { allocateStoreCredit } from './store-credit.js';
 
 const CART_CHUNK_SIZE = 450;
-const CART_MAX_CHUNKS = 16;
+const CART_MAX_CHUNKS = 14;
 
 export function normalizeCheckoutBuyerEmail(value) {
   const email = String(value || '').trim().toLowerCase();
@@ -90,6 +91,7 @@ export function buildStripeCheckoutSessionParams({
   quoteOrderId = null,
   quoteCheckoutAttemptId = null,
   allowPromotionCodes = true,
+  storeCredit = null,
 }) {
   const buyerEmail = normalizeCheckoutBuyerEmail(email);
   if (buyerEmail.error) throw new Error(buyerEmail.error);
@@ -108,17 +110,26 @@ export function buildStripeCheckoutSessionParams({
     shippingOption,
     metadata: fulfillmentMetadata,
   } = checkoutFulfillmentStripeTransport(shippingSelection);
+  const storeCreditAmountMinor = Math.max(0, Number(storeCredit?.amountMinor) || 0);
+  const creditAllocation = storeCreditAmountMinor > 0
+    ? allocateStoreCredit(sellable, qtyBySku, storeCreditAmountMinor)
+    : null;
+  const checkoutLines = creditAllocation?.lines || sellable.map((product) => ({
+    product,
+    quantity: qtyBySku[product.sku],
+    unitAmountMinor: Math.round(Number(product.price) * 100),
+  }));
 
   const params = {
     mode: "payment",
-    line_items: sellable.map((product) => (
-      product.stripe_price_id
-        ? { price: product.stripe_price_id, quantity: qtyBySku[product.sku] }
+    line_items: checkoutLines.map(({ product, quantity, unitAmountMinor }) => (
+      product.stripe_price_id && !creditAllocation
+        ? { price: product.stripe_price_id, quantity }
         : {
-            quantity: qtyBySku[product.sku],
+            quantity,
             price_data: {
               currency: product.currency || "usd",
-              unit_amount: Math.round(Number(product.price) * 100),
+              unit_amount: unitAmountMinor,
               product_data: {
                 name: product.name,
                 metadata: { sku: product.sku },
@@ -154,6 +165,8 @@ export function buildStripeCheckoutSessionParams({
       quote_id: quoteId || "",
       quote_order_id: quoteOrderId || "",
       quote_checkout_attempt_id: quoteCheckoutAttemptId || "",
+      store_credit_reservation_id: storeCredit?.reservationId || "",
+      store_credit_amount_minor: creditAllocation ? String(creditAllocation.amountMinor) : "",
       ...fulfillmentMetadata,
       ...cartMetadataEntries(cart),
     },

@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css?v=20260711u">
-<link rel="stylesheet" href="css/style.css?v=20260808b">
+<link rel="stylesheet" href="css/style.css?v=20260820a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css?v=20260725f">
 <style>
@@ -532,6 +532,15 @@
   #companyDetail .dash-row b,
   .account-detail .dash-row b,
   .company-dossier .dash-row b { font-variant-numeric: tabular-nums; }
+  .company-store-credit { display: grid; gap: 10px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .company-store-credit .adm-panel-header { margin-bottom: 0; }
+  .company-store-credit .adm-panel-header h3 { margin: 0; }
+  .company-store-credit-form { margin-top: 4px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--surface); }
+  .company-store-credit-form .adm-status { min-height: 1.2em; }
+  .company-store-credit-history { margin-top: 2px; }
+  .company-store-credit-history > summary { min-height: 40px; display: flex; align-items: center; color: var(--accent-ink); font-size: .82rem; font-weight: 800; cursor: pointer; }
+  .company-store-credit-history .dash-row span { display: grid; gap: 2px; min-width: 0; }
+  .company-store-credit-history .dash-row small { overflow-wrap: anywhere; }
   .account-console { display: grid; gap: 14px; }
   .account-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
   .account-metric { display: grid; gap: 3px; min-height: 78px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 12px; }
@@ -663,12 +672,6 @@
     .company-admin-actions > .btn,
     .admin-input-sm,
     .admin-input-md { width: 100%; max-width: none; }
-    .adm-coupon-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
-    .adm-coupon-form .adm-input,
-    .adm-coupon-form .btn,
-    .adm-coupon-form .adm-status { width: 100%; max-width: none; }
-    .adm-coupon-form .btn,
-    .adm-coupon-form .adm-status { grid-column: 1 / -1; }
     .adm-track-controls .adm-input,
     .adm-track-controls .adm-select,
     .adm-track-controls .btn { flex-basis: 100%; width: 100%; }
@@ -684,6 +687,12 @@
     .seo-audit-meta { grid-column: 1 / -1; text-align: left; }
   }
   @media (max-width: 980px) {
+    .adm-coupon-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
+    .adm-coupon-form .adm-input,
+    .adm-coupon-form .btn,
+    .adm-coupon-form .adm-status { width: 100%; max-width: none; }
+    .adm-coupon-form .btn,
+    .adm-coupon-form .adm-status { grid-column: 1 / -1; }
     .adm-layout { display: block; }
     .adm-sidebar.adm-tabs-wrap { position: static; max-height: none; overflow: visible; overscroll-behavior: auto; margin-bottom: 18px; }
     .adm-nav-toggle { display: flex; }
@@ -969,13 +978,13 @@
         </div>
         </div>
         <div data-prod-panel="pricing" hidden>
-        <div class="adm-card" id="admCoupons" data-capability-scope="admin.write">
+        <div class="adm-card" id="admCoupons" data-capability-scope="promotion.write">
           <div class="adm-panel-header"><h2>Promo codes</h2></div>
-          <p class="muted">Stripe promotion codes — buyers enter them at card checkout. (NET on-account orders don't take promo codes.)</p>
+          <p class="muted">Stripe promotion codes — buyers enter them on secure payment. Choose either percent or fixed amount; accepted quotes and NET orders keep their negotiated pricing.</p>
           <div class="adm-inline-actions adm-coupon-form">
             <input id="cpCode" name="promo_code" class="adm-input" autocomplete="off" spellcheck="false" placeholder="CODE…" aria-label="Promo code">
-            <input id="cpPercent" name="percent_off" class="adm-input" type="number" min="1" max="100" step="1" placeholder="% off…" aria-label="Percent off">
-            <input id="cpAmount" name="amount_off" class="adm-input" type="number" min="0" step="0.01" placeholder="$ off…" aria-label="Amount off">
+            <input id="cpPercent" name="percent_off" class="adm-input" type="number" min="0.01" max="100" step="0.01" placeholder="% off…" aria-label="Percent off">
+            <input id="cpAmount" name="amount_off" class="adm-input" type="number" min="0.01" step="0.01" placeholder="$ off…" aria-label="Amount off">
             <input id="cpMin" name="minimum_order" class="adm-input" type="number" min="0" step="0.01" placeholder="Min order $…" aria-label="Minimum order">
             <input id="cpMax" name="maximum_uses" class="adm-input" type="number" min="1" step="1" placeholder="Max uses…" aria-label="Max redemptions">
             <input id="cpExpires" name="expires_at" class="adm-input" type="date" aria-label="Expires">
@@ -1105,6 +1114,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260808b"></script>
+<script type="module" src="js/admin.js?v=20260820a"></script>
 </body>
 </html>

@@ -1,10 +1,10 @@
-import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260808b';
-import { catalogImageDimensions } from './main/catalog-data.js?v=20260808b';
+import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260820a';
+import { catalogImageDimensions } from './main/catalog-data.js?v=20260820a';
 import {
   createShippingRequestCoordinator,
   fetchShippingJson,
   shippingRequestSnapshot,
-} from './shipping-request.js?v=20260808b';
+} from './shipping-request.js?v=20260820a';
 
 const money = (amount, currency = 'usd') => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: String(currency).toUpperCase(),
@@ -90,6 +90,14 @@ function checkoutError(error) {
     quote_checkout_busy: 'Your quote payment session changed in another tab. Wait a moment and try again.',
     quote_checkout_attempt_unavailable: 'Your quote payment session could not be verified. Try again before opening another payment.',
     quote_checkout_expiry_unverified: 'The prior quote payment session could not be closed safely. Try again shortly.',
+    store_credit_unavailable: 'Account credit is no longer available. Continue without it or ask your account team.',
+    store_credit_account_required: 'Sign in to the credited business account before applying account credit.',
+    store_credit_currency_unsupported: 'Account credit can only be applied to USD orders.',
+    store_credit_request_identity_collision: 'This payment attempt changed. Try opening payment again.',
+    store_credit_reservation_conflict: 'This account-credit attempt is no longer active. Try opening payment again.',
+    store_credit_reservation_expired: 'This account-credit hold expired. Try opening payment again.',
+    store_credit_reservation_failed: 'Account credit could not be reserved. Try again.',
+    store_credit_attach_failed: 'Stripe opened, but account credit is still being secured. Try again to resume the same payment.',
     stripe_error: 'Stripe could not start payment. Try again.',
   })[code] || 'Checkout could not continue. Review the form and try again.';
 }
@@ -271,11 +279,11 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260808b'),
+    import('./address-autocomplete.js?v=20260820a'),
     import('./auth.js?v=20260711w'),
-    import('./staff-surface.js?v=20260808b'),
+    import('./staff-surface.js?v=20260820a'),
   ]);
-  const { checkout, items } = cartModule;
+  const { acceptedQuoteContext, checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;
   const { api, getToken, me } = authModule;
   const { isStaffAccount, replaceBuyerSurface } = staffModule;
@@ -311,10 +319,16 @@ async function boot() {
   const sameBilling = document.getElementById('billingSameAsShipping');
   const billingFields = document.getElementById('billingAddressFields');
   const shippingPending = document.getElementById('shippingPending');
+  const storeCreditBox = document.getElementById('checkoutStoreCredit');
+  const storeCreditInput = document.getElementById('applyStoreCredit');
+  const storeCreditAvailable = document.getElementById('checkoutStoreCreditAvailable');
+  const promoNote = document.getElementById('checkoutPromoNote');
   const rateRequests = createShippingRequestCoordinator();
   const state = {
     catalog: new Map(), saved: [], token: null, quote: null, selectedRate: null,
-    quoteSnapshot: null,
+    quoteSnapshot: null, checkoutIntentId: null,
+    storeCreditAvailableMinor: Math.max(0, Number(staffAccount?.store_credit?.available_minor) || 0),
+    hasCompanyAccount: Boolean(staffAccount?.company?.id && staffAccount?.can_checkout),
   };
 
   function showStatus(message, kind = '') {
@@ -375,6 +389,7 @@ async function boot() {
     state.quote = null;
     state.selectedRate = null;
     state.quoteSnapshot = null;
+    state.checkoutIntentId = null;
     rateOptions.replaceChildren();
     ratesBox.hidden = true;
     pay.disabled = true;
@@ -386,6 +401,7 @@ async function boot() {
     calculate.classList.remove('btn-secondary', 'checkout-recalculate');
     calculate.textContent = 'Confirm address & view rates';
     showStatus('');
+    renderStoreCredit();
     if (hadQuote) renderTotals();
   }
 
@@ -405,11 +421,36 @@ async function boot() {
   // The dispatch date the rates were quoted against, as returned by /api/shipping-rates.
   const shipDate = () => state.quote?.fulfillment?.ship_date || null;
 
+  function storeCreditEligible() {
+    return state.hasCompanyAccount
+      && state.storeCreditAvailableMinor > 0
+      && !acceptedQuoteContext(items());
+  }
+
+  function selectedStoreCreditMinor(pricing = cartPricing(cart, state.catalog)) {
+    if (!storeCreditEligible() || !storeCreditInput.checked || !pricing.known) return 0;
+    return Math.min(state.storeCreditAvailableMinor, Math.round(pricing.total * 100));
+  }
+
+  function renderStoreCredit() {
+    const eligible = storeCreditEligible();
+    storeCreditBox.hidden = !eligible;
+    promoNote.hidden = Boolean(acceptedQuoteContext(items()));
+    if (!eligible) {
+      storeCreditInput.checked = false;
+      storeCreditInput.disabled = true;
+      return;
+    }
+    storeCreditInput.disabled = false;
+    storeCreditAvailable.textContent = `${money(state.storeCreditAvailableMinor / 100, 'usd')} available. Applies to merchandise before tax.`;
+  }
+
   function renderTotals() {
     const pricing = cartPricing(cart, state.catalog);
     const { currency } = pricing;
     const selected = state.quote?.rates?.[state.selectedRate];
     const shipping = selected?.amount_minor;
+    const storeCreditMinor = selectedStoreCreditMinor(pricing);
     // Put the delivery date next to the money it costs, so the trade-off the buyer is
     // actually making — pay more, get it sooner — is legible in one place.
     const shippingNote = shipping == null
@@ -418,9 +459,10 @@ async function boot() {
         .filter(Boolean).join(' · ');
     document.getElementById('checkoutTotals').innerHTML = `<dl>
       <div><dt>Product subtotal</dt><dd>${pricing.known ? money(pricing.total, currency) : 'At payment'}</dd></div>
+      ${storeCreditMinor ? `<div><dt>Account credit</dt><dd>−${money(storeCreditMinor / 100, currency)}</dd></div>` : ''}
       <div><dt>Shipping<small>${escapeHtml(shippingNote)}</small></dt><dd>${shipping == null ? '—' : money(shipping / 100, currency)}</dd></div>
       <div><dt>Tax</dt><dd>At payment</dd></div>
-      <div class="cart-total-row"><dt>Estimated total</dt><dd>${pricing.known ? money(pricing.total + (shipping || 0) / 100, currency) : 'At payment'}</dd></div>
+      <div class="cart-total-row"><dt>Estimated total</dt><dd>${pricing.known ? money(Math.max(0, pricing.total - (storeCreditMinor / 100)) + (shipping || 0) / 100, currency) : 'At payment'}</dd></div>
     </dl>`;
   }
 
@@ -669,6 +711,10 @@ async function boot() {
   }
   toggleBilling();
   sameBilling.addEventListener('change', () => { toggleBilling(); invalidateRates(); });
+  storeCreditInput.addEventListener('change', () => {
+    state.checkoutIntentId = null;
+    renderTotals();
+  });
   const rateBoundFields = new Set([
     'firstName', 'lastName', 'phone', 'businessName',
     'shippingAutocomplete', 'billingAutocomplete',
@@ -699,6 +745,7 @@ async function boot() {
   rateOptions.addEventListener('change', (event) => {
     if (event.target.name !== 'shippingRate') return;
     state.selectedRate = Number(event.target.value);
+    state.checkoutIntentId = null;
     const selected = state.quote?.rates?.[state.selectedRate];
     payHint.textContent = `${shippingServiceSummary(selected)} selected.`;
     showStatus(`${shippingServiceSummary(selected)} selected. Continue to secure payment.`, 'ok');
@@ -709,6 +756,7 @@ async function boot() {
   mountAddress('billing').catch(() => showManualAddress('billing', false));
 
   state.token = await getToken().catch(() => null);
+  renderStoreCredit();
   const account = staffAccount; // resolved by the staff gate above; one me() per load
   if (account && !account.needs_profile) {
     const [firstName = '', ...lastName] = clean(account.profile?.full_name || account.full_name).split(/\s+/);
@@ -804,9 +852,13 @@ async function boot() {
         await Promise.allSettled(reusable.map(([type, address]) => saveForReuse(type, address)));
       }
       const values = formValues(form);
+      const applyStoreCredit = storeCreditEligible() && storeCreditInput.checked;
+      if (applyStoreCredit && !state.checkoutIntentId) state.checkoutIntentId = crypto.randomUUID();
       await checkout({
         email: clean(values.email), token: state.token,
         purchaseOrderNumber: clean(values.purchaseOrderNumber), shippingQuoteToken: rate.token,
+        applyStoreCredit,
+        checkoutIntentId: applyStoreCredit ? state.checkoutIntentId : null,
       });
     } catch (error) {
       if ([
@@ -819,6 +871,12 @@ async function boot() {
         'shipping_plan_mismatch',
         'shipping_plan_integrity_failed',
       ].includes(error?.code)) invalidateRates();
+      if (['store_credit_unavailable', 'store_credit_request_identity_collision', 'store_credit_reservation_conflict', 'store_credit_reservation_expired'].includes(error?.code)) {
+        if (error?.code === 'store_credit_unavailable') state.storeCreditAvailableMinor = 0;
+        state.checkoutIntentId = null;
+        renderStoreCredit();
+        renderTotals();
+      }
       showStatus(checkoutError(error), 'err');
       pay.disabled = !state.quote;
       pay.innerHTML = 'Continue to payment <i class="ph ph-lock-key" aria-hidden="true"></i>';

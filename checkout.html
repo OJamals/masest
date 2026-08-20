@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260808b">
+  <link rel="stylesheet" href="css/style.css?v=20260820a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/checkout.js?v=20260808b"></script>
+  <script type="module" src="js/checkout.js?v=20260820a"></script>
 </head>
 <body class="checkout-flow-page">
 <a class="skip-link" href="#main">Skip to checkout</a>
@@ -124,6 +124,17 @@
       <h2 id="checkoutSummaryTitle">Order summary</h2>
       <div id="checkoutLines" class="checkout-summary-lines"></div>
       <div id="checkoutTotals" class="cart-estimate checkout-totals" aria-live="polite" aria-atomic="true"></div>
+      <section id="checkoutStoreCredit" class="checkout-store-credit" aria-labelledby="checkoutStoreCreditTitle" hidden>
+        <label class="checkout-switch-row" for="applyStoreCredit">
+          <input id="applyStoreCredit" name="applyStoreCredit" type="checkbox">
+          <span class="checkout-switch" aria-hidden="true"></span>
+          <span class="checkout-store-credit-copy">
+            <b id="checkoutStoreCreditTitle">Apply account credit</b>
+            <small id="checkoutStoreCreditAvailable"></small>
+          </span>
+        </label>
+      </section>
+      <p id="checkoutPromoNote" class="checkout-promo-note">Have a promo code? Enter it on the secure payment screen.</p>
       <section id="shippingRates" class="checkout-rates" aria-labelledby="shippingRatesTitle" hidden>
         <h3 id="shippingRatesTitle">Shipping method</h3>
         <p id="addressVerification" class="checkout-verified"></p>

@@ -3,10 +3,14 @@
 //   POST { code, percent_off|amount_off, … } → create coupon + promotion code
 //   POST { id, action:'deactivate' }         → deactivate a promotion code
 import Stripe from 'stripe';
-import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
-import { staffCanWrite } from '../../_lib/authz.js';
+import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
+import { staffCan } from '../../_lib/authz.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { buildCouponParams } from '../../_lib/coupons.js';
+import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
+
+const BODY_LIMIT = 8 * 1024;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function shapePromo(p) {
   const c = p.coupon || {};
@@ -37,9 +41,21 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
-    if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
+    if (!staffCan(role, 'promotion.write')) {
+      return json(403, { error: 'forbidden', message: 'Finance or owner access is required.' });
+    }
+    let body;
+    try {
+      body = await readBoundedJson(request, BODY_LIMIT);
+    } catch (error) {
+      return json(error instanceof RequestBodyTooLargeError ? 413 : 400, {
+        error: error instanceof RequestBodyTooLargeError ? 'request_too_large' : 'bad_request',
+      });
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return json(400, { error: 'bad_request' });
+    }
     const sb = adminClient(env);
-    const body = await readBody(request);
 
     if (body.action === 'deactivate') {
       if (!body.id) return json(400, { error: 'promo_id_required' });
@@ -47,20 +63,32 @@ export async function onRequest({ request, env }) {
         const promo = await stripe.promotionCodes.update(body.id, { active: false });
         await recordAudit(sb, { user, action: 'coupon.deactivate', targetType: 'coupon', targetId: body.id, detail: { code: promo.code } });
         return json(200, { ok: true, coupon: shapePromo(promo) });
-      } catch (err) {
-        return json(502, { error: 'stripe_error', detail: err?.message || String(err) });
+      } catch {
+        return json(502, { error: 'stripe_error' });
       }
     }
 
     const built = buildCouponParams(body);
     if (built.error) return json(400, { error: built.error });
+    const requestId = String(body.request_id || '').trim().toLowerCase();
+    if (!UUID.test(requestId)) return json(400, { error: 'invalid_request_id' });
     try {
-      const coupon = await stripe.coupons.create(built.coupon);
-      const promo = await stripe.promotionCodes.create({ coupon: coupon.id, ...built.promo });
-      await recordAudit(sb, { user, action: 'coupon.create', targetType: 'coupon', targetId: promo.id, detail: { code: promo.code, coupon_id: coupon.id } });
+      const coupon = await stripe.coupons.create(built.coupon, {
+        idempotencyKey: `promotion-coupon:${requestId}`,
+      });
+      const promo = await stripe.promotionCodes.create({ coupon: coupon.id, ...built.promo }, {
+        idempotencyKey: `promotion-code:${requestId}`,
+      });
+      await recordAudit(sb, {
+        user,
+        action: 'coupon.create',
+        targetType: 'coupon',
+        targetId: promo.id,
+        detail: { code: promo.code, coupon_id: coupon.id, request_id: requestId },
+      });
       return json(200, { ok: true, coupon: shapePromo({ ...promo, coupon }) });
-    } catch (err) {
-      return json(502, { error: 'stripe_error', detail: err?.message || String(err) });
+    } catch {
+      return json(502, { error: 'stripe_error' });
     }
   }
 

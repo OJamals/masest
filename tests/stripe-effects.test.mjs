@@ -382,6 +382,61 @@ test('late buyer confirmations skip orders already cancelled or refunded', async
   }
 });
 
+test('buyer confirmation labels account credit separately and restores original subtotal', async () => {
+  let email;
+  const sb = {
+    from(table) {
+      if (table === 'orders') {
+        return resolvedQuery({
+          data: {
+            id: 'order-1',
+            order_number: 'MST-00000123',
+            status: 'paid',
+            customer_email: 'buyer@example.com',
+            subtotal: 39.99,
+            shipping: 0,
+            tax: 0,
+            total: 37.99,
+            currency: 'usd',
+            purchase_order_number: null,
+            ship_address: null,
+          },
+          error: null,
+        });
+      }
+      if (table === 'order_items') {
+        return resolvedQuery({
+          data: [{ sku: 'SKU-1', name: 'Product', qty: 2, unit_price: 25, backordered: false }],
+          error: null,
+        });
+      }
+      throw new Error(`unexpected table ${table}`);
+    },
+  };
+
+  const result = await deliverIntegrationEffect({
+    env: {},
+    sb,
+    effect: {
+      id: 'effect-credit-confirmation',
+      provider: 'stripe',
+      provider_event_id: 'evt-credit-confirmation',
+      effect_key: 'buyer-confirmation',
+      effect_type: 'order_confirmation',
+      payload: { order_id: 'order-1', pending: false, discount: 2, store_credit: 10.01 },
+      lease_owner: 'worker-1',
+    },
+  }, {
+    sendEmail: async (_env, input) => { email = input; return true; },
+  });
+
+  assert.equal(result.skipped, false);
+  assert.match(email.html, /Subtotal<\/td><td[^>]*>USD 50\.00/);
+  assert.match(email.html, /Account credit<\/td><td[^>]*>&minus;USD 10\.01/);
+  assert.match(email.html, /Discount<\/td><td[^>]*>&minus;USD 2\.00/);
+  assert.match(email.html, /Total<\/td><td[^>]*>USD 37\.99/);
+});
+
 test('worker records provider success before completion and skips provider after response-loss retry', async () => {
   const calls = [];
   const fresh = {

@@ -684,6 +684,33 @@ test('expired Checkout webhook terminalizes the exact persisted Quote attempt', 
   });
 });
 
+test('expired Checkout releases its exact account-credit reservation', async () => {
+  const released = [];
+  const session = paidSession();
+  session.status = 'expired';
+  session.metadata.store_credit_reservation_id = '11111111-1111-4111-8111-111111111111';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_credit_expired',
+      type: 'checkout.session.expired',
+      data: { object: session },
+    }),
+    adminClient: () => ({}),
+    finishQuoteCheckoutAttempt: async () => ({ status: 'not_applicable' }),
+    releaseCompanyStoreCredit: async (_sb, input) => {
+      released.push(input);
+      return { status: 'released' };
+    },
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.deepEqual(result, { status: 200, body: { received: true } });
+  assert.deepEqual(released, [{
+    reservationId: '11111111-1111-4111-8111-111111111111',
+    stripeSessionId: 'cs_1',
+  }]);
+});
+
 test('quoted Checkout preflight rejects a mismatched Session before any Order or effect mutation', async () => {
   const calls = [];
   const transitions = [];
@@ -764,6 +791,43 @@ test('webhook hydrates an incomplete checkout event before persisting the paid o
     'cs_1',
     { metadata: { order_number: 'MST-00000123' } },
   ]);
+});
+
+test('completed Checkout consumes account credit after durable order recovery and before effects', async () => {
+  const calls = [];
+  const session = paidSession();
+  session.metadata.company_id = 'company-1';
+  session.metadata.store_credit_reservation_id = '11111111-1111-4111-8111-111111111111';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_credit_completed',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    }),
+    updateCheckoutSession: async () => {},
+    adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
+    consumeCompanyStoreCredit: async (_sb, input) => {
+      calls.push(['credit.consume', input]);
+      return { status: 'consumed', amount_minor: 1001, currency: 'usd' };
+    },
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.equal(result.status, 200);
+  const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
+  assert.ok(labels.indexOf('rpc.persist_stripe_order') < labels.indexOf('credit.consume'));
+  assert.ok(labels.indexOf('credit.consume') < labels.indexOf('rpc.link_order_provider_object'));
+  assert.ok(labels.indexOf('credit.consume') < labels.indexOf('effects.ingest'));
+  assert.deepEqual(calls.find((call) => Array.isArray(call) && call[0] === 'credit.consume')[1], {
+    reservationId: '11111111-1111-4111-8111-111111111111',
+    stripeSessionId: 'cs_1',
+    orderId: 'order-1',
+  });
+  const effects = calls.find((call) => Array.isArray(call) && call[0] === 'effects.ingest')[1];
+  assert.equal(
+    effects.find(({ effect_type }) => effect_type === 'order_confirmation').payload.store_credit,
+    10.01,
+  );
 });
 
 test('duplicate webhook delivery recovers and enqueues the same effects before 200', async () => {
@@ -980,6 +1044,36 @@ test('concurrent ACH success deliveries have one claim and duplicate-safe effect
   assert.equal(labels.filter((label) => label === 'effects.ingest').length, 2);
   const enqueues = calls.filter((call) => Array.isArray(call) && call[0] === 'effects.ingest');
   assert.deepEqual(enqueues[0][1], enqueues[1][1]);
+});
+
+test('ACH settlement replays account-credit consumption before the confirmed receipt', async () => {
+  const calls = [];
+  const session = paidSession();
+  session.metadata.store_credit_reservation_id = '11111111-1111-4111-8111-111111111111';
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_credit_ach_success',
+      type: 'checkout.session.async_payment_succeeded',
+      data: { object: session },
+    }),
+    adminClient: () => achDb(calls, [
+      { data: { id: 'order-1', status: 'paid', company_id: null }, error: null },
+    ]),
+    consumeCompanyStoreCredit: async (_sb, input) => {
+      calls.push(['credit.consume', input]);
+      return { status: 'consumed', amount_minor: 1001, currency: 'usd', replay: true };
+    },
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.equal(result.status, 200);
+  const labels = calls.map((call) => Array.isArray(call) ? call[0] : call);
+  assert.ok(labels.indexOf('credit.consume') < labels.indexOf('effects.ingest'));
+  const effects = calls.find((call) => Array.isArray(call) && call[0] === 'effects.ingest')[1];
+  assert.equal(
+    effects.find(({ effect_type }) => effect_type === 'order_confirmation').payload.store_credit,
+    10.01,
+  );
 });
 
 test('successful quoted ACH payment finalizes the pending quote', async () => {

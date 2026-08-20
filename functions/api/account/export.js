@@ -3,7 +3,16 @@
 import { requireCompany, json } from '../../_lib/supabase.js';
 
 // Company-scoped tables holding the account's personal/business data (filtered by company_id).
-const COMPANY_TABLES = ['addresses', 'quotes', 'messages', 'notifications', 'program_subscriptions', 'company_invites'];
+const COMPANY_TABLES = [
+  'addresses',
+  'quotes',
+  'messages',
+  'notifications',
+  'program_subscriptions',
+  'company_invites',
+  'company_store_credit_entries',
+  'company_store_credit_reservations',
+];
 
 export async function onRequestGet({ request, env }) {
   const ctx = await requireCompany(request, env);

@@ -57,6 +57,11 @@ import {
   finishQuoteCheckoutAttemptFromSession,
   preflightQuoteCheckoutAttemptFromSession,
 } from '../_lib/quote-checkout-attempt.js';
+import {
+  consumeCompanyStoreCredit,
+  normalizeStoreCreditIntentId,
+  releaseCompanyStoreCredit,
+} from '../_lib/store-credit.js';
 
 export { htmlEscape as escapeHtml } from '../_lib/supabase.js';
 
@@ -134,6 +139,26 @@ async function transitionQuotedCheckout(sb, session, finalOrderId, transition, e
   return result?.error ? json(503, { error: errorCode }) : null;
 }
 
+function storeCreditReservationFromSession(session) {
+  const raw = String(session?.metadata?.store_credit_reservation_id || '').trim();
+  if (!raw) return { value: null };
+  const value = normalizeStoreCreditIntentId(raw);
+  return value ? { value } : { error: 'store_credit_metadata_invalid' };
+}
+
+function consumedStoreCreditAmount(result) {
+  const amountMinor = Number(result?.amount_minor);
+  if (
+    !Number.isSafeInteger(amountMinor)
+    || amountMinor <= 0
+    || amountMinor > 100_000_000
+    || String(result?.currency || '').toLowerCase() !== 'usd'
+  ) {
+    throw new Error('store_credit_consumption_invalid');
+  }
+  return amountMinor / 100;
+}
+
 export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
   const hydrateFulfillmentOrder = dependencies.hydrateCheckoutFulfillmentOrder
@@ -145,6 +170,8 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     || finishQuoteCheckoutAttemptFromSession;
   const preflightQuotedAttempt = dependencies.preflightQuoteCheckoutAttempt
     || preflightQuoteCheckoutAttemptFromSession;
+  const consumeStoreCredit = dependencies.consumeCompanyStoreCredit || consumeCompanyStoreCredit;
+  const releaseStoreCredit = dependencies.releaseCompanyStoreCredit || releaseCompanyStoreCredit;
   const constructEvent = dependencies.constructEvent || (async ({ raw, sig, whSecret }) => {
     const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
     const cryptoProvider = Stripe.createSubtleCryptoProvider();
@@ -177,7 +204,22 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   }
 
   if (event.type === 'checkout.session.expired') {
-    const result = await finishQuotedAttempt(getAdminClient(env), event.data.object, {
+    const sb = getAdminClient(env);
+    const session = event.data.object;
+    const reservation = storeCreditReservationFromSession(session);
+    if (reservation.error) return json(503, { error: reservation.error });
+    if (reservation.value) {
+      try {
+        await releaseStoreCredit(sb, {
+          reservationId: reservation.value,
+          stripeSessionId: session.id,
+        });
+      } catch (error) {
+        console.error('store_credit_release_failed', error?.code || error?.name || 'unknown');
+        return json(503, { error: 'store_credit_release_failed' });
+      }
+    }
+    const result = await finishQuotedAttempt(sb, session, {
       terminalStatus: 'expired',
       reason: 'provider_expired_webhook',
     });
@@ -261,6 +303,10 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       console.error('checkout_session_cart_missing', s?.id || 'unknown');
       return json(503, { error: 'checkout_session_incomplete' });
     }
+    const storeCreditReservation = storeCreditReservationFromSession(s);
+    if (storeCreditReservation.error) {
+      return json(503, { error: storeCreditReservation.error });
+    }
     const subtotal = centsToAmount(s.amount_subtotal);
     const tax = centsToAmount(s.total_details?.amount_tax);
     const total = centsToAmount(s.amount_total);
@@ -342,6 +388,21 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       order = persistedOrder;
     }
 
+    let storeCredit = 0;
+    if (storeCreditReservation.value) {
+      try {
+        const consumed = await consumeStoreCredit(sb, {
+          reservationId: storeCreditReservation.value,
+          stripeSessionId: s.id,
+          orderId: order.id,
+        });
+        storeCredit = consumedStoreCreditAmount(consumed);
+      } catch (error) {
+        console.error('store_credit_consume_failed', error?.code || error?.name || 'unknown');
+        return json(503, { error: 'store_credit_consume_failed' });
+      }
+    }
+
     try {
       await linkOrderProviderObject(sb, {
         orderId: order.id,
@@ -380,6 +441,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
         currency: (s.currency || 'usd').toUpperCase(),
         total,
         discount: centsToAmount(s.total_details?.amount_discount),
+        storeCredit,
       }),
     );
     if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });
@@ -439,6 +501,24 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     } else if (!['paid', 'fulfilled', 'refunded'].includes(order.status)) {
       return json(200, { received: true, duplicate: true });
     }
+    const storeCreditReservation = storeCreditReservationFromSession(s);
+    if (storeCreditReservation.error) {
+      return json(503, { error: storeCreditReservation.error });
+    }
+    let storeCredit = 0;
+    if (storeCreditReservation.value) {
+      try {
+        const consumed = await consumeStoreCredit(sb, {
+          reservationId: storeCreditReservation.value,
+          stripeSessionId: s.id,
+          orderId: effectOrder.id,
+        });
+        storeCredit = consumedStoreCreditAmount(consumed);
+      } catch (error) {
+        console.error('store_credit_consume_failed', error?.code || error?.name || 'unknown');
+        return json(503, { error: 'store_credit_consume_failed' });
+      }
+    }
     const enqueueError = await enqueueRequiredEffects(
       sb,
       event,
@@ -450,6 +530,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
         currency: (s.currency || 'usd').toUpperCase(),
         total: centsToAmount(s.amount_total),
         discount: centsToAmount(s.total_details?.amount_discount),
+        storeCredit,
       }),
     );
     if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });

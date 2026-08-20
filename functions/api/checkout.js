@@ -33,6 +33,12 @@ import {
   openQuoteCheckoutSession,
   QuoteCheckoutAttemptError,
 } from '../_lib/quote-checkout-attempt.js';
+import {
+  attachCompanyStoreCreditReservation,
+  normalizeStoreCreditIntentId,
+  reserveCompanyStoreCredit,
+  storeCreditCheckoutIdempotencyKey,
+} from '../_lib/store-credit.js';
 
 const CHECKOUT_BODY_MAX_BYTES = 64 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -41,6 +47,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 // while customer/shipping setup and the provider request are still in flight.
 const STRIPE_MIN_CHECKOUT_WINDOW_MS = 31 * 60 * 1000;
 const STRIPE_MAX_CHECKOUT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const STORE_CREDIT_CHECKOUT_WINDOW_MS = 35 * 60 * 1000;
 
 function quoteOrderCheckoutSnapshot(order) {
   return {
@@ -88,6 +95,9 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     || resolveCheckoutFulfillmentSelection;
   const clock = dependencies.now || (() => new Date());
   const openQuotedSession = dependencies.openQuoteCheckoutSession || openQuoteCheckoutSession;
+  const reserveStoreCredit = dependencies.reserveCompanyStoreCredit || reserveCompanyStoreCredit;
+  const attachStoreCredit = dependencies.attachCompanyStoreCreditReservation
+    || attachCompanyStoreCreditReservation;
 
   const rl = await checkRateLimit(env, 'checkout', clientIp(request), { limit: 20, windowSec: 60 });
   if (!rl.ok) {
@@ -105,6 +115,16 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return json(400, { error: 'bad_request' });
+  }
+  if (body.apply_store_credit != null && typeof body.apply_store_credit !== 'boolean') {
+    return json(400, { error: 'invalid_store_credit_request' });
+  }
+  const applyStoreCredit = body.apply_store_credit === true;
+  const checkoutIntentId = applyStoreCredit
+    ? normalizeStoreCreditIntentId(body.checkout_intent_id)
+    : '';
+  if (applyStoreCredit && !checkoutIntentId) {
+    return json(400, { error: 'invalid_checkout_intent_id' });
   }
 
   const purchaseOrder = normalizePurchaseOrderNumber(body.purchase_order_number);
@@ -241,6 +261,15 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       currency: String(quoteOrder.currency || 'usd').toLowerCase(),
       quotedItemsBySku,
     };
+  }
+  if (applyStoreCredit && quoteContext) {
+    return json(409, {
+      error: 'store_credit_unavailable_for_quote',
+      message: 'Accepted quote pricing cannot be combined with account credit.',
+    });
+  }
+  if (applyStoreCredit && (!user || !companyId || company?.status !== 'approved')) {
+    return json(403, { error: 'store_credit_account_required' });
   }
 
   const { data: variants, error } = await sb
@@ -419,6 +448,49 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     }
   }
 
+  let storeCredit = null;
+  let storeCreditExpiresAt = null;
+  if (applyStoreCredit) {
+    if (orderCurrency !== 'usd') {
+      return json(409, { error: 'store_credit_currency_unsupported' });
+    }
+    const merchandiseSubtotalMinor = sellable.reduce(
+      (sum, line) => sum + (Math.round(Number(line.price) * 100) * qtyBySku[line.sku]),
+      0,
+    );
+    if (!Number.isSafeInteger(merchandiseSubtotalMinor) || merchandiseSubtotalMinor <= 0) {
+      return json(409, { error: 'store_credit_unavailable' });
+    }
+    storeCreditExpiresAt = new Date(clock().getTime() + STORE_CREDIT_CHECKOUT_WINDOW_MS);
+    try {
+      const reservation = await reserveStoreCredit(sb, {
+        companyId,
+        userId: user.id,
+        intentId: checkoutIntentId,
+        maxAmountMinor: merchandiseSubtotalMinor,
+        expiresAt: storeCreditExpiresAt.toISOString(),
+        currency: orderCurrency,
+      });
+      const amountMinor = Number(reservation?.amount_minor);
+      if (!reservation?.id || !Number.isSafeInteger(amountMinor)
+        || amountMinor <= 0 || amountMinor > merchandiseSubtotalMinor) {
+        return json(503, { error: 'store_credit_reservation_failed', retryable: true });
+      }
+      storeCredit = { reservationId: reservation.id, amountMinor };
+    } catch (error) {
+      if (error?.code === 'store_credit_insufficient') {
+        return json(409, { error: 'store_credit_unavailable' });
+      }
+      if (['store_credit_request_identity_collision', 'store_credit_reservation_conflict'].includes(error?.code)) {
+        return json(409, { error: error.code });
+      }
+      if (error?.code === 'store_credit_reservation_expired') {
+        return json(409, { error: error.code });
+      }
+      return json(503, { error: 'store_credit_reservation_failed', retryable: true });
+    }
+  }
+
   const sessionParams = buildStripeCheckoutSessionParams({
     appUrl,
     email: buyerEmail.value,
@@ -434,7 +506,11 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     quoteId: quoteContext?.quoteId || null,
     quoteOrderId: quoteContext?.quoteOrderId || null,
     allowPromotionCodes: !quoteContext,
+    storeCredit,
   });
+  if (storeCredit) {
+    sessionParams.expires_at = Math.floor(storeCreditExpiresAt.getTime() / 1000);
+  }
 
   if (quoteContext) {
     const offerExpiryMs = Date.parse(quoteContext.offerExpiresAt);
@@ -482,8 +558,30 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   }
 
   try {
-    const session = await stripe.checkout.sessions.create(sessionParams);
-    return json(200, { url: session.url });
+    const session = storeCredit
+      ? await stripe.checkout.sessions.create(sessionParams, {
+          idempotencyKey: storeCreditCheckoutIdempotencyKey(storeCredit.reservationId),
+        })
+      : await stripe.checkout.sessions.create(sessionParams);
+    if (storeCredit) {
+      if (!session?.id) {
+        return json(503, { error: 'store_credit_attach_failed', retryable: true });
+      }
+      try {
+        await attachStoreCredit(sb, {
+          reservationId: storeCredit.reservationId,
+          stripeSessionId: session.id,
+        });
+      } catch {
+        // Provider creation may have succeeded. Keep the reservation fail-closed and use
+        // the same idempotency key on retry instead of risking a second spend or session.
+        return json(503, { error: 'store_credit_attach_failed', retryable: true });
+      }
+    }
+    return json(200, {
+      url: session.url,
+      ...(storeCredit ? { store_credit_amount_minor: storeCredit.amountMinor } : {}),
+    });
   } catch (err) {
     return json(502, { error: 'stripe_error', code: err?.code || null });
   }

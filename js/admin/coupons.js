@@ -1,10 +1,11 @@
 // Admin promo-codes card (#97, #36 per-tab split): Stripe promotion-code
 // management. Lives inside the Products tab; shared primitives ($, api, message,
 // admSkeleton, admEmpty) are injected. esc/money/dateTime/confirmDialog from util.
-import { esc, money, dateTime as date, confirmDialog } from '../util.js?v=20260808b';
+import { esc, money, dateTime as date, confirmDialog } from '../util.js?v=20260820a';
 
 export function createCouponsCard({ $, api, message, admSkeleton, admEmpty }) {
   let couponsWired = false;
+  let couponCreateIdentity = null;
 
   function couponDiscount(c) {
     if (c.percent_off != null) return `${esc(c.percent_off)}% off`;
@@ -30,6 +31,7 @@ export function createCouponsCard({ $, api, message, admSkeleton, admEmpty }) {
     renderCoupons();
     if (couponsWired || !$('cpCreate')) return;
     couponsWired = true;
+    $('cpExpires').min = new Date().toISOString().slice(0, 10);
     $('cpCreate').addEventListener('click', async () => {
       const body = {
         code: $('cpCode').value.trim(),
@@ -40,13 +42,31 @@ export function createCouponsCard({ $, api, message, admSkeleton, admEmpty }) {
         expires_at: $('cpExpires').value,
       };
       if (!body.code) { message('cpStatus', 'Enter a code.', 'err'); return; }
+      if (Boolean(body.percent_off) === Boolean(body.amount_off)) {
+        message('cpStatus', 'Enter either a percent discount or a fixed-dollar discount.', 'err');
+        return;
+      }
+      const fingerprint = JSON.stringify(body);
+      if (couponCreateIdentity?.fingerprint !== fingerprint) {
+        couponCreateIdentity = { fingerprint, requestId: crypto.randomUUID() };
+      }
+      body.request_id = couponCreateIdentity.requestId;
       message('cpStatus', 'Creating…');
       try {
         await api('/api/admin/coupons', { method: 'POST', body });
+        couponCreateIdentity = null;
         message('cpStatus', 'Code created.', 'ok');
         ['cpCode', 'cpPercent', 'cpAmount', 'cpMin', 'cpMax', 'cpExpires'].forEach((id) => { $(id).value = ''; });
         renderCoupons();
-      } catch (err) { message('cpStatus', err.data?.error || 'Could not create the code. Retry.', 'err'); }
+      } catch (err) {
+        const copy = {
+          ambiguous_discount: 'Enter either a percent discount or a fixed-dollar discount.',
+          invalid_expires_at: 'Choose an expiration date that has not passed.',
+          invalid_amount: 'Enter a fixed discount of at least $0.01 with no more than two decimals.',
+          invalid_minimum_amount: 'Enter a minimum order with no more than two decimals.',
+        }[err.data?.error];
+        message('cpStatus', copy || err.data?.error || 'Could not create the code. Retry.', 'err');
+      }
     });
     $('cpList').addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-coupon-off]');

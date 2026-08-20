@@ -35,7 +35,7 @@ test("dashboard renders balance owed + credit available from ACCOUNT.credit", ()
   const js = read("js/dashboard.js");
   assert.match(js, /ACCOUNT\??\.credit/, "dashboard must read ACCOUNT.credit");
   assert.match(js, /Balance owed/, "dashboard must label the outstanding balance");
-  assert.match(js, /Credit available/, "dashboard must label available credit");
+  assert.match(js, /NET credit available/, "dashboard must distinguish NET capacity from account credit");
 });
 
 test("checkout tells a buyer where on-account ordering actually happens", () => {

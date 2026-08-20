@@ -5,6 +5,7 @@ import { adminClient, userFromRequest, json, readBody } from '../../_lib/supabas
 import { isStaffEmail, normalizeStaffRole } from '../../_lib/authz.js';
 import { buildAccountSetup } from '../../_lib/setup.js';
 import { companyCreditState } from '../../_lib/credit.js';
+import { companyStoreCreditSummary } from '../../_lib/store-credit.js';
 
 // Pragmatic email shape check — the real gate is Supabase's confirmation email to the new address.
 export function isValidEmail(value) {
@@ -44,6 +45,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   let credit = null;
+  let store_credit = null;
   if (company?.id) {
     try {
       const state = await companyCreditState(sb, company.id, company.credit_limit);
@@ -55,6 +57,17 @@ export async function onRequestGet({ request, env }) {
       };
     } catch (err) {
       credit = null; // degrade gracefully — never break the dashboard load on a credit read
+    }
+    try {
+      const state = await companyStoreCreditSummary(sb, company.id);
+      store_credit = {
+        currency: state.currency || 'usd',
+        balance_minor: Number(state.balance_minor) || 0,
+        reserved_minor: Number(state.reserved_minor) || 0,
+        available_minor: Number(state.available_minor) || 0,
+      };
+    } catch {
+      store_credit = null; // additive migration may not be live yet; account remains usable
     }
   }
 
@@ -71,6 +84,7 @@ export async function onRequestGet({ request, env }) {
     can_checkout: company?.status === 'approved',
     can_use_net_terms: company?.status === 'approved' && (company?.net_terms_days || 0) > 0,
     credit,
+    store_credit,
     setup: buildAccountSetup(profile, company),
   });
 }

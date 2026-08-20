@@ -61,3 +61,28 @@ test('Session metadata binds the exact current shipping plan contract', () => {
   assert.equal(params.metadata.shipping_plan_id, 'plan-1');
   assert.equal(params.metadata.shipping_plan_digest, 'digest-1');
 });
+
+test('account credit reduces merchandise exactly while leaving Stripe promotion-code entry enabled', () => {
+  const params = buildStripeCheckoutSessionParams({
+    ...base,
+    email: 'buyer@example.test',
+    sellable: [{ sku: 'VK-1', name: 'VertKleen', price: 25, currency: 'usd', stripe_price_id: 'price_live' }],
+    qtyBySku: { 'VK-1': 3 },
+    storeCredit: { reservationId: 'credit-reservation-1', amountMinor: 1001 },
+  });
+
+  assert.equal(params.allow_promotion_codes, true);
+  assert.equal(params.metadata.store_credit_reservation_id, 'credit-reservation-1');
+  assert.equal(params.metadata.store_credit_amount_minor, '1001');
+  assert.deepEqual(
+    params.line_items.map((line) => ({ quantity: line.quantity, unit_amount: line.price_data.unit_amount })),
+    [
+      { quantity: 2, unit_amount: 2166 },
+      { quantity: 1, unit_amount: 2167 },
+    ],
+  );
+  assert.equal(
+    params.line_items.reduce((sum, line) => sum + line.quantity * line.price_data.unit_amount, 0),
+    7500 - 1001,
+  );
+});

@@ -3,9 +3,9 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260808b';
-import { captureDirty, restoreDirty } from './edits.js?v=20260808b';
-import { ORDER_STATUSES } from './orders.js?v=20260808b';
+import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260820a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260820a';
+import { ORDER_STATUSES } from './orders.js?v=20260820a';
 
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
@@ -378,6 +378,97 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     return `<div class="company-payments"><h3>Payment methods</h3>${rows}</div>`;
   }
 
+  let storeCreditAdjustmentIdentity = null;
+
+  function renderCompanyStoreCredit(company, storeCredit) {
+    if (!storeCredit) {
+      return `<section class="company-store-credit"><h3>Account credit</h3>
+        <p class="muted">Account credit is unavailable until its database schema is applied.</p></section>`;
+    }
+    const currency = storeCredit.currency || 'usd';
+    const entries = (storeCredit.entries || []).map((entry) => `
+      <div class="dash-row">
+        <span><b>${esc(String(entry.kind || 'adjustment').replaceAll('_', ' '))}</b><small class="muted">${esc(entry.reason || '')} · ${esc(date(entry.created_at))}</small></span>
+        <b>${esc(money((Number(entry.amount_minor) || 0) / 100, entry.currency || currency))}</b>
+      </div>`).join('') || '<p class="muted">No account-credit activity yet.</p>';
+    return `<section class="company-store-credit" data-company-store-credit>
+      <div class="adm-panel-header"><h3>Account credit</h3><span class="badge badge-warning">Separate from NET terms</span></div>
+      <div class="dash-row"><span>Ledger balance</span><b>${esc(money((Number(storeCredit.balance_minor) || 0) / 100, currency))}</b></div>
+      <div class="dash-row"><span>Reserved in checkout</span><b>${esc(money((Number(storeCredit.reserved_minor) || 0) / 100, currency))}</b></div>
+      <div class="dash-row"><span>Available</span><b>${esc(money((Number(storeCredit.available_minor) || 0) / 100, currency))}</b></div>
+      <div class="adm-form-grid company-store-credit-form" data-capability-scope="company.credit">
+        <label>Adjustment
+          <select class="adm-select" name="store_credit_direction" data-store-credit-direction>
+            <option value="add">Add credit</option>
+            <option value="remove">Remove credit</option>
+          </select>
+        </label>
+        <label>Amount (USD)
+          <input class="adm-input" name="store_credit_amount" data-store-credit-amount inputmode="decimal" autocomplete="off" placeholder="Enter amount…" aria-describedby="storeCreditHelp">
+        </label>
+        <label class="wide">Reason
+          <input class="adm-input" name="store_credit_reason" data-store-credit-reason maxlength="500" autocomplete="off" placeholder="Required ledger note…">
+        </label>
+        <p id="storeCreditHelp" class="muted wide">Credit applies to merchandise before tax. Every adjustment is permanent ledger history.</p>
+        <div class="wide adm-inline-actions">
+          <button class="btn btn-primary btn-sm" type="button" data-store-credit-adjust data-capability="company.credit">Apply adjustment</button>
+          <span class="adm-status" data-store-credit-status role="status" aria-live="polite"></span>
+        </div>
+      </div>
+      <details class="company-store-credit-history"><summary>Account-credit history (${(storeCredit.entries || []).length})</summary>${entries}</details>
+    </section>`;
+  }
+
+  function wireCompanyStoreCreditActions(company) {
+    const box = $('companyDetail');
+    const button = box?.querySelector('[data-store-credit-adjust]');
+    if (!button || !company?.id) return;
+    button.addEventListener('click', async () => {
+      const amountField = box.querySelector('[data-store-credit-amount]');
+      const reasonField = box.querySelector('[data-store-credit-reason]');
+      const direction = box.querySelector('[data-store-credit-direction]')?.value || 'add';
+      const status = box.querySelector('[data-store-credit-status]');
+      const rawAmount = amountField?.value.trim() || '';
+      const reason = reasonField?.value.trim() || '';
+      if (!/^\d{1,7}(?:\.\d{1,2})?$/.test(rawAmount)
+        || Number(rawAmount) <= 0 || Number(rawAmount) > 1000000 || reason.length < 8) {
+        status.textContent = 'Enter $0.01–$1,000,000.00 and a reason of at least 8 characters.';
+        status.dataset.state = 'err';
+        return;
+      }
+      const amount = direction === 'remove' ? `-${rawAmount}` : rawAmount;
+      const fingerprint = JSON.stringify({ company_id: company.id, amount, reason });
+      if (storeCreditAdjustmentIdentity?.fingerprint !== fingerprint) {
+        storeCreditAdjustmentIdentity = { fingerprint, requestId: crypto.randomUUID() };
+      }
+      const verb = direction === 'remove' ? 'remove' : 'add';
+      if (!(await confirmDialog(
+        `${verb === 'add' ? 'Add' : 'Remove'} ${money(Number(rawAmount), 'usd')} ${verb === 'add' ? 'to' : 'from'} ${company.name || 'this Company'} account credit?`,
+        { confirmText: 'Apply adjustment', danger: direction === 'remove' },
+      ))) return;
+      button.disabled = true;
+      status.textContent = 'Applying ledger adjustment…';
+      status.dataset.state = '';
+      try {
+        await api('/api/admin/company-credits', {
+          method: 'POST',
+          body: {
+            company_id: company.id,
+            amount,
+            reason,
+            request_id: storeCreditAdjustmentIdentity.requestId,
+          },
+        });
+        storeCreditAdjustmentIdentity = null;
+        await openCompanyDetail(company.id);
+      } catch (err) {
+        status.textContent = err.data?.error || 'Could not apply account credit. Retry keeps the same request identity.';
+        status.dataset.state = 'err';
+        button.disabled = false;
+      }
+    });
+  }
+
   function renderCompanyOrdersMini(company, orders = []) {
     if (!orders.length) return '<div class="company-orders-mini"><h3>Orders</h3><p class="muted">No orders yet.</p></div>';
     const rows = orders.slice(0, 20).map((o) => `
@@ -670,12 +761,14 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         ${renderCompanyInvites(company, detail.invites || [])}
         ${renderCompanyAddresses(company, console_.addresses || [])}
         ${renderCompanyPayments(company, console_.payment_methods || [])}
+        ${renderCompanyStoreCredit(company, detail.store_credit)}
         ${renderCompanyOrdersMini(company, console_.orders || [])}
         <p class="muted" style="margin-top:12px">${openSteps.length ? `Open: ${openSteps.map((step) => esc(step.label)).join(', ')}` : 'Setup complete.'}</p>`;
       wireCompanyDetailActions(company);
       wireCompanyUserActions(company);
       wireCompanyAddressActions(company);
       wireCompanyPaymentActions(company);
+      wireCompanyStoreCreditActions(company);
       wireCompanyOrderActions(company);
       box.querySelector('[data-company-detail-close]')?.addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
       box.querySelector('[data-company-detail-title]')?.focus();

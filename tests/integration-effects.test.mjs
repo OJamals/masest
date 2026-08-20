@@ -47,6 +47,7 @@ test('provider-visible Stripe idempotency keys and delivery plans remain stable'
       currency: 'USD',
       total: 25,
       discount: 2,
+      storeCredit: 10.01,
     }).map(({ effect_key, effect_type, depends_on_effect_key }) => ({
       effect_key, effect_type, depends_on_effect_key,
     })),
@@ -56,6 +57,11 @@ test('provider-visible Stripe idempotency keys and delivery plans remain stable'
       { effect_key: 'buyer-confirmation', effect_type: 'order_confirmation', depends_on_effect_key: null },
       { effect_key: 'company-order-received', effect_type: 'company_notification', depends_on_effect_key: null },
     ],
+  );
+  assert.equal(
+    module.checkoutOrderEffects({ orderId: 'order-1', stage: 'card', storeCredit: 10.01 })
+      .find(({ effect_type }) => effect_type === 'order_confirmation').payload.store_credit,
+    10.01,
   );
 });
 

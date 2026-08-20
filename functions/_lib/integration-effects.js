@@ -32,7 +32,7 @@ async function defaultCreateStripeRefund(env, { paymentIntent, amountCents, idem
 const PAYLOAD_KEYS = Object.freeze({
   stock_decrement: new Set(['order_id']),
   oversell_alert: new Set(['order_id']),
-  order_confirmation: new Set(['order_id', 'pending', 'discount']),
+  order_confirmation: new Set(['order_id', 'pending', 'discount', 'store_credit']),
   ach_failure_email: new Set(['order_id']),
   company_notification: new Set([
     'kind',
@@ -155,6 +155,7 @@ export function checkoutOrderEffects({
   currency = 'USD',
   total = 0,
   discount = 0,
+  storeCredit = 0,
 }) {
   const effects = [];
   if (stage === 'card' || stage === 'ach_succeeded') {
@@ -166,11 +167,14 @@ export function checkoutOrderEffects({
       'stock-decrement',
     ));
   }
-  effects.push(effect('buyer-confirmation', 'order_confirmation', {
+  const confirmationPayload = {
     order_id: orderId,
     pending: stage === 'ach_pending',
     discount: Number(discount) || 0,
-  }));
+  };
+  const storeCreditAmount = Math.max(0, Number(storeCredit) || 0);
+  if (storeCreditAmount > 0) confirmationPayload.store_credit = storeCreditAmount;
+  effects.push(effect('buyer-confirmation', 'order_confirmation', confirmationPayload));
   const notification = companyNotification(
     stage === 'ach_succeeded' ? 'company-payment-cleared' : 'company-order-received',
     stage === 'ach_succeeded' ? 'payment_cleared' : 'order_received',
@@ -489,6 +493,8 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
   const appUrl = env.APP_URL || 'https://masest.co';
   const documentNote = technicalDocumentRequestNoteHtml(appUrl);
   const discount = Number(effectRow.payload.discount) || 0;
+  const storeCredit = Math.max(0, Number(effectRow.payload.store_credit) || 0);
+  const originalSubtotal = Math.round((Number(order.subtotal || 0) + storeCredit) * 100) / 100;
   const html = `
   <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
     <div style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
@@ -512,7 +518,8 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
           <tbody>${rows}</tbody>
         </table>
         <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
-          <tr><td style="padding:3px 0;color:#556">Subtotal</td><td style="padding:3px 0;text-align:right">${money(order.subtotal)}</td></tr>
+          <tr><td style="padding:3px 0;color:#556">Subtotal</td><td style="padding:3px 0;text-align:right">${money(originalSubtotal)}</td></tr>
+          ${storeCredit > 0 ? `<tr><td style="padding:3px 0;color:#556">Account credit</td><td style="padding:3px 0;text-align:right">&minus;${money(storeCredit)}</td></tr>` : ''}
           ${discount > 0 ? `<tr><td style="padding:3px 0;color:#556">Discount</td><td style="padding:3px 0;text-align:right">&minus;${money(discount)}</td></tr>` : ''}
           ${Number(order.shipping) > 0 ? `<tr><td style="padding:3px 0;color:#556">Shipping</td><td style="padding:3px 0;text-align:right">${money(order.shipping)}</td></tr>` : ''}
           <tr><td style="padding:3px 0;color:#556">Tax</td><td style="padding:3px 0;text-align:right">${money(order.tax)}</td></tr>

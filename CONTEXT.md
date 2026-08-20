@@ -43,11 +43,28 @@
   `requisition_name`, and canonical `order_items`.
 
 - **Checkout mode**
-  - `pay` (default) — creates/redirects to Stripe payment.
-  - `net` — creates a NET order on account.
+  - `pay` — creates/redirects to Stripe card or ACH payment.
+  - Any self-serve `net` request is invalid. Platform staff raises NET orders from the
+    accepted-quote workflow after credit review.
 
 - **NET terms**  
   Deferred-payment contract tied to an approved company (`net_terms_days` > 0, `credit_limit`, and open NET balance).
+
+- **NET credit limit**
+  The maximum approved unpaid NET receivable for a Company. This is purchasing capacity,
+  not money or a checkout discount.
+
+- **Company account credit**
+  A discretionary USD merchandise discount held in an append-only Company ledger. It is
+  separate from the NET credit limit. Checkout atomically reserves available account credit,
+  embeds the exact reduction in Stripe merchandise prices, consumes it only after the Order
+  persists, and restores it after a full cancellation or refund.
+
+- **Promotion code**
+  A Stripe-native coupon code entered on hosted Checkout. Stripe owns code validity, expiry,
+  minimum spend, and redemption limits. Standard Checkout may combine a promotion code with
+  Company account credit because account credit is already reflected in merchandise prices;
+  accepted-quote pricing permits neither adjustment.
 
 - **Order**  
   A sales record in `public.orders` with a finite lifecycle and payment method.
@@ -121,6 +138,13 @@
   disabled while old application instances or pre-migration Stripe Sessions may exist. Enable
   only after new code is live, old workers are drained, and every legacy Session is terminal.
 
+- **Account-credit Checkout reservation**
+  One idempotent hold against a Company's account-credit ledger, bound to Buyer, cart-priced
+  merchandise maximum, Checkout intent UUID, and Stripe Session. Active holds reduce available
+  credit. A completed Session converts the hold into one immutable redemption; an expired
+  Session releases it. Provider ambiguity remains held for the same-idempotency retry; only
+  a verified terminal provider event may release the hold.
+
 - **Lead score / Priority**  
   Internal urgency classifier used by lead handling workflows.
 
@@ -147,7 +171,13 @@
 ## Key rules in plain language
 
 - A company must be `approved` to unlock checkout for the company buyer path.
-- `NET` checkout is only valid when company approval is active and `net_terms_days` is set.
+- Buyer Checkout is always card/ACH. NET ordering is a Platform-staff accepted-quote action.
+- Company account credit is approved-Company, USD, and merchandise-only. It cannot reduce
+  shipping directly and is never inferred from a NET credit limit.
+- Account-credit adjustments are finance/owner actions with an exact amount, reason, and
+  idempotent request identity; ledger entries are never edited or deleted.
+- Promotion-code creation and deactivation are finance/owner actions; Stripe remains the
+  redemption authority.
 - A `quote` is expected for non-purchasable items (including `products.mode='quote'` and `services`).
 - A saved requisition quote never creates a parallel line-item model: requisition, offer,
   checkout, and final order all use `orders` / `order_items`.
