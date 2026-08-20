@@ -8,6 +8,8 @@
 // compact shape (short keys, no display names — the webhook re-derives names from
 // product_variants) and split across cart, cart2, cart3… keys. The Session carries 33
 // fixed metadata keys, leaving at most 16 cart chunks under Stripe's 50-key limit.
+import { checkoutFulfillmentStripeTransport } from './checkout-fulfillment-contract.js';
+
 const CART_CHUNK_SIZE = 450;
 const CART_MAX_CHUNKS = 16;
 
@@ -100,33 +102,12 @@ export function buildStripeCheckoutSessionParams({
     unit_price: Number(product.price),
     backordered: !!product.backordered,
   }));
-  const selectedAddress = shippingSelection?.address || null;
-  const selectedBillingAddress = shippingSelection?.billing_address || selectedAddress;
-  const selectedRate = shippingSelection?.rate || null;
-  const inlineShippingOption = selectedRate ? {
-    shipping_rate_data: {
-      type: "fixed_amount",
-      display_name: [selectedRate.carrier_name, selectedRate.service_type].filter(Boolean).join(" — ") || "Shipping",
-      fixed_amount: {
-        amount: Math.max(0, Math.round(Number(selectedRate.amount_minor) || 0)),
-        currency: selectedRate.currency || "usd",
-      },
-      // Required once automatic_tax is enabled: Stripe rejects a shipping rate whose tax
-      // behavior is unspecified. Set it now so flipping STRIPE_TAX_ENABLED is not an outage.
-      tax_behavior: "exclusive",
-      ...(Number(selectedRate.delivery_days) > 0 ? {
-        delivery_estimate: {
-          maximum: { unit: "business_day", value: Math.ceil(Number(selectedRate.delivery_days)) },
-        },
-      } : {}),
-      metadata: {
-        provider: "shipengine",
-        provider_rate_id: selectedRate.rate_id || "",
-        carrier_id: selectedRate.carrier_id || "",
-        service_code: selectedRate.service_code || "",
-      },
-    },
-  } : null;
+  const {
+    selectedAddress,
+    selectedBillingAddress,
+    shippingOption,
+    metadata: fulfillmentMetadata,
+  } = checkoutFulfillmentStripeTransport(shippingSelection);
 
   const params = {
     mode: "payment",
@@ -159,8 +140,8 @@ export function buildStripeCheckoutSessionParams({
     // origin/head-office address before it can be flipped on, or sessions error.
     automatic_tax: { enabled: !!taxEnabled },
     ...(selectedAddress ? {} : { shipping_address_collection: { allowed_countries: ["US"] } }),
-    shipping_options: inlineShippingOption
-      ? [inlineShippingOption]
+    shipping_options: shippingOption
+      ? [shippingOption]
       : shippingRateIds.map((shipping_rate) => ({ shipping_rate })),
     billing_address_collection: selectedBillingAddress ? "auto" : "required",
     success_url: `${appUrl}/order-confirmed.html?session_id={CHECKOUT_SESSION_ID}`,
@@ -173,33 +154,7 @@ export function buildStripeCheckoutSessionParams({
       quote_id: quoteId || "",
       quote_order_id: quoteOrderId || "",
       quote_checkout_attempt_id: quoteCheckoutAttemptId || "",
-      shipping_rate_id: selectedRate?.rate_id || "",
-      shipping_carrier_id: selectedRate?.carrier_id || "",
-      shipping_service_code: selectedRate?.service_code || "",
-      shipping_contract_version: shippingSelection?.v === 3 ? "3" : selectedRate ? "legacy_v2" : "legacy_static",
-      shipping_plan_id: shippingSelection?.plan_id || "",
-      shipping_plan_digest: shippingSelection?.plan_digest || "",
-      shipping_cart_digest: shippingSelection?.cart_digest || "",
-      shipping_address_digest: shippingSelection?.address_digest || "",
-      shipping_amount_minor: selectedRate ? String(Math.max(0, Math.round(Number(selectedRate.amount_minor) || 0))) : "",
-      shipping_currency: selectedRate?.currency || "",
-      ship_name: selectedAddress?.name || "",
-      ship_company: selectedAddress?.company || "",
-      ship_phone: selectedAddress?.phone || "",
-      ship_address1: selectedAddress?.address1 || "",
-      ship_address2: selectedAddress?.address2 || "",
-      ship_city: selectedAddress?.city || "",
-      ship_state: selectedAddress?.state || "",
-      ship_postal_code: selectedAddress?.postal_code || "",
-      ship_country: selectedAddress?.country || "",
-      ship_residential: selectedAddress ? (selectedAddress.residential ? "yes" : "no") : "",
-      billing_same_as_shipping: shippingSelection?.billing_same_as_shipping === false ? "no" : "yes",
-      bill_address1: selectedBillingAddress?.address1 || "",
-      bill_address2: selectedBillingAddress?.address2 || "",
-      bill_city: selectedBillingAddress?.city || "",
-      bill_state: selectedBillingAddress?.state || "",
-      bill_postal_code: selectedBillingAddress?.postal_code || "",
-      bill_country: selectedBillingAddress?.country || "",
+      ...fulfillmentMetadata,
       ...cartMetadataEntries(cart),
     },
   };

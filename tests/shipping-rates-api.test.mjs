@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CheckoutShippingError } from "../functions/_lib/checkout-shipping.js";
+import { CheckoutFulfillmentError } from "../functions/_lib/checkout-fulfillment-contract.js";
 import { createShippingRatesHandler } from "../functions/api/shipping-rates.js";
 
 function request(body) {
@@ -53,9 +53,9 @@ test("shipping-rates endpoint maps bounded validation and provider failures", as
     quoteCheckoutRates: async () => { throw error; },
   });
   for (const [error, expected] of [
-    [new CheckoutShippingError("shipping_address_incomplete", 400), 400],
-    [new CheckoutShippingError("shipping_package_profile_missing", 409), 409],
-    [new CheckoutShippingError("shipping_rates_unavailable", 502), 502],
+    [new CheckoutFulfillmentError("shipping_address_incomplete", 400), 400],
+    [new CheckoutFulfillmentError("shipping_package_profile_missing", 409), 409],
+    [new CheckoutFulfillmentError("shipping_rates_unavailable", 502), 502],
   ]) {
     const response = await make(error)({
       request: request({ cart: [{ sku: "A", qty: 1 }], address: {} }),

@@ -7,7 +7,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { emailLayout, json } from "../functions/_lib/supabase.js";
-import { refundCommandPlan } from "../functions/_lib/order-reversal.js";
+import { orderReversalPlanningForTests } from "../functions/_lib/order-reversal-commands.js";
+
+const { refundCommandPlan } = orderReversalPlanningForTests;
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
@@ -51,16 +53,16 @@ test("emailLayout escapes CTA text and blocks unsafe CTA URLs", () => {
 });
 
 test("admin notifications escape staff-controlled email text", () => {
-  const orders = read("functions/api/admin/orders.js");
+  const staffOperations = read("functions/_lib/staff-order-operations.js");
   const offers = read("functions/api/admin/offers.js");
   // The dynamic `extra` body can carry staff input (e.g. a manual NET settlement
   // reference). Both notification paths must escape it before it reaches the email.
-  assert.match(orders, /bodyHtml: `<p>\$\{htmlEscape\(extra \|\|/, "notifyCompany must escape extra");
+  assert.match(staffOperations, /bodyHtml: `<p>\$\{htmlEscape\(extra \|\|/, "notifyCompany must escape extra");
   // The shipment-email body moved into the shared builder so the automatic carrier-scan
   // path and the manual staff update render identically — the escape moved with it.
   const orderEmail = read("functions/_lib/order-email.js");
   assert.match(orderEmail, /htmlEscape\(extra \|\| `Your order is now/, "shipmentEmailHtml must escape extra");
-  assert.match(orders, /shipmentEmailHtml\(order, label, extra\)/, "tracking email must use the escaping builder");
+  assert.match(staffOperations, /shipmentEmailHtml\(order, label, extra\)/, "tracking email must use the escaping builder");
   assert.match(offers, /htmlEscape\(title\)/);
   assert.match(offers, /htmlEscape\(String\(body\.body \|\| ''\)\)/);
 });

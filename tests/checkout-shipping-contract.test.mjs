@@ -5,12 +5,13 @@ import { validateGoogleAddress } from '../functions/_lib/address-validation.js';
 import { shipStationRequest } from '../functions/_lib/shipstation.js';
 import { createStripeWebhookHandler } from '../functions/api/stripe-webhook.js';
 import {
-  CheckoutShippingError,
+  CheckoutFulfillmentError,
   assertShippingPlanSelection,
+  hydrateCheckoutFulfillmentOrder,
   loadShippingQuotePlan,
-  quoteCheckoutRates,
   verifyShippingSelectionToken,
-} from '../functions/_lib/checkout-shipping.js';
+} from '../functions/_lib/checkout-fulfillment-contract.js';
+import { quoteCheckoutRates } from '../functions/_lib/checkout-shipping.js';
 
 const address = {
   name: 'Buyer One', company: 'Acme', phone: '321-555-0100',
@@ -81,7 +82,7 @@ test('a carton-plan write failure is retryable and no signed rate escapes', asyn
     quoteCheckoutRates({
       env, cart: [{ sku: 'VK-1', qty: 1 }], address, email: 'buyer@example.test', variants,
     }, dependencies({ persistShippingQuotes: async () => ({ ok: false, error: { code: '08006' } }) })),
-    (error) => error instanceof CheckoutShippingError
+    (error) => error instanceof CheckoutFulfillmentError
       && error.code === 'shipping_plan_store_unavailable'
       && error.status === 503,
   );
@@ -207,6 +208,12 @@ function stripeEventRequest() {
   });
 }
 
+function hydrateWithPlan(loadPlan) {
+  return (args) => hydrateCheckoutFulfillmentOrder(args, {
+    loadShippingQuotePlan: loadPlan,
+  });
+}
+
 function currentSession() {
   return {
     id: 'cs_current', mode: 'payment', payment_status: 'paid', payment_intent: 'pi_current',
@@ -237,7 +244,9 @@ test('current webhook refuses to acknowledge payment when its bound plan is miss
     constructEvent: async () => ({
       id: 'evt_current', type: 'checkout.session.completed', data: { object: currentSession() },
     }),
-    loadShippingQuotePlan: async () => ({ outcome: 'not_found', plan: null }),
+    hydrateCheckoutFulfillmentOrder: hydrateWithPlan(
+      async () => ({ outcome: 'not_found', plan: null }),
+    ),
     adminClient: () => ({
       from(table) {
         if (table === 'product_variants') return {
@@ -308,7 +317,9 @@ test('current webhook atomically persists the exact bound cartons, Buyer, and re
     constructEvent: async () => ({
       id: 'evt_bound', type: 'checkout.session.completed', data: { object: session },
     }),
-    loadShippingQuotePlan: async () => ({ outcome: 'found', plan }),
+    hydrateCheckoutFulfillmentOrder: hydrateWithPlan(
+      async () => ({ outcome: 'found', plan }),
+    ),
     updateCheckoutSession: async () => {},
     adminClient: () => db,
   });
@@ -349,7 +360,9 @@ test('current webhook rejects Session cart metadata that no longer matches the b
     constructEvent: async () => ({
       id: 'evt_cart_mismatch', type: 'checkout.session.completed', data: { object: session },
     }),
-    loadShippingQuotePlan: async () => ({ outcome: 'found', plan }),
+    hydrateCheckoutFulfillmentOrder: hydrateWithPlan(
+      async () => ({ outcome: 'found', plan }),
+    ),
     adminClient: () => ({
       from(table) {
         if (table === 'product_variants') return {
@@ -406,7 +419,9 @@ test('an unknown shipping contract cannot be downgraded to the legacy review pat
     constructEvent: async () => ({
       id: 'evt_unknown_contract', type: 'checkout.session.completed', data: { object: session },
     }),
-    loadShippingQuotePlan: async () => { throw new Error('unknown contracts must not load a v3 plan'); },
+    hydrateCheckoutFulfillmentOrder: hydrateWithPlan(async () => {
+      throw new Error('unknown contracts must not load a v3 plan');
+    }),
     adminClient: () => ({
       from(table) {
         if (table === 'product_variants') return {
@@ -457,7 +472,9 @@ test('legacy webhook persists an explicit manual-review marker and never loads a
     constructEvent: async () => ({
       id: 'evt_legacy', type: 'checkout.session.completed', data: { object: session },
     }),
-    loadShippingQuotePlan: async () => { throw new Error('legacy must not load a v3 plan'); },
+    hydrateCheckoutFulfillmentOrder: hydrateWithPlan(async () => {
+      throw new Error('legacy must not load a v3 plan');
+    }),
     updateCheckoutSession: async () => {},
     adminClient: () => db,
   });

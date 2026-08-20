@@ -73,7 +73,7 @@ test("buyer order lists carry QuickBooks invoice state for NET orders", () => {
 });
 
 test("NET settlement actions preserve shipment completion when payment arrives after delivery", () => {
-  const src = read("functions/api/admin/orders.js");
+  const src = read("functions/_lib/staff-order-operations.js");
   assert.match(src, /settledOrderStatus/);
   assert.match(src, /tracking_status,tracking_number/);
 });
@@ -100,7 +100,7 @@ test("generic order edits cannot settle open NET receivables", () => {
 });
 
 test("admin generic status writes cannot bypass explicit economic commands", () => {
-  const src = read("functions/api/admin/orders.js");
+  const src = read("functions/_lib/staff-order-operations.js");
   assert.match(src, /error: 'use_explicit_order_action'/);
   assert.match(src, /if \(body\.status === before\.status\).*unchanged/s);
   assert.doesNotMatch(src, /\.update\(\{ status: statusPlan\.status \}\)/);

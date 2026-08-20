@@ -6,36 +6,38 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 
 const ADMIN_HTML = read('admin.html');
 const ADMIN_ORDERS_API = read('functions/api/admin/orders.js');
+const STAFF_ORDER_OPERATIONS = read('functions/_lib/staff-order-operations.js');
 const ADMIN_ORDERS_UI = read('js/admin/orders.js');
 const AUTHZ = read('functions/_lib/authz.js');
 const ORDER_REVERSAL_SQL = read('supabase/schema-order-reversals.sql');
 
 test('admin orders API can create manual orders with line items and audit', () => {
-  assert.match(ADMIN_ORDERS_API, /body\.action === 'create_order'/);
-  assert.match(ADMIN_ORDERS_API, /rpc\('create_manual_order_atomic'/);
+  assert.match(ADMIN_ORDERS_API, /runStaffOrderOperation/);
+  assert.match(STAFF_ORDER_OPERATIONS, /body\?\.action === 'create_order'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /rpc\('create_manual_order_atomic'/);
   assert.match(ORDER_REVERSAL_SQL, /create or replace function public\.create_manual_order_atomic/i);
   assert.match(ORDER_REVERSAL_SQL, /create_manual_order_atomic[\s\S]*insert into public\.orders[\s\S]*insert into public\.order_items/i);
   assert.match(ORDER_REVERSAL_SQL, /manual_order_stock_unavailable/);
-  assert.match(ADMIN_ORDERS_API, /action: 'order\.create'/);
-  assert.match(ADMIN_ORDERS_API, /normalizeOrderItems\(/);
+  assert.match(STAFF_ORDER_OPERATIONS, /action: 'order\.create'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /normalizeOrderItems\(/);
 });
 
 test('admin orders API can modify order metadata and replace line items', () => {
-  assert.match(ADMIN_ORDERS_API, /body\.action === 'update_order'/);
-  assert.match(ADMIN_ORDERS_API, /rpc\('update_draft_order_atomic'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /body\?\.action === 'update_order'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /rpc\('update_draft_order_atomic'/);
   assert.match(ORDER_REVERSAL_SQL, /update_draft_order_atomic[\s\S]*for update/i);
   assert.match(ORDER_REVERSAL_SQL, /settled_order_lines_immutable/);
-  assert.match(ADMIN_ORDERS_API, /action: 'order\.update'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /action: 'order\.update'/);
 });
 
 test('admin orders API can remove orders behind an owner-only capability', () => {
   assert.match(AUTHZ, /"order\.delete": \["owner"\]/);
-  assert.match(ADMIN_ORDERS_API, /body\.action === 'delete_order'/);
-  assert.match(ADMIN_ORDERS_API, /staffCan\(role, 'order\.delete'\)/);
-  assert.match(ADMIN_ORDERS_API, /rpc\('delete_draft_order_atomic'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /body\?\.action === 'delete_order'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /staffCan\(role, 'order\.delete'\)/);
+  assert.match(STAFF_ORDER_OPERATIONS, /rpc\('delete_draft_order_atomic'/);
   assert.match(ORDER_REVERSAL_SQL, /create or replace function public\.delete_draft_order_atomic/i);
   assert.match(ORDER_REVERSAL_SQL, /order_delete_forbidden/);
-  assert.match(ADMIN_ORDERS_API, /action: 'order\.delete'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /action: 'order\.delete'/);
 });
 
 test('admin orders tab exposes create, edit, fulfillment, and remove controls', () => {

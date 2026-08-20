@@ -30,11 +30,17 @@ const MUTATION_ENDPOINTS = [
   'functions/api/admin/recipients.js',
 ];
 
+const MUTATION_OWNERS = new Map([
+  ['functions/api/admin/orders.js', 'functions/_lib/staff-order-operations.js'],
+]);
+
 for (const path of MUTATION_ENDPOINTS) {
   test(`${path} enforces the read_only write baseline`, () => {
-    const src = read(path);
+    const owner = MUTATION_OWNERS.get(path) || path;
+    const src = read(owner);
     assert.match(src, /import\s*\{[^}]*staffCanWrite[^}]*\}\s*from\s*['"][^'"]*authz\.js['"]/, 'must import staffCanWrite');
     assert.match(src, /staffCanWrite\(\s*role\s*\)/, 'must check staffCanWrite(role)');
+    if (owner !== path) assert.match(read(path), /runStaffOrderOperation/, 'endpoint must delegate to guarded owner');
   });
 }
 

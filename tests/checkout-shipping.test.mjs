@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  CheckoutShippingError,
+  CheckoutFulfillmentError,
+  verifyShippingSelectionToken,
+} from "../functions/_lib/checkout-fulfillment-contract.js";
+import {
   combinePackagesForRates,
   normalizeShippingAddress,
   quoteCheckoutRates,
-  verifyShippingSelectionToken,
 } from "../functions/_lib/checkout-shipping.js";
 
 const address = {
@@ -51,7 +53,7 @@ test("shipping address normalizes a complete domestic delivery address", () => {
   });
   assert.throws(
     () => normalizeShippingAddress({ ...address, postal_code: "" }),
-    (error) => error instanceof CheckoutShippingError && error.code === "shipping_address_incomplete",
+    (error) => error instanceof CheckoutFulfillmentError && error.code === "shipping_address_incomplete",
   );
 });
 

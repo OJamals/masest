@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { CommerceContextError } from '../functions/_lib/commerce-context.js';
+import { CheckoutFulfillmentError } from '../functions/_lib/checkout-fulfillment-contract.js';
 import { createCheckoutHandler } from '../functions/api/checkout.js';
 import {
   ShippingRequestError,
@@ -31,6 +32,36 @@ test('Checkout stops on a typed commerce-context read failure before pricing or 
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: 'commerce_context_unavailable', retryable: true });
   assert.deepEqual(calls, ['context']);
+});
+
+test('Checkout rejects an invalid fulfillment token before commerce-context reads', async () => {
+  const calls = [];
+  const handler = createCheckoutHandler({
+    rateLimit: async () => ({ ok: true }),
+    resolveCheckoutFulfillmentSelection: async () => {
+      calls.push('fulfillment');
+      throw new CheckoutFulfillmentError('shipping_quote_invalid');
+    },
+    resolveCommerceContext: async () => {
+      calls.push('context');
+      throw new Error('must not run');
+    },
+  });
+  const response = await handler({
+    request: new Request('https://masest.test/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'buyer@example.test',
+        cart: [{ sku: 'VK-1', qty: 1 }],
+        shipping_quote_token: 'invalid',
+      }),
+    }),
+    env: { SHIPPING_QUOTE_SECRET: 'q'.repeat(48) },
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: 'shipping_quote_invalid', retryable: false });
+  assert.deepEqual(calls, ['fulfillment']);
 });
 
 test('Checkout uses one Company snapshot for tier price, tax, Customer, ownership, and recipient', async () => {
@@ -247,8 +278,7 @@ test('Checkout rejects a shipping quote whose currency differs from the priced c
       sb, user: null, userId: null, profile: null, company: null, companyId: null,
       tier: 'retail', taxExempt: false,
     }),
-    verifyShippingSelectionToken: async () => selection,
-    loadShippingQuotePlan: async () => ({ outcome: 'found', plan }),
+    resolveCheckoutFulfillmentSelection: async () => selection,
     createStripe: () => { stripeAccessed = true; throw new Error('must not access Stripe'); },
   });
   const response = await handler({

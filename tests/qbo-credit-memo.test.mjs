@@ -135,10 +135,12 @@ test('refund credit memo is wired end to end', () => {
   assert.match(sync, /runQboRefundSync/);
   assert.match(sync, /claim_qbo_refunds/);
   assert.match(sync, /syncRefund/);
-  const admin = read('functions/api/admin/orders.js');
+  const staffOperations = read('functions/_lib/staff-order-operations.js');
+  const reversalCommands = read('functions/_lib/order-reversal-commands.js');
   const effects = read('functions/_lib/integration-effects.js');
   const reversal = read('supabase/schema-order-reversals.sql');
-  assert.match(admin, /queueRefundCommand/);
+  assert.match(staffOperations, /queueRefundCommand/);
+  assert.match(reversalCommands, /export async function queueRefundCommand/);
   assert.match(effects, /order_accounting_reversal[\s\S]*accountingReversalEffect/);
   assert.match(reversal, /p_action = 'credit_memo'[\s\S]*insert into public\.qbo_refunds/,
     'the durable accounting effect must enqueue one credit memo after provider success');

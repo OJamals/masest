@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const ordersApi = read('functions/api/admin/orders.js');
+const staffOrderOperations = read('functions/_lib/staff-order-operations.js');
 const ordersUi = read('js/admin/orders.js');
 const reviewsApi = read('functions/api/admin/reviews.js');
 const reviewsUi = read('js/admin/reviews.js');
@@ -28,14 +29,8 @@ test('review moderation applies to a selection, not one row at a time', () => {
 });
 
 test('orders bulk-accept is bounded, audited, and reports what it skipped', () => {
-  assert.match(ordersApi, /if \(body\.action === 'accept_orders'\)/);
-  assert.match(ordersApi, /staffCan\(role, 'order\.write'\)/);
-  assert.match(ordersApi, /\.slice\(0, 200\)/);
-  // Only orders that can move are touched; the rest are skipped, not failed.
-  assert.match(ordersApi, /ACCEPTABLE_STATUSES\.has\(order\.status\) && !order\.accepted_at/);
-  assert.match(ordersApi, /\.is\('accepted_at', null\)/, 'concurrent accepts must not double-stamp');
-  assert.match(ordersApi, /action: 'order\.accept_bulk'/);
-  assert.match(ordersApi, /accepted: acceptedIds\.length, skipped: ids\.length - acceptedIds\.length/);
+  // Behavior is covered through runStaffOrderOperation in staff-order-operations.test.mjs.
+  assert.match(ordersApi, /runStaffOrderOperation\(\{ body, user, role, sb, env, request \}\)/);
 
   assert.match(ordersUi, /id="ordAll"/);
   assert.match(ordersUi, /class="ord-check"/);
@@ -47,10 +42,9 @@ test('orders bulk-accept is bounded, audited, and reports what it skipped', () =
 test('economic status moves require explicit per-order commands', () => {
   // Accept is safe to batch because it stamps ownership only. Economic status
   // changes remain per-order and cannot bypass refund/cancel/settlement commands.
-  assert.doesNotMatch(ordersApi, /action === 'bulk_status'|action === 'update_orders'/);
-  assert.match(ordersApi, /error: 'use_explicit_order_action'/);
-  assert.match(ordersApi, /queueRefundCommand\(/);
-  assert.match(ordersApi, /confirmCancellationCommand\(/);
+  assert.doesNotMatch(staffOrderOperations, /action === 'bulk_status'|action === 'update_orders'/);
+  assert.match(staffOrderOperations, /queueRefund\(\{/);
+  assert.match(staffOrderOperations, /confirmCancellation\(\{/);
   assert.doesNotMatch(ordersUi, /data-order-status=/);
 });
 

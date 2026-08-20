@@ -23,10 +23,10 @@ test('orders tab delegates the mark-net-paid action and confirms before settling
 });
 
 test('admin orders API settles NET via planNetSettlement behind the credit permission', () => {
-  const api = read('functions/api/admin/orders.js');
-  assert.match(api, /body\.action === 'mark_net_paid'/, 'endpoint handles the action');
-  assert.match(api, /staffCan\(role, 'company\.credit'\)/, 'gated by the company.credit permission');
-  assert.match(api, /planNetSettlement\(/, 'uses the shared settlement planner');
+  const operations = read('functions/_lib/staff-order-operations.js');
+  assert.match(operations, /body\.action === 'mark_net_paid'/, 'Order operations handle the action');
+  assert.match(operations, /staffCan\(role, 'company\.credit'\)/, 'gated by the company.credit permission');
+  assert.match(operations, /planNetSettlement\(/, 'uses the shared settlement planner');
 });
 
 test('planNetSettlement only settles an open NET order', () => {

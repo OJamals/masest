@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const r = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 const ADMIN = r("../functions/api/admin/orders.js");
+const ORDER_OPERATIONS = r("../functions/_lib/staff-order-operations.js");
 const ACCT_LIST = r("../functions/api/account/orders.js");
 const ACCT_ONE = r("../functions/api/account/order.js");
 const DASH = r("../js/dashboard.js");
@@ -11,7 +12,7 @@ const DASH = r("../js/dashboard.js");
 // #99 shipment event history: tracking updates append an event; customer + admin
 // read paths embed it; the customer dashboard renders the history.
 test("update_tracking appends a shipment_events row", () => {
-  assert.match(ADMIN, /from\('shipment_events'\)\s*\.insert\(\{[\s\S]*status: trackingStatus/);
+  assert.match(ORDER_OPERATIONS, /from\('shipment_events'\)\s*\.insert\(\{[\s\S]*status: trackingStatus/);
 });
 
 test("customer + admin read paths embed shipment_events", () => {

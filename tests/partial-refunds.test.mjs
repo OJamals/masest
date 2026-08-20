@@ -86,14 +86,14 @@ test('stockIncrements tolerates null/empty input', () => {
 
 // ---- source contract: immutable command owns refund math and recovery ----
 test('refund action queues one atomic command with stable identity and durable effects', () => {
-  const api = read('functions/api/admin/orders.js');
-  const service = read('functions/_lib/order-reversal-service.js');
+  const operations = read('functions/_lib/staff-order-operations.js');
+  const service = read('functions/_lib/order-reversal-commands.js');
   const effects = read('functions/_lib/integration-effects.js');
   const sql = read('supabase/schema-order-reversals.sql');
-  assert.match(api, /queueRefundCommand\(\{/);
-  assert.match(api, /requestId:\s*body\.request_id/);
-  assert.match(api, /lines:\s*body\.lines/);
-  assert.match(api, /order\.refund_queued/);
+  assert.match(operations, /queueRefund\(\{/);
+  assert.match(operations, /requestId:\s*body\.request_id/);
+  assert.match(operations, /lines:\s*body\.lines/);
+  assert.match(operations, /order\.refund_queued/);
   assert.match(service, /refundCommandPlan\(order/);
   assert.match(sql, /create or replace function public\.claim_order_refund_command/i);
   assert.match(sql, /for update/i);

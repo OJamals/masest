@@ -58,9 +58,9 @@ test('planNetSettlement does not invent a qbo_payment_id for manual settlement',
   assert.equal('qbo_payment_id' in r.update, false);
 });
 
-// ---- source contract: orders.js mark_net_paid action wiring ----
+// ---- source contract: staff Order operations mark_net_paid wiring ----
 test('mark_net_paid action delegates to planNetSettlement and audits the settlement', () => {
-  const src = read('functions/api/admin/orders.js');
+  const src = read('functions/_lib/staff-order-operations.js');
   assert.match(src, /body\.action\s*===\s*['"]mark_net_paid['"]/, 'must expose a mark_net_paid action');
   assert.match(src, /planNetSettlement\(/, 'must delegate NET-settlement validation to the helper');
   assert.match(src, /order\.mark_net_paid/, 'must audit the manual settlement distinctly');
@@ -68,7 +68,7 @@ test('mark_net_paid action delegates to planNetSettlement and audits the settlem
 });
 
 test('mark_net_paid is finance-gated (settlement adjusts credit state)', () => {
-  const src = read('functions/api/admin/orders.js');
+  const src = read('functions/_lib/staff-order-operations.js');
   assert.match(
     src,
     /mark_net_paid['"]\s*\)\s*\{[\s\S]{0,200}?staffCan\(role,\s*['"]company\.credit['"]\)/,

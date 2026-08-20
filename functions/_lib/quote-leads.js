@@ -2,14 +2,11 @@ import { stagePatch } from './crm-pipeline.js';
 import {
   buildConvertItems,
   netOrderRow,
-  quoteOrderRow,
-  quotePayloadWithOffer,
 } from './quote-convert.js';
-import { guardQuoteOffer, requisitionQuoteMayBeSent } from './quote-order.js';
+import { guardQuoteOffer } from './quote-order.js';
+import { sendQuoteOffer } from './quote-offer.js';
 import { companyEmails } from './supabase.js';
-import { quoteOfferEffects, toIntegrationEffectRows } from './integration-effects.js';
 import {
-  canTransitionOffer,
   offerExpiryReached,
   quoteDeliveryState,
   quoteExpirationPatch,
@@ -93,15 +90,6 @@ function plusDays(days, base) {
 
 function appendNote(existing, note) {
   return [existing, note].filter(Boolean).join('\n').slice(0, 4000);
-}
-
-function offerExpiry(value, now) {
-  const raw = String(value || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw)) return null;
-  const timestamp = Date.parse(raw);
-  return Number.isFinite(timestamp) && timestamp > now.getTime()
-    ? new Date(timestamp).toISOString()
-    : null;
 }
 
 export function createQuoteLeadLifecycle({
@@ -454,168 +442,14 @@ export function createQuoteLeadLifecycle({
     }
   }
 
-  async function sendOffer({ id, items, expiresAt: requestedExpiresAt, actor, user } = {}) {
-    let order = null;
-    let committed = false;
-    let checkoutMutation = null;
-    let checkoutMutationIdentity = null;
-    try {
-      const atDate = now();
-      const expiresAt = offerExpiry(requestedExpiresAt, atDate);
-      if (!expiresAt) return { status: 400, body: { error: 'future_offer_expiry_required' } };
-      const quote = await store.offerQuote(id);
-      if (!quote) return { status: 404, body: { error: 'quote_not_found' } };
-      if (!requisitionQuoteMayBeSent(quote, atDate.getTime())) {
-        return { status: 409, body: { error: 'quote_closed' } };
-      }
-      const requisitionId = String(quote.payload?.requisition_id || '');
-      const requesterId = String(quote.payload?.requester_id || '');
-      const companyId = String(quote.payload?.company_id || '');
-      if (quote.source !== 'requisition' || !UUID.test(requisitionId)
-        || !UUID.test(requesterId) || !UUID.test(companyId)) {
-        return { status: 409, body: { error: 'invalid_requisition_quote' } };
-      }
-
-      const requisition = await store.requisition({ requisitionId, requesterId, companyId });
-      if (!requisition) return { status: 409, body: { error: 'requisition_unavailable' } };
-      const built = buildConvertItems(items);
-      if (built.error) return { status: 400, body: { error: built.error } };
-      const sourceBySku = new Map((requisition.order_items || [])
-        .map((item) => [item.sku, item]));
-      if (built.items.some((item) => !sourceBySku.has(item.sku))) {
-        return { status: 400, body: { error: 'item_not_in_requisition' } };
-      }
-      const clean = built.items.map((item) => ({
-        ...item,
-        product_sku: sourceBySku.get(item.sku)?.product_sku || item.product_sku,
-        name: sourceBySku.get(item.sku)?.name || item.name,
-      }));
-      const currency = String(requisition.currency || 'usd').toLowerCase();
-      order = await store.createOrder(quoteOrderRow({
-        companyId,
-        userId: requesterId,
-        email: String(quote.email || '').toLowerCase(),
-        subtotal: built.subtotal,
-        currency,
-      }));
-      await store.insertOrderItems(order.id, clean);
-
-      const at = atDate.toISOString();
-      const previousOfferOrderId = String(quote.payload?.offer_order_id || '');
-      const nextOfferStatus = quote.payload?.offer_status ? 'revised' : 'sent';
-      if (!canTransitionOffer(quote, nextOfferStatus, atDate.getTime())) {
-        await store.deleteOrder(order.id);
-        return { status: 409, body: { error: 'quote_changed' } };
-      }
-      if (UUID.test(previousOfferOrderId)) {
-        if (!prepareCheckoutChange || !Number.isSafeInteger(Number(quote.offer_revision))
-          || Number(quote.offer_revision) < 1) {
-          await store.deleteOrder(order.id);
-          return { status: 503, body: { error: 'quote_checkout_attempt_unavailable', retryable: true } };
-        }
-        try {
-          checkoutMutationIdentity = {
-            quoteId: quote.id,
-            quoteOrderId: previousOfferOrderId,
-            requesterId,
-            companyId,
-            offerRevision: Number(quote.offer_revision),
-            offerStatus: String(quote.payload?.offer_status || ''),
-          };
-          checkoutMutation = await prepareCheckoutChange({
-            kind: 'revise',
-            identity: checkoutMutationIdentity,
-          });
-        } catch (error) {
-          await store.deleteOrder(order.id);
-          return {
-            status: Number(error?.status) || 503,
-            body: {
-              error: error?.code || 'quote_checkout_attempt_unavailable',
-              ...(error?.retryable ? { retryable: true } : {}),
-            },
-          };
-        }
-        if (!UUID.test(String(checkoutMutation?.mutationId || ''))) {
-          await store.deleteOrder(order.id);
-          return { status: 503, body: { error: 'quote_checkout_attempt_unavailable', retryable: true } };
-        }
-      }
-      const payload = quotePayloadWithOffer(quote.payload, {
-        orderId: order.id,
-        status: nextOfferStatus,
-        at,
-        expiresAt,
-      });
-      const effects = toIntegrationEffectRows(quoteOfferEffects({
-        quoteId: quote.id,
-        companyId,
-        email: quote.email,
-        product: quote.product,
-      }));
-      const updated = await store.commitOffer({
-        quote,
-        payload,
-        orderId: order.id,
-        actor,
-        dealValue: built.subtotal,
-        expiresAt,
-        eventId: `quote:${quote.id}:${order.id}`,
-        effects,
-        checkoutMutationId: checkoutMutation?.mutationId || null,
-      });
-      if (!updated) {
-        if (checkoutMutation?.mutationId) {
-          await releaseCheckoutChange({
-            mutationId: checkoutMutation.mutationId,
-            identity: checkoutMutationIdentity,
-          }).catch(() => {});
-        }
-        await store.deleteOrder(order.id);
-        return { status: 409, body: { error: 'quote_changed' } };
-      }
-      committed = true;
-
-      if (UUID.test(previousOfferOrderId) && previousOfferOrderId !== order.id) {
-        await store.deleteOrder(previousOfferOrderId, {
-          companyId,
-          requesterId,
-          status: 'cart',
-          requisitionName: null,
-        }).catch(() => {});
-      }
-      await Promise.allSettled([audit({
-        user,
-        action: nextOfferStatus === 'revised' ? 'quote.revise' : 'quote.send',
-        targetType: 'quote',
-        targetId: quote.id,
-        detail: {
-          company_id: companyId,
-          order_id: order.id,
-          subtotal: built.subtotal,
-          expires_at: expiresAt,
-          delivery: 'queued',
-        },
-      })]);
-      return {
-        status: 202,
-        body: { ok: true, order_id: order.id, quote: updated, delivery_state: 'queued' },
-      };
-    } catch (error) {
-      if (checkoutMutation?.mutationId && !committed) {
-        await releaseCheckoutChange({
-          mutationId: checkoutMutation.mutationId,
-          identity: checkoutMutationIdentity,
-        }).catch(() => {});
-      }
-      if (order && !committed) await store.deleteOrder(order.id).catch(() => {});
-      if (error?.code === '23505' && /quotes_open_requisition_unique_idx/.test(error?.message || '')) {
-        return { status: 409, body: { error: 'open_quote_exists' } };
-      }
-      return { status: 500, body: { error: error?.message || String(error) } };
-    }
+  function sendOffer(input = {}) {
+    return sendQuoteOffer({ store, ...input }, {
+      audit,
+      prepareCheckoutChange,
+      releaseCheckoutChange,
+      now,
+    });
   }
-
   async function convert({
     id,
     companyId: requestedCompanyId,

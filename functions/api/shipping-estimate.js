@@ -5,10 +5,8 @@
 // for. This one does none of that: it exists so a buyer can see roughly what shipping costs
 // before deciding to fill in an address, and nothing it returns is purchasable.
 import { adminClient, json } from '../_lib/supabase.js';
-import {
-  CheckoutShippingError,
-  estimateCheckoutRates,
-} from '../_lib/checkout-shipping.js';
+import { CheckoutFulfillmentError } from '../_lib/checkout-fulfillment-contract.js';
+import { estimateCheckoutRates } from '../_lib/checkout-shipping.js';
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
@@ -56,7 +54,7 @@ export async function handleShippingEstimate({ request, env }, dependencies = {}
     });
     return json(200, result);
   } catch (error) {
-    if (error instanceof CheckoutShippingError) {
+    if (error instanceof CheckoutFulfillmentError) {
       return json(error.status, { error: error.code, ...error.details });
     }
     return json(502, { error: 'shipping_rates_unavailable' });

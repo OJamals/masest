@@ -5,7 +5,7 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("admin orders can record a QuickBooks invoice id for NET orders", () => {
-  const source = read("functions/api/admin/orders.js");
+  const source = read("functions/_lib/staff-order-operations.js");
   assert.match(source, /qbo_invoice_id/, "orders API must read and write the QBO invoice id field");
   assert.match(source, /body\.action\s*===\s*['"]record_qbo_invoice['"]/,
     "orders API must expose a record_qbo_invoice admin action");

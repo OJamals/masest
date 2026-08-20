@@ -19,16 +19,14 @@ import {
 import { ensureCompanyStripeCustomer } from '../_lib/stripe-customer.js';
 import { guestStripeCustomer, stripeCustomerAddress } from '../_lib/stripe-customer.js';
 import {
-  assertShippingPlanSelection,
-  CheckoutShippingError,
-  loadShippingQuotePlan,
-  verifyShippingSelectionToken,
-} from '../_lib/checkout-shipping.js';
+  CheckoutFulfillmentError,
+  resolveCheckoutFulfillmentSelection,
+} from '../_lib/checkout-fulfillment-contract.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
 import { stripeRuntimeError, stripeShippingRatesError } from '../_lib/stripe-runtime.js';
-import { expireQuoteOfferIfDue } from '../_lib/quote-order.js';
+import { expireQuoteOfferIfDue } from '../_lib/quote-offer.js';
 import { quoteBuyerActions, quoteBuyerOwns } from '../_lib/quote-lifecycle.js';
 import {
   createSupabaseQuoteCheckoutAttemptStore,
@@ -86,8 +84,8 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const createStripe = dependencies.createStripe
     || ((secret) => new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() }));
   const validateShippingRates = dependencies.validateShippingRates || stripeShippingRatesError;
-  const verifyShippingSelection = dependencies.verifyShippingSelectionToken || verifyShippingSelectionToken;
-  const loadShippingPlan = dependencies.loadShippingQuotePlan || loadShippingQuotePlan;
+  const resolveShippingSelection = dependencies.resolveCheckoutFulfillmentSelection
+    || resolveCheckoutFulfillmentSelection;
   const clock = dependencies.now || (() => new Date());
   const openQuotedSession = dependencies.openQuoteCheckoutSession || openQuoteCheckoutSession;
 
@@ -126,19 +124,24 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const skus = Object.keys(qtyBySku);
   if (!skus.length) return json(400, { error: 'cart_empty' });
   let shippingSelection = null;
+  if (!body.shipping_quote_token && env.SHIPPING_QUOTE_SECRET) {
+    return json(400, { error: 'shipping_quote_required' });
+  }
   if (body.shipping_quote_token) {
     try {
-      shippingSelection = await verifyShippingSelection({
-        secret: env.SHIPPING_QUOTE_SECRET,
+      // Verify untrusted token bytes before unrelated account/database reads. Resolver then
+      // creates its own service client only after signature, expiry, and cart binding pass.
+      shippingSelection = await resolveShippingSelection({
+        env,
         token: body.shipping_quote_token,
         cart: Object.entries(qtyBySku).map(([sku, qty]) => ({ sku, qty })),
       });
     } catch (error) {
-      if (error instanceof CheckoutShippingError) return json(error.status, { error: error.code });
-      return json(400, { error: 'shipping_quote_invalid' });
+      if (error instanceof CheckoutFulfillmentError) {
+        return json(error.status, { error: error.code, retryable: error.status >= 500 });
+      }
+      return json(503, { error: 'shipping_plan_store_unavailable', retryable: true });
     }
-  } else if (env.SHIPPING_QUOTE_SECRET) {
-    return json(400, { error: 'shipping_quote_required' });
   }
 
   let commerce;
@@ -153,26 +156,6 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const { sb, user, profile, company, companyId, tier, taxExempt } = commerce;
   const buyerEmail = normalizeCheckoutBuyerEmail(body.email || user?.email);
   if (buyerEmail.error) return json(400, { error: buyerEmail.error });
-
-  if (shippingSelection) {
-    try {
-      const result = await loadShippingPlan(env, shippingSelection.plan_id, { sb });
-      const plan = assertShippingPlanSelection(shippingSelection, result);
-      // The stored row is the fulfillment authority; the token proves the buyer selected
-      // this exact digest and lets Checkout safely hydrate the same immutable snapshot.
-      shippingSelection = {
-        ...shippingSelection,
-        cart: plan.cart,
-        address: plan.address,
-        billing_address: plan.billing_address,
-        billing_same_as_shipping: plan.billing_same_as_shipping !== false,
-        rate: plan.rate,
-      };
-    } catch (error) {
-      if (error instanceof CheckoutShippingError) return json(error.status, { error: error.code, retryable: error.status >= 500 });
-      return json(503, { error: 'shipping_plan_store_unavailable', retryable: true });
-    }
-  }
 
   const quoteId = String(body.quote_id || '');
   const quoteOrderId = String(body.quote_order_id || '');

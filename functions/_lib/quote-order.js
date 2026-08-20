@@ -64,34 +64,6 @@ export async function findOpenRequisitionQuote(sb, requisitionId) {
   };
 }
 
-export async function expireQuoteOfferIfDue(sb, quote, {
-  at = new Date().toISOString(),
-} = {}) {
-  const boundary = Date.parse(at);
-  if (!offerExpiryReached(quote, boundary)) return { quote, expired: false };
-  const patch = quoteExpirationPatch(quote, at);
-  let update = sb.from('quotes').update(patch).eq('id', quote.id).eq('status', quote.status);
-  update = quote.pipeline_stage == null
-    ? update.is('pipeline_stage', null)
-    : update.eq('pipeline_stage', quote.pipeline_stage);
-  const query = guardQuoteOffer(update, quote.payload);
-  const { data, error } = await query
-    .select('id,created_at,type,product,industry,email,status,pipeline_stage,source,payload')
-    .maybeSingle();
-  if (error) return { quote, expired: true, error };
-  if (data) return { quote: data, expired: true };
-
-  const current = await sb.from('quotes')
-    .select('id,created_at,type,product,industry,email,status,pipeline_stage,source,payload')
-    .eq('id', quote.id)
-    .maybeSingle();
-  return {
-    quote: current.data || quote,
-    expired: true,
-    ...(current.error ? { error: current.error } : {}),
-  };
-}
-
 async function boundQuote(sb, quoteId, draftOrderId) {
   if (![quoteId, draftOrderId].every((id) => UUID.test(String(id || '')))) {
     return { error: 'invalid_quote_order_identity' };

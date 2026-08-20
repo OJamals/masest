@@ -4,7 +4,6 @@ import test from 'node:test';
 
 import {
   activeOutboundShipmentLabels,
-  deriveOrderFulfillment,
   requiredOutboundLabelVoids,
   resolveShipmentLabel,
   shipmentLabelOwnership,
@@ -98,35 +97,6 @@ test('void evidence deactivates only its exact outbound label', () => {
     effect_key: `shipstation-label-void:${ORDER_ID}:se-label-b`,
   }]);
   assert.equal(resolveShipmentLabel(order, 'se-label-a', { kind: 'outbound' }).active, false);
-});
-
-test('one split scan never fulfills unrelated shipments', () => {
-  const partial = deriveOrderFulfillment(splitOrder());
-  assert.equal(partial.complete, false);
-  assert.equal(partial.tracking_status, 'packing');
-  assert.deepEqual(partial.pending_shipment_ids, [SPLIT_B]);
-
-  const shipped = splitOrder();
-  shipped.order_provider_links[1].metadata.tracking_status = 'shipped';
-  const allShipped = deriveOrderFulfillment(shipped);
-  assert.equal(allShipped.complete, true);
-  assert.equal(allShipped.tracking_status, 'shipped');
-
-  shipped.order_provider_links[0].metadata.tracking_status = 'delivered';
-  shipped.order_provider_links[1].metadata.tracking_status = 'delivered';
-  const delivered = deriveOrderFulfillment(shipped);
-  assert.equal(delivered.complete, true);
-  assert.equal(delivered.tracking_status, 'delivered');
-});
-
-test('a required split without an active label cannot be fulfilled', () => {
-  const order = splitOrder();
-  order.order_provider_links = order.order_provider_links.filter((link) => link.provider_object_id !== 'se-label-b');
-
-  const state = deriveOrderFulfillment(order);
-  assert.equal(state.complete, false);
-  assert.deepEqual(state.pending_shipment_ids, [SPLIT_B]);
-  assert.equal(state.tracking_status, 'packing');
 });
 
 function attemptLedger() {
@@ -358,17 +328,27 @@ test('durable mutation claims give replacement shipments and labels new incarnat
   assert.match(labelClaim, /jsonb_build_object\([\s\S]+operation_key'[\s\S]+v_operation_key/i);
 });
 
-test('tracking projection resolves exact labels and requires every active split to finish', async () => {
+test('SQL tracking projection is the sole fulfillment authority for every active split', async () => {
   const sql = await readFile(new URL('../supabase/schema-provider-inbox.sql', import.meta.url), 'utf8');
+  const ownershipSource = await readFile(new URL('../functions/_lib/shipment-label-ownership.js', import.meta.url), 'utf8');
   const start = sql.indexOf('create or replace function public.apply_shipstation_tracking_integration_effect');
   const end = sql.indexOf('create or replace function public.apply_resend_delivery_integration_effect', start);
   const tracking = sql.slice(start, end);
 
+  assert.doesNotMatch(ownershipSource, /deriveOrderFulfillment|TERMINAL_TRACKING/,
+    'runtime JavaScript must not mirror the transactional fulfillment projection');
   assert.match(tracking, /from public\.order_shipment_label_ownership ownership/i);
   assert.match(tracking, /order_shipment_id, provider_label_id/i);
   assert.match(tracking, /update public\.order_provider_links[\s\S]+tracking_occurred_at/i);
-  assert.match(tracking, /from public\.order_shipments required[\s\S]+required\.status <> 'cancelled'/i);
-  assert.match(tracking, /v_any_label and v_all_terminal/i);
+  assert.match(tracking, /from public\.order_shipments required[\s\S]+required\.status <> 'cancelled'[\s\S]+not exists[\s\S]+label\.active[\s\S]+not in \('shipped', 'delivered'\)/i,
+    'every active split must own an active terminal outbound label');
+  assert.match(tracking, /required\.status <> 'cancelled'[\s\S]+coalesce\(label\.tracking_status, 'packing'\) <> 'delivered'/i,
+    'delivered requires every active split label to be delivered');
+  assert.match(tracking, /label\.active and label\.tracking_status = 'blocked'/i);
+  assert.match(tracking, /when v_any_label and v_all_delivered then 'delivered'[\s\S]+when v_any_label and v_all_terminal then 'shipped'[\s\S]+when v_any_blocked then 'blocked'[\s\S]+when v_any_label then 'packing'[\s\S]+else 'processing'/i,
+    'projection precedence must remain delivered, shipped, blocked, packing, processing');
+  assert.match(tracking, /v_order_status in \('paid', 'net_paid', 'fulfilled'\)[\s\S]+v_any_label and v_all_terminal[\s\S]+v_order_status := 'fulfilled'/i,
+    'only settled orders with every required split terminal may become fulfilled');
   assert.match(tracking, /v_label\.label_kind = 'return'[\s\S]+return public\.finish_integration_projection/i);
   assert.doesNotMatch(tracking, /from public\.orders\s+where tracking_number/i);
   assert.doesNotMatch(tracking, /where shipstation_return_tracking_number/i);

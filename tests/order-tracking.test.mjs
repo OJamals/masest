@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 const SCHEMA = read("../supabase/schema.sql");
 const ADMIN_ORDERS = read("../functions/api/admin/orders.js");
+const STAFF_ORDER_OPERATIONS = read("../functions/_lib/staff-order-operations.js");
 const ACCOUNT_ORDERS = read("../functions/api/account/orders.js");
 const ACCOUNT_ORDER = read("../functions/api/account/order.js");
 const ADMIN_JS = read("../js/admin/orders.js"); // Orders tab moved in #36
@@ -37,35 +38,35 @@ test("staff orders API can update tracking metadata and notify buyers", () => {
   assert.match(ADMIN_ORDERS, /'Carrier'/);
   assert.match(ADMIN_ORDERS, /'Tracking #'/);
   assert.match(ADMIN_ORDERS, /'ETA'/);
-  assert.match(ADMIN_ORDERS, /action\s*===\s*['"]update_tracking['"]/);
-  assert.match(ADMIN_ORDERS, /body\.tracking_status/);
-  assert.match(ADMIN_ORDERS, /tracking_number/);
-  assert.match(ADMIN_ORDERS, /tracking_url/);
-  assert.match(ADMIN_ORDERS, /estimated_delivery_at/);
+  assert.match(STAFF_ORDER_OPERATIONS, /action\s*===\s*['"]update_tracking['"]/);
+  assert.match(STAFF_ORDER_OPERATIONS, /body\.tracking_status/);
+  assert.match(STAFF_ORDER_OPERATIONS, /tracking_number/);
+  assert.match(STAFF_ORDER_OPERATIONS, /tracking_url/);
+  assert.match(STAFF_ORDER_OPERATIONS, /estimated_delivery_at/);
   // Delivered closes the loop with its own label/body; shipped and generic updates keep
   // theirs. The copy lives in the shared builder so an automatic carrier scan and a manual
   // staff update cannot word the same event differently.
-  assert.match(ADMIN_ORDERS, /const notice\s*=\s*shipmentNotice\(noticeStatus,\s*\{ carrier, trackingNumber \}\)/);
-  assert.match(ADMIN_ORDERS, /trackingStatus === 'delivered' \|\| \(trackingStatus === 'shipped' && trackingNumber\)/);
+  assert.match(STAFF_ORDER_OPERATIONS, /const notice\s*=\s*shipmentNotice\(noticeStatus,\s*\{ carrier, trackingNumber \}\)/);
+  assert.match(STAFF_ORDER_OPERATIONS, /trackingStatus === 'delivered'[\s\S]{0,80}\|\| \(trackingStatus === 'shipped' && trackingNumber\)/);
   const ORDER_EMAIL = readFileSync(new URL('../functions/_lib/order-email.js', import.meta.url), 'utf8');
   assert.match(ORDER_EMAIL, /Your order was delivered\./);
   assert.match(ORDER_EMAIL, /Your order has shipped\./);
   // One rich tracking email goes to buyer + company recipients (sendTrackingEmail), so
   // the clickable tracking link is never shadowed by the generic notifyCompany email.
-  assert.match(ADMIN_ORDERS, /await sendTrackingEmail\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*\[order\?\.customer_email,\s*\.\.\.companyRecipients\]\)/);
+  assert.match(STAFF_ORDER_OPERATIONS, /await sendOrderTrackingEmail\([\s\S]{0,180}\[order\?\.customer_email, \.\.\.companyRecipients\]/);
 });
 
 test("staff shipment tracking promotes settled orders while preserving open NET receivables", () => {
-  assert.match(ADMIN_ORDERS, /const update\s*=\s*\{\s*tracking_status:\s*trackingStatus/);
+  assert.match(STAFF_ORDER_OPERATIONS, /const update\s*=\s*\{\s*tracking_status:\s*trackingStatus/);
   // Promotion is centralized in the lifecycle helper: shipped requires tracking,
   // delivered can close settled local/BOL workflows without a parcel number, and
   // open NET receivables stay net_open until payment is recorded.
-  assert.match(ADMIN_ORDERS, /const fulfilled\s*=\s*shouldPromoteToFulfilled\(current,\s*trackingStatus,\s*trackingNumber\)/);
+  assert.match(STAFF_ORDER_OPERATIONS, /const fulfilled\s*=\s*shouldPromoteToFulfilled\(current,\s*trackingStatus,\s*trackingNumber\)/);
   assert.match(
-    ADMIN_ORDERS,
-    /if\s*\(fulfilled\)\s*\{\s*update\.status\s*=\s*'fulfilled';\s*\}/
+    STAFF_ORDER_OPERATIONS,
+    /if\s*\(fulfilled\)\s*update\.status\s*=\s*'fulfilled'/
   );
-  assert.match(ADMIN_ORDERS, /rpc\('update_order_tracking_guarded'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /rpc\('update_order_tracking_guarded'/);
 });
 
 test("staff console surfaces tracking controls on each order", () => {

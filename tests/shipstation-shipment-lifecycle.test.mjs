@@ -323,6 +323,51 @@ test('provider-accepted update stays locked when later rate refresh is rejected'
   assert.equal(failed.reconcile, true);
 });
 
+test('provider-accepted update preserves provider-succeeded evidence when local finalization crashes', async () => {
+  let attemptState = 'claimed';
+  let providerCalls = 0;
+  await assert.rejects(
+    updateOrderShipment(
+      { SHIPSTATION_API_KEY: 'secret', SHIPSTATION_WAREHOUSE_ID: 'se-2287981' },
+      {
+        order_id: order.id,
+        order_shipment_id: 'a024352e-2dc8-4a6c-ad44-eb57e7701408',
+        expected_revision: 3,
+        packages,
+        reason: 'Correct packed dimensions',
+      },
+      { user: { id: 'staff-1', email: 'staff@example.com' } },
+      {
+        loadOrder: async () => order,
+        listCarriers: async () => [{ carrier_id: 'se-ups' }],
+        claimShipmentOperation: async () => ({
+          claimed: true,
+          state: 'claimed',
+          id: 'a024352e-2dc8-4a6c-ad44-eb57e7701408',
+          revision: 3,
+          provider_shipment_id: 'se-shipment-1',
+          operation_key: 'shipment_update:attempt-finalize-crash',
+          lease_owner: 'worker-finalize-crash',
+        }),
+        updateShipment: async () => {
+          providerCalls += 1;
+          return { shipment_id: 'se-shipment-1' };
+        },
+        quoteRates: async () => ({ rate_response: { rates: [] } }),
+        markAttemptProviderSucceeded: async () => { attemptState = 'provider_succeeded'; },
+        markAttemptReconcileRequired: async () => { attemptState = 'reconcile_required'; },
+        releaseOperationAttempt: async () => assert.fail('accepted mutation cannot release'),
+        completeOperationAttempt: async () => assert.fail('failed finalization cannot complete'),
+        finalizeShipmentOperation: async () => { throw new Error('database unavailable'); },
+        failShipmentOperation: async () => {},
+      },
+    ),
+    /database unavailable/,
+  );
+  assert.equal(providerCalls, 1);
+  assert.equal(attemptState, 'provider_succeeded');
+});
+
 test('selectOrderShipmentRate persists exact row revision and rate', async () => {
   let selected;
   const result = await selectOrderShipmentRate(

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { loadOrderIntegrationTimeline } from '../functions/api/admin/orders.js';
 
 const API = readFileSync(new URL("../functions/api/admin/orders.js", import.meta.url), "utf8");
+const ORDER_OPERATIONS = readFileSync(new URL("../functions/_lib/staff-order-operations.js", import.meta.url), "utf8");
 const UI = readFileSync(new URL("../js/admin/orders.js", import.meta.url), "utf8");
 
 // #95 per-order drill-down: endpoint serves single-order detail + staff timeline,
@@ -66,7 +67,7 @@ test("UI fetches detail by id and opens the modal with a backorder badge", () =>
 });
 
 test('orders with immutable provider financial evidence return a stable delete conflict', () => {
-  assert.match(API, /body\.action === 'delete_order'[\s\S]*?rpc\('delete_draft_order_atomic'/);
-  assert.match(API, /'order_delete_forbidden'/);
-  assert.match(API, /'order_delete_forbidden',[\s\S]*?\]\.includes\(code\)\) return 409/);
+  assert.match(ORDER_OPERATIONS, /body\?\.action === 'delete_order'[\s\S]*?rpc\('delete_draft_order_atomic'/);
+  assert.match(ORDER_OPERATIONS, /'order_delete_forbidden'/);
+  assert.match(ORDER_OPERATIONS, /'order_delete_forbidden',[\s\S]*?\]\.includes\(code\)\) return 409/);
 });

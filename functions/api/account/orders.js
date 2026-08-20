@@ -9,8 +9,8 @@ import {
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { decorateOrderLifecycle } from '../../_lib/order-lifecycle.js';
 import { normalizeCartQuantities } from '../../_lib/order-shape.js';
+import { expireQuoteOfferIfDue } from '../../_lib/quote-offer.js';
 import {
-  expireQuoteOfferIfDue,
   findOpenRequisitionQuote,
   isOpenRequisitionQuoteConflict,
 } from '../../_lib/quote-order.js';

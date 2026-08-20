@@ -7,11 +7,12 @@ import {
 } from '../functions/_lib/integration-effects.js';
 import {
   confirmCancellationCommand,
+  orderReversalPlanningForTests,
   prepareCancellationCommand,
   queueRefundCommand,
   retireCancellationReviewCommand,
-} from '../functions/_lib/order-reversal-service.js';
-import {
+} from '../functions/_lib/order-reversal-commands.js';
+const {
   cancellationAccountingPlan,
   cancellationCommandPlan,
   cancellationCommandEffects,
@@ -19,7 +20,7 @@ import {
   refundCommandEffects,
   refundCommandPlan,
   reversalPlanHash,
-} from '../functions/_lib/order-reversal.js';
+} = orderReversalPlanningForTests;
 
 const ORDER_ID = '11111111-1111-4111-8111-111111111111';
 const COMMAND_ID = '22222222-2222-4222-8222-222222222222';
@@ -27,6 +28,7 @@ const REVERSAL_SQL = readFileSync(new URL('../supabase/schema-order-reversals.sq
 const LABEL_OWNERSHIP_SQL = readFileSync(new URL('../supabase/schema-shipment-label-ownership.sql', import.meta.url), 'utf8');
 const PROVIDER_INBOX_SQL = readFileSync(new URL('../supabase/schema-provider-inbox.sql', import.meta.url), 'utf8');
 const ADMIN_ORDERS_API = readFileSync(new URL('../functions/api/admin/orders.js', import.meta.url), 'utf8');
+const STAFF_ORDER_OPERATIONS = readFileSync(new URL('../functions/_lib/staff-order-operations.js', import.meta.url), 'utf8');
 const ADMIN_ORDERS_UI = readFileSync(new URL('../js/admin/orders.js', import.meta.url), 'utf8');
 const order = {
   id: ORDER_ID,
@@ -597,10 +599,11 @@ test('review-required cancellation can only be retired through an audited no-sid
 });
 
 test('admin exposes review-required cancellation retirement and requires a fresh plan', () => {
-  assert.match(ADMIN_ORDERS_API, /retireCancellationReviewCommand/);
-  assert.match(ADMIN_ORDERS_API, /body\.action\s*===\s*'retire_cancellation_review'/);
-  assert.match(ADMIN_ORDERS_API, /staffCan\(role,\s*'order\.refund'\)/);
-  assert.match(ADMIN_ORDERS_API, /cancellation_review/);
+  assert.match(ADMIN_ORDERS_API, /runStaffOrderOperation/);
+  assert.match(STAFF_ORDER_OPERATIONS, /retireCancellationReview/);
+  assert.match(STAFF_ORDER_OPERATIONS, /body\?\.action\s*===\s*'retire_cancellation_review'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /staffCan\(role,\s*'order\.refund'\)/);
+  assert.match(STAFF_ORDER_OPERATIONS, /cancellation_review/);
   assert.match(ADMIN_ORDERS_UI, /data-retire-cancellation-review/);
   assert.match(ADMIN_ORDERS_UI, /fresh cancellation preflight/i);
   assert.match(ADMIN_ORDERS_UI, /action:\s*'retire_cancellation_review'/);

@@ -30,13 +30,14 @@ test('#40 address default reset uses RPC and safe fallback ordering', () => {
 });
 
 test('#42 refunds have a distinct refunded order status', () => {
-  const api = read('functions/api/admin/orders.js');
+  const operations = read('functions/_lib/staff-order-operations.js');
   const admin = read('js/admin/orders.js'); // Orders consts moved in #36
   const schema = read('supabase/schema.sql');
   const migration = read('supabase/schema-refunds.sql');
   const reversal = read('supabase/schema-order-reversals.sql');
-  assert.match(api, /ORDER_STATUSES[\s\S]*'refunded'/);
-  assert.match(api, /queueRefundCommand\(/, 'refund action must use the immutable reversal command');
+  assert.match(operations, /ORDER_STATUSES[\s\S]*'refunded'/);
+  assert.match(operations, /const queueRefund = [^;]*queueRefundCommand/,
+    'refund action must use the immutable reversal command');
   assert.match(reversal, /apply_order_reversal_complete_effect[\s\S]*status = 'refunded'/, 'completion must atomically mark a fully-refunded order refunded');
   assert.match(admin, /ORDER_STATUSES[\s\S]*'refunded'/, 'admin filter/status dropdown must include refunded');
   assert.match(admin, /REFUND_BLOCKING_STATUSES[\s\S]*'refunded'/, 'admin UI should hide refund action after refund');

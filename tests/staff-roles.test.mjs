@@ -99,7 +99,7 @@ test('requireStaff resolves and returns a role from env owner + DB staff_role', 
 
 // ---- endpoint capability gates ----
 for (const [path, cap] of [
-  ['functions/api/admin/orders.js', 'order.refund'],
+  ['functions/_lib/staff-order-operations.js', 'order.refund'],
   ['functions/api/admin/companies.js', 'company.credit'],
   ['functions/api/admin/products.js', 'product.write'],
   ['functions/api/admin/users.js', 'user.role'],

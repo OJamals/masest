@@ -8,16 +8,12 @@ import Stripe from 'stripe';
 import { userFromRequest, adminClient, json } from '../../_lib/supabase.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { escapeLike } from '../../_lib/crm.js';
-import { quotePayloadWithOffer } from '../../_lib/quote-convert.js';
-import { expireQuoteOfferIfDue, guardQuoteOffer } from '../../_lib/quote-order.js';
-import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
-import { quoteBuyerActions, quoteBuyerOwns, quoteLifecycle } from '../../_lib/quote-lifecycle.js';
 import {
-  createSupabaseQuoteCheckoutAttemptStore,
-  prepareQuoteCheckoutMutation,
-  QuoteCheckoutAttemptError,
-  releaseQuoteCheckoutMutation,
-} from '../../_lib/quote-checkout-attempt.js';
+  expireQuoteOfferIfDue,
+  runBuyerQuoteOfferAction,
+} from '../../_lib/quote-offer.js';
+import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
+import { quoteBuyerActions, quoteLifecycle } from '../../_lib/quote-lifecycle.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ACCEPT_BODY_MAX_BYTES = 4 * 1024;
@@ -147,14 +143,6 @@ export async function onRequestGet({ request, env }, dependencies = {}) {
 export async function onRequestPost({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
   const clock = dependencies.now || (() => new Date());
-  const prepareCheckoutMutation = dependencies.prepareQuoteCheckoutMutation
-    || ((input) => prepareQuoteCheckoutMutation({
-      ...input,
-      stripe: env.STRIPE_SECRET_KEY
-        ? new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() })
-        : null,
-      store: createSupabaseQuoteCheckoutAttemptStore(input.sb),
-    }));
   const { user } = dependencies.userFromRequest
     ? await dependencies.userFromRequest(request, env)
     : await userFromRequest(request, env);
@@ -168,199 +156,24 @@ export async function onRequestPost({ request, env }, dependencies = {}) {
       error: error instanceof RequestBodyTooLargeError ? 'request_too_large' : 'bad_request',
     });
   }
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'bad_request' });
-  if (!['accept_offer', 'decline_offer'].includes(body.action)) return json(400, { error: 'invalid_action' });
-  const quoteId = String(body.id || '');
-  if (!UUID.test(quoteId)) return json(400, { error: 'invalid_quote_id' });
-
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return json(400, { error: 'bad_request' });
+  }
   const sb = getAdminClient(env);
-  const { data: profile, error: profileError } = await sb.from('profiles')
-    .select('company_id')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (profileError) return json(500, { error: 'server_error' });
-  const { data: quote, error: quoteError } = await sb.from('quotes')
-    .select('id,source,payload,status,pipeline_stage,offer_revision,checkout_mutation_id,checkout_mutation_kind')
-    .eq('id', quoteId)
-    .neq('status', 'spam')
-    .maybeSingle();
-  if (quoteError) return json(500, { error: 'server_error' });
-  if (!quote) return json(404, { error: 'not_found' });
-
-  // Email locates legacy/public requests, but never authorizes a requisition mutation.
-  if (!quoteBuyerOwns(quote, { userId: user.id, companyId: profile?.company_id })) {
-    return json(403, { error: 'forbidden' });
-  }
-  const actionNow = clock();
-  const actionAt = actionNow.toISOString();
-  const expiry = await expireQuoteOfferIfDue(sb, quote, { at: actionAt });
-  if (expiry.error) return json(500, { error: 'server_error' });
-  const currentQuote = expiry.quote;
-  const offerOrderId = String(currentQuote.payload?.offer_order_id || '');
-  const companyId = String(currentQuote.payload?.company_id || '');
-  const requesterId = String(currentQuote.payload?.requester_id || '');
-  if (!UUID.test(offerOrderId) || !UUID.test(companyId) || requesterId !== user.id) {
-    return json(409, { error: 'offer_unavailable' });
-  }
-
-  const { data: offer, error: offerError } = await sb.from('orders')
-    .select('id,company_id,user_id,subtotal,total,currency,order_items(sku,product_sku,name,qty,unit_price,line_total)')
-    .eq('id', offerOrderId)
-    .eq('company_id', companyId)
-    .eq('user_id', user.id)
-    .eq('status', 'cart')
-    .is('requisition_name', null)
-    .maybeSingle();
-  if (offerError) return json(500, { error: 'server_error' });
-  const actions = quoteBuyerActions(currentQuote, {
-    userId: user.id,
-    companyId: profile?.company_id,
-    hasOffer: Boolean(offer?.order_items?.length),
-    now: actionNow.getTime(),
+  const runOfferAction = dependencies.runBuyerQuoteOfferAction || runBuyerQuoteOfferAction;
+  const result = await runOfferAction({
+    sb,
+    user,
+    action: body.action,
+    quoteId: body.id,
+    reason: body.reason,
+    now: clock,
+    stripe: env.STRIPE_SECRET_KEY
+      ? new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() })
+      : null,
+  }, {
+    prepareQuoteCheckoutMutation: dependencies.prepareQuoteCheckoutMutation,
+    releaseQuoteCheckoutMutation: dependencies.releaseQuoteCheckoutMutation,
   });
-
-  // Declining closes the loop without touching the draft order: staff may still revise and
-  // re-send, and the reason lands on the CRM record where follow-up decisions get made.
-  if (body.action === 'decline_offer') {
-    if (!actions.can_decline) return json(409, { error: 'offer_unavailable' });
-    const declinedAt = actionAt;
-    const reason = String(body.reason || '').trim().slice(0, 500);
-    let mutationId = null;
-    if (currentQuote.payload?.offer_status === 'accepted') {
-      try {
-        const prepared = await prepareCheckoutMutation({
-          sb,
-          env,
-          kind: 'decline',
-          identity: {
-            quoteId: currentQuote.id,
-            quoteOrderId: offerOrderId,
-            requesterId,
-            companyId,
-            offerRevision: Number(currentQuote.offer_revision),
-            offerStatus: String(currentQuote.payload?.offer_status || ''),
-          },
-        });
-        mutationId = prepared.mutationId;
-      } catch (error) {
-        if (error instanceof QuoteCheckoutAttemptError) {
-          return json(error.status, { error: error.code, ...(error.retryable ? { retryable: true } : {}) });
-        }
-        return json(503, { error: 'quote_checkout_attempt_unavailable', retryable: true });
-      }
-    }
-    const payload = quotePayloadWithOffer(currentQuote.payload, {
-      orderId: currentQuote.payload?.offer_order_id,
-      status: 'declined',
-      at: declinedAt,
-    });
-    if (reason) payload.offer_declined_reason = reason;
-    const declineQuery = sb.from('quotes')
-      .update({
-        payload,
-        status: 'closed',
-        pipeline_stage: 'lost',
-        next_step: reason ? `Buyer declined: ${reason}` : 'Buyer declined the quote',
-        handled_at: declinedAt,
-        ...(mutationId ? {
-          checkout_mutation_id: null,
-          checkout_mutation_kind: null,
-          checkout_mutation_order_id: null,
-          checkout_mutation_offer_revision: null,
-        } : {}),
-      })
-      .eq('id', currentQuote.id)
-      .eq('status', currentQuote.status)
-      .eq('offer_revision', Number(currentQuote.offer_revision));
-    if (mutationId) {
-      declineQuery
-        .eq('checkout_mutation_id', mutationId)
-        .eq('checkout_mutation_order_id', offerOrderId)
-        .eq('checkout_mutation_offer_revision', Number(currentQuote.offer_revision));
-    }
-    const { data: declined, error: declineError } = await guardQuoteOffer(declineQuery, currentQuote.payload)
-      .select('id')
-      .maybeSingle();
-    if (declineError || !declined) {
-      if (mutationId) {
-        await (dependencies.releaseQuoteCheckoutMutation
-          ? dependencies.releaseQuoteCheckoutMutation({
-            sb,
-            mutationId,
-            identity: {
-              quoteId: currentQuote.id,
-              quoteOrderId: offerOrderId,
-              offerRevision: Number(currentQuote.offer_revision),
-            },
-          })
-          : releaseQuoteCheckoutMutation(createSupabaseQuoteCheckoutAttemptStore(sb), {
-            mutationId,
-            identity: {
-              quoteId: currentQuote.id,
-              quoteOrderId: offerOrderId,
-              offerRevision: Number(currentQuote.offer_revision),
-            },
-          })).catch(() => {});
-      }
-      if (declineError) return json(500, { error: 'server_error' });
-      return json(409, { error: 'quote_changed' });
-    }
-    return json(200, { ok: true, quote_id: currentQuote.id, declined: true }, { 'cache-control': 'private, no-store' });
-  }
-  if (currentQuote.payload?.offer_status === 'ordered') {
-    return json(409, { error: 'already_ordered', order_id: currentQuote.payload?.final_order_id || null });
-  }
-  if (currentQuote.payload?.offer_status === 'payment_pending') {
-    return json(409, { error: 'payment_pending', order_id: currentQuote.payload?.final_order_id || null });
-  }
-  if (!actions.can_accept) {
-    return json(409, { error: 'offer_unavailable' });
-  }
-
-  // Re-loading an already accepted offer is idempotent and does not restamp the CAS row.
-  if (currentQuote.payload?.offer_status === 'accepted') {
-    return json(200, {
-      ok: true,
-      quote_id: currentQuote.id,
-      offer: {
-        id: offer.id,
-        subtotal: Number(offer.subtotal || 0),
-        total: Number(offer.total || 0),
-        currency: offer.currency || 'usd',
-        order_items: offer.order_items,
-      },
-    }, { 'cache-control': 'private, no-store' });
-  }
-
-  const at = actionAt;
-  const payload = quotePayloadWithOffer(currentQuote.payload, {
-    orderId: offer.id,
-    status: 'accepted',
-    at,
-  });
-  const updateQuery = sb.from('quotes')
-    .update({
-      payload,
-      status: 'contacted',
-      next_step: 'Buyer accepted; awaiting checkout',
-      handled_at: at,
-    })
-    .eq('id', currentQuote.id)
-    .eq('status', currentQuote.status);
-  const { data: updated, error: updateError } = await guardQuoteOffer(updateQuery, currentQuote.payload)
-    .select('id')
-    .maybeSingle();
-  if (updateError) return json(500, { error: 'server_error' });
-  if (!updated) return json(409, { error: 'quote_changed' });
-  return json(200, {
-    ok: true,
-    quote_id: currentQuote.id,
-    offer: {
-      id: offer.id,
-      subtotal: Number(offer.subtotal || 0),
-      total: Number(offer.total || 0),
-      currency: offer.currency || 'usd',
-      order_items: offer.order_items,
-    },
-  }, { 'cache-control': 'private, no-store' });
+  return json(result.status, result.body, { 'cache-control': 'private, no-store' });
 }

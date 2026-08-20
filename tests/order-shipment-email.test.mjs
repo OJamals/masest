@@ -8,10 +8,12 @@ const SCHEMA = read("supabase/schema.sql");
 const ORDER_INTEGRITY = read("supabase/schema-order-integrity.sql");
 const CHECKOUT = read("functions/api/checkout.js");
 const STRIPE_WEBHOOK = read("functions/api/stripe-webhook.js");
+const CHECKOUT_FULFILLMENT = read("functions/_lib/checkout-fulfillment-contract.js");
 const ORDER_SHAPE = read("functions/_lib/order-shape.js");
 const STRIPE_EFFECTS = read("functions/_lib/integration-effects.js");
 const ACCOUNT_ORDERS = read("functions/api/account/orders.js");
 const ADMIN_ORDERS = read("functions/api/admin/orders.js");
+const STAFF_ORDER_OPERATIONS = read("functions/_lib/staff-order-operations.js");
 const DASHBOARD = read("js/dashboard.js");
 const ADMIN_ORDER_UI = read("js/admin/orders.js");
 
@@ -22,7 +24,8 @@ test("orders persist buyer email for shipment notifications", () => {
     /function\s+public\.place_net_order_v2[\s\S]*customer_email[\s\S]*p_email/i);
   // The Stripe paid-order row is built by order-shape.js; the webhook resolves the
   // bound current-version Buyer email and passes it into orderRowFromSession.
-  assert.match(STRIPE_WEBHOOK, /const buyerEmail = shippingContract === '3' \? boundBuyerEmail : buyerEmailFromStripeSession\(s\)/);
+  assert.match(STRIPE_WEBHOOK, /const buyerEmail = checkoutFulfillmentBuyerEmail\(/);
+  assert.match(CHECKOUT_FULFILLMENT, /checkoutFulfillmentNeedsBoundBuyer\(session\)[\s\S]*\? boundBuyerEmail[\s\S]*: legacyBuyerEmail/);
   assert.match(STRIPE_WEBHOOK, /orderRowFromSession\(s,\s*buyerEmail\)/);
   assert.match(ORDER_SHAPE, /customer_email:\s*customerEmail/);
 });
@@ -40,13 +43,13 @@ test("shipping and purchase-order references reach confirmations and order views
 });
 
 test("tracking updates email buyer + company recipients once, deduplicated", () => {
-  assert.match(ADMIN_ORDERS, /function sendTrackingEmail/);
-  assert.match(ADMIN_ORDERS, /function notifyBuyerTracking/);
-  assert.match(ADMIN_ORDERS, /order\?\.customer_email/);
+  assert.match(STAFF_ORDER_OPERATIONS, /function sendTrackingEmail/);
+  assert.match(STAFF_ORDER_OPERATIONS, /function notifyBuyerTracking/);
+  assert.match(STAFF_ORDER_OPERATIONS, /order\?\.customer_email/);
   // The recipient union is deduplicated inside sendTrackingEmail (Set over normalized emails).
-  assert.match(ADMIN_ORDERS, /new Set\(\(recipients \|\| \[\]\)/);
-  assert.match(ADMIN_ORDERS, /await sendTrackingEmail\(env,\s*request,\s*order,\s*notifyLabel,\s*notifyBody,\s*\[order\?\.customer_email,\s*\.\.\.companyRecipients\]\)/);
-  assert.match(ADMIN_ORDERS, /htmlEscape/);
+  assert.match(STAFF_ORDER_OPERATIONS, /new Set\(\(recipients \|\| \[\]\)/);
+  assert.match(STAFF_ORDER_OPERATIONS, /await sendOrderTrackingEmail\([\s\S]{0,180}\[order\?\.customer_email,\s*\.\.\.companyRecipients\]/);
+  assert.match(STAFF_ORDER_OPERATIONS, /htmlEscape/);
 });
 
 test("public order number is used across confirmation, tracking, dashboard, admin, and CSV", () => {
@@ -54,7 +57,7 @@ test("public order number is used across confirmation, tracking, dashboard, admi
   assert.match(STRIPE_EFFECTS, /orderReference\(order\)/);
   assert.match(ACCOUNT_ORDERS, /select\('id,order_number,status,/);
   assert.match(ADMIN_ORDERS, /select\('id,order_number,status,/);
-  assert.match(ADMIN_ORDERS, /const reference = orderReference\(order\)[\s\S]*subject:\s*`Order \$\{reference\} \$\{label\}`/);
+  assert.match(STAFF_ORDER_OPERATIONS, /const reference = orderReference\(order\)[\s\S]*subject:\s*`Order \$\{reference\} \$\{label\}`/);
   assert.match(ADMIN_ORDERS, /rows\.push\(\[o\.order_number \|\| o\.id,/);
   assert.match(DASHBOARD, /o\.order_number \|\| o\.id/);
   assert.match(ADMIN_ORDER_UI, /order\.order_number \|\| order\.id/);

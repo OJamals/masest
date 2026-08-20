@@ -14,6 +14,7 @@ import {
   shipmentLabelOwnership,
 } from './shipment-label-ownership.js';
 import {
+  runShipStationProviderOperation,
   shipStationOperationKey,
   shipStationRequestFingerprint,
 } from './shipstation-operation-attempts.js';
@@ -37,6 +38,60 @@ function attemptHandle(claim) {
   const operationKey = text(claim?.operation_key, 512);
   const leaseOwner = text(claim?.lease_owner, 128);
   return operationKey && leaseOwner ? { operationKey, leaseOwner } : null;
+}
+
+function claimedProviderOperationAttempt({
+  env,
+  claim,
+  context,
+  operation,
+  requireHandle,
+  markAttemptProviderSucceeded,
+  completeOperationAttempt,
+  attemptLifecycle,
+}) {
+  const handle = attemptHandle(claim);
+  if (!handle && requireHandle) {
+    throw new ShipStationError('shipstation_operation_claim_invalid');
+  }
+  const operationKey = handle?.operationKey || `injected:${operation}`;
+  const leaseOwner = handle?.leaseOwner || 'injected-lease';
+  const providerObjectId = (summary) => text(
+    summary?.provider_object_id || summary?.label_id || summary?.shipment_id,
+    100,
+  ) || null;
+  return {
+    operationKey,
+    leaseOwner,
+    attemptAdapter: {
+      claim: async () => ({ state: 'claimed', lease_owner: leaseOwner }),
+      providerSucceeded: async (input) => {
+        if (!handle) return;
+        await markAttemptProviderSucceeded(env, {
+          ...input,
+          providerObjectId: providerObjectId(input.resultSummary),
+        });
+      },
+      complete: async (input) => {
+        if (!handle) return;
+        await completeOperationAttempt(env, input);
+      },
+      reconcile: async (input) => {
+        if (!handle) return;
+        await attemptLifecycle.reconcile(env, input);
+      },
+      release: async (input) => {
+        if (!handle) return;
+        await attemptLifecycle.release(env, {
+          ...input,
+          evidence: 'provider_rejected',
+          reason: `Provider rejected ${operation} before acceptance`,
+          actorId: context?.user?.id,
+          actorEmail: context?.user?.email,
+        });
+      },
+    },
+  };
 }
 
 function providerFailureIsProvenRejection(error) {
@@ -540,12 +595,6 @@ function reconcilableAttempt(attempts, operation, predicate = () => true) {
   return candidates[0] || null;
 }
 
-async function recordAttemptProviderSucceeded(mark, env, claim, providerObjectId, resultSummary) {
-  const handle = attemptHandle(claim);
-  if (!handle) return;
-  await mark(env, { ...handle, providerObjectId, resultSummary });
-}
-
 async function completeAttempt(complete, env, claim, resultSummary) {
   const handle = attemptHandle(claim);
   if (!handle) return;
@@ -564,26 +613,6 @@ function shipmentAttemptSummary(result) {
     package_count: Array.isArray(result?.packages) ? result.packages.length : 0,
     rate_count: Array.isArray(result?.rates) ? result.rates.length : 0,
   };
-}
-
-async function recordAttemptFailure(lifecycle, env, claim, error, context, operation, providerAccepted = false) {
-  const handle = attemptHandle(claim);
-  if (!handle) return;
-  const common = {
-    ...handle,
-    errorCode: error?.code || 'shipstation_request_failed',
-  };
-  if (!providerAccepted && providerFailureIsProvenRejection(error)) {
-    await lifecycle.release(env, {
-      ...common,
-      evidence: 'provider_rejected',
-      reason: `Provider rejected ${operation} before acceptance`,
-      actorId: context?.user?.id,
-      actorEmail: context?.user?.email,
-    });
-  } else {
-    await lifecycle.reconcile(env, common);
-  }
 }
 
 async function defaultFinalizeShipmentOperation(env, input) {
@@ -1315,65 +1344,73 @@ export async function rateOrderShipment(env, input, context = {}, dependencies =
   const providerExternalShipmentId = externalShipmentId(claim?.external_shipment_id);
   payload.shipment.external_shipment_id = providerExternalShipmentId;
 
-  let response;
-  let rates;
-  let shipmentId;
-  let finalized;
   let providerAccepted = false;
   try {
-    const provider = await quoteRates(env, payload);
-    providerAccepted = true;
-    await recordAttemptProviderSucceeded(
-      markAttemptProviderSucceeded,
+    const attempt = claimedProviderOperationAttempt({
       env,
       claim,
-      text(provider?.rate_response?.shipment_id || provider?.shipment_id, 100) || null,
-      {
+      context,
+      operation: 'shipment create',
+      requireHandle: claimShipmentOperation === defaultClaimShipmentOperation,
+      markAttemptProviderSucceeded,
+      completeOperationAttempt,
+      attemptLifecycle,
+    });
+    const outcome = await runShipStationProviderOperation({
+      ...attempt,
+      callProvider: async () => {
+        const provider = await quoteRates(env, payload);
+        providerAccepted = true;
+        return provider;
+      },
+      summarizeProviderResult: (provider) => ({
         shipment_id: text(provider?.rate_response?.shipment_id || provider?.shipment_id, 100) || null,
         external_shipment_id: providerExternalShipmentId,
+      }),
+      finalize: async (provider) => {
+        const response = provider?.rate_response || provider || {};
+        const rates = markPaidService(safeRatesForPackages(response, packages, carriers), order).rates;
+        const shipmentId = text(response?.shipment_id || rates[0]?.shipment_id, 100);
+        if (!shipmentId) throw new ShipStationError('shipstation_rate_response_invalid');
+        const finalized = await finalizeShipmentOperation(env, {
+          orderShipmentId: rowId(claim.id),
+          expectedRevision: Number(claim.revision),
+          providerShipmentId: shipmentId,
+          status: 'rated',
+          packageHash,
+          packages,
+          rates,
+          actorId: context?.user?.id,
+          actorEmail: context?.user?.email,
+          reason: 'Shipment created and rated',
+        });
+        return {
+          order_shipment_id: claim.id,
+          shipment_id: shipmentId,
+          external_shipment_id: providerExternalShipmentId,
+          split_key: orderSplitKey,
+          revision: Number(finalized?.revision ?? claim.revision),
+          package_hash: packageHash,
+          rates,
+          packages,
+          packages_source: packagesSource,
+          paid_service: {
+            carrier_id: text(order?.paid_shipping_carrier_id, 100) || null,
+            service_code: text(order?.paid_shipping_service_code, 100) || null,
+            matched: rates.some((rate) => rate.paid_service === true),
+          },
+        };
       },
-    );
-    response = provider?.rate_response || provider || {};
-    rates = markPaidService(safeRatesForPackages(response, packages, carriers), order).rates;
-    shipmentId = text(response?.shipment_id || rates[0]?.shipment_id, 100);
-    if (!shipmentId) throw new ShipStationError('shipstation_rate_response_invalid');
-    finalized = await finalizeShipmentOperation(env, {
-      orderShipmentId: rowId(claim.id),
-      expectedRevision: Number(claim.revision),
-      providerShipmentId: shipmentId,
-      status: 'rated',
-      packageHash,
-      packages,
-      rates,
-      actorId: context?.user?.id,
-      actorEmail: context?.user?.email,
-      reason: 'Shipment created and rated',
+      summarizeFinalResult: shipmentAttemptSummary,
+      classifyProviderError: (error) => (
+        providerFailureIsProvenRejection(error) ? 'not_accepted' : 'ambiguous'
+      ),
     });
+    return outcome.result;
   } catch (error) {
-    await recordAttemptFailure(
-      attemptLifecycle, env, claim, error, context, 'shipment create', providerAccepted,
-    ).catch(() => {});
     await recordShipmentFailure(failShipmentOperation, env, claim, error, providerAccepted, 'create');
     throw error;
   }
-  const result = {
-    order_shipment_id: claim.id,
-    shipment_id: shipmentId,
-    external_shipment_id: providerExternalShipmentId,
-    split_key: orderSplitKey,
-    revision: Number(finalized?.revision ?? claim.revision),
-    package_hash: packageHash,
-    rates,
-    packages,
-    packages_source: packagesSource,
-    paid_service: {
-      carrier_id: text(order?.paid_shipping_carrier_id, 100) || null,
-      service_code: text(order?.paid_shipping_service_code, 100) || null,
-      matched: rates.some((rate) => rate.paid_service === true),
-    },
-  };
-  await completeAttempt(completeOperationAttempt, env, claim, shipmentAttemptSummary(result));
-  return result;
 }
 
 function assertShipmentMutable(order, orderShipmentId) {
@@ -1444,56 +1481,73 @@ export async function updateOrderShipment(env, input, context = {}, dependencies
   if (claim?.state === 'completed') return claim.result_summary || {};
   const providerShipmentId = providerId(claim?.provider_shipment_id, 'shipstation_shipment_required');
   const payload = shipmentPayload(shipmentOrder, packages, warehouseId, input);
-  let finalized;
-  let rates;
   let providerAccepted = false;
   try {
-    const provider = await updateShipment(env, providerShipmentId, payload);
-    providerAccepted = true;
-    await recordAttemptProviderSucceeded(
-      markAttemptProviderSucceeded, env, claim, providerShipmentId,
-      { shipment_id: text(provider?.shipment_id || providerShipmentId, 100) },
-    );
-    const responseId = text(provider?.shipment_id || providerShipmentId, 100);
-    if (responseId !== providerShipmentId) throw new ShipStationError('shipstation_shipment_response_invalid');
-    const quoted = await quoteRates(env, {
-      shipment_id: providerShipmentId,
-      rate_options: { carrier_ids: carrierIds },
+    const attempt = claimedProviderOperationAttempt({
+      env,
+      claim,
+      context,
+      operation: 'shipment update',
+      requireHandle: claimShipmentOperation === defaultClaimShipmentOperation,
+      markAttemptProviderSucceeded,
+      completeOperationAttempt,
+      attemptLifecycle,
     });
-    const rateResponse = quoted?.rate_response || quoted || {};
-    rates = safeRatesForPackages(rateResponse, packages, carriers);
-    finalized = await finalizeShipmentOperation(env, {
-      orderShipmentId,
-      expectedRevision: Number(claim.revision),
-      providerShipmentId,
-      status: 'rated',
-      packageHash,
-      packages,
-      rates,
-      actorId: context?.user?.id,
-      actorEmail: context?.user?.email,
-      reason: operationReason,
+    const outcome = await runShipStationProviderOperation({
+      ...attempt,
+      callProvider: async () => {
+        const provider = await updateShipment(env, providerShipmentId, payload);
+        providerAccepted = true;
+        return provider;
+      },
+      summarizeProviderResult: (provider) => {
+        const responseId = text(provider?.shipment_id || providerShipmentId, 100);
+        if (responseId !== providerShipmentId) {
+          throw new ShipStationError('shipstation_shipment_response_invalid');
+        }
+        return { shipment_id: responseId };
+      },
+      finalize: async () => {
+        const quoted = await quoteRates(env, {
+          shipment_id: providerShipmentId,
+          rate_options: { carrier_ids: carrierIds },
+        });
+        const rateResponse = quoted?.rate_response || quoted || {};
+        const rates = safeRatesForPackages(rateResponse, packages, carriers);
+        const finalized = await finalizeShipmentOperation(env, {
+          orderShipmentId,
+          expectedRevision: Number(claim.revision),
+          providerShipmentId,
+          status: 'rated',
+          packageHash,
+          packages,
+          rates,
+          actorId: context?.user?.id,
+          actorEmail: context?.user?.email,
+          reason: operationReason,
+        });
+        return {
+          order_shipment_id: orderShipmentId,
+          shipment_id: providerShipmentId,
+          revision: finalized.revision,
+          status: finalized.status || 'rated',
+          package_hash: packageHash,
+          packages,
+          rates,
+        };
+      },
+      summarizeFinalResult: shipmentAttemptSummary,
+      classifyProviderError: (error) => (
+        providerFailureIsProvenRejection(error) ? 'not_accepted' : 'ambiguous'
+      ),
     });
+    return outcome.result;
   } catch (error) {
-    await recordAttemptFailure(
-      attemptLifecycle, env, claim, error, context, 'shipment update', providerAccepted,
-    ).catch(() => {});
     await recordShipmentFailure(
       failShipmentOperation, env, claim, error, providerAccepted, 'update', orderShipmentId,
     );
     throw error;
   }
-  const result = {
-    order_shipment_id: orderShipmentId,
-    shipment_id: providerShipmentId,
-    revision: finalized.revision,
-    status: finalized.status || 'rated',
-    package_hash: packageHash,
-    packages,
-    rates,
-  };
-  await completeAttempt(completeOperationAttempt, env, claim, shipmentAttemptSummary(result));
-  return result;
 }
 
 export async function cancelOrderShipment(env, input, context = {}, dependencies = {}) {
@@ -1528,46 +1582,59 @@ export async function cancelOrderShipment(env, input, context = {}, dependencies
   });
   if (claim?.state === 'completed') return claim.result_summary || {};
   const providerShipmentId = providerId(claim?.provider_shipment_id, 'shipstation_shipment_required');
-  let finalized;
   let providerAccepted = false;
   try {
-    const provider = await cancelShipment(env, providerShipmentId);
-    if (provider?.approved === false) {
-      throw new ShipStationError('shipstation_shipment_cancel_rejected', 422);
-    }
-    providerAccepted = true;
-    await recordAttemptProviderSucceeded(
-      markAttemptProviderSucceeded, env, claim, providerShipmentId,
-      { shipment_id: providerShipmentId, cancelled: true },
-    );
-    finalized = await finalizeShipmentOperation(env, {
-      orderShipmentId,
-      expectedRevision: Number(claim.revision),
-      providerShipmentId,
-      status: 'cancelled',
-      packages: [],
-      rates: [],
-      actorId: context?.user?.id,
-      actorEmail: context?.user?.email,
-      reason: operationReason,
+    const attempt = claimedProviderOperationAttempt({
+      env,
+      claim,
+      context,
+      operation: 'shipment cancel',
+      requireHandle: claimShipmentOperation === defaultClaimShipmentOperation,
+      markAttemptProviderSucceeded,
+      completeOperationAttempt,
+      attemptLifecycle,
     });
+    const outcome = await runShipStationProviderOperation({
+      ...attempt,
+      callProvider: async () => {
+        const provider = await cancelShipment(env, providerShipmentId);
+        if (provider?.approved === false) {
+          throw new ShipStationError('shipstation_shipment_cancel_rejected', 422);
+        }
+        providerAccepted = true;
+        return provider;
+      },
+      summarizeProviderResult: () => ({ shipment_id: providerShipmentId, cancelled: true }),
+      finalize: async () => {
+        const finalized = await finalizeShipmentOperation(env, {
+          orderShipmentId,
+          expectedRevision: Number(claim.revision),
+          providerShipmentId,
+          status: 'cancelled',
+          packages: [],
+          rates: [],
+          actorId: context?.user?.id,
+          actorEmail: context?.user?.email,
+          reason: operationReason,
+        });
+        return {
+          order_shipment_id: orderShipmentId,
+          shipment_id: providerShipmentId,
+          revision: finalized.revision,
+          status: 'cancelled',
+        };
+      },
+      classifyProviderError: (error) => (
+        providerFailureIsProvenRejection(error) ? 'not_accepted' : 'ambiguous'
+      ),
+    });
+    return outcome.result;
   } catch (error) {
-    await recordAttemptFailure(
-      attemptLifecycle, env, claim, error, context, 'shipment cancel', providerAccepted,
-    ).catch(() => {});
     await recordShipmentFailure(
       failShipmentOperation, env, claim, error, providerAccepted, 'cancel', orderShipmentId,
     );
     throw error;
   }
-  const result = {
-    order_shipment_id: orderShipmentId,
-    shipment_id: providerShipmentId,
-    revision: finalized.revision,
-    status: 'cancelled',
-  };
-  await completeAttempt(completeOperationAttempt, env, claim, result);
-  return result;
 }
 
 export async function selectOrderShipmentRate(env, input, _context = {}, dependencies = {}) {
@@ -1833,156 +1900,174 @@ export async function buyOrderLabel(env, input, context = {}, dependencies = {})
     throw new ShipStationError('shipstation_label_purchase_locked');
   }
 
-  let label;
   let providerAccepted = false;
+  let finalizationStarted = false;
   try {
-    label = await purchaseLabel(env, rateId, {
-      validate_address: 'validate_and_clean',
-      label_layout: '4x6',
-      label_format: 'pdf',
-      label_download_type: 'url',
-      display_scheme: 'label',
+    const attempt = claimedProviderOperationAttempt({
+      env,
+      claim: claimed,
+      context,
+      operation: 'label purchase',
+      requireHandle: claimLabel === defaultClaimLabel,
+      markAttemptProviderSucceeded,
+      completeOperationAttempt,
+      attemptLifecycle,
     });
-    providerAccepted = true;
-    await recordAttemptProviderSucceeded(
-      markAttemptProviderSucceeded, env, claimed,
-      text(label?.label_id, 100) || null,
-      {
+    const outcome = await runShipStationProviderOperation({
+      ...attempt,
+      callProvider: async () => {
+        const label = await purchaseLabel(env, rateId, {
+          validate_address: 'validate_and_clean',
+          label_layout: '4x6',
+          label_format: 'pdf',
+          label_download_type: 'url',
+          display_scheme: 'label',
+        });
+        providerAccepted = true;
+        return label;
+      },
+      summarizeProviderResult: (label) => ({
         label_id: text(label?.label_id, 100) || null,
         shipment_id: text(label?.shipment_id, 100) || shipmentId,
         tracking_number: text(label?.tracking_number, 160) || null,
         status: text(label?.status || label?.label_status, 80).toLowerCase() || null,
+      }),
+      finalize: async (label) => {
+        finalizationStarted = true;
+        const labelId = text(label?.label_id, 100);
+        if (!labelId) {
+          await persistLabel(env, id, {
+            shipstation_label_status: 'reconcile_required',
+            shipstation_error: 'shipstation_label_response_invalid',
+          });
+          throw new ShipStationError('shipstation_label_response_invalid');
+        }
+        if (text(label?.shipment_id, 100) !== shipmentId) {
+          await persistLabel(env, id, {
+            shipstation_label_status: 'reconcile_required',
+            shipstation_error: 'shipstation_label_response_invalid',
+          });
+          throw new ShipStationError('shipstation_label_response_invalid');
+        }
+        const labelUrl = text(label?.label_download?.pdf || label?.label_download?.href || label?.label_download, 1000) || null;
+        const trackingNumber = text(label?.tracking_number, 160) || null;
+        const trackingUrl = text(label?.tracking_url, 1000) || null;
+        const providerStatus = text(label?.status || label?.label_status, 80).toLowerCase();
+        if (['error', 'voided'].includes(providerStatus)) {
+          await persistLabel(env, id, {
+            shipstation_shipment_id: text(label?.shipment_id, 100) || shipmentId,
+            shipstation_label_id: labelId,
+            shipstation_rate_id: rateId,
+            shipstation_label_status: 'reconcile_required',
+            shipstation_error: 'shipstation_label_provider_error',
+          });
+          throw new ShipStationError('shipstation_label_provider_error');
+        }
+        const labelCost = money(label?.shipment_cost);
+        const labelCurrency = text(label?.shipment_cost?.currency, 8).toLowerCase();
+        if (labelCost == null || labelCost < 0 || !/^[a-z]{3}$/.test(labelCurrency)) {
+          await persistLabel(env, id, {
+            shipstation_label_status: 'reconcile_required',
+            shipstation_error: 'shipstation_label_response_invalid',
+          });
+          throw new ShipStationError('shipstation_label_response_invalid');
+        }
+        const labelStatus = ['processing', 'pending', 'queued'].includes(providerStatus)
+          ? 'label_pending'
+          : 'label_purchased';
+        const patch = {
+          shipstation_shipment_id: text(label?.shipment_id, 100) || shipmentId,
+          shipstation_label_id: labelId,
+          shipstation_rate_id: rateId,
+          shipstation_carrier_id: text(label?.carrier_id, 100) || null,
+          shipstation_service_code: text(label?.service_code, 100) || null,
+          shipstation_label_url: labelUrl,
+          shipstation_cost: labelCost,
+          shipstation_label_status: labelStatus,
+          shipstation_error: null,
+          tracking_status: 'packing',
+          carrier: text(label?.carrier_code || label?.carrier_id, 120) || null,
+          tracking_number: trackingNumber,
+          tracking_url: trackingUrl,
+        };
+        await persistLabel(env, id, patch);
+        await linkShipStationObject(linkProviderObject, env, order, 'shipment', patch.shipstation_shipment_id, {
+          order_shipment_id: orderShipmentId,
+          revision,
+        });
+        await linkShipStationObject(linkProviderObject, env, order, 'rate', rateId, {
+          shipment_id: patch.shipstation_shipment_id,
+        });
+        await linkShipStationObject(linkProviderObject, env, order, 'label', labelId, {
+          order_shipment_id: orderShipmentId,
+          revision,
+          shipment_id: patch.shipstation_shipment_id,
+          rate_id: rateId,
+          status: labelStatus,
+          tracking_number: trackingNumber,
+          tracking_url: trackingUrl,
+          carrier: patch.carrier,
+          cost: patch.shipstation_cost,
+          currency: labelCurrency,
+        });
+        await recordPostagePurchase(recordFinancialEntry, env, order, {
+          labelId,
+          orderShipmentId,
+          shipmentId: patch.shipstation_shipment_id,
+          rateId,
+          cost: patch.shipstation_cost,
+          currency: labelCurrency,
+          actorId: context?.user?.id,
+        });
+        await insertShipmentEvent(env, id, {
+          status: 'packing',
+          carrier: patch.carrier,
+          tracking_number: trackingNumber,
+          note: `ShipStation label ${labelId} purchased`,
+          provider: 'shipstation',
+          provider_event_key: `label-purchase:${labelId}`,
+          order_shipment_id: orderShipmentId,
+          provider_label_id: labelId,
+        });
+        await audit(env, context, 'shipstation_label_purchased', id, {
+          shipment_id: patch.shipstation_shipment_id,
+          label_id: labelId,
+          rate_id: rateId,
+          cost: patch.shipstation_cost,
+          currency: labelCurrency,
+          status: labelStatus,
+        });
+        return {
+          already_purchased: false,
+          label_id: labelId,
+          shipment_id: patch.shipstation_shipment_id,
+          status: labelStatus,
+          tracking_number: trackingNumber,
+          tracking_url: trackingUrl,
+          cost: patch.shipstation_cost,
+          currency: labelCurrency,
+        };
       },
-    );
+      summarizeFinalResult: (result) => {
+        const { tracking_url: _trackingUrl, ...summary } = result;
+        return summary;
+      },
+      classifyProviderError: (error) => (
+        providerFailureIsProvenRejection(error) ? 'not_accepted' : 'ambiguous'
+      ),
+    });
+    return outcome.result;
   } catch (error) {
-    await recordAttemptFailure(
-      attemptLifecycle, env, claimed, error, context, 'label purchase', providerAccepted,
-    ).catch(() => {});
-    await persistLabel(env, id, {
-      shipstation_label_status: !providerAccepted && providerFailureIsProvenRejection(error)
-        ? 'rated'
-        : 'reconcile_required',
-      shipstation_error: text(error?.code || 'shipstation_label_purchase_failed', 160),
-    }).catch(() => {});
+    if (!finalizationStarted) {
+      await persistLabel(env, id, {
+        shipstation_label_status: !providerAccepted && providerFailureIsProvenRejection(error)
+          ? 'rated'
+          : 'reconcile_required',
+        shipstation_error: text(error?.code || 'shipstation_label_purchase_failed', 160),
+      }).catch(() => {});
+    }
     throw error;
   }
-
-  const labelId = text(label?.label_id, 100);
-  if (!labelId) {
-    await persistLabel(env, id, {
-      shipstation_label_status: 'reconcile_required',
-      shipstation_error: 'shipstation_label_response_invalid',
-    });
-    throw new ShipStationError('shipstation_label_response_invalid');
-  }
-  if (text(label?.shipment_id, 100) !== shipmentId) {
-    await persistLabel(env, id, {
-      shipstation_label_status: 'reconcile_required',
-      shipstation_error: 'shipstation_label_response_invalid',
-    });
-    throw new ShipStationError('shipstation_label_response_invalid');
-  }
-  const labelUrl = text(label?.label_download?.pdf || label?.label_download?.href || label?.label_download, 1000) || null;
-  const trackingNumber = text(label?.tracking_number, 160) || null;
-  const trackingUrl = text(label?.tracking_url, 1000) || null;
-  const providerStatus = text(label?.status || label?.label_status, 80).toLowerCase();
-  if (['error', 'voided'].includes(providerStatus)) {
-    await persistLabel(env, id, {
-      shipstation_shipment_id: text(label?.shipment_id, 100) || shipmentId,
-      shipstation_label_id: labelId,
-      shipstation_rate_id: rateId,
-      shipstation_label_status: 'reconcile_required',
-      shipstation_error: 'shipstation_label_provider_error',
-    });
-    throw new ShipStationError('shipstation_label_provider_error');
-  }
-  const labelCost = money(label?.shipment_cost);
-  const labelCurrency = text(label?.shipment_cost?.currency, 8).toLowerCase();
-  if (labelCost == null || labelCost < 0 || !/^[a-z]{3}$/.test(labelCurrency)) {
-    await persistLabel(env, id, {
-      shipstation_label_status: 'reconcile_required',
-      shipstation_error: 'shipstation_label_response_invalid',
-    });
-    throw new ShipStationError('shipstation_label_response_invalid');
-  }
-  const labelStatus = ['processing', 'pending', 'queued'].includes(providerStatus)
-    ? 'label_pending'
-    : 'label_purchased';
-  const patch = {
-    shipstation_shipment_id: text(label?.shipment_id, 100) || shipmentId,
-    shipstation_label_id: labelId,
-    shipstation_rate_id: rateId,
-    shipstation_carrier_id: text(label?.carrier_id, 100) || null,
-    shipstation_service_code: text(label?.service_code, 100) || null,
-    shipstation_label_url: labelUrl,
-    shipstation_cost: labelCost,
-    shipstation_label_status: labelStatus,
-    shipstation_error: null,
-    tracking_status: 'packing',
-    carrier: text(label?.carrier_code || label?.carrier_id, 120) || null,
-    tracking_number: trackingNumber,
-    tracking_url: trackingUrl,
-  };
-  await persistLabel(env, id, patch);
-  await linkShipStationObject(linkProviderObject, env, order, 'shipment', patch.shipstation_shipment_id, {
-    order_shipment_id: orderShipmentId,
-    revision,
-  });
-  await linkShipStationObject(linkProviderObject, env, order, 'rate', rateId, {
-    shipment_id: patch.shipstation_shipment_id,
-  });
-  await linkShipStationObject(linkProviderObject, env, order, 'label', labelId, {
-    order_shipment_id: orderShipmentId,
-    revision,
-    shipment_id: patch.shipstation_shipment_id,
-    rate_id: rateId,
-    status: labelStatus,
-    tracking_number: trackingNumber,
-    tracking_url: trackingUrl,
-    carrier: patch.carrier,
-    cost: patch.shipstation_cost,
-    currency: labelCurrency,
-  });
-  await recordPostagePurchase(recordFinancialEntry, env, order, {
-    labelId,
-    orderShipmentId,
-    shipmentId: patch.shipstation_shipment_id,
-    rateId,
-    cost: patch.shipstation_cost,
-    currency: labelCurrency,
-    actorId: context?.user?.id,
-  });
-  await insertShipmentEvent(env, id, {
-    status: 'packing',
-    carrier: patch.carrier,
-    tracking_number: trackingNumber,
-    note: `ShipStation label ${labelId} purchased`,
-    provider: 'shipstation',
-    provider_event_key: `label-purchase:${labelId}`,
-    order_shipment_id: orderShipmentId,
-    provider_label_id: labelId,
-  });
-  await audit(env, context, 'shipstation_label_purchased', id, {
-    shipment_id: patch.shipstation_shipment_id,
-    label_id: labelId,
-    rate_id: rateId,
-    cost: patch.shipstation_cost,
-    currency: labelCurrency,
-    status: labelStatus,
-  });
-  const result = {
-    already_purchased: false,
-    label_id: labelId,
-    shipment_id: patch.shipstation_shipment_id,
-    status: labelStatus,
-    tracking_number: trackingNumber,
-    tracking_url: trackingUrl,
-    cost: patch.shipstation_cost,
-    currency: labelCurrency,
-  };
-  const { tracking_url: _trackingUrl, ...attemptResult } = result;
-  await completeAttempt(completeOperationAttempt, env, claimed, attemptResult);
-  return result;
 }
 
 export async function voidOrderLabel(env, input, context = {}, dependencies = {}) {
@@ -2030,75 +2115,70 @@ export async function voidOrderLabel(env, input, context = {}, dependencies = {}
     throw new ShipStationError('shipstation_label_void_locked');
   }
 
-  let provider;
   let providerAccepted = false;
+  let finalizationStarted = false;
   try {
-    provider = await voidLabel(env, labelId);
-    providerAccepted = provider?.approved === true;
-    if (providerAccepted) {
-      await recordAttemptProviderSucceeded(
-        markAttemptProviderSucceeded, env, claimed, labelId,
-        { label_id: labelId, approved: true },
-      );
-    }
+    const attempt = claimedProviderOperationAttempt({
+      env,
+      claim: claimed,
+      context,
+      operation: 'label void',
+      requireHandle: claimVoid === defaultClaimVoid,
+      markAttemptProviderSucceeded,
+      completeOperationAttempt,
+      attemptLifecycle,
+    });
+    const outcome = await runShipStationProviderOperation({
+      ...attempt,
+      callProvider: async () => {
+        const provider = await voidLabel(env, labelId);
+        if (provider?.approved !== true) {
+          throw new ShipStationError('shipstation_label_void_rejected', 422);
+        }
+        providerAccepted = true;
+        return provider;
+      },
+      summarizeProviderResult: () => ({ label_id: labelId, approved: true }),
+      finalize: async (provider) => {
+        finalizationStarted = true;
+        const providerMessage = text(provider?.message, 240) || null;
+        await finalizeVoid(env, {
+          orderId: id,
+          labelId,
+          actorId: text(context?.user?.id, 80) || null,
+          reason,
+          providerMessage,
+        });
+        await audit(env, context, 'shipstation_label_voided', id, {
+          label_id: labelId,
+          reason,
+          refund_state: 'pending',
+        }).catch(() => {});
+        return {
+          already_voided: false,
+          label_id: labelId,
+          status: 'label_voided',
+          refund_state: 'pending',
+          message: providerMessage,
+        };
+      },
+      summarizeFinalResult: ({ message: _message, ...summary }) => summary,
+      classifyProviderError: (error) => (
+        providerFailureIsProvenRejection(error) ? 'not_accepted' : 'ambiguous'
+      ),
+    });
+    return outcome.result;
   } catch (error) {
-    await recordAttemptFailure(
-      attemptLifecycle, env, claimed, error, context, 'label void', providerAccepted,
-    ).catch(() => {});
-    await persistLabel(env, id, {
-      shipstation_label_status: providerFailureIsProvenRejection(error)
-        ? 'label_void_failed'
-        : 'void_reconcile_required',
-      shipstation_error: text(error?.code || 'shipstation_label_void_failed', 160),
-    }).catch(() => {});
+    if (!finalizationStarted) {
+      await persistLabel(env, id, {
+        shipstation_label_status: !providerAccepted && providerFailureIsProvenRejection(error)
+          ? 'label_void_failed'
+          : 'void_reconcile_required',
+        shipstation_error: text(error?.code || 'shipstation_label_void_failed', 160),
+      }).catch(() => {});
+    }
     throw error;
   }
-  if (provider?.approved !== true) {
-    const handle = attemptHandle(claimed);
-    if (handle) {
-      await attemptLifecycle.release(env, {
-        ...handle,
-        evidence: 'provider_rejected',
-        reason: 'Provider explicitly rejected label void request',
-        actorId: context?.user?.id,
-        actorEmail: context?.user?.email,
-        errorCode: 'shipstation_label_void_rejected',
-      });
-    }
-    await persistLabel(env, id, {
-      shipstation_label_status: 'label_void_failed',
-      shipstation_error: 'shipstation_label_void_rejected',
-    });
-    throw new ShipStationError('shipstation_label_void_rejected');
-  }
-
-  const providerMessage = text(provider?.message, 240) || null;
-  await finalizeVoid(env, {
-    orderId: id,
-    labelId,
-    actorId: text(context?.user?.id, 80) || null,
-    reason,
-    providerMessage,
-  });
-  await audit(env, context, 'shipstation_label_voided', id, {
-    label_id: labelId,
-    reason,
-    refund_state: 'pending',
-  }).catch(() => {});
-  const result = {
-    already_voided: false,
-    label_id: labelId,
-    status: 'label_voided',
-    refund_state: 'pending',
-    message: providerMessage,
-  };
-  await completeAttempt(completeOperationAttempt, env, claimed, {
-    already_voided: false,
-    label_id: labelId,
-    status: 'label_voided',
-    refund_state: 'pending',
-  });
-  return result;
 }
 
 export async function reconcileOrderLabelVoid(env, input, context = {}, dependencies = {}) {
@@ -2494,129 +2574,145 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     label_download_type: 'url',
     display_scheme: 'label',
   };
-  let label;
   let providerAccepted = false;
+  let finalizationStarted = false;
   try {
-    label = await createReturn(env, outboundLabelId, requestBody);
-    providerAccepted = true;
-    await recordAttemptProviderSucceeded(
-      markAttemptProviderSucceeded, env, claimed,
-      text(label?.label_id, 100) || null,
-      {
+    const attempt = claimedProviderOperationAttempt({
+      env,
+      claim: claimed,
+      context,
+      operation: 'return label',
+      requireHandle: claimReturn === defaultClaimReturn,
+      markAttemptProviderSucceeded,
+      completeOperationAttempt,
+      attemptLifecycle,
+    });
+    const outcome = await runShipStationProviderOperation({
+      ...attempt,
+      callProvider: async () => {
+        const label = await createReturn(env, outboundLabelId, requestBody);
+        providerAccepted = true;
+        return label;
+      },
+      summarizeProviderResult: (label) => ({
         label_id: text(label?.label_id, 100) || null,
         outbound_label_id: outboundLabelId,
         tracking_number: text(label?.tracking_number, 160) || null,
         status: text(label?.status || label?.label_status, 80).toLowerCase() || null,
+      }),
+      finalize: async (label) => {
+        finalizationStarted = true;
+        const returnLabelId = text(label?.label_id, 100);
+        if (!/^se-[a-z0-9_-]+$/i.test(returnLabelId)) {
+          await persistReturn(env, id, {
+            shipstation_return_label_status: 'return_reconcile_required',
+            shipstation_return_error: 'shipstation_return_response_invalid',
+          });
+          throw new ShipStationError('shipstation_return_response_invalid');
+        }
+        if (label?.is_return_label !== true
+            || (text(label?.outbound_label_id, 100) && text(label.outbound_label_id, 100) !== outboundLabelId)
+            || ['error', 'voided'].includes(text(label?.status || label?.label_status, 80).toLowerCase())) {
+          await persistReturn(env, id, {
+            shipstation_return_label_status: 'return_reconcile_required',
+            shipstation_return_error: 'shipstation_return_response_invalid',
+          });
+          throw new ShipStationError('shipstation_return_response_invalid');
+        }
+        const cost = money(label?.shipment_cost);
+        const currency = text(label?.shipment_cost?.currency || order.currency, 8).toLowerCase();
+        const chargeEvent = text(label?.charge_event || requestBody.charge_event, 40).toLowerCase();
+        if (cost == null || cost < 0 || !/^[a-z]{3}$/.test(currency)
+            || !['on_creation', 'on_carrier_acceptance', 'carrier_default'].includes(chargeEvent)) {
+          await persistReturn(env, id, {
+            shipstation_return_label_status: 'return_reconcile_required',
+            shipstation_return_error: 'shipstation_return_response_invalid',
+          });
+          throw new ShipStationError('shipstation_return_response_invalid');
+        }
+        const trackingNumber = text(label?.tracking_number, 160) || null;
+        await finalizeReturn(env, {
+          orderId: id,
+          outboundLabelId,
+          orderShipmentId: outbound.order_shipment_id,
+          returnLabelId,
+          cost,
+          currency,
+          chargeEvent,
+          trackingNumber,
+          reason,
+        });
+        const status = 'return_label_created';
+        await linkProviderObject(env, {
+          orderId: order.id,
+          provider: 'shipstation',
+          objectType: 'return_label',
+          providerObjectId: returnLabelId,
+          metadata: {
+            order_number: order.order_number || null,
+            outbound_label_id: outboundLabelId,
+            order_shipment_id: outbound.order_shipment_id,
+            status,
+            tracking_number: trackingNumber,
+            cost,
+            currency,
+            charge_event: chargeEvent,
+          },
+        });
+        await recordReturnPostage(recordFinancialEntry, env, order, {
+          returnLabelId,
+          outboundLabelId,
+          orderShipmentId: outbound.order_shipment_id,
+          cost,
+          currency,
+          chargeEvent,
+          actorId: context?.user?.id,
+          reason,
+        });
+        await audit(env, context, 'shipstation_return_label_created', id, {
+          outbound_label_id: outboundLabelId,
+          order_shipment_id: outbound.order_shipment_id,
+          return_label_id: returnLabelId,
+          cost,
+          currency,
+          charge_event: chargeEvent,
+          recognition_state: returnRecognitionState(chargeEvent),
+          reason,
+        });
+        // A return label nobody can print is not a return. Send it to the buyer as soon as it
+        // exists; best-effort, because the label is already bought and paid for either way.
+        const emailed = await (dependencies.sendReturnLabelEmail || sendReturnLabelEmail)(env, order, {
+          labelUrl: text(label?.label_download?.pdf || label?.label_download?.href || label?.label_download, 1000) || null,
+          trackingNumber,
+          returnLabelId,
+          reason,
+        });
+        return {
+          already_created: false,
+          emailed,
+          ...safeLabel(label),
+          label_id: returnLabelId,
+          outbound_label_id: outboundLabelId,
+          status,
+          recognition_state: returnRecognitionState(chargeEvent),
+        };
       },
-    );
+      classifyProviderError: (error) => (
+        providerFailureIsProvenRejection(error) ? 'not_accepted' : 'ambiguous'
+      ),
+    });
+    return outcome.result;
   } catch (error) {
-    await recordAttemptFailure(
-      attemptLifecycle, env, claimed, error, context, 'return label', providerAccepted,
-    ).catch(() => {});
-    await persistReturn(env, id, {
-      shipstation_return_label_status: !providerAccepted && providerFailureIsProvenRejection(error)
-        ? 'return_failed'
-        : 'return_reconcile_required',
-      shipstation_return_error: text(error?.code || 'shipstation_return_failed', 160),
-    }).catch(() => {});
+    if (!finalizationStarted) {
+      await persistReturn(env, id, {
+        shipstation_return_label_status: !providerAccepted && providerFailureIsProvenRejection(error)
+          ? 'return_failed'
+          : 'return_reconcile_required',
+        shipstation_return_error: text(error?.code || 'shipstation_return_failed', 160),
+      }).catch(() => {});
+    }
     throw error;
   }
-  const returnLabelId = text(label?.label_id, 100);
-  if (!/^se-[a-z0-9_-]+$/i.test(returnLabelId)) {
-    await persistReturn(env, id, {
-      shipstation_return_label_status: 'return_reconcile_required',
-      shipstation_return_error: 'shipstation_return_response_invalid',
-    });
-    throw new ShipStationError('shipstation_return_response_invalid');
-  }
-  if (label?.is_return_label !== true
-      || (text(label?.outbound_label_id, 100) && text(label.outbound_label_id, 100) !== outboundLabelId)
-      || ['error', 'voided'].includes(text(label?.status || label?.label_status, 80).toLowerCase())) {
-    await persistReturn(env, id, {
-      shipstation_return_label_status: 'return_reconcile_required',
-      shipstation_return_error: 'shipstation_return_response_invalid',
-    });
-    throw new ShipStationError('shipstation_return_response_invalid');
-  }
-  const cost = money(label?.shipment_cost);
-  const currency = text(label?.shipment_cost?.currency || order.currency, 8).toLowerCase();
-  const chargeEvent = text(label?.charge_event || requestBody.charge_event, 40).toLowerCase();
-  if (cost == null || cost < 0 || !/^[a-z]{3}$/.test(currency)
-      || !['on_creation', 'on_carrier_acceptance', 'carrier_default'].includes(chargeEvent)) {
-    await persistReturn(env, id, {
-      shipstation_return_label_status: 'return_reconcile_required',
-      shipstation_return_error: 'shipstation_return_response_invalid',
-    });
-    throw new ShipStationError('shipstation_return_response_invalid');
-  }
-  const trackingNumber = text(label?.tracking_number, 160) || null;
-  await finalizeReturn(env, {
-    orderId: id,
-    outboundLabelId,
-    orderShipmentId: outbound.order_shipment_id,
-    returnLabelId,
-    cost,
-    currency,
-    chargeEvent,
-    trackingNumber,
-    reason,
-  });
-  const status = 'return_label_created';
-  await linkProviderObject(env, {
-    orderId: order.id,
-    provider: 'shipstation',
-    objectType: 'return_label',
-    providerObjectId: returnLabelId,
-    metadata: {
-      order_number: order.order_number || null,
-      outbound_label_id: outboundLabelId,
-      order_shipment_id: outbound.order_shipment_id,
-      status,
-      tracking_number: trackingNumber,
-      cost,
-      currency,
-      charge_event: chargeEvent,
-    },
-  });
-  await recordReturnPostage(recordFinancialEntry, env, order, {
-    returnLabelId,
-    outboundLabelId,
-    orderShipmentId: outbound.order_shipment_id,
-    cost,
-    currency,
-    chargeEvent,
-    actorId: context?.user?.id,
-    reason,
-  });
-  await audit(env, context, 'shipstation_return_label_created', id, {
-    outbound_label_id: outboundLabelId,
-    order_shipment_id: outbound.order_shipment_id,
-    return_label_id: returnLabelId,
-    cost,
-    currency,
-    charge_event: chargeEvent,
-    recognition_state: returnRecognitionState(chargeEvent),
-    reason,
-  });
-  // A return label nobody can print is not a return. Send it to the buyer as soon as it
-  // exists; best-effort, because the label is already bought and paid for either way.
-  const emailed = await (dependencies.sendReturnLabelEmail || sendReturnLabelEmail)(env, order, {
-    labelUrl: text(label?.label_download?.pdf || label?.label_download?.href || label?.label_download, 1000) || null,
-    trackingNumber,
-    returnLabelId,
-    reason,
-  });
-  const result = {
-    already_created: false,
-    emailed,
-    ...safeLabel(label),
-    label_id: returnLabelId,
-    outbound_label_id: outboundLabelId,
-    status,
-    recognition_state: returnRecognitionState(chargeEvent),
-  };
-  await completeAttempt(completeOperationAttempt, env, claimed, result);
-  return result;
 }
 
 export async function reconcileOrderReturnLabel(env, input, context = {}, dependencies = {}) {

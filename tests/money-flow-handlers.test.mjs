@@ -237,12 +237,11 @@ test('paid checkout verifies a signed carrier selection and bypasses legacy fixe
     adminClient: () => checkoutDb(calls),
     tierForRequest: async () => ({ tier: 'retail' }),
     userFromRequest: async () => ({ user: null }),
-    verifyShippingSelectionToken: async ({ token, cart }) => {
+    resolveCheckoutFulfillmentSelection: async ({ token, cart }) => {
       assert.equal(token, 'opaque.signed');
       assert.deepEqual(cart, [{ sku: 'VK-1', qty: 2 }]);
       return shippingSelection;
     },
-    loadShippingQuotePlan: async () => ({ outcome: 'found', plan: storedPlan }),
     createStripe: () => ({
       checkout: { sessions: { async create(params) {
         calls.push('stripe.session.create');

@@ -580,8 +580,10 @@ begin
     return public.finish_integration_projection(p_effect_id, p_worker_id, v_result);
   end if;
 
-  -- Aggregate every non-cancelled required split. One scan can update one label, but
-  -- cannot fulfill the Order while another split has no active terminal label.
+  -- Canonical Order fulfillment projection. Aggregate every non-cancelled required split
+  -- inside this locked transaction. One scan can update one label, but cannot fulfill the
+  -- Order while another split has no active terminal label. Runtime JavaScript deliberately
+  -- resolves exact labels only; it does not mirror this aggregate state machine.
   select
     exists (
       select 1 from public.order_shipment_label_ownership label

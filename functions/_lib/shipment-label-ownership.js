@@ -1,14 +1,15 @@
-// Authoritative ShipStation label ownership.
+// Authoritative ShipStation label resolution for runtime commands.
 //
 // `orders.shipstation_*` fields are deliberately absent from this module. They are a
 // latest-action projection for staff convenience, not provider identity. Ownership comes
 // from immutable order_provider_links joined to canonical order_shipments; financial state
-// comes from append-only order_financial_entries.
+// comes from append-only order_financial_entries. Order fulfillment state is projected
+// atomically by public.apply_shipstation_tracking_integration_effect; do not mirror that
+// aggregate in JavaScript.
 
 const OUTBOUND_TYPES = new Set(['label']);
 const RETURN_TYPES = new Set(['return_label']);
 const VOID_STATES = new Set(['label_voided', 'voided']);
-const TERMINAL_TRACKING = new Set(['shipped', 'delivered']);
 
 function text(value, max = 255) {
   return String(value ?? '').trim().slice(0, max);
@@ -190,46 +191,4 @@ export function requiredOutboundLabelVoids(order) {
     tracking_status: label.tracking_status,
     effect_key: `shipstation-label-void:${label.order_id}:${label.label_id}`,
   }));
-}
-
-export function deriveOrderFulfillment(order) {
-  const ownership = shipmentLabelOwnership(order);
-  const required = ownership.shipments;
-  const pending = [];
-  let anyLabel = false;
-  let anyBlocked = false;
-  let allDelivered = required.length > 0;
-
-  for (const shipment of required) {
-    const shipmentId = text(shipment.id, 80);
-    const labels = ownership.outbound.filter((label) => (
-      label.active && label.order_shipment_id === shipmentId
-    ));
-    anyLabel ||= labels.length > 0;
-    anyBlocked ||= labels.some((label) => label.tracking_status === 'blocked');
-    const terminal = labels.length > 0
-      && labels.every((label) => TERMINAL_TRACKING.has(label.tracking_status));
-    if (!terminal) pending.push(shipmentId);
-    if (!labels.length || labels.some((label) => label.tracking_status !== 'delivered')) {
-      allDelivered = false;
-    }
-  }
-
-  const complete = required.length > 0 && pending.length === 0;
-  const trackingStatus = allDelivered
-    ? 'delivered'
-    : anyBlocked
-      ? 'blocked'
-      : complete
-        ? 'shipped'
-        : anyLabel
-          ? 'packing'
-          : 'processing';
-
-  return {
-    complete,
-    tracking_status: trackingStatus,
-    required_shipment_ids: required.map((shipment) => text(shipment.id, 80)),
-    pending_shipment_ids: pending,
-  };
 }

@@ -12,10 +12,11 @@ import {
   normalizeCheckoutBuyerEmail,
 } from '../_lib/checkout-session.js';
 import {
-  assertShippingPlanSelection,
-  CheckoutShippingError,
-  loadShippingQuotePlan,
-} from '../_lib/checkout-shipping.js';
+  checkoutFulfillmentBuyerEmail,
+  checkoutFulfillmentNeedsBoundBuyer,
+  CheckoutFulfillmentError,
+  hydrateCheckoutFulfillmentOrder,
+} from '../_lib/checkout-fulfillment-contract.js';
 import {
   isDelinquentStatus,
   planFailedPayment,
@@ -99,23 +100,6 @@ async function enrichLineNames(sb, lines) {
   }
 }
 
-function orderShippingAddressFromPlan(address = {}) {
-  return {
-    name: address.name || null,
-    company: address.company || null,
-    phone: address.phone || null,
-    address: {
-      line1: address.address1 || null,
-      line2: address.address2 || null,
-      city: address.city || null,
-      state: address.state || null,
-      postal_code: address.postal_code || null,
-      country: address.country || 'US',
-    },
-    residential: address.residential === true,
-  };
-}
-
 function qboRefundRowsFromCharge(charge, order, plan) {
   if (!order?.id || !plan?.amount || order.qbo_sync_status === 'skipped') return [];
   const total = Number(order.total) || 0;
@@ -152,7 +136,8 @@ async function transitionQuotedCheckout(sb, session, finalOrderId, transition, e
 
 export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
-  const loadShippingPlan = dependencies.loadShippingQuotePlan || loadShippingQuotePlan;
+  const hydrateFulfillmentOrder = dependencies.hydrateCheckoutFulfillmentOrder
+    || hydrateCheckoutFulfillmentOrder;
   const finalizeQuotedOrder = dependencies.finalizeQuoteOrder || finalizeQuoteOrder;
   const markQuotedOrderPending = dependencies.markQuotePaymentPending || markQuotePaymentPending;
   const reopenQuotedOrder = dependencies.reopenQuoteAfterPaymentFailure || reopenQuoteAfterPaymentFailure;
@@ -242,7 +227,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     let cart = parseCartMetadata(assembleCartMetadata(s.metadata));
     let boundBuyerEmail = normalizeCheckoutBuyerEmail(s.metadata?.buyer_email).value || '';
     if (!cart.length || !buyerEmailFromStripeSession(s)
-      || (s.metadata?.shipping_contract_version === '3' && !boundBuyerEmail)) {
+      || (checkoutFulfillmentNeedsBoundBuyer(s) && !boundBuyerEmail)) {
       try {
         s = await retrieveCheckoutSession(s.id);
         cart = parseCartMetadata(assembleCartMetadata(s.metadata));
@@ -289,59 +274,30 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     let lines = cart.length ? cartLines(cart) : [];
     if (lines.length) await enrichLineNames(sb, lines);
     const itemRows = orderItemRows(lines, null);
-    const shippingContract = String(s.metadata?.shipping_contract_version || 'legacy_unmarked');
-    const buyerEmail = shippingContract === '3' ? boundBuyerEmail : buyerEmailFromStripeSession(s);
+    const buyerEmail = checkoutFulfillmentBuyerEmail({
+      session: s,
+      boundBuyerEmail,
+      legacyBuyerEmail: buyerEmailFromStripeSession(s),
+    });
     if (!buyerEmail) {
       console.error('checkout_session_buyer_missing', s?.id || 'unknown');
       return json(503, { error: 'checkout_session_incomplete' });
     }
-    const orderRow = orderRowFromSession(s, buyerEmail);
-    if (shippingContract === '3') {
-      const selection = {
-        v: 3,
-        plan_id: s.metadata?.shipping_plan_id,
-        plan_digest: s.metadata?.shipping_plan_digest,
-        cart_digest: s.metadata?.shipping_cart_digest,
-        address_digest: s.metadata?.shipping_address_digest,
-        rate: {
-          rate_id: s.metadata?.shipping_rate_id,
-          carrier_id: s.metadata?.shipping_carrier_id,
-          service_code: s.metadata?.shipping_service_code,
-          amount_minor: Number(s.metadata?.shipping_amount_minor),
-          currency: s.metadata?.shipping_currency,
-        },
-      };
-      try {
-        const result = await loadShippingPlan(env, selection.plan_id, { sb });
-        const plan = assertShippingPlanSelection(selection, result, {
-          notFoundStatus: 503,
-          cart,
-        });
-        const paidShippingMinor = Number(s.shipping_cost?.amount_subtotal ?? s.total_details?.amount_shipping ?? 0);
-        if (paidShippingMinor !== Number(plan.amount_minor)) {
-          throw new CheckoutShippingError('shipping_plan_mismatch', 503);
-        }
-        // The durable, digested plan is the shipping authority. Session metadata is useful
-        // for Stripe display, but must not be able to detach the paid Order from the exact
-        // validated destination whose cartons and rate were selected.
-        orderRow.ship_address = orderShippingAddressFromPlan(plan.address);
-        orderRow.shipping_package_plan = plan.packages;
-        orderRow.fulfillment_contract_status = 'bound';
-        orderRow.shipstation_error = null;
-      } catch (error) {
-        const code = error instanceof CheckoutShippingError
-          ? error.code : 'shipping_plan_store_unavailable';
-        console.error('checkout_shipping_plan_recovery_failed', code);
-        return json(503, { error: code });
-      }
-    } else if (['legacy_unmarked', 'legacy_v2', 'legacy_static'].includes(shippingContract)) {
-      // Sessions created before the v3 carton contract remain recoverable, but the Order is
-      // visibly held for a human carton review. Fulfillment must never silently recompute it.
-      orderRow.fulfillment_contract_status = 'legacy_review_required';
-      orderRow.shipstation_error = 'shipping_package_plan_review_required';
-    } else {
-      console.error('checkout_shipping_contract_unsupported', shippingContract);
-      return json(503, { error: 'shipping_contract_unsupported' });
+    let orderRow = orderRowFromSession(s, buyerEmail);
+    try {
+      orderRow = await hydrateFulfillmentOrder({
+        env,
+        session: s,
+        cart,
+        order: orderRow,
+        sb,
+      });
+    } catch (error) {
+      const code = error instanceof CheckoutFulfillmentError
+        ? error.code
+        : 'shipping_plan_store_unavailable';
+      console.error('checkout_shipping_plan_recovery_failed', code);
+      return json(503, { error: code });
     }
     const { data: persisted, error: persistErr } = await sb.rpc('persist_stripe_order', {
       p_order: orderRow,
