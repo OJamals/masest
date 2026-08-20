@@ -25,6 +25,10 @@ create table if not exists public.company_store_credit_reservations (
 
 create index if not exists company_store_credit_reservations_active_idx
   on public.company_store_credit_reservations (company_id, currency, status, expires_at);
+create index if not exists company_store_credit_reservations_user_idx
+  on public.company_store_credit_reservations (user_id);
+create index if not exists company_store_credit_reservations_order_idx
+  on public.company_store_credit_reservations (order_id);
 
 create table if not exists public.company_store_credit_entries (
   id              uuid primary key default gen_random_uuid(),
@@ -48,6 +52,10 @@ create table if not exists public.company_store_credit_entries (
 
 create index if not exists company_store_credit_entries_company_idx
   on public.company_store_credit_entries (company_id, currency, created_at desc);
+create index if not exists company_store_credit_entries_order_idx
+  on public.company_store_credit_entries (order_id);
+create index if not exists company_store_credit_entries_created_by_idx
+  on public.company_store_credit_entries (created_by);
 
 alter table public.company_store_credit_reservations enable row level security;
 alter table public.company_store_credit_entries enable row level security;

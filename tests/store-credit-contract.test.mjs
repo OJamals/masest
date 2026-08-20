@@ -16,6 +16,18 @@ test('account credit schema owns an immutable, idempotent, service-only ledger a
   assert.match(sql, /for update/i);
   assert.match(sql, /unique\s*\(request_id\)/i);
   assert.match(sql, /unique\s*\(company_id,\s*intent_id\)/i);
+  for (const [name, table, column] of [
+    ['company_store_credit_reservations_user_idx', 'company_store_credit_reservations', 'user_id'],
+    ['company_store_credit_reservations_order_idx', 'company_store_credit_reservations', 'order_id'],
+    ['company_store_credit_entries_order_idx', 'company_store_credit_entries', 'order_id'],
+    ['company_store_credit_entries_created_by_idx', 'company_store_credit_entries', 'created_by'],
+  ]) {
+    assert.match(
+      sql,
+      new RegExp(`create index if not exists ${name}\\s+on public\\.${table} \\(\\s*${column}\\s*\\)`, 'i'),
+      `${table}.${column} foreign key must stay indexed`,
+    );
+  }
   assert.match(sql, /revoke all[\s\S]*from public, anon, authenticated/i);
   assert.match(sql, /grant execute[\s\S]*to service_role/i);
   assert.match(sql, /create or replace function public\.reserve_company_store_credit/i);
