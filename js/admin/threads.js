@@ -18,7 +18,7 @@ export function createThreadsTab({ api, state }) {
   // One console per document, lazily mounted. initAdminSupport() returns null if
   // one is already present, so a second call cannot produce a second inbox.
   function ensureConsole() {
-    consolePromise ||= import('../admin-support.js?v=20260820b')
+    consolePromise ||= import('../admin-support.js?v=20260821a')
       .then(({ initAdminSupport }) => initAdminSupport({
         auth: { api },
         root: '/',

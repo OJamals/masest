@@ -9,6 +9,58 @@ function moneyMinor(value) {
   return Number.isSafeInteger(minor) ? minor : null;
 }
 
+export function normalizePromotionId(value) {
+  const id = typeof value === 'string' ? value.trim() : '';
+  return /^promo_[A-Za-z0-9]{1,240}$/.test(id) ? id : null;
+}
+
+export function promotionListParams(requestUrl) {
+  const rawCursor = new URL(requestUrl).searchParams.get('starting_after');
+  const cursor = rawCursor ? normalizePromotionId(rawCursor) : null;
+  if (rawCursor && !cursor) {
+    return { error: 'invalid_cursor' };
+  }
+  return {
+    params: {
+      limit: 100,
+      expand: ['data.coupon'],
+      ...(cursor ? { starting_after: cursor } : {}),
+    },
+  };
+}
+
+function promotionIdentity(value) {
+  const id = normalizePromotionId(typeof value === 'string' ? value : value?.id);
+  if (!id) return null;
+  const rawCode = typeof value === 'object' && value && typeof value.code === 'string'
+    ? value.code.trim()
+    : '';
+  const code = rawCode
+    && rawCode.length <= 100
+    && !/[\u0000-\u001F\u007F]/.test(rawCode)
+    ? rawCode
+    : null;
+  return { id, code };
+}
+
+// Stripe event destinations may include either an expanded Promotion Code object,
+// its ID, or only the discount breakdown. Normalize all supported Checkout shapes.
+export function checkoutPromotion(session) {
+  const direct = Array.isArray(session?.discounts) ? session.discounts : [];
+  const breakdown = Array.isArray(session?.total_details?.breakdown?.discounts)
+    ? session.total_details.breakdown.discounts
+    : [];
+  const candidates = [
+    ...direct.flatMap((discount) => [discount?.promotion_code, discount?.discount?.promotion_code]),
+    ...breakdown.flatMap((entry) => [entry?.promotion_code, entry?.discount?.promotion_code]),
+  ];
+  for (const candidate of candidates) {
+    const promotion = promotionIdentity(candidate);
+    if (promotion) return promotion;
+  }
+  return null;
+}
+
 export function buildCouponParams(body, { nowSeconds = Math.floor(Date.now() / 1000) } = {}) {
   const b = body || {};
   const code = String(b.code || '').trim().toUpperCase();

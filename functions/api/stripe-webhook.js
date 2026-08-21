@@ -11,6 +11,7 @@ import {
   buyerEmailFromStripeSession,
   normalizeCheckoutBuyerEmail,
 } from '../_lib/checkout-session.js';
+import { checkoutPromotion } from '../_lib/coupons.js';
 import {
   checkoutFulfillmentBuyerEmail,
   checkoutFulfillmentNeedsBoundBuyer,
@@ -64,6 +65,8 @@ import {
 } from '../_lib/store-credit.js';
 
 export { htmlEscape as escapeHtml } from '../_lib/supabase.js';
+
+const CHECKOUT_PROMOTION_EXPAND = { expand: ['discounts.promotion_code'] };
 
 // Postgres unique-constraint violation (e.g. the orders.stripe_payment_intent guard).
 export function isUniqueViolation(error) {
@@ -182,9 +185,9 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   if (!secret || !whSecret) return json(500, { error: 'stripe_not_configured' });
   const runtimeError = stripeRuntimeError(env);
   if (runtimeError) return json(503, { error: runtimeError });
-  const retrieveCheckoutSession = dependencies.retrieveCheckoutSession || (async (id) => {
+  const retrieveCheckoutSession = dependencies.retrieveCheckoutSession || (async (id, params) => {
     const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
-    return stripe.checkout.sessions.retrieve(id);
+    return stripe.checkout.sessions.retrieve(id, params);
   });
   const updateCheckoutSession = dependencies.updateCheckoutSession || (async (id, params) => {
     const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
@@ -268,15 +271,34 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     // absent; acknowledging the reduced event would create an unfulfillable paid order.
     let cart = parseCartMetadata(assembleCartMetadata(s.metadata));
     let boundBuyerEmail = normalizeCheckoutBuyerEmail(s.metadata?.buyer_email).value || '';
+    let sessionHydrated = false;
     if (!cart.length || !buyerEmailFromStripeSession(s)
       || (checkoutFulfillmentNeedsBoundBuyer(s) && !boundBuyerEmail)) {
       try {
-        s = await retrieveCheckoutSession(s.id);
+        s = await retrieveCheckoutSession(s.id, CHECKOUT_PROMOTION_EXPAND);
+        sessionHydrated = true;
         cart = parseCartMetadata(assembleCartMetadata(s.metadata));
         boundBuyerEmail = normalizeCheckoutBuyerEmail(s.metadata?.buyer_email).value || '';
       } catch (error) {
         console.error('checkout_session_hydrate_failed', error?.code || error?.name || 'unknown');
         return json(503, { error: 'checkout_session_hydrate_failed' });
+      }
+    }
+    const rawPromotionDiscountMinor = Number(s.total_details?.amount_discount || 0);
+    const promotionDiscountMinor = Number.isSafeInteger(rawPromotionDiscountMinor)
+      && rawPromotionDiscountMinor > 0
+      ? rawPromotionDiscountMinor
+      : 0;
+    let promotion = checkoutPromotion(s);
+    if (promotionDiscountMinor && !promotion?.code && !sessionHydrated) {
+      try {
+        promotion = checkoutPromotion(
+          await retrieveCheckoutSession(s.id, CHECKOUT_PROMOTION_EXPAND),
+        ) || promotion;
+      } catch (error) {
+        // Attribution is evidence, not fulfillment authority. Preserve paid-order
+        // processing when Stripe's optional expansion is temporarily unavailable.
+        console.error('checkout_promotion_hydrate_failed', error?.code || error?.name || 'unknown');
       }
     }
     const attemptPreflight = await preflightQuotedAttempt(sb, s, event.id);
@@ -389,6 +411,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     }
 
     let storeCredit = 0;
+    let storeCreditMinor = 0;
     if (storeCreditReservation.value) {
       try {
         const consumed = await consumeStoreCredit(sb, {
@@ -397,6 +420,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
           orderId: order.id,
         });
         storeCredit = consumedStoreCreditAmount(consumed);
+        storeCreditMinor = Number(consumed.amount_minor);
       } catch (error) {
         console.error('store_credit_consume_failed', error?.code || error?.name || 'unknown');
         return json(503, { error: 'store_credit_consume_failed' });
@@ -404,12 +428,25 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
     }
 
     try {
+      const currency = /^[a-z]{3}$/.test(String(s.currency || '').toLowerCase())
+        ? String(s.currency).toLowerCase()
+        : 'usd';
       await linkOrderProviderObject(sb, {
         orderId: order.id,
         provider: 'stripe',
         objectType: 'checkout_session',
         providerObjectId: s.id,
-        metadata: { order_number: order.order_number, livemode: Boolean(s.livemode) },
+        metadata: {
+          order_number: order.order_number,
+          livemode: Boolean(s.livemode),
+          currency,
+          promotion_discount_minor: promotionDiscountMinor,
+          ...(promotion ? {
+            promotion_code_id: promotion.id,
+            ...(promotion.code ? { promotion_code: promotion.code } : {}),
+          } : {}),
+          store_credit_minor: storeCreditMinor,
+        },
       });
       await linkOrderProviderObject(sb, {
         orderId: order.id,

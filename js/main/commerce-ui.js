@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260820b";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260821a";
 import { smoothPref } from "./engagement.js";
 
 function imageDimsAttr(src) {

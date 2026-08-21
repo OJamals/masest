@@ -90,12 +90,13 @@ test("visual QA padding contracts cover disclosures and dense admin controls", (
   assert.match(admin, /\.company-admin-head \.link-name\s*\{[\s\S]*background:\s*transparent/, "company-name buttons should not render with native button chrome");
   assert.match(admin, /\.admin-order-actions \.admin-input-sm\s*\{[\s\S]*flex-basis:\s*220px/, "QBO and payment IDs should get enough inline width on desktop");
   assert.match(admin, /\.product-cms-image\s*\{[^}]*width:\s*100%/, "product CMS image controls should use the available mobile card width");
-  assert.match(admin, /@media \(max-width: 980px\)[\s\S]*\.adm-coupon-form\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/, "tablet-width coupon controls should use a bounded grid instead of clipping past the card");
+  assert.match(admin, /@media \(max-width: 980px\)[\s\S]*\.adm-promo-required\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/, "tablet-width coupon controls should use a bounded grid instead of clipping past the card");
   assert.match(admin, /@media \(max-width: 420px\)[\s\S]*\.adm-action-item\s*\{[\s\S]*grid-template-columns:\s*38px minmax\(0,\s*1fr\)/, "tiny mobile admin action rows should let the count wrap below long action copy");
   const inventoryJs = read("js/admin/inventory.js");
   const couponsJs = read("js/admin/coupons.js");
   assert.match(inventoryJs, /invLow[\s\S]*<div class="adm-table-wrap">[\s\S]*low-stock variants/, "low-stock admin tables should scroll inside cards instead of clipping columns");
-  assert.match(couponsJs, /cpList[\s\S]*<div class="adm-table-wrap">[\s\S]*promo code/, "promo-code tables should scroll inside cards instead of clipping columns");
+  assert.match(couponsJs, /function couponListHtml[\s\S]*<div class="adm-table-wrap">[\s\S]*Promotion codes/, "promo-code tables should scroll inside cards instead of clipping columns");
+  assert.match(couponsJs, /box\.innerHTML\s*=\s*couponListHtml\(\)/, "promo-code list should paint the wrapped table into its card");
   assert.equal((adminPricing.match(/class="adm-table-wrap"/g) || []).length, 3, "all unified pricing tables should use the admin scroll boundary");
   assert.doesNotMatch(adminPricing, /class="table-scroll"/, "admin pricing should not inherit public comparison-table mobile behavior");
   assert.match(adminQuotes, /id="qBulkOwner"[^>]+aria-label="Assign selected leads to owner"/, "bulk owner control should have a stable accessible name");

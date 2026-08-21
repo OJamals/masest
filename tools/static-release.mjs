@@ -1,1 +1,1 @@
-export const STYLE_VERSION = "20260820b";
+export const STYLE_VERSION = "20260821a";

@@ -756,8 +756,8 @@ test('webhook hydrates an incomplete checkout event before persisting the paid o
         },
       },
     }),
-    retrieveCheckoutSession: async (id) => {
-      calls.push(['stripe.session.retrieve', id]);
+    retrieveCheckoutSession: async (id, params) => {
+      calls.push(['stripe.session.retrieve', id, params]);
       return complete;
     },
     updateCheckoutSession: async (id, params) => { calls.push(['stripe.session.update', id, params]); },
@@ -767,7 +767,11 @@ test('webhook hydrates an incomplete checkout event before persisting the paid o
   const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
 
   assert.deepEqual(result, { status: 200, body: { received: true } });
-  assert.deepEqual(calls[0], ['stripe.session.retrieve', 'cs_1']);
+  assert.deepEqual(calls[0], [
+    'stripe.session.retrieve',
+    'cs_1',
+    { expand: ['discounts.promotion_code'] },
+  ]);
   const persist = calls.find((call) => Array.isArray(call) && call[0] === 'rpc.persist_stripe_order');
   assert.equal(persist[1].p_order.company_id, 'company-1');
   assert.equal(persist[1].p_order.customer_email, 'buyer@example.com');
@@ -828,6 +832,97 @@ test('completed Checkout consumes account credit after durable order recovery an
     effects.find(({ effect_type }) => effect_type === 'order_confirmation').payload.store_credit,
     10.01,
   );
+});
+
+test('completed Checkout attributes promotion and account credit through canonical provider links', async () => {
+  const calls = [];
+  const session = paidSession();
+  session.total_details = { amount_tax: 0, amount_discount: 500 };
+  session.metadata.company_id = 'company-1';
+  session.metadata.store_credit_reservation_id = '11111111-1111-4111-8111-111111111111';
+  const expandedSession = {
+    ...session,
+    discounts: [{ promotion_code: { id: 'promo_Save20', code: 'SAVE20' } }],
+  };
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_discount_completed',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    }),
+    retrieveCheckoutSession: async (id, params) => {
+      calls.push(['stripe.session.retrieve', id, params]);
+      return expandedSession;
+    },
+    updateCheckoutSession: async () => {},
+    adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
+    consumeCompanyStoreCredit: async () => ({
+      status: 'consumed',
+      amount_minor: 1001,
+      currency: 'usd',
+    }),
+  });
+
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(calls.find(([label]) => label === 'stripe.session.retrieve'), [
+    'stripe.session.retrieve',
+    'cs_1',
+    { expand: ['discounts.promotion_code'] },
+  ]);
+  const links = calls.filter(([label]) => label === 'rpc.link_order_provider_object');
+  assert.deepEqual(links.map(([, args]) => [args.p_object_type, args.p_provider_object_id]), [
+    ['checkout_session', 'cs_1'],
+    ['payment_intent', 'pi_1'],
+  ]);
+  assert.deepEqual(links[0][1].p_metadata, {
+    order_number: 'MST-00000123',
+    livemode: false,
+    currency: 'usd',
+    promotion_discount_minor: 500,
+    promotion_code_id: 'promo_Save20',
+    promotion_code: 'SAVE20',
+    store_credit_minor: 1001,
+  });
+});
+
+test('promotion-code expansion outage preserves paid fulfillment and known promotion identity', async () => {
+  const calls = [];
+  const session = paidSession();
+  session.total_details = { amount_tax: 0, amount_discount: 500 };
+  session.discounts = [{ promotion_code: 'promo_Save20' }];
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({
+      id: 'evt_discount_expand_outage',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    }),
+    retrieveCheckoutSession: async () => {
+      const error = new Error('provider unavailable');
+      error.code = 'api_connection_error';
+      throw error;
+    },
+    updateCheckoutSession: async () => {},
+    adminClient: () => webhookDb(calls, [{ data: { id: 'order-1' }, error: null }]),
+  });
+
+  const originalError = console.error;
+  console.error = () => {};
+  let result;
+  try {
+    result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(result.status, 200);
+  const checkoutLink = calls.find(([, args]) => (
+    args?.p_object_type === 'checkout_session'
+  ));
+  assert.equal(checkoutLink[1].p_metadata.promotion_discount_minor, 500);
+  assert.equal(checkoutLink[1].p_metadata.promotion_code_id, 'promo_Save20');
+  assert.equal('promotion_code' in checkoutLink[1].p_metadata, false);
 });
 
 test('duplicate webhook delivery recovers and enqueues the same effects before 200', async () => {

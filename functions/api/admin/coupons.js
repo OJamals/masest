@@ -6,7 +6,11 @@ import Stripe from 'stripe';
 import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
 import { staffCan } from '../../_lib/authz.js';
 import { recordAudit } from '../../_lib/audit.js';
-import { buildCouponParams } from '../../_lib/coupons.js';
+import {
+  buildCouponParams,
+  normalizePromotionId,
+  promotionListParams,
+} from '../../_lib/coupons.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
 
 const BODY_LIMIT = 8 * 1024;
@@ -36,8 +40,20 @@ export async function onRequest({ request, env }) {
   const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
 
   if (request.method === 'GET') {
-    const list = await stripe.promotionCodes.list({ limit: 100, expand: ['data.coupon'] });
-    return json(200, { coupons: (list.data || []).map(shapePromo) });
+    const listed = promotionListParams(request.url);
+    if (listed.error) return json(400, { error: listed.error });
+    try {
+      const list = await stripe.promotionCodes.list(listed.params);
+      const promotions = list.data || [];
+      const nextCursor = list.has_more ? promotions.at(-1)?.id || null : null;
+      return json(200, {
+        coupons: promotions.map(shapePromo),
+        has_more: Boolean(nextCursor),
+        next_cursor: nextCursor,
+      });
+    } catch {
+      return json(502, { error: 'stripe_error' });
+    }
   }
 
   if (request.method === 'POST') {
@@ -58,10 +74,11 @@ export async function onRequest({ request, env }) {
     const sb = adminClient(env);
 
     if (body.action === 'deactivate') {
-      if (!body.id) return json(400, { error: 'promo_id_required' });
+      const promotionId = normalizePromotionId(body.id);
+      if (!promotionId) return json(400, { error: 'invalid_promo_id' });
       try {
-        const promo = await stripe.promotionCodes.update(body.id, { active: false });
-        await recordAudit(sb, { user, action: 'coupon.deactivate', targetType: 'coupon', targetId: body.id, detail: { code: promo.code } });
+        const promo = await stripe.promotionCodes.update(promotionId, { active: false });
+        await recordAudit(sb, { user, action: 'coupon.deactivate', targetType: 'coupon', targetId: promotionId, detail: { code: promo.code } });
         return json(200, { ok: true, coupon: shapePromo(promo) });
       } catch {
         return json(502, { error: 'stripe_error' });

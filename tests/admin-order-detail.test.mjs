@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { loadOrderIntegrationTimeline } from '../functions/api/admin/orders.js';
+import { orderAdjustmentEvidence } from '../js/admin/orders.js';
 
 const API = readFileSync(new URL("../functions/api/admin/orders.js", import.meta.url), "utf8");
 const ORDER_OPERATIONS = readFileSync(new URL("../functions/_lib/staff-order-operations.js", import.meta.url), "utf8");
@@ -64,6 +65,38 @@ test("UI fetches detail by id and opens the modal with a backorder badge", () =>
   assert.match(UI, /Financial evidence/);
   assert.match(UI, /pending carrier credit/);
   assert.match(UI, /backordered \? ' <span class="badge badge-warning">backordered/);
+});
+
+test('order detail exposes bounded promotion and account-credit evidence', () => {
+  assert.deepEqual(orderAdjustmentEvidence([
+    {
+      provider: 'stripe',
+      object_type: 'checkout_session',
+      metadata: {
+        promotion_code: 'SAVE20',
+        promotion_discount_minor: 500,
+        store_credit_minor: 1001,
+      },
+    },
+  ]), {
+    promotionCode: 'SAVE20',
+    promotionDiscountMinor: 500,
+    storeCreditMinor: 1001,
+  });
+  assert.deepEqual(orderAdjustmentEvidence([{
+    provider: 'stripe',
+    object_type: 'checkout_session',
+    metadata: {
+      promotion_discount_minor: -1,
+      store_credit_minor: Number.MAX_SAFE_INTEGER + 1,
+    },
+  }]), {
+    promotionCode: '',
+    promotionDiscountMinor: 0,
+    storeCreditMinor: 0,
+  });
+  assert.match(UI, /Promotion/);
+  assert.match(UI, /Account credit/);
 });
 
 test('orders with immutable provider financial evidence return a stable delete conflict', () => {

@@ -3,15 +3,39 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260820b';
-import { captureDirty, restoreDirty } from './edits.js?v=20260820b';
-import { createSavedViews } from './saved-views.js?v=20260820b';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260821a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260821a';
+import { createSavedViews } from './saved-views.js?v=20260821a';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 /* Lifecycle view rather than a column value: everything still owed a shipment.
    Selects the same rows the Overview "Fulfillment queue" number counts. */
 export const NEEDS_FULFILLMENT = 'needs_fulfillment';
 const MANUAL_CREATE_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled'];
+
+function positiveMinor(value) {
+  const minor = Number(value);
+  return Number.isSafeInteger(minor) && minor > 0 ? minor : 0;
+}
+
+export function orderAdjustmentEvidence(providerLinks = []) {
+  const checkout = Array.isArray(providerLinks)
+    ? providerLinks.find((link) => link?.provider === 'stripe' && link?.object_type === 'checkout_session')
+    : null;
+  const metadata = checkout?.metadata && typeof checkout.metadata === 'object'
+    && !Array.isArray(checkout.metadata)
+    ? checkout.metadata
+    : {};
+  const rawCode = typeof metadata.promotion_code === 'string' ? metadata.promotion_code.trim() : '';
+  const promotionCode = rawCode.length <= 100 && !/[\u0000-\u001F\u007F]/.test(rawCode)
+    ? rawCode
+    : '';
+  return {
+    promotionCode,
+    promotionDiscountMinor: positiveMinor(metadata.promotion_discount_minor),
+    storeCreditMinor: positiveMinor(metadata.store_credit_minor),
+  };
+}
 
 export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats }) {
   const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
@@ -765,6 +789,18 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     const lifecycle = lifecycleFor(order);
     const providerLinks = (order.order_provider_links || [])
       .slice().sort((a, b) => `${a.provider}:${a.object_type}`.localeCompare(`${b.provider}:${b.object_type}`));
+    const adjustments = orderAdjustmentEvidence(providerLinks);
+    const adjustmentLines = [
+      adjustments.promotionDiscountMinor
+        ? `<b>Promotion${adjustments.promotionCode ? ` ${esc(adjustments.promotionCode)}` : ''}</b> −${esc(money(adjustments.promotionDiscountMinor / 100, order.currency))}`
+        : '',
+      adjustments.storeCreditMinor
+        ? `<b>Account credit</b> −${esc(money(adjustments.storeCreditMinor / 100, order.currency))}`
+        : '',
+    ].filter(Boolean);
+    const adjustmentSummary = adjustmentLines.length
+      ? `<p class="muted" style="margin:4px 0 0">${adjustmentLines.join(' · ')}</p>`
+      : '';
     const providerObject = (link) => {
       const id = esc(link.provider_object_id);
       if (link.provider !== 'shipstation' || !['label', 'return_label'].includes(link.object_type)) return `<code>${id}</code>`;
@@ -825,6 +861,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       ${order.purchase_order_number ? `<p style="margin:0 0 12px"><b>Purchase order:</b> ${esc(order.purchase_order_number)}</p>` : ''}
       <table class="adm" style="width:100%"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Line</th></tr></thead><tbody>${items}</tbody></table>
       <p style="margin:12px 0 0"><b>Total</b> ${esc(money(order.total ?? order.subtotal, order.currency))}${Number(order.tax) ? ` (tax ${esc(money(order.tax, order.currency))})` : ''}${Number(order.refunded_amount) > 0 ? ` · refunded ${esc(money(order.refunded_amount, order.currency))}` : ''}</p>
+      ${adjustmentSummary}
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
       ${shipHistory}
       ${shipmentLedger}

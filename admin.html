@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css?v=20260711u">
-<link rel="stylesheet" href="css/style.css?v=20260820b">
+<link rel="stylesheet" href="css/style.css?v=20260821a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css?v=20260725f">
 <style>
@@ -567,8 +567,50 @@
   .adm-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .adm-report-controls { align-items: end; gap: 10px; }
   .adm-inv-subhead { margin: 24px 0 8px; padding-top: 16px; border-top: 1px solid var(--line-soft); font-size: .9rem; }
-  .adm-coupon-form { gap: 8px; margin-bottom: 14px; }
-  .adm-coupon-form .adm-input { max-width: 120px; }
+  .adm-section-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 10px; }
+  .adm-section-head h3 { margin: 0; }
+  .adm-section-head > p { max-width: 58ch; margin: 0; }
+  .adm-promo-form { display: grid; gap: 12px; margin-bottom: 18px; padding: 14px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--panel); }
+  .adm-promo-offer,
+  .adm-promo-type { min-width: 0; margin: 0; padding: 0; border: 0; }
+  .adm-promo-offer > legend { margin-bottom: 10px; color: var(--ink); font-size: .9rem; font-weight: 800; }
+  .adm-promo-required { display: grid; grid-template-columns: minmax(180px, 1.15fr) minmax(220px, 1fr) minmax(150px, .75fr); gap: 12px; align-items: start; }
+  .adm-promo-required > label,
+  .adm-promo-limit-grid label,
+  .adm-price-search { display: grid; gap: 5px; min-width: 0; color: var(--ink-soft); font-size: .82rem; font-weight: 700; }
+  .adm-field-help { color: var(--muted); font-size: .72rem; font-weight: 500; line-height: 1.35; }
+  .adm-promo-type > legend { margin-bottom: 5px; color: var(--ink-soft); font-size: .82rem; font-weight: 700; }
+  .adm-promo-type-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .adm-promo-choice { display: flex; align-items: center; gap: 7px; min-height: 42px; padding: 9px 10px; border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); color: var(--ink-soft); cursor: pointer; }
+  .adm-promo-choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; }
+  .adm-promo-choice input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+  .adm-promo-limits { border-top: 1px solid var(--line-soft); }
+  .adm-promo-limits > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 48px; color: var(--ink-soft); cursor: pointer; list-style: none; }
+  .adm-promo-limits > summary::-webkit-details-marker { display: none; }
+  .adm-promo-limits > summary span { display: grid; gap: 2px; }
+  .adm-promo-limits > summary small { color: var(--muted); font-size: .72rem; font-weight: 500; }
+  .adm-promo-limits > summary i { transition: transform .16s var(--ease-out); }
+  .adm-promo-limits[open] > summary i { transform: rotate(180deg); }
+  .adm-promo-limit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 4px 0 8px; }
+  .adm-promo-submit { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid rgba(14,124,134,.24); border-radius: 8px; background: var(--accent-tint); }
+  .adm-promo-preview { display: grid; gap: 3px; min-width: 0; }
+  .adm-promo-preview .adm-eyebrow { margin: 0; }
+  #cpPreview { color: var(--ink); font-size: .86rem; font-weight: 700; line-height: 1.4; }
+  .adm-promo-submit .btn { white-space: nowrap; }
+  .adm-promo-form .adm-status { margin: 0; min-height: 1.25em; }
+  .adm-promo-history { padding: 2px 0 0; }
+  .adm-pricing-workspace { display: grid; gap: 12px; }
+  .adm-pricing-workspace > .adm-panel-header { margin-bottom: 0; }
+  .adm-pricing-workspace > .adm-panel-header h2 { margin: 0; }
+  .adm-pricing-workspace > .adm-panel-header p { max-width: 78ch; margin: 5px 0 0; }
+  .adm-price-toolbar { display: grid; grid-template-columns: minmax(240px, 1fr) auto; gap: 14px; align-items: end; }
+  .adm-price-search .adm-search { width: 100%; max-width: none; }
+  .adm-price-scope { display: grid; gap: 5px; }
+  .adm-price-scope-options { display: flex; flex-wrap: wrap; gap: 6px; }
+  .adm-price-scope-options .btn { background: transparent; color: var(--ink-soft); }
+  .adm-price-scope-options .btn.is-active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; }
+  .adm-price-section { display: grid; gap: 10px; padding: 0; }
+  .adm-price-section + .adm-price-section { margin-top: 18px; }
   #invCsv { min-height: 90px; margin-bottom: 10px; }
   .adm-report-controls .field { margin: 0; }
   .adm-select-sm { max-width: 220px; }
@@ -687,12 +729,8 @@
     .seo-audit-meta { grid-column: 1 / -1; text-align: left; }
   }
   @media (max-width: 980px) {
-    .adm-coupon-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
-    .adm-coupon-form .adm-input,
-    .adm-coupon-form .btn,
-    .adm-coupon-form .adm-status { width: 100%; max-width: none; }
-    .adm-coupon-form .btn,
-    .adm-coupon-form .adm-status { grid-column: 1 / -1; }
+    .adm-promo-required { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .adm-promo-type { grid-column: span 2; }
     .adm-layout { display: block; }
     .adm-sidebar.adm-tabs-wrap { position: static; max-height: none; overflow: visible; overscroll-behavior: auto; margin-bottom: 18px; }
     .adm-nav-toggle { display: flex; }
@@ -701,6 +739,14 @@
     .adm-nav-group { min-width: 184px; scroll-snap-align: start; }
   }
   @media (max-width: 640px) {
+    .adm-promo-required,
+    .adm-promo-limit-grid,
+    .adm-promo-submit,
+    .adm-price-toolbar { grid-template-columns: 1fr; }
+    .adm-promo-type { grid-column: auto; }
+    .adm-promo-submit .btn { width: 100%; }
+    .adm-price-scope-options .btn { flex: 1 1 120px; }
+    .adm-section-head { align-items: start; flex-direction: column; gap: 5px; }
     .adm-panel-header { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: left; }
@@ -921,12 +967,12 @@
         <div class="crm-tabs" id="prodToggle" role="group" aria-label="Product workspaces">
           <button class="btn btn-ghost btn-sm is-active" type="button" data-prod-view="catalog" aria-pressed="true">Catalog</button>
           <button class="btn btn-ghost btn-sm" type="button" data-prod-view="inventory" aria-pressed="false">Inventory</button>
-          <button class="btn btn-ghost btn-sm" type="button" data-prod-view="pricing" aria-pressed="false">Pricing &amp; promos</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-prod-view="pricing" aria-pressed="false">Prices &amp; promos</button>
         </div>
         <div data-prod-panel="catalog">
         <div class="adm-card adm-governance-note adm-governance-note-compact" id="catalogPriceGovernance" role="note">
           <h2><i class="ph ph-shield-check" aria-hidden="true"></i> CMS-managed pricing</h2>
-          <p>Use the Pricing workspace for product, customer-tier, service, and program prices. Catalog seed files are bootstrap and recovery data only.</p>
+          <p>Use Prices &amp; promos for product, customer-tier, service, and program prices. Catalog seed files are bootstrap and recovery data only.</p>
         </div>
         <div class="adm-card adm-workspace-card adm-catalog-browser">
           <div class="adm-panel-header"><div><h2>Product catalog</h2><p class="muted">Search first, then edit the matching product or variant in place.</p></div><input id="prodSearch" name="product_search" class="adm-search" type="search" autocomplete="off" placeholder="Search name, SKU, or variant…" aria-label="Search products"></div>
@@ -979,22 +1025,51 @@
         </div>
         <div data-prod-panel="pricing" hidden>
         <div class="adm-card" id="admCoupons" data-capability-scope="promotion.write">
-          <div class="adm-panel-header"><h2>Promo codes</h2></div>
-          <p class="muted">Stripe promotion codes — buyers enter them on secure payment. Choose either percent or fixed amount; accepted quotes and NET orders keep their negotiated pricing.</p>
-          <div class="adm-inline-actions adm-coupon-form">
-            <input id="cpCode" name="promo_code" class="adm-input" autocomplete="off" spellcheck="false" placeholder="CODE…" aria-label="Promo code">
-            <input id="cpPercent" name="percent_off" class="adm-input" type="number" min="0.01" max="100" step="0.01" placeholder="% off…" aria-label="Percent off">
-            <input id="cpAmount" name="amount_off" class="adm-input" type="number" min="0.01" step="0.01" placeholder="$ off…" aria-label="Amount off">
-            <input id="cpMin" name="minimum_order" class="adm-input" type="number" min="0" step="0.01" placeholder="Min order $…" aria-label="Minimum order">
-            <input id="cpMax" name="maximum_uses" class="adm-input" type="number" min="1" step="1" placeholder="Max uses…" aria-label="Max redemptions">
-            <input id="cpExpires" name="expires_at" class="adm-input" type="date" aria-label="Expires">
-            <button id="cpCreate" class="btn btn-primary btn-sm" type="button">Create code</button>
-            <span id="cpStatus" class="adm-status" role="status" aria-live="polite"></span>
-          </div>
-          <div id="cpList" class="adm-list">Loading…</div>
+          <div class="adm-panel-header"><div><h2>Promotion codes</h2><p class="muted">Create discounts for secure card checkout. Accepted quotes and NET orders keep their negotiated pricing.</p></div></div>
+          <form id="cpForm" class="adm-promo-form" onsubmit="return false">
+            <fieldset class="adm-promo-offer">
+              <legend>Create a checkout offer</legend>
+              <div class="adm-promo-required">
+                <label>Promo code <input id="cpCode" name="promo_code" class="adm-input" autocomplete="off" spellcheck="false" placeholder="SAVE10…" aria-describedby="cpCodeHelp cpStatus" required><small id="cpCodeHelp" class="adm-field-help">3–40 letters or numbers; periods, underscores, and hyphens allowed.</small></label>
+                <fieldset class="adm-promo-type">
+                  <legend>Discount type</legend>
+                  <div class="adm-promo-type-options">
+                    <label class="adm-promo-choice"><input name="discount_type" type="radio" value="percent" checked> Percent off</label>
+                    <label class="adm-promo-choice"><input name="discount_type" type="radio" value="amount"> Fixed amount</label>
+                  </div>
+                </fieldset>
+                <label>Discount value <input id="cpDiscount" name="discount_value" class="adm-input" type="number" min="0.01" max="100" step="0.01" inputmode="decimal" placeholder="10…" aria-describedby="cpDiscountHelp cpStatus" required><small id="cpDiscountHelp" class="adm-field-help">Enter 10 for 10% off.</small></label>
+              </div>
+            </fieldset>
+            <details class="adm-promo-limits">
+              <summary><span><b>Optional limits</b><small>Set a minimum order, total redemption cap, or expiration date.</small></span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
+              <div class="adm-promo-limit-grid">
+                <label>Minimum order <input id="cpMin" name="minimum_order" class="adm-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="100.00…" aria-describedby="cpMinHelp cpStatus"><small id="cpMinHelp" class="adm-field-help">Leave blank for any order value.</small></label>
+                <label>Max uses <input id="cpMax" name="maximum_uses" class="adm-input" type="number" min="1" step="1" inputmode="numeric" placeholder="500…" aria-describedby="cpMaxHelp cpStatus"><small id="cpMaxHelp" class="adm-field-help">Total uses across all customers.</small></label>
+                <label>Expires <input id="cpExpires" name="expires_at" class="adm-input" type="date" aria-describedby="cpExpiresHelp cpStatus"><small id="cpExpiresHelp" class="adm-field-help">Valid through the selected date.</small></label>
+              </div>
+            </details>
+            <div class="adm-promo-submit">
+              <div class="adm-promo-preview"><p class="adm-eyebrow">Customer offer</p><output id="cpPreview" for="cpCode cpDiscount cpMin cpMax cpExpires" aria-live="polite">Enter a promo code and discount to preview the customer offer.</output></div>
+              <button id="cpCreate" class="btn btn-primary btn-sm" type="submit">Create promo code</button>
+            </div>
+            <p id="cpStatus" class="adm-status" role="status" aria-live="polite"></p>
+          </form>
+          <section class="adm-promo-history" aria-labelledby="cpHistoryHeading">
+            <div class="adm-section-head"><div><p class="adm-eyebrow">Stripe</p><h3 id="cpHistoryHeading">Existing promo codes</h3></div><p class="muted">Review redemption limits, expiration, and active status.</p></div>
+            <div id="cpList" class="adm-list">Loading…</div>
+          </section>
         </div>
-        <div class="adm-card">
-          <input id="priceSearch" name="variant_search" type="search" class="adm-search" autocomplete="off" placeholder="Search variants…" aria-label="Search variants">
+        <div class="adm-card adm-pricing-workspace">
+          <div class="adm-panel-header"><div><h2>Live pricing</h2><p class="muted">Saved prices publish immediately to checkout, product selectors, public pricing tables, services, programs, and linked comparison content.</p></div></div>
+          <div class="adm-price-toolbar">
+            <label class="adm-price-search">Search prices <input id="priceSearch" name="variant_search" type="search" class="adm-search" autocomplete="off" placeholder="Search product name or VSKU…"></label>
+            <div class="adm-price-scope"><span class="adm-field-label">Price type</span><div id="priceScopes" class="adm-price-scope-options" role="group" aria-label="Choose pricing records">
+              <button class="btn btn-ghost btn-sm is-active" type="button" data-price-scope="products" aria-pressed="true">Products</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-price-scope="services" aria-pressed="false">Services &amp; packages</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-price-scope="programs" aria-pressed="false">Programs</button>
+            </div></div>
+          </div>
           <p id="pricingStatus" class="adm-status" role="status" aria-live="polite"></p>
           <div id="admPricing">Loading…</div>
         </div>
@@ -1114,6 +1189,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260820b"></script>
+<script type="module" src="js/admin.js?v=20260821a"></script>
 </body>
 </html>

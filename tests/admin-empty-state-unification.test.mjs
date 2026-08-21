@@ -8,8 +8,8 @@ test("admin list empties use the shared admEmpty primitive, not ad-hoc <p class=
   const pricing = read("js/admin/pricing.js");
   assert.match(
     pricing,
-    /admEmpty\(\s*'ph-[a-z-]+',\s*q \? 'No matching prices' : 'No pricing records'/,
-    "pricing should use a search-aware admEmpty for every managed price type",
+    /admEmpty\(\s*'ph-[a-z-]+',\s*q \? `No matching \$\{label\} prices` : `No \$\{label\} pricing records`/,
+    "pricing should use a scope-aware, search-aware admEmpty for every managed price type",
   );
   assert.doesNotMatch(pricing, /<p class="muted"[^>]*>No (?:variants|pricing records)/, "pricing should drop hand-rolled empties");
 
