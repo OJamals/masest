@@ -28,10 +28,11 @@ export function renderAdminChrome({ onSignOut } = {}) {
     <div class="nav-inner adm-chrome-inner">
       <a class="nav-logo" href="/" aria-label="MASEST home"><img class="logo-image logo-ink" src="/img/masest-logo-ink.png" alt="MASEST" width="469" height="585"></a>
       <span class="adm-chrome-label">Staff console</span>
-      <div class="adm-chrome-search"></div>
+      <div class="adm-chrome-search" hidden></div>
       <div class="nav-actions">
         <span class="adm-chrome-user" id="admChromeUser" hidden></span>
-        <button class="btn btn-ghost btn-sm" id="admSignOut" type="button"><i class="ph ph-sign-out" aria-hidden="true"></i> Sign out</button>
+        <button class="btn btn-ghost btn-sm" id="admSignOut" type="button" hidden><i class="ph ph-sign-out" aria-hidden="true"></i> Sign out</button>
+        <span class="sr-only" id="admSignOutStatus" role="status" aria-live="polite"></span>
       </div>
     </div>`;
   document.body.prepend(bar);
@@ -40,7 +41,25 @@ export function renderAdminChrome({ onSignOut } = {}) {
   // Staff identity + sign out, rendered here rather than mounting the buyer
   // account nav: that dropdown links Orders / Addresses / Payment / Notifications
   // off the buyer account API, which the staff console must not carry.
-  bar.querySelector('#admSignOut')?.addEventListener('click', () => onSignOut?.());
+  const signOut = bar.querySelector('#admSignOut');
+  const signOutStatus = bar.querySelector('#admSignOutStatus');
+  signOut?.addEventListener('click', async () => {
+    if (signOut.disabled) return;
+    signOut.disabled = true;
+    signOut.setAttribute('aria-busy', 'true');
+    signOut.removeAttribute('title');
+    if (signOutStatus) signOutStatus.textContent = '';
+    try {
+      await onSignOut?.();
+    } catch {
+      const error = 'Could not sign out. Try again.';
+      signOut.title = error;
+      if (signOutStatus) signOutStatus.textContent = error;
+    } finally {
+      signOut.disabled = false;
+      signOut.removeAttribute('aria-busy');
+    }
+  });
 
   let scrollRAF = 0;
   const applyScroll = () => {
@@ -55,11 +74,17 @@ export function renderAdminChrome({ onSignOut } = {}) {
   return bar;
 }
 
-/* Show which staff account the console is acting as (set once /api/admin/stats
-   returns staff_context). */
-export function setAdminChromeUser(email) {
-  const el = document.getElementById('admChromeUser');
-  if (!el) return;
-  el.textContent = email || '';
-  el.hidden = !email;
+/* Session-only chrome stays absent until /api/admin/stats verifies staff context. */
+export function setAdminChromeSession(staff = null) {
+  const active = Boolean(staff);
+  const email = String(staff?.email || '');
+  const user = document.getElementById('admChromeUser');
+  const signOut = document.getElementById('admSignOut');
+  const search = document.querySelector('.adm-chrome-search');
+  if (user) {
+    user.textContent = email;
+    user.hidden = !active || !email;
+  }
+  if (signOut) signOut.hidden = !active;
+  if (search) search.hidden = !active;
 }

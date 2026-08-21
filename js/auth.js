@@ -124,7 +124,8 @@ export function onPasswordRecovery(callback) {
 }
 
 export async function logout() {
-  await requireClient().auth.signOut();
+  const { error } = await requireClient().auth.signOut();
+  if (error) throw error;
   emitAuth();
 }
 

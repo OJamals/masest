@@ -6,14 +6,15 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260820a";
-const ADMIN_RELEASE = "20260820a";
-const ADMIN_PAGE_RELEASE = "20260820a";
-const CHROME_RELEASE = "20260820a";
-const ACCOUNT_NAV_RELEASE = "20260820a";
-const CUSTOMER_CHAT_RELEASE = "20260820a";
+const MAIN_RELEASE = "20260820b";
+const ADMIN_RELEASE = "20260820b";
+const ADMIN_PAGE_RELEASE = "20260820b";
+const ADMIN_CHROME_RELEASE = "20260820b";
+const CHROME_RELEASE = "20260820b";
+const ACCOUNT_NAV_RELEASE = "20260820b";
+const CUSTOMER_CHAT_RELEASE = "20260820b";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
-const CONTENT_RELEASE = "20260820a";
+const CONTENT_RELEASE = "20260820b";
 const STORY_RELEASE = "20260726a";
 // The shared support console sits in both module graphs, so it rides ADMIN_RELEASE.
 const SUPPORT_RELEASE = ADMIN_RELEASE;
@@ -64,10 +65,11 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   for (const module of ["products", "qbo", "companies", "threads"]) {
     assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_RELEASE}`));
   }
-  assert.match(read("js/admin.js"), new RegExp(`admin/orders\\.js\\?v=${ADMIN_PAGE_RELEASE}`));
+  assert.match(read("js/admin.js"), new RegExp(`admin/orders\\.js\\?v=${ADMIN_RELEASE}`));
   assert.match(read("js/admin.js"), new RegExp(`admin/content\\.js\\?v=${CONTENT_RELEASE}`));
   assert.match(read("js/admin/content.js"), new RegExp(`content-types\\.js\\?v=${CONTENT_RELEASE}`));
-  assert.match(read("js/admin.js"), new RegExp(`admin/chrome\\.js\\?v=${ADMIN_RELEASE}`));
+  assert.match(read("js/admin.js"), new RegExp(`admin/chrome\\.js\\?v=${ADMIN_CHROME_RELEASE}`));
+  assert.match(read("js/admin.js"), new RegExp(`admin/session\\.js\\?v=${ADMIN_PAGE_RELEASE}`));
   assert.match(read("js/main/chrome.js"), /initAccountNav\(\{ nav, root, authModule, resolveSession \}\)/);
   assert.match(read("js/account-nav.js"), /await import\(authModule\)/);
   assert.match(read("js/main/chrome.js"), /\{ chatRoot: root, authModule \}/);

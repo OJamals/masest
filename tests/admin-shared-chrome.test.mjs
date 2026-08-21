@@ -47,8 +47,9 @@ test('support console puts close top-right and settings top-left', () => {
 test('admin renders its own staff chrome, not the storefront nav', () => {
   const admin = read('js/admin.js');
 
-  assert.match(admin, /import \{ renderAdminChrome, setAdminChromeUser \} from '\.\/admin\/chrome\.js\?v=\d{8}[a-z]'/);
-  assert.match(admin, /renderAdminChrome\(\{ onSignOut: \(\) => \{ void logout\(\); \} \}\);/);
+  assert.match(admin, /import \{ renderAdminChrome, setAdminChromeSession \} from '\.\/admin\/chrome\.js\?v=\d{8}[a-z]'/);
+  assert.match(admin, /renderAdminChrome\(\{ onSignOut: \(\) => adminSession\.signOut\(\) \}\);/);
+  assert.doesNotMatch(admin, /onSignOut:[^\n]*void logout\(\)/, 'staff sign out must await the session transition');
   // The storefront chrome stays on the public site: importing it here would put
   // the marketing nav, cart, and ~861px footer back on the operations console.
   assert.doesNotMatch(admin, /from '\.\/main\/chrome\.js/);
@@ -66,7 +67,7 @@ test('staff chrome omits storefront nav links, cart, lead bar, and marketing foo
   // buyer account nav (see admin-message-center's buyer-UI boundary).
   assert.match(chrome, /admChromeUser/);
   assert.match(chrome, /id="admSignOut"/);
-  assert.match(chrome, /export function setAdminChromeUser/);
+  assert.match(chrome, /export function setAdminChromeSession/);
 
   for (const [label, pattern] of [
     ['cart', /nav-cart|data-cart-count/],

@@ -44,7 +44,7 @@ test("account nav re-renders on auth change so the header swaps Sign in after lo
   assert.match(auth, /new CustomEvent\(['"]masest:auth['"]\)/, "auth helper should dispatch the masest:auth event");
   // login + logout must broadcast so both directions refresh the header.
   assert.match(auth, /emitAuth\(\);\s*\n\s*return data;/, "login should emit an auth change");
-  assert.match(auth, /signOut\(\);\s*\n\s*emitAuth\(\);/, "logout should emit an auth change");
+  assert.match(auth, /signOut\(\);\s*\n\s*if \(error\) throw error;\s*\n\s*emitAuth\(\);/, "logout should emit an auth change only after successful sign-out");
 });
 
 test("dashboard organizes signed-in tools with a sidebar and account group", () => {

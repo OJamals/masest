@@ -1,17 +1,29 @@
 /* MASEST staff admin console. */
-import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260820a';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260820a';
-import { editKey } from './admin/edits.js?v=20260820a';
-import { createFeatureLoader } from './admin/feature-loader.js?v=20260820a';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260820a';
-import { renderAdminChrome, setAdminChromeUser } from './admin/chrome.js?v=20260820a';
-import { createAdminSearch } from './admin/search.js?v=20260820a';
+import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260820b';
+import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260820b';
+import { editKey } from './admin/edits.js?v=20260820b';
+import { createFeatureLoader } from './admin/feature-loader.js?v=20260820b';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260820b';
+import { renderAdminChrome, setAdminChromeSession } from './admin/chrome.js?v=20260820b';
+import { createAdminSessionLifecycle } from './admin/session.js?v=20260820b';
+import { createAdminSearch } from './admin/search.js?v=20260820b';
 
 const $ = (id) => document.getElementById(id);
 
 // Staff console chrome: one compact bar with staff identity + sign out. No
 // storefront nav, cart, or marketing footer (see js/admin/chrome.js for why).
-const adminChrome = renderAdminChrome({ onSignOut: () => { void logout(); } });
+const adminSession = createAdminSessionLifecycle({
+  logout,
+  hasUnsavedEdits: () => hasUnsavedAdminEdits(),
+  confirmDiscard: () => confirmDialog(
+    'Sign out and discard unsaved changes?',
+    { confirmText: 'Sign out', cancelText: 'Keep working', danger: true },
+  ),
+  clearUnsavedEdits: () => clearUnsavedAdminEdits(),
+  showGate: ({ expired }) => showAdminGate({ expired }),
+  reload: () => location.reload(),
+});
+const adminChrome = renderAdminChrome({ onSignOut: () => adminSession.signOut() });
 
 // Cross-entity search lives in the chrome but only after the staff gate clears.
 let searchMounted = false;
@@ -130,7 +142,7 @@ const state = {
 
 function applyStaffContext(value) {
   state.staff = normalizeStaffContext(value);
-  setAdminChromeUser(state.staff.email);
+  setAdminChromeSession(state.staff);
   if ($('admRoleBadge')) {
     $('admRoleBadge').textContent = `${staffRoleLabel(state.staff.role)} access`;
     $('admRoleBadge').dataset.s = state.staff.role === 'read_only' ? 'changes_requested' : 'published';
@@ -168,12 +180,23 @@ function message(id, text, kind = '') {
   el.dataset.state = kind;
 }
 
-// Session lost mid-use: drop back to the sign-in gate instead of failing silently.
+function showAdminGate({ expired = false } = {}) {
+  state.staff = null;
+  setAdminChromeSession(null);
+  if ($('admGate')) $('admGate').hidden = false;
+  if ($('admApp')) $('admApp').hidden = true;
+  if ($('gPass')) $('gPass').value = '';
+  if ($('gateTitle')) $('gateTitle').textContent = expired ? 'Session expired' : 'Staff sign in';
+  if ($('gateMsg')) $('gateMsg').textContent = expired
+    ? 'Please sign in again to continue.'
+    : 'Sign in with an approved staff account.';
+}
+
+// A verified staff session owns cached records, loaded feature modules, and live
+// pollers. Once it expires, reload the document so none can cross into the next
+// staff login. Initial anonymous boot only needs the gate and must not reload-loop.
 document.addEventListener('masest:session-expired', () => {
-  $('admGate').hidden = false;
-  $('admApp').hidden = true;
-  if ($('gateTitle')) $('gateTitle').textContent = 'Session expired';
-  if ($('gateMsg')) $('gateMsg').textContent = 'Please sign in again to continue.';
+  adminSession.expire({ hadStaff: Boolean(state.staff) });
 });
 
 async function boot() {
@@ -189,8 +212,7 @@ async function boot() {
     renderStats(stats);
     setTab(location.hash.slice(1) || 'overview');
   } catch (err) {
-    $('admGate').hidden = false;
-    $('admApp').hidden = true;
+    showAdminGate({ expired: err.status === 401 && hadToken });
  if (err.status === 403) {
  $('gateTitle').textContent = 'Staff access required';
  $('gateMsg').textContent = 'This account is not marked as staff.';
@@ -549,7 +571,7 @@ async function downloadCsv(url, filename, statusId) {
 // Reports & exports card (#96). Bound once — the overview tab re-renders on each visit.
 let reportsWired = false;
 function wireReports() {
-  void import('./admin/stripe.js?v=20260820a').then(({ wireStripePayouts, renderStripePayouts }) => {
+  void import('./admin/stripe.js?v=20260820b').then(({ wireStripePayouts, renderStripePayouts }) => {
     wireStripePayouts();
     return renderStripePayouts();
   }).catch(() => {
@@ -629,8 +651,8 @@ let supportEntry = {};
 const featureLoader = createFeatureLoader({
   analytics: async () => {
     const [{ createTrafficRenderer }, { createSeoAudit }] = await Promise.all([
-      import('./admin/traffic.js?v=20260820a'),
-      import('./admin/seo.js?v=20260820a'),
+      import('./admin/traffic.js?v=20260820b'),
+      import('./admin/seo.js?v=20260820b'),
     ]);
     const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
     const runSeoAudit = createSeoAudit({ $, state });
@@ -640,11 +662,11 @@ const featureLoader = createFeatureLoader({
     };
   },
   integrations: async () => {
-    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260820a');
-    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260820a');
-    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260820a');
-    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260820a');
-    const { createAutomationCard } = await import('./admin/automation.js?v=20260820a');
+    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260820b');
+    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260820b');
+    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260820b');
+    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260820b');
+    const { createAutomationCard } = await import('./admin/automation.js?v=20260820b');
     const { renderAutomation } = createAutomationCard({ $, api, admSkeleton });
     return {
       wire() {
@@ -665,7 +687,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   orders: async () => {
-    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260820a');
+    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260820b');
     const { renderOrders, wireOrders } = createOrdersTab({
       $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
     });
@@ -692,8 +714,8 @@ const featureLoader = createFeatureLoader({
   },
   companies: async () => {
     const [{ createCompaniesTab }, { createCrmPanel }] = await Promise.all([
-      import('./admin/companies.js?v=20260820a'),
-      import('./admin/crm.js?v=20260820a'),
+      import('./admin/companies.js?v=20260820b'),
+      import('./admin/crm.js?v=20260820b'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const { renderCompanies, wireCompanies, openCompanyDetail, applyAcctView } = createCompaniesTab({
@@ -733,10 +755,10 @@ const featureLoader = createFeatureLoader({
       { createInventoryCard },
       { createCouponsCard },
     ] = await Promise.all([
-      import('./admin/products.js?v=20260820a'),
-      import('./admin/pricing.js?v=20260820a'),
-      import('./admin/inventory.js?v=20260820a'),
-      import('./admin/coupons.js?v=20260820a'),
+      import('./admin/products.js?v=20260820b'),
+      import('./admin/pricing.js?v=20260820b'),
+      import('./admin/inventory.js?v=20260820b'),
+      import('./admin/coupons.js?v=20260820b'),
     ]);
     const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({
       $, api, state, message, admSkeleton, admEmpty,
@@ -774,7 +796,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260820a');
+    const { createContentTab } = await import('./admin/content.js?v=20260820b');
     const { renderContent, renderBlog, wireContent, wireBlog } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -815,7 +837,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   support: async () => {
-    const { createThreadsTab } = await import('./admin/threads.js?v=20260820a');
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260820b');
     const { renderThreads, wireThreads, openThread, openConsole, openSettings } = createThreadsTab({ api, state });
     supportEntry = { openThread, openConsole, openSettings };
     return {
@@ -828,7 +850,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   quotes: async () => {
-    const { createQuotesTab } = await import('./admin/quotes.js?v=20260820a');
+    const { createQuotesTab } = await import('./admin/quotes.js?v=20260820b');
     const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager,
     });
@@ -849,7 +871,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   reviews: async () => {
-    const { createReviewsTab } = await import('./admin/reviews.js?v=20260820a');
+    const { createReviewsTab } = await import('./admin/reviews.js?v=20260820b');
     const {
       renderReviews,
       wireReviews,
@@ -869,8 +891,8 @@ const featureLoader = createFeatureLoader({
   },
   newsletter: async () => {
     const [{ createNewsletterTab }, { createOffersTab }] = await Promise.all([
-      import('./admin/newsletter.js?v=20260820a'),
-      import('./admin/offers.js?v=20260820a'),
+      import('./admin/newsletter.js?v=20260820b'),
+      import('./admin/offers.js?v=20260820b'),
     ]);
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
@@ -892,8 +914,8 @@ const featureLoader = createFeatureLoader({
   },
   crm: async () => {
     const [{ createCrmWorkspace }, { createCrmPanel }] = await Promise.all([
-      import('./admin/crm-workspace.js?v=20260820a'),
-      import('./admin/crm.js?v=20260820a'),
+      import('./admin/crm-workspace.js?v=20260820b'),
+      import('./admin/crm.js?v=20260820b'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const openSubject = (type, id, label) => {
