@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -15,6 +15,11 @@ import {
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
+const updateSourceRoot = process.env.MASEST_UPDATE_SOURCE_ROOT
+  || join(homedir(), "Desktop", "masest", "updates");
+const updateSourceOptions = existsSync(updateSourceRoot)
+  ? { sourceRoot: updateSourceRoot }
+  : {};
 
 test("company identity has one legal owner, domain, sales route, and no unconfirmed street address", () => {
   assert.doesNotThrow(() => validateCompanyIdentity(COMPANY_IDENTITY));
@@ -83,8 +88,7 @@ test("customer content preserves the owner-approved VertKleen HMIS claim", () =>
 
 test("August media rights are approved and complete product photos receive controlled placement", () => {
   const review = JSON.parse(read("data/update-media-review.json"));
-  const sourceRoot = join(homedir(), "Desktop", "masest", "updates");
-  const records = validateUpdateMediaReview(review, { sourceRoot });
+  const records = validateUpdateMediaReview(review, updateSourceOptions);
 
   assert.equal(records.length, 15);
   assert.deepEqual(review.review_control.rights_approval, {
@@ -205,8 +209,7 @@ test("brand and product assets do not inherit field-photo metadata requirements"
 
 test("same-day HVAC correspondence remains a hash-pinned lead, not public job attribution", () => {
   const review = JSON.parse(read("data/update-media-review.json"));
-  const sourceRoot = join(homedir(), "Desktop", "masest", "updates");
-  const records = validateUpdateMediaReview(review, { sourceRoot });
+  const records = validateUpdateMediaReview(review, updateSourceOptions);
   const hvacSequence = records.filter(({ candidate_id }) => (
     Number(candidate_id.slice(-3)) >= 5 && Number(candidate_id.slice(-3)) <= 9
   ));
@@ -218,12 +221,14 @@ test("same-day HVAC correspondence remains a hash-pinned lead, not public job at
     assert.equal(record.missing.includes("product_and_job"), true);
   }
 
-  const changedContext = structuredClone(review);
-  changedContext.candidate_media.find(
-    ({ candidate_id }) => candidate_id === "MAS-UPD-MEDIA-005",
-  ).context_source_sha256 = "0".repeat(64);
-  assert.throws(
-    () => validateUpdateMediaReview(changedContext, { sourceRoot }),
-    /update_media:MAS-UPD-MEDIA-005:source_hash_changed/,
-  );
+  if (updateSourceOptions.sourceRoot) {
+    const changedContext = structuredClone(review);
+    changedContext.candidate_media.find(
+      ({ candidate_id }) => candidate_id === "MAS-UPD-MEDIA-005",
+    ).context_source_sha256 = "0".repeat(64);
+    assert.throws(
+      () => validateUpdateMediaReview(changedContext, updateSourceOptions),
+      /update_media:MAS-UPD-MEDIA-005:source_hash_changed/,
+    );
+  }
 });

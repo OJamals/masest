@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -14,10 +14,14 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const review = JSON.parse(read("data/update-bundle-review.json"));
 const escapeHtml = (value) => String(value).replaceAll("&", "&amp;");
+const updateSourceRoot = process.env.MASEST_UPDATE_SOURCE_ROOT
+  || join(homedir(), "Desktop", "masest", "updates");
+const updateSourceOptions = existsSync(updateSourceRoot)
+  ? { sourceRoot: updateSourceRoot }
+  : {};
 
 test("five owner-approved bundle offers publish stable SKUs and current prices", () => {
-  const sourceRoot = join(homedir(), "Desktop", "masest", "updates");
-  const plans = validateUpdateBundleReview(review, { sourceRoot });
+  const plans = validateUpdateBundleReview(review, updateSourceOptions);
 
   assert.equal(plans.length, 5);
   assert.deepEqual(plans.map(({ name }) => name), [
