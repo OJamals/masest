@@ -60,8 +60,8 @@ test("homepage first fold prioritizes replacement and trial without duplicate sh
       });
 
       assert.equal(result.hasScrollCue, false, "first fold should not include a decorative scroll cue");
-      assert.ok(result.ctas.some((cta) => cta.text === "Shop by cleaning job"), "product CTA should be visible in the first fold");
-      assert.ok(result.ctas.some((cta) => cta.text === "Plan a field trial"), "quote CTA should be visible in the first fold");
+      assert.ok(result.ctas.some((cta) => cta.text === "Shop cleaners"), "product CTA should be visible in the first fold");
+      assert.ok(result.ctas.some((cta) => cta.text === "Try it on my job"), "quote CTA should be visible in the first fold");
       assert.deepEqual(result.shortcuts, [], "first fold should not repeat replacement actions in a shortcut rail");
     } finally {
       await browser.close();
@@ -93,8 +93,8 @@ test("homepage keeps a primary action visible on short mobile", async () => {
             label === text;
         });
         return {
-          hasPrimary: visibleInFold("a, button", "Shop by cleaning job"),
-          hasTrial: visibleInFold("a, button", "Plan a field trial"),
+          hasPrimary: visibleInFold("a, button", "Shop cleaners"),
+          hasTrial: visibleInFold("a, button", "Try it on my job"),
           visibleShortcuts: [...document.querySelectorAll(".story-shortcuts a")].filter((el) => {
             const rect = el.getBoundingClientRect();
             const style = getComputedStyle(el);

@@ -59,9 +59,9 @@ test("static product hero exposes buying context before long copy", () => {
   assert.ok(buy > facts, "price and pack controls should follow product highlights");
   assert.ok(description > buy, "buying context should appear before the long product description");
   assert.match(product, /<b>HMIS<\/b>0-0-0/);
-  assert.match(product, /<b>Alternative to<\/b>Conventional brewery acids and beer-stone cleaners/);
+  assert.match(product, /<b>Replaces<\/b>Conventional brewery acids and beer-stone cleaners/);
   assert.match(product, /class="btn btn-secondary"[^>]*>Plan my brewery cleaning cycle<\/a>/);
-  assert.match(product, /class="product-back-link"[^>]*>All products<\/a>/);
+  assert.match(product, /class="product-back-link"[^>]*>Browse all cleaners<\/a>/);
 });
 
 test("animated homepage copy keeps stable accessible names", () => {
@@ -73,13 +73,13 @@ test("animated homepage copy keeps stable accessible names", () => {
   const headline = home.match(/<h1 class="act-h" id="storyAct1Title"[^>]*>([\s\S]*?)<\/h1>/)?.[1];
   assert.equal(
     String(headline).replace(/<[^>]+>/g, ""),
-    "Industrial Cleaning Power Without the Harsh-Chemical Tradeoff.",
+    "Clean the Hard Stuff Without Harsh Acids, Caustics, or Solvents.",
   );
-  assert.match(home, /aria-label="Shop VertKleen by cleaning job"/);
-  assert.match(home, /aria-label="Plan a VertKleen field trial"/);
+  assert.match(home, /aria-label="Shop VertKleen products"/);
+  assert.match(home, /aria-label="Try VertKleen on my cleaning job"/);
   assert.doesNotMatch(home, /starting candidate|trial candidate|Candidate only after|path to approval/i);
   assert.match(home, /Break down and rinse away/);
-  assert.match(home, /Completed-task cost/);
+  assert.match(home, /Whole-job cost/);
   assert.doesNotMatch(home, /class="cmp-table cmp-jobs"/);
 });
 
@@ -129,7 +129,7 @@ test("support routes use task-first science copy without changing destinations",
     "Request biological testing",
     "Request materials analysis",
     "Request bid support",
-    "Request technical review",
+    "Ask an expert",
     "Request site sampling",
     "Request a WMP review",
     "Request a package",
@@ -141,10 +141,10 @@ test("support routes use task-first science copy without changing destinations",
   assert.match(pages.serviceCatalog, /Build a practical water plan around your facility, systems, team, and day-to-day work/);
   assert.match(pages.programs, />Price my water-treatment program<\/a>/);
   assert.match(pages.resources, />Get my cleaning plan<\/a>/);
-  assert.match(pages.newsletter, />One mechanism\. One field result\. One practical win\.<\/h1>/);
+  assert.match(pages.newsletter, />Useful cleaning ideas, once a month\.<\/h1>/);
   assert.match(pages.hvacPricing, />Price the result, not the gallon\.<\/h1>/);
-  assert.match(pages.hvacPricing, />Request completed-task pricing<\/a>/);
-  assert.match(pages.cipPricing, />Request CIP pricing<\/a>/);
+  assert.match(pages.hvacPricing, />Get a quote<\/a>/);
+  assert.match(pages.cipPricing, />Get CIP pricing<\/a>/);
   for (const page of [pages.about, pages.services, pages.programs, pages.resources, pages.catalogData]) {
     assert.doesNotMatch(
       page,
@@ -175,11 +175,12 @@ test("public content generators preserve current SEO releases", () => {
   const comparisonBuilder = read("tools/gen_comparisons.mjs");
   const seoBuilder = read("tools/seo-inject.mjs");
 
-  assert.match(blogBuilder, /brand: "VertKleen"/);
+  assert.match(blogBuilder, /import \{ organizationJsonLd \} from "\.\/company-identity\.mjs"/);
+  assert.match(blogBuilder, /const ORG = organizationJsonLd\(\);/);
   assert.match(blogBuilder, /if \(!missing\.length\) return 0;/);
   assert.match(blogBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);
   assert.match(comparisonBuilder, /style\.css\?v=\$\{STYLE_VERSION\}/);
   assert.match(comparisonBuilder, /<!-- seo:auto -->[\s\S]*<!-- \/seo:auto -->/);
-  assert.match(seoBuilder, /<span><b>Alternative to<\/b>\$\{text\(replacement\)\}<\/span>/);
-  assert.match(seoBuilder, /<a class="product-back-link"[^>]*>All products<\/a>/);
+  assert.match(seoBuilder, /<span><b>Replaces<\/b>\$\{text\(replacement\)\}<\/span>/);
+  assert.match(seoBuilder, /<a class="product-back-link"[^>]*>Browse all cleaners<\/a>/);
 });

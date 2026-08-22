@@ -83,11 +83,14 @@ export async function initSegmentPricing(root = document) {
     const data = await response.json();
     const pricing = await loadPricingData();
     const liveBySku = new Map((pricing.variants || []).map((variant) => [variant.vsku, variant]));
-    data.segments = (data.segments || []).map((segment) => ({
-      ...segment,
-      rows: (segment.rows || []).flatMap((row) => {
+    data.segments = (data.segments || []).map((segment) => {
+      const tier = segment.price_tier;
+      if (!["retail", "hvac"].includes(tier)) throw new Error("segment_price_tier_invalid");
+      return {
+        ...segment,
+        rows: (segment.rows || []).flatMap((row) => {
         const variant = liveBySku.get(row.sku);
-        const price = variant?.tiers?.hvac;
+        const price = variant?.tiers?.[tier];
         if (price == null) return [];
         return [{
           ...row,
@@ -95,8 +98,9 @@ export async function initSegmentPricing(root = document) {
           price_per_unit: Number(price),
           price_per_gallon: Number(price) / Number(variant.gallons || row.size_gal || 1),
         }];
-      }),
-    }));
+        }),
+      };
+    });
     renderSegment(mount, data);
   } catch {
     mount.innerHTML = '<p class="muted">Pricing is unavailable.</p>';
@@ -104,4 +108,4 @@ export async function initSegmentPricing(root = document) {
 }
 
 initSegmentPricing();
-import { loadPricingData } from "./pricing-data.js?v=20260821a";
+import { loadPricingData } from "./pricing-data.js?v=20260822a";

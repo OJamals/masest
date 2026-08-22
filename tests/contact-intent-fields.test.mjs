@@ -43,6 +43,12 @@ test("unmatched product param falls back to the message field", () => {
   assert.match(engagement, /preMatched/);
 });
 
+test("bounded bundle SKUs become explicit quote-form product options", () => {
+  assert.match(engagement, /const BUNDLE_SKU = \/\^VK-BND-/);
+  assert.match(engagement, /Bundle SKU: \$\{pre\}/);
+  assert.match(engagement, /BUNDLE_SKU\.test\(pre\)/);
+});
+
 test("industry select covers every generated industry page", () => {
   for (const sector of [
     "Oil, Gas &amp; Process Plants", "Marine", "Manufacturing", "Food &amp; Beverage", "Healthcare",

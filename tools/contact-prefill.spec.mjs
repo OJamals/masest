@@ -49,8 +49,8 @@ test("contact form pre-fills quote message from cart handoff", async ({ page }) 
 
 test("product quote handoff lands on the visible prefilled product", async ({ page }) => {
   await page.goto(`${BASE_URL}/products/descaler.html`, { waitUntil: "networkidle" });
-  await expect(page.getByRole("link", { name: "Test my mineral deposit" })).toHaveAttribute("href", /#quoteForm$/);
-  await expect(page.getByRole("link", { name: "Request a Descaler sample" })).toHaveAttribute("href", /#quoteForm$/);
+  await expect(page.getByRole("link", { name: "Test my mineral buildup" })).toHaveAttribute("href", /#quoteForm$/);
+  await expect(page.getByRole("link", { name: "Try a free Descaler sample" })).toHaveAttribute("href", /#quoteForm$/);
 
   await page.goto(
     `${BASE_URL}/contact.html?type=quote&product=VertKleen%20Descaler#quoteForm`,
@@ -66,6 +66,28 @@ test("product quote handoff lands on the visible prefilled product", async ({ pa
   const formTop = await page.locator("#quoteForm").evaluate((form) => form.getBoundingClientRect().top);
   expect(formTop).toBeGreaterThanOrEqual(0);
   expect(formTop).toBeLessThan(900);
+});
+
+test("bundle order handoff preserves the stable SKU and buyer message", async ({ page }) => {
+  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
+  const link = page.locator('[data-bundle-sku="VK-BND-KITCHEN-4X1G"]')
+    .getByRole("link", { name: "Order this kit" });
+  const href = await link.getAttribute("href");
+  expect(href).toMatch(/^contact\?type=quote&product=VK-BND-KITCHEN-4X1G&message=/);
+
+  await page.goto(`${BASE_URL}/${href.replace(/^contact\?/, "contact.html?")}`, {
+    waitUntil: "networkidle",
+  });
+
+  await expect(page.locator('[name="type"]')).toHaveValue("quote");
+  await expect(page.locator("#fProduct")).toHaveValue("VK-BND-KITCHEN-4X1G");
+  await expect(page.locator("#fMessage")).toHaveValue(
+    "I'd like to order the Kitchen & Interior bundle (VK-BND-KITCHEN-4X1G).",
+  );
+  await expect(page.locator("#quoteContextSummary")).toContainText(
+    "Quote request for VK-BND-KITCHEN-4X1G.",
+  );
+  await expect(page.locator(".quote-advanced-toggle")).toHaveAttribute("aria-expanded", "true");
 });
 
 test("customer chat context stays visible, editable, and submits only its allowed source", async ({ page }) => {

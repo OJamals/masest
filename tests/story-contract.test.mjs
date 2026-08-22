@@ -21,8 +21,8 @@ test("first act has one dominant guided replacement action and quieter trial", (
   const primaryActions = actOne.match(/class="btn btn-primary"/g) || [];
 
   assert.equal(primaryActions.length, 1);
-  assert.match(actOne, /class="btn btn-primary" href="products#catalog"[^>]*>Shop by cleaning job<\/a>/);
-  assert.match(actOne, /class="btn btn-ghost" href="contact\?type=sample"[^>]*>Plan a field trial<\/a>/);
+  assert.match(actOne, /class="btn btn-primary" href="products#catalog"[^>]*>Shop cleaners<\/a>/);
+  assert.match(actOne, /class="btn btn-ghost" href="contact\?type=sample"[^>]*>Try it on my job<\/a>/);
   assert.doesNotMatch(actOne, /story-shortcuts/);
 });
 
@@ -31,9 +31,9 @@ test("second act carries buildup and operational cost through one pipe", () => {
 
   assert.equal((actTwo.match(/class="pipe-diagram"/g) || []).length, 1);
   assert.match(actTwo, /class="pipe-cost-chain"/);
-  assert.match(actTwo, /PPE &amp; training/);
+  assert.match(actTwo, /Crew time/);
   assert.match(actTwo, /Downtime/);
-  assert.match(actTwo, /Hazmat handling/);
+  assert.match(actTwo, /Extra handling/);
 });
 
 test("third act is one operational ledger with task-matched chemistry", () => {

@@ -192,7 +192,7 @@ test("cart uses a conventional order summary without catalog policy duplication"
       assert.equal(await productImage.getAttribute('src'), 'https://example.com/hcr.png');
       assert.equal(await productImage.getAttribute('alt'), 'VertKleen HCR pail');
       await page.getByRole("link", { name: "Continue to checkout", exact: true }).waitFor();
-      await page.getByRole("link", { name: "Get formal quote" }).waitFor();
+      await page.getByRole("link", { name: "Get a quote", exact: true }).waitFor();
       assert.equal(await page.locator(".cart-path-primary").count(), 1);
       assert.equal(await page.locator(".cart-path-quote").count(), 1);
       assert.equal(await page.locator(".cart-path-requisition").count(), 1);

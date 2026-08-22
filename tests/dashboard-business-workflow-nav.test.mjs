@@ -36,5 +36,5 @@ test("business hub summarizes readiness metrics", () => {
   assert.match(html, /\.biz-hub-metric/, "business hub should style compact readiness metrics");
   assert.match(js, /setupMetric\(data\)/, "business hub should expose setup progress");
   assert.match(js, /netTermsText\(data\)/, "business hub should expose NET terms state");
-  assert.match(js, /aria-label="Business status"[\s\S]*Verification[\s\S]*Setup[\s\S]*Ordering[\s\S]*NET terms/, "business hub should render the key readiness markers");
+  assert.match(js, /aria-label="Business status"[\s\S]*Account status[\s\S]*Setup[\s\S]*Ordering[\s\S]*NET terms/, "business hub should render the key account markers");
 });

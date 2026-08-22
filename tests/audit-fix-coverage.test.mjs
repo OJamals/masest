@@ -36,7 +36,7 @@ test('cart registers the actual action row, not its non-overlapping padded card,
 });
 
 test('product detail purchase proof and primary buy action stay decision-adjacent', () => {
-  assert.match(product, /<a class="product-hero-proof" href="#records"[^>]*>[\s\S]*See 3 field results<\/a>/);
+  assert.match(product, /<a class="product-hero-proof" href="#records"[^>]*>[\s\S]*See 3 real job results<\/a>/);
   assert.match(product, /id="records"/);
   assert.match(
     commerceSource,
@@ -56,7 +56,7 @@ test('checkout keeps address rationale and mobile escape/trust cues', () => {
   assert.match(mobile, /\.checkout-secure\s*\{[^}]*font-size:/);
 });
 
-test('homepage keeps the audited hyphenated headline phrase unbroken', () => {
-  assert.match(home, /<span class="no-break">Harsh-Chemical<\/span>/);
-  assert.match(css, /\.no-break\s*\{\s*white-space:\s*nowrap;?\s*\}/);
+test('homepage keeps the customer headline intact', () => {
+  assert.match(home, /Clean the Hard Stuff Without Harsh Acids, Caustics, or Solvents\./);
+  assert.doesNotMatch(home, /Clean the Hard Stuff[\s\S]{0,80}<br/);
 });

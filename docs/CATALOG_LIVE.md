@@ -24,8 +24,9 @@ the CMS tier remains the operator authority.
 ## Metadata
 
 `data/catalog.seed.json` owns product, variant, service, and package metadata only.
-`data/segment-pricing.json` owns segment membership and copy only. Generated JSON and SQL
-artifacts contain no prices.
+`data/segment-pricing.json` owns segment membership, copy, and explicit public-tier binding:
+HVAC & Facilities uses `hvac`; CIP Food & Beverage uses `retail`. It contains no prices.
+Generated JSON and SQL artifacts contain no prices.
 
 Run:
 

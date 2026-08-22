@@ -35,7 +35,7 @@ const tab4IndustryPages = [
   "warehousing-distribution-centers",
   "pressure-washing-soft-wash-contractors",
   "drone-cleaning-companies",
-  "marine-marinas-boatyards",
+  "marine",
   "aviation-fbos-mro-airports",
   "municipalities-water-utilities",
   "healthcare-senior-living",
@@ -45,11 +45,11 @@ const tab4IndustryPages = [
 ];
 
 const comparisonPages = [
-  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "VK-HCR-5G", "CLR PRO MAX", "280&times; less corrosion"],
-  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "VK-HCR-5G", "$34.00-$48.60/gal", "280&times; less corrosion"],
-  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Task-Cost Guide", "VK-CRHD-5G", "$13.20-$36.80/gal", "Three Walmart distribution centers switched"],
-  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "VK-LAM3-5G", "$34.00/gal", "Before-and-after results show"],
-  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "VK-CR-2.5G", "$38.85/gal", "Brewlando Brewing replaced"],
+  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "VK-HCR-5G", "CLR PRO MAX", "A real HCR job shows heavy rust and mineral scale"],
+  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "VK-HCR-5G", "$34.00-$48.60/gal", "A real HVAC job shows HCR releasing heavy rust and scale"],
+  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Heavy Degreaser Comparison", "VK-CRHD-5G", "$13.20-$36.80/gal", "set up a fair side-by-side test"],
+  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "VK-LAM3-5G", "$34.00/gal", "Before-and-after photos show CR and LAM3"],
+  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "VK-CR-2.5G", "$38.85/gal", "Brewlando Brewing field and lab results"],
 ];
 
 const comparisonBlogPosts = [
@@ -72,7 +72,7 @@ const industryLabelPages = [
 
 test("product and industry listings stay concise and product-focused", () => {
   const products = read("products.html");
-  assert.match(products, /Start with the mess\. Find the VertKleen product\./);
+  assert.match(products, /Start with the mess\. Find the cleaner\./);
   assert.doesNotMatch(products, /VertKleen covers acids, caustics, degreasers/);
 
   for (const slug of industryLabelPages) {
@@ -153,7 +153,7 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
     assert.match(html, /crhd-pressure-wash-studio\.webp/);
     assert.match(html, /crs-studio\.webp/);
     assert.match(html, /multiwash-pressure-wash-studio\.webp/);
-    assert.match(html, /Apply at 1:20 via downstream injector/);
+    assert.match(html, /Apply at 1:20 through a downstream injector or foam cannon/);
     assert.match(html, /Rust &amp; fertilizer stains/);
     assert.match(html, /<span class="catalog-type">PW label<\/span>/);
     assert.doesNotMatch(html, /Published pack prices|1400 gal tote/);
@@ -197,7 +197,7 @@ test("industry page images route to industry pages, not proof or contact", () =>
   }
 });
 
-test("priority 2 comparison landing pages include price math, swap row, proof point, and quote CTA", () => {
+test("priority 2 comparison landing pages include live price bindings, swap row, scoped record, and quote CTA", () => {
   const sitemap = read("sitemap.xml");
 
   for (const [path, title, seoTitle, vkMath, marketMath, proof] of comparisonPages) {
@@ -213,6 +213,10 @@ test("priority 2 comparison landing pages include price math, swap row, proof po
     assert.match(html, /href="\.\.\/contact\?type=quote/, `${title} should route quote CTA to the quote form`);
     assert.match(html, new RegExp(`data-cms-content="page_sections" data-cms-page="${route}" data-cms-region="body"`), `${title} should expose a CMS page-section mount`);
   }
+
+  const brewery = read("comparisons/beer-line-cleaner-cost-comparison.html");
+  assert.match(brewery, /data-price-vsku="VK-CR-2\.5G" data-price-tier="retail"/);
+  assert.match(brewery, /data-price-vsku="VK-HCR-2\.5G" data-price-tier="retail"/);
 });
 
 test("comparison SEO pages are also generated as mechanism-first blog posts", () => {

@@ -16,6 +16,7 @@ const AUTHORITY_RECORD_ID_PATTERN = /^MAS-AUTH-[A-Z0-9-]+$/;
 const PRODUCT_SLUG_PATTERN = /^[a-z0-9-]+$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const AUTHORITY_RECORD_TYPES = new Set(["certification", "equivalency"]);
+const LABEL_COLLECTIONS = new Set(["cip", "general", "hvac", "marine"]);
 const SENSITIVE_FLAGS = new Set([
   "confidential_customer_data",
   "personal_contact",
@@ -30,6 +31,14 @@ function isSensitive(document) {
 }
 
 const hasText = (value) => typeof value === "string" && value.trim().length > 0;
+
+export function documentRevision(document, control) {
+  return document?.revision || control?.revision;
+}
+
+export function documentEffectiveDate(document, control) {
+  return document?.effective_date || control?.effective_date;
+}
 
 export function documentType(document) {
   const path = String(document?.path || "");
@@ -112,6 +121,8 @@ export function validatePublicDocumentReview(
       throw new Error(`${REVIEW_PATH}: invalid or duplicate document ID for ${path}`);
     }
     const source = String(document.source || "");
+    const hasDocumentRevision = document.revision !== undefined;
+    const hasDocumentEffectiveDate = document.effective_date !== undefined;
     if (
       typeof document.title !== "string"
       || !document.title.trim()
@@ -124,6 +135,9 @@ export function validatePublicDocumentReview(
       || source.split("/").includes("..")
       || !SHA256_PATTERN.test(document.source_sha256 || "")
       || document.superseded_status !== (document.status === "restricted" ? "restricted" : "current")
+      || hasDocumentRevision !== hasDocumentEffectiveDate
+      || (hasDocumentRevision && !/^\d+\.\d+$/.test(document.revision || ""))
+      || (hasDocumentEffectiveDate && !/^\d{4}-\d{2}-\d{2}$/.test(document.effective_date || ""))
     ) {
       throw new Error(`${REVIEW_PATH}: incomplete document control for ${path}`);
     }
@@ -173,6 +187,64 @@ export function validatePublicDocumentReview(
     if (documentDistribution(document) !== "public") excludedPublicPaths.add(path);
   }
 
+  const pendingControl = review.pending_source_control || {};
+  const pendingSources = review.pending_sources;
+  if (pendingSources !== undefined) {
+    if (
+      !Array.isArray(pendingSources)
+      || !pendingSources.length
+      || !/^\d{4}-\d{2}-\d{2}$/.test(pendingControl.reviewed_on || "")
+      || !hasText(pendingControl.promotion_rule)
+    ) {
+      throw new Error(`${REVIEW_PATH}: incomplete pending-source control`);
+    }
+    const pendingPaths = new Set();
+    const pendingHashes = new Set();
+    for (const pending of pendingSources) {
+      const source = String(pending?.source || "");
+      const flags = Array.isArray(pending?.flags) ? pending.flags : [];
+      const revisionMissing = pending?.revision == null;
+      const effectiveDateMissing = pending?.effective_date == null;
+      if (
+        !/^updates\/(?!.*(?:^|\/)\.\.(?:\/|$)).+\.pdf$/i.test(source)
+        || source.includes("\\")
+        || pendingPaths.has(source)
+        || !SHA256_PATTERN.test(pending?.source_sha256 || "")
+        || pendingHashes.has(pending.source_sha256)
+        || !hasText(pending?.title)
+        || !Array.isArray(pending?.skus)
+        || !pending.skus.every((sku) => typeof sku === "string" && /^[A-Z0-9-]+$/.test(sku))
+        || !Array.isArray(pending?.product_names)
+        || !pending.product_names.length
+        || !pending.product_names.every(hasText)
+        || !/^\d{4}-\d{2}-\d{2}$/.test(pending?.source_created_on || "")
+        || (!revisionMissing && !hasText(pending.revision))
+        || (!effectiveDateMissing && !/^\d{4}-\d{2}-\d{2}$/.test(pending.effective_date))
+        || pending?.distribution !== "restricted"
+        || pending?.intake_status !== "pending_approval"
+        || !Array.isArray(pending?.supersedes_document_ids)
+        || !pending.supersedes_document_ids.every((documentId) => documentIds.has(documentId))
+        || !Array.isArray(pending?.flags)
+        || !flags.includes("claim_review_required")
+        || !flags.includes("regulatory_review_required")
+        || revisionMissing !== flags.includes("revision_missing")
+        || effectiveDateMissing !== flags.includes("effective_date_missing")
+      ) {
+        throw new Error(`${REVIEW_PATH}: invalid pending source ${source || "(empty)"}`);
+      }
+      if (sourceRoot || requireSources) {
+        if (!sourceRoot) throw new Error(`${REVIEW_PATH}: document source root is required`);
+        const sourcePath = join(sourceRoot, source);
+        if (!existsSync(sourcePath)) throw new Error(`${source}: pending source is missing`);
+        if (fileSha256(sourcePath) !== pending.source_sha256) {
+          throw new Error(`${source}: pending source changed after intake review`);
+        }
+      }
+      pendingPaths.add(source);
+      pendingHashes.add(pending.source_sha256);
+    }
+  }
+
   const onDisk = pdfPaths(root).sort();
   const reviewed = [...recorded].sort();
   if (JSON.stringify(onDisk) !== JSON.stringify(reviewed)) {
@@ -186,6 +258,71 @@ export function validatePublicDocumentReview(
     || !/^\d{4}-\d{2}-\d{2}$/.test(control.effective_date || "")
   ) {
     throw new Error(`${REVIEW_PATH}: incomplete document-control release`);
+  }
+
+  const labelRelease = review.label_release;
+  if (labelRelease !== undefined) {
+    if (
+      labelRelease.owner !== "MASEST Consulting LLC"
+      || labelRelease.approved_by_role !== "Owner"
+      || labelRelease.status !== "approved_for_public_distribution"
+      || labelRelease.marine_naming_status !== "owner_approved_marketing_names"
+      || !/^\d{4}-\d{2}-\d{2}$/.test(labelRelease.approved_on || "")
+      || !/^\d+\.\d+$/.test(labelRelease.revision || "")
+      || !/^\d{4}-\d{2}-\d{2}$/.test(labelRelease.effective_date || "")
+      || !hasText(labelRelease.trademark_scope)
+      || !hasText(labelRelease.manifest)
+      || labelRelease.manifest.startsWith("/")
+      || labelRelease.manifest.includes("\\")
+      || labelRelease.manifest.split("/").includes("..")
+    ) {
+      throw new Error(`${REVIEW_PATH}: invalid approved label release`);
+    }
+    const manifestPath = join(root, labelRelease.manifest);
+    if (!existsSync(manifestPath)) throw new Error(`${REVIEW_PATH}: approved label manifest is missing`);
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const releaseControl = manifest.release_control || {};
+    if (
+      releaseControl.owner !== labelRelease.owner
+      || releaseControl.approved_by_role !== labelRelease.approved_by_role
+      || releaseControl.approval_status !== labelRelease.status
+      || releaseControl.approved_on !== labelRelease.approved_on
+      || releaseControl.revision !== labelRelease.revision
+      || releaseControl.effective_date !== labelRelease.effective_date
+      || releaseControl.marine_naming_status !== labelRelease.marine_naming_status
+      || !hasText(releaseControl.trademark_scope)
+      || !Array.isArray(manifest.labels)
+      || manifest.labels.length === 0
+    ) {
+      throw new Error(`${REVIEW_PATH}: approved label manifest control mismatch`);
+    }
+    const releasedDocuments = review.documents.filter(
+      (document) => document.release_manifest === labelRelease.manifest,
+    );
+    if (releasedDocuments.length !== manifest.labels.length) {
+      throw new Error(`${REVIEW_PATH}: approved label release inventory mismatch`);
+    }
+    const releasedById = new Map(releasedDocuments.map((document) => [document.document_id, document]));
+    for (const label of manifest.labels) {
+      const document = releasedById.get(label.document_id);
+      if (
+        !document
+        || document.path !== label.output_path
+        || document.title !== label.title
+        || JSON.stringify(document.skus) !== JSON.stringify(label.skus)
+        || document.source !== `updates/${label.source_path}`
+        || document.source_sha256 !== label.source_sha256
+        || document.source_page !== label.source_page
+        || document.collection !== label.collection
+        || !LABEL_COLLECTIONS.has(document.collection)
+        || document.status !== "resource_only"
+        || document.flags.length !== 0
+        || documentRevision(document, control) !== labelRelease.revision
+        || documentEffectiveDate(document, control) !== labelRelease.effective_date
+      ) {
+        throw new Error(`${REVIEW_PATH}: approved label manifest mismatch for ${label.document_id}`);
+      }
+    }
   }
   const distribution = review.distribution_policy || {};
   if (
@@ -215,8 +352,8 @@ export function validatePublicDocumentReview(
     const marker = [
       "% MASEST-CONTROL",
       `ID=${document.document_id}`,
-      `REV=${control.revision}`,
-      `EFFECTIVE=${control.effective_date}`,
+      `REV=${documentRevision(document, control)}`,
+      `EFFECTIVE=${documentEffectiveDate(document, control)}`,
       "STATUS=CURRENT",
       "APPROVAL=CUSTOMER-REVIEW",
       "OWNER=MASEST-CONSULTING-LLC",

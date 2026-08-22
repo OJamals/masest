@@ -1,0 +1,279 @@
+{
+  "review_control": {
+    "owner": "MASEST content and commerce",
+    "revision": "2",
+    "effective_date": "2026-08-22",
+    "source_root_ref": "~/Desktop/masest/updates",
+    "public_rule": "Owner-approved bundle SKUs, prices, savings, and component lists may publish as current quote-order offers. Direct cart checkout remains disabled until a bundle-specific inventory and shipping model is approved and implemented.",
+    "required_commercial_fields": [
+      "fulfillment_model",
+      "bundle_sku",
+      "approved_price_minor",
+      "effective_date",
+      "inventory_reservation_rule",
+      "shipping_package_plan",
+      "discount_stacking_rule",
+      "tax_configuration",
+      "commercial_approval"
+    ]
+  },
+  "source_documents": [
+    {
+      "source_id": "MAS-UPD-BUNDLE-SRC-001",
+      "title": "VertKleen Bundle Spec Sheets",
+      "source_path": "VertKleen-Bundle-Spec-Sheets.pdf",
+      "source_sha256": "fe19f6286c856fcdebb9ea32e4acc035db9d8c12eb5fe6739534568a203915be",
+      "status": "approved_commercial_source",
+      "distribution": "restricted"
+    },
+    {
+      "source_id": "MAS-UPD-BUNDLE-SRC-002",
+      "title": "VertKleen Bundle Squares",
+      "source_path": "VertKleen-Bundle-Squares.pdf",
+      "source_sha256": "7980e7c93a54b301baa7352261dccb5081f361c1fb6dd25759269fdfda1e4966",
+      "status": "approved_commercial_source",
+      "distribution": "restricted"
+    },
+    {
+      "source_id": "MAS-UPD-BUNDLE-SRC-003",
+      "title": "VertKleen Home and Property Brochure",
+      "source_path": "VertKleen-Home-Property-Brochure.pdf",
+      "source_sha256": "ef30363fc0680e696386ad0747df53229ab6d457983fb163bb7d67c9b7b37cfc",
+      "status": "approved_commercial_source",
+      "distribution": "restricted"
+    },
+    {
+      "source_id": "MAS-UPD-BUNDLE-SRC-004",
+      "title": "VertKleen Website Pricing and SKU List",
+      "source_path": "VertKleen_Website_Pricing_WebDev.xlsx",
+      "source_sha256": "5af05df29fe8df8dac2e7002e597e031c916d0bc378f6c26998ab002206bc5c9",
+      "status": "approved_commercial_source",
+      "distribution": "restricted"
+    }
+  ],
+  "bundle_concepts": [
+    {
+      "concept_id": "MAS-UPD-BUNDLE-001",
+      "slug": "kitchen-interior",
+      "name": "Kitchen & Interior",
+      "public_summary": "Plan grease, odor, general surface, and finish-sensitive cleaning across kitchens and interiors.",
+      "public_status": "published_bundle_offer",
+      "commerce_status": "active_quote_offer",
+      "checkout_mode": "quote_required",
+      "source_price_status": "owner_approved_current_price",
+      "source_currency": "USD",
+      "source_bundle_price_minor": 5400,
+      "source_separate_price_minor": 6302,
+      "source_stated_savings_minor": 902,
+      "bundle_sku": "VK-BND-KITCHEN-4X1G",
+      "component_variant_skus": ["VK-CRHD-1G", "VK-PRG-1G", "VK-MW-1G", "VK-NEUT-1G"],
+      "approved_price_minor": 5400,
+      "effective_date": "2026-08-22",
+      "fulfillment_model": "Staff-quoted four-component kit.",
+      "inventory_reservation_rule": "Component variant SKUs and quantities are locked into the approved quote before payment.",
+      "shipping_package_plan": "Four one-gallon jugs; shipping service and carton plan are confirmed from component package profiles in the quote.",
+      "discount_stacking_rule": "Approved bundle price does not stack with promotion codes unless the accepted quote explicitly allows it.",
+      "tax_configuration": "Taxable physical goods; approved account exemptions apply through quote checkout.",
+      "commercial_approval": {
+        "status": "owner_approved",
+        "approved_by_role": "Owner",
+        "approved_on": "2026-08-22"
+      },
+      "source_document_ids": [
+        "MAS-UPD-BUNDLE-SRC-001",
+        "MAS-UPD-BUNDLE-SRC-002",
+        "MAS-UPD-BUNDLE-SRC-003",
+        "MAS-UPD-BUNDLE-SRC-004"
+      ],
+      "source_components": [
+        { "source_name": "CRHD", "catalog_slug": "cr-hd", "mapping_status": "exact_catalog_product", "variant_sku": "VK-CRHD-1G", "source_unit_price_minor": 1061 },
+        { "source_name": "Purgo", "catalog_slug": "purgo", "mapping_status": "exact_catalog_product", "variant_sku": "VK-PRG-1G", "source_unit_price_minor": 2149 },
+        { "source_name": "MultiWash", "catalog_slug": "multiwash", "mapping_status": "exact_catalog_product", "variant_sku": "VK-MW-1G", "source_unit_price_minor": 1469 },
+        { "source_name": "Neutral", "catalog_slug": "neutral", "mapping_status": "exact_catalog_product", "variant_sku": "VK-NEUT-1G", "source_unit_price_minor": 1623 }
+      ],
+      "missing": []
+    },
+    {
+      "concept_id": "MAS-UPD-BUNDLE-002",
+      "slug": "bathroom-care",
+      "name": "Bathroom Care",
+      "public_summary": "Plan mineral scale, everyday grime, outdoor stains, and odors across bathroom areas.",
+      "public_status": "published_bundle_offer",
+      "commerce_status": "active_quote_offer",
+      "checkout_mode": "quote_required",
+      "source_price_status": "owner_approved_current_price",
+      "source_currency": "USD",
+      "source_bundle_price_minor": 6800,
+      "source_separate_price_minor": 8002,
+      "source_stated_savings_minor": 1202,
+      "bundle_sku": "VK-BND-BATHROOM-4X1G",
+      "component_variant_skus": ["VK-HCR-1G", "VK-MW-1G", "VK-LAM3-1G", "VK-PRG-1G"],
+      "approved_price_minor": 6800,
+      "effective_date": "2026-08-22",
+      "fulfillment_model": "Staff-quoted four-component kit.",
+      "inventory_reservation_rule": "Component variant SKUs and quantities are locked into the approved quote before payment.",
+      "shipping_package_plan": "Four one-gallon jugs; shipping service and carton plan are confirmed from component package profiles in the quote.",
+      "discount_stacking_rule": "Approved bundle price does not stack with promotion codes unless the accepted quote explicitly allows it.",
+      "tax_configuration": "Taxable physical goods; approved account exemptions apply through quote checkout.",
+      "commercial_approval": {
+        "status": "owner_approved",
+        "approved_by_role": "Owner",
+        "approved_on": "2026-08-22"
+      },
+      "source_document_ids": [
+        "MAS-UPD-BUNDLE-SRC-001",
+        "MAS-UPD-BUNDLE-SRC-002",
+        "MAS-UPD-BUNDLE-SRC-003",
+        "MAS-UPD-BUNDLE-SRC-004"
+      ],
+      "source_components": [
+        {
+          "source_name": "HCR",
+          "catalog_slug": "hcr",
+          "mapping_status": "exact_catalog_product",
+          "variant_sku": "VK-HCR-1G",
+          "source_unit_price_minor": 2163
+        },
+        { "source_name": "MultiWash", "catalog_slug": "multiwash", "mapping_status": "exact_catalog_product", "variant_sku": "VK-MW-1G", "source_unit_price_minor": 1469 },
+        { "source_name": "Lam3", "catalog_slug": "lam3", "mapping_status": "exact_catalog_product", "variant_sku": "VK-LAM3-1G", "source_unit_price_minor": 2221 },
+        { "source_name": "Purgo", "catalog_slug": "purgo", "mapping_status": "exact_catalog_product", "variant_sku": "VK-PRG-1G", "source_unit_price_minor": 2149 }
+      ],
+      "missing": []
+    },
+    {
+      "concept_id": "MAS-UPD-BUNDLE-003",
+      "slug": "exterior-curb-appeal",
+      "name": "Exterior & Curb Appeal",
+      "public_summary": "Plan roof, hardscape, siding, and patio stains, aluminum oxidation, and mineral buildup.",
+      "public_status": "published_bundle_offer",
+      "commerce_status": "active_quote_offer",
+      "checkout_mode": "quote_required",
+      "source_price_status": "owner_approved_current_price",
+      "source_currency": "USD",
+      "source_bundle_price_minor": 6000,
+      "source_separate_price_minor": 7058,
+      "source_stated_savings_minor": 1058,
+      "bundle_sku": "VK-BND-EXTERIOR-4X1G",
+      "component_variant_skus": ["VK-LAM3-1G", "VK-MW-1G", "VK-ALB-1G", "VK-HCR-1G"],
+      "approved_price_minor": 6000,
+      "effective_date": "2026-08-22",
+      "fulfillment_model": "Staff-quoted four-component kit.",
+      "inventory_reservation_rule": "Component variant SKUs and quantities are locked into the approved quote before payment.",
+      "shipping_package_plan": "Four one-gallon jugs; shipping service and carton plan are confirmed from component package profiles in the quote.",
+      "discount_stacking_rule": "Approved bundle price does not stack with promotion codes unless the accepted quote explicitly allows it.",
+      "tax_configuration": "Taxable physical goods; approved account exemptions apply through quote checkout.",
+      "commercial_approval": {
+        "status": "owner_approved",
+        "approved_by_role": "Owner",
+        "approved_on": "2026-08-22"
+      },
+      "source_document_ids": [
+        "MAS-UPD-BUNDLE-SRC-001",
+        "MAS-UPD-BUNDLE-SRC-002",
+        "MAS-UPD-BUNDLE-SRC-003",
+        "MAS-UPD-BUNDLE-SRC-004"
+      ],
+      "source_components": [
+        { "source_name": "Lam3", "catalog_slug": "lam3", "mapping_status": "exact_catalog_product", "variant_sku": "VK-LAM3-1G", "source_unit_price_minor": 2221 },
+        { "source_name": "MultiWash", "catalog_slug": "multiwash", "mapping_status": "exact_catalog_product", "variant_sku": "VK-MW-1G", "source_unit_price_minor": 1469 },
+        { "source_name": "AlumiBrite", "catalog_slug": "alumibrite", "mapping_status": "exact_catalog_product", "variant_sku": "VK-ALB-1G", "source_unit_price_minor": 1205 },
+        {
+          "source_name": "HCR",
+          "catalog_slug": "hcr",
+          "mapping_status": "exact_catalog_product",
+          "variant_sku": "VK-HCR-1G",
+          "source_unit_price_minor": 2163
+        }
+      ],
+      "missing": []
+    },
+    {
+      "concept_id": "MAS-UPD-BUNDLE-004",
+      "slug": "hvac-plumbing",
+      "name": "HVAC & Plumbing",
+      "public_summary": "Plan mineral deposits, drain-line organic buildup, equipment surfaces, and odor context across HVAC and plumbing maintenance.",
+      "public_status": "published_bundle_offer",
+      "commerce_status": "active_quote_offer",
+      "checkout_mode": "quote_required",
+      "source_price_status": "owner_approved_current_price",
+      "source_currency": "USD",
+      "source_bundle_price_minor": 6500,
+      "source_separate_price_minor": 7614,
+      "source_stated_savings_minor": 1114,
+      "bundle_sku": "VK-BND-HVAC-4X1G",
+      "component_variant_skus": ["VK-HCR-T16-1G", "VK-CR2-1G", "VK-MW-1G", "VK-PRG-1G"],
+      "approved_price_minor": 6500,
+      "effective_date": "2026-08-22",
+      "fulfillment_model": "Staff-quoted four-component kit.",
+      "inventory_reservation_rule": "Component variant SKUs and quantities are locked into the approved quote before payment.",
+      "shipping_package_plan": "Four one-gallon jugs; shipping service and carton plan are confirmed from component package profiles in the quote.",
+      "discount_stacking_rule": "Approved bundle price does not stack with promotion codes unless the accepted quote explicitly allows it.",
+      "tax_configuration": "Taxable physical goods; approved account exemptions apply through quote checkout.",
+      "commercial_approval": {
+        "status": "owner_approved",
+        "approved_by_role": "Owner",
+        "approved_on": "2026-08-22"
+      },
+      "source_document_ids": [
+        "MAS-UPD-BUNDLE-SRC-001",
+        "MAS-UPD-BUNDLE-SRC-002",
+        "MAS-UPD-BUNDLE-SRC-003",
+        "MAS-UPD-BUNDLE-SRC-004"
+      ],
+      "source_components": [
+        { "source_name": "HVAC HCR", "catalog_slug": "hcr-t16", "mapping_status": "exact_catalog_product", "variant_sku": "VK-HCR-T16-1G", "source_unit_price_minor": 2171 },
+        { "source_name": "HVAC CR", "catalog_slug": "cr2", "mapping_status": "exact_catalog_product", "variant_sku": "VK-CR2-1G", "source_unit_price_minor": 1825 },
+        { "source_name": "MultiWash", "catalog_slug": "multiwash", "mapping_status": "exact_catalog_product", "variant_sku": "VK-MW-1G", "source_unit_price_minor": 1469 },
+        { "source_name": "Purgo", "catalog_slug": "purgo", "mapping_status": "exact_catalog_product", "variant_sku": "VK-PRG-1G", "source_unit_price_minor": 2149 }
+      ],
+      "missing": []
+    },
+    {
+      "concept_id": "MAS-UPD-BUNDLE-005",
+      "slug": "garage-auto",
+      "name": "Garage & Auto",
+      "public_summary": "Plan concrete oil, vehicle washing, aluminum oxidation, and general shop cleaning.",
+      "public_status": "published_bundle_offer",
+      "commerce_status": "active_quote_offer",
+      "checkout_mode": "quote_required",
+      "source_price_status": "owner_approved_current_price",
+      "source_currency": "USD",
+      "source_bundle_price_minor": 4800,
+      "source_separate_price_minor": 5641,
+      "source_stated_savings_minor": 841,
+      "bundle_sku": "VK-BND-GARAGE-4X1G",
+      "component_variant_skus": ["VK-CR-1G", "VK-TRQ-1G", "VK-ALB-1G", "VK-MW-1G"],
+      "approved_price_minor": 4800,
+      "effective_date": "2026-08-22",
+      "fulfillment_model": "Staff-quoted four-component kit.",
+      "inventory_reservation_rule": "Component variant SKUs and quantities are locked into the approved quote before payment.",
+      "shipping_package_plan": "Four one-gallon jugs; shipping service and carton plan are confirmed from component package profiles in the quote.",
+      "discount_stacking_rule": "Approved bundle price does not stack with promotion codes unless the accepted quote explicitly allows it.",
+      "tax_configuration": "Taxable physical goods; approved account exemptions apply through quote checkout.",
+      "commercial_approval": {
+        "status": "owner_approved",
+        "approved_by_role": "Owner",
+        "approved_on": "2026-08-22"
+      },
+      "source_document_ids": [
+        "MAS-UPD-BUNDLE-SRC-001",
+        "MAS-UPD-BUNDLE-SRC-002",
+        "MAS-UPD-BUNDLE-SRC-003",
+        "MAS-UPD-BUNDLE-SRC-004"
+      ],
+      "source_components": [
+        {
+          "source_name": "CR",
+          "catalog_slug": "cr",
+          "mapping_status": "exact_catalog_product",
+          "variant_sku": "VK-CR-1G",
+          "source_unit_price_minor": 1927
+        },
+        { "source_name": "Torque", "catalog_slug": "torque", "mapping_status": "exact_catalog_product", "variant_sku": "VK-TRQ-1G", "source_unit_price_minor": 1040 },
+        { "source_name": "AlumiBrite", "catalog_slug": "alumibrite", "mapping_status": "exact_catalog_product", "variant_sku": "VK-ALB-1G", "source_unit_price_minor": 1205 },
+        { "source_name": "MultiWash", "catalog_slug": "multiwash", "mapping_status": "exact_catalog_product", "variant_sku": "VK-MW-1G", "source_unit_price_minor": 1469 }
+      ],
+      "missing": []
+    }
+  ]
+}

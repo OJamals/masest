@@ -80,15 +80,15 @@ test('quote task economics and operating boundaries are normalized, persisted, a
   assert.equal(emails.length, 2);
   const internalHtml = emails[0].html;
   for (const label of [
-    'Current chemical',
-    'Current dilution',
-    'Labor per completed task',
-    'Water per completed task',
-    'Downtime per completed task',
-    'Disposal per completed task',
-    'Asset life context',
-    'Wastewater route',
-    'Reopening / return-to-service criteria',
+    'Cleaner used now',
+    'Current mix',
+    'People and time',
+    'Water used',
+    'Time out of service',
+    'Cleanup and wash water',
+    'Maintenance schedule',
+    'Wash water',
+    'Ready-to-use check',
   ]) {
     assert.match(internalHtml, new RegExp(label));
   }

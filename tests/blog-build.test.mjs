@@ -7,6 +7,7 @@ import { CONTENT_TYPE_DEFINITIONS, snapshotGroups, structuredPayloadKeys } from 
 import { snapshotPayloads } from "../tools/build-content.mjs";
 import { buildBlog } from "../tools/build-blog.mjs";
 import { escapeHtml } from "../tools/_md.mjs";
+import { organizationJsonLd } from "../tools/company-identity.mjs";
 
 const SEED = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
 const P3_AUTHORITY_POSTS = [
@@ -80,7 +81,7 @@ const SEO_INTENT_POSTS = [
     links: [
       "/products/alumibrite",
       "/products/torque",
-      "/industries/marine-marinas-boatyards",
+      "/industries/marine",
       "/proof#airboat-alumibrite",
     ],
   },
@@ -283,7 +284,7 @@ test("P3 authority posts connect products to practical outcomes in plain languag
       const post = SEED.blog_posts.find(({ slug }) => slug === expected.slug);
       assert.ok(post, `${expected.slug} must exist in the Blog CMS snapshot`);
       assert.equal(post.category, "technical");
-      assert.equal(post.author, "MASEST Technical Team");
+      assert.equal(post.author, "MASEST Team");
       assert.ok(post.tags.includes("operations"));
       assert.ok(post.body.includes(expected.outcome), `${expected.slug} must name ${expected.outcome}`);
       for (const link of expected.links) {
@@ -315,7 +316,11 @@ test("SEO intent posts connect buyer searches to products, proof, and trial CTAs
       assert.equal(post.hero, expected.hero);
       assert.ok(post.body.includes(expected.diagram));
       assert.ok(post.body.includes(expected.product));
-      assert.match(post.body, /HMIS 0-0-0/);
+      assert.match(post.body, /HMIS|SDS|label|product record/i);
+      assert.doesNotMatch(
+        post.body,
+        /every\s+(?:current\s+)?VertKleen product[^.!?]{0,100}HMIS\s+0-0-0/i,
+      );
       assert.match(post.body, /\[Plan my .+\]\(\/contact\?type=audit/);
       for (const link of expected.links) {
         assert.ok(
@@ -350,7 +355,11 @@ test("published blog prose stays human, concise, and free of legal-style disclai
 
   for (const post of SEED.blog_posts) {
     const prose = `${post.title}\n${post.excerpt}\n${post.body}`;
-    assert.match(prose, /HMIS 0-0-0/, `${post.slug} should keep the shared product-line advantage visible`);
+    assert.doesNotMatch(
+      prose,
+      /every\s+(?:current\s+)?VertKleen product[^.!?]{0,100}HMIS\s+0-0-0/i,
+      `${post.slug} should keep product claims bounded to the exact record`,
+    );
     for (const pattern of banned) {
       assert.doesNotMatch(prose, pattern, `${post.slug} should avoid ${pattern}`);
     }
@@ -436,12 +445,7 @@ test("buildBlog writes an index listing every post with filter data", () => {
     assert.match(idx, /data-blog-filter/);
     assert.match(idx, /data-cms-page="blog"/);
     assert.match(idx, /canonical" href="https:\/\/masest\.co\/blog"/);
-    assert.match(idx, /"brand":"VertKleen"/);
-    assert.match(
-      idx,
-      /"description":"VertKleen pairs industrial cleaning performance with HMIS 0-0-0 across every current product MASEST offers\."/,
-    );
-    assert.match(idx, /"contactPoint":\{"@type":"ContactPoint","contactType":"sales","url":"https:\/\/masest\.co\/contact"\}/);
+    assert.ok(idx.includes(JSON.stringify(organizationJsonLd())));
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
@@ -629,13 +633,13 @@ test("Walmart CR HD case leads with the customer story and renders its decision 
   assert.ok(post, "Walmart CR HD case must exist in the Blog CMS snapshot");
   assert.ok(comparison, "CR HD comparison must exist in the Blog CMS snapshot");
   assert.equal(post.category, "technical");
-  assert.equal(post.author, "MASEST Technical Team");
+  assert.equal(post.author, "MASEST Team");
   assert.ok(post.tags.includes("warehouse"));
   assert.ok(post.tags.includes("cr-hd"));
   for (const site of ["DC-8851", "DC-7023", "DC-6099"]) assert.ok(post.body.includes(site));
   assert.match(post.body, /Simple Green replacement/);
-  assert.match(post.body, /50% degreaser versus 15% active for Simple Green/);
-  assert.match(post.body, /Crown Forklift and Plug Power equipment approval/);
+  assert.match(post.body, /50% degreaser, compared with 15% active for Simple Green/);
+  assert.match(post.body, /Used on Crown Forklift and Plug Power equipment/);
   assert.match(post.body, /Heavy-duty performance, HMIS 0-0-0/);
   assert.doesNotMatch(post.body, /\$10,000|Descaler plumbing|savings claim/i);
   assert.doesNotMatch(post.body, /generated, unbranded warehouse trial illustration/i);

@@ -27,8 +27,8 @@ const CATEGORY_COPY = {
   "Testing - Materials": {
     icon: "ph-magnifying-glass",
     title: "Materials testing",
-    note: "Corrosion coupon, pipe, deposit, single-element, and abbreviated material analysis.",
-    description: "Learn what a deposit, pipe, or corrosion sample can tell you about the equipment problem.",
+    note: "Corrosion samples, pipe sections, buildup, and material checks.",
+    description: "Learn what buildup, pipe, or a corrosion sample says about the equipment problem.",
     representative_image: "/img/representative/applications/deposit-analysis-service-v1.webp",
     cta: "Request materials analysis"
   },
@@ -37,12 +37,12 @@ const CATEGORY_COPY = {
     title: "Consulting",
     note: "Equipment inspections, ultrasonic and borescope testing, sprinkler testing, and particle work.",
     description: "Get experienced eyes, useful measurements, and a clear path forward for an equipment problem.",
-    cta: "Request technical review"
+    cta: "Ask an expert"
   },
   "Bid Support": {
     icon: "ph-file-text",
     title: "Bid support",
-    note: "Specification creation, spec review, and buyer-side bid interview support.",
+    note: "Specification writing, review, and help during vendor interviews.",
     description: "Write a stronger bid, ask sharper questions, and compare vendors on what matters to your operation.",
     representative_image: "/img/representative/applications/bid-wmp-review-desk-v1.webp",
     cta: "Request bid support"
@@ -51,7 +51,7 @@ const CATEGORY_COPY = {
     icon: "ph-hard-hat",
     title: "Field services",
     note: "On-site sample collection and standard sampling visits.",
-    description: "Have MASEST collect and route samples so your testing starts with reliable field work.",
+    description: "Have MASEST collect and deliver samples so your test starts with reliable field work.",
     cta: "Request site sampling"
   },
   "Water Management Plan": {
@@ -146,12 +146,12 @@ function serviceSort(a, b) {
 
 function countLabel(count, category = "") {
   if (category === "Service Packages") return `${count} ${count === 1 ? "package" : "packages"}`;
-  return `${count} ${count === 1 ? "line item" : "line items"}`;
+  return `${count} ${count === 1 ? "service" : "services"}`;
 }
 
 function renderLifecycle(items) {
   if (!items.length) return "";
-  return `<br><span class="service-lifecycle" aria-label="Water Management Plan lifecycle">${items
+  return `<br><span class="service-lifecycle" aria-label="Water plan steps">${items
     .map((item, index) => (
       `<b title="${htmlEscape(displayServiceName(item.name))}">${htmlEscape(item.lifecycle_stage)}</b>${index < items.length - 1 ? ' <span aria-hidden="true">→</span> ' : ""}`
     ))
@@ -433,4 +433,4 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { loadPricingData } from "./pricing-data.js?v=20260821a";
+import { loadPricingData } from "./pricing-data.js?v=20260822a";

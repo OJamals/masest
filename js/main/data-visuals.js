@@ -58,11 +58,11 @@ function renderProofCoverage(root, cards) {
 
   root.innerHTML = `
     <div class="viz-copy">
-      <span class="eyebrow">Proof coverage</span>
-      <h3>Evidence spans ${total} published proof records across ${entries.length} sectors.</h3>
-      <p data-proof-coverage-note>${activeProofKind() === "all" ? "Showing the full proof record." : `Filtered to ${PROOF_LABELS[activeProofKind()]}.`}</p>
+      <span class="eyebrow">Real results</span>
+      <h3>See ${total} results across ${entries.length} industries.</h3>
+      <p data-proof-coverage-note>${activeProofKind() === "all" ? "Showing all results." : `Showing ${PROOF_LABELS[activeProofKind()]}.`}</p>
     </div>
-    <div class="viz-stack" role="group" aria-label="Filter proof records by sector">
+    <div class="viz-stack" role="group" aria-label="Filter results by industry">
       ${entries.map(([kind], index) => `
         <button
           class="viz-segment viz-tone-${index + 1}"
@@ -70,7 +70,7 @@ function renderProofCoverage(root, cards) {
           style="--share:${percent(counts[kind], total)}"
           data-proof-viz-filter="${htmlEscape(kind)}"
           aria-pressed="${kind === activeProofKind() ? "true" : "false"}"
-          aria-label="${htmlEscape(PROOF_LABELS[kind])}: ${counts[kind]} proof records"
+          aria-label="${htmlEscape(PROOF_LABELS[kind])}: ${counts[kind]} results"
         >
           <b>${counts[kind]}</b>
           <span>${htmlEscape(PROOF_LABELS[kind])}</span>
@@ -82,8 +82,8 @@ function renderProofCoverage(root, cards) {
   const sync = () => {
     const kind = activeProofKind();
     root.querySelector("[data-proof-coverage-note]").textContent = kind === "all"
-      ? "Showing the full proof record."
-      : `Filtered to ${PROOF_LABELS[kind] || kind}.`;
+      ? "Showing all results."
+      : `Showing ${PROOF_LABELS[kind] || kind}.`;
     root.querySelectorAll("[data-proof-viz-filter]").forEach((item) => {
       const selected = kind !== "all" && item.dataset.proofVizFilter === kind;
       item.classList.toggle("active", selected);
@@ -119,16 +119,16 @@ function renderServiceMix(root, catalog) {
   root.innerHTML = `
     <div class="viz-copy">
       <span class="eyebrow">Service mix</span>
-      <h3>${largest || "Service categories"} carry the broadest quote coverage.</h3>
-      <p>${total} catalog entries, including services and packages, grouped by buyer task.</p>
+      <h3>${largest || "Service categories"} make up most of our service work.</h3>
+      <p>${total} services and packages, grouped by what you need.</p>
     </div>
-    <div class="viz-stack service-mix-stack" role="list" aria-label="Service catalog entries by category">
+    <div class="viz-stack service-mix-stack" role="list" aria-label="Services by category">
       ${entries.map(([category, count], index) => `
         <span
           class="viz-segment viz-tone-${(index % 6) + 1}"
           role="listitem"
           style="--share:${percent(count, total)}"
-          aria-label="${htmlEscape(SERVICE_LABELS[category] || category)}: ${count} catalog entries"
+          aria-label="${htmlEscape(SERVICE_LABELS[category] || category)}: ${count} services"
         >
           <b>${count}</b>
           <span>${htmlEscape(SERVICE_LABELS[category] || category)}</span>
@@ -154,7 +154,7 @@ export function initDataVisualizations() {
       })
       .then((catalog) => renderServiceMix(serviceRoot, catalog))
       .catch(() => {
-        serviceRoot.innerHTML = `<p class="viz-fallback">Service mix loads from the same catalog as the pricing table. Browse the catalog below for the current scoped line items.</p>`;
+        serviceRoot.innerHTML = `<p class="viz-fallback">Browse every service and package below.</p>`;
       });
   }
 }

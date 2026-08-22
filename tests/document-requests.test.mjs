@@ -255,7 +255,8 @@ test("request workflow is mounted in Accounts and uses the shared authenticated 
   assert.match(chrome, /mode:\s*"register"/);
   assert.match(account, /params\.get\("mode"\).+"register"/);
   assert.match(product, /data-document-request/);
-  assert.match(product, /Register to request/);
+  assert.match(product, /Request file/);
+  assert.match(chrome, /Sign in to request/);
 
   assert.match(schema, /create table if not exists public\.technical_documents/);
   assert.match(schema, /create table if not exists public\.technical_document_requests/);

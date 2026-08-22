@@ -1,939 +1,1743 @@
 {
   "discovery": {
     "roles": [
-      {"id": "facility-operations", "label": "Facility / operations", "detail": "Equipment, downtime, labor, and getting back to work.", "result_detail": "Start with the equipment, available cleaning time, current method, and finished result.", "cta_type": "audit", "cta_label": "Plan the first test"},
-      {"id": "ehs-compliance", "label": "EHS / compliance", "detail": "Crew handling, rinse, wash water, and a cleaner workday.", "result_detail": "Start with crew experience, water use, cleanup, and how wash water is handled today.", "cta_type": "audit", "cta_label": "Compare crew handling"},
-      {"id": "procurement", "label": "Procurement", "detail": "Product, pack size, supply, full-job cost, and quote.", "result_detail": "Start with the product, volume, delivery location, job cost, and buying deadline.", "cta_type": "quote", "cta_label": "Price the product"},
-      {"id": "service-contractors", "label": "Service contractors", "detail": "Job fit, repeatable cleaning steps, and client results.", "result_detail": "Start with a repeatable method, clear finished result, wash water, and client handoff.", "cta_type": "audit", "cta_label": "Build service plan"}
+      {
+        "id": "facility-operations",
+        "label": "Facility / operations",
+        "detail": "Equipment, downtime, labor, and getting back to work.",
+        "result_detail": "Start with the equipment, available cleaning time, current method, and finished result.",
+        "cta_type": "audit",
+        "cta_label": "Plan the first test"
+      },
+      {
+        "id": "ehs-compliance",
+        "label": "Safety & handling",
+        "detail": "Crew handling, rinse, wash water, and a cleaner workday.",
+        "result_detail": "Start with crew experience, water use, cleanup, and how wash water is handled today.",
+        "cta_type": "audit",
+        "cta_label": "Compare crew handling"
+      },
+      {
+        "id": "procurement",
+        "label": "Purchasing",
+        "detail": "Product, pack size, supply, full-job cost, and quote.",
+        "result_detail": "Start with the product, volume, delivery location, job cost, and buying deadline.",
+        "cta_type": "quote",
+        "cta_label": "Price the product"
+      },
+      {
+        "id": "service-contractors",
+        "label": "Service contractors",
+        "detail": "Job fit, repeatable cleaning steps, and client results.",
+        "result_detail": "Start with a repeatable method, clear finished result, wash water, and client handoff.",
+        "cta_type": "audit",
+        "cta_label": "Build service plan"
+      }
     ],
     "jobs": [
-      {"id": "degrease", "label": "Degrease", "detail": "Oil, grease, carbon film, and industrial grime.", "result_detail": "Match the grease, surface, tools, cleanup, and finished result.", "cta_type": "audit", "cta_label": "Plan a degreasing test"},
-      {"id": "descale", "label": "Descale", "detail": "Mineral scale, rust, and water-side deposits.", "result_detail": "Match the mineral buildup and equipment material to circulation, rinse, and restart.", "cta_type": "audit", "cta_label": "Plan a descaling test"},
-      {"id": "cip", "label": "CIP", "detail": "Process circuits, tanks, lines, and exchangers.", "result_detail": "Match the circuit, buildup, equipment material, flow, cycle time, rinse, and finished result.", "cta_type": "audit", "cta_label": "Plan a CIP test"},
-      {"id": "cooling-water", "label": "Cooling water", "detail": "Towers, loops, exchangers, treatment, and restart.", "result_detail": "Match the water system, buildup, treatment plan, service schedule, and restart.", "cta_type": "audit", "cta_label": "Plan my water program"},
-      {"id": "fleet-wash", "label": "Fleet wash", "detail": "Vehicles, equipment, finishes, wash water, and speed.", "result_detail": "Match road film and grease to the finish, wash setup, vehicles per day, and dry result.", "cta_type": "quote", "cta_label": "Price my fleet wash"},
-      {"id": "exterior-bio-soil", "label": "Exterior / bio-soil", "detail": "Facades, hardscape, roofs, algae, moss, and outdoor stains.", "result_detail": "Match the surface and buildup to access, nearby landscaping, wash water, and finished appearance.", "cta_type": "audit", "cta_label": "Plan an exterior test"}
+      {
+        "id": "degrease",
+        "label": "Degrease",
+        "detail": "Oil, grease, carbon film, and industrial grime.",
+        "result_detail": "Match the grease, surface, tools, cleanup, and finished result.",
+        "cta_type": "audit",
+        "cta_label": "Plan a degreasing test"
+      },
+      {
+        "id": "descale",
+        "label": "Descale",
+        "detail": "Mineral scale, rust, and water-side buildups.",
+        "result_detail": "Match the mineral buildup and equipment material to circulation, rinse, and restart.",
+        "cta_type": "audit",
+        "cta_label": "Plan a descaling test"
+      },
+      {
+        "id": "cip",
+        "label": "CIP",
+        "detail": "Process circuits, tanks, lines, and exchangers.",
+        "result_detail": "Match the circuit, buildup, equipment material, flow, cycle time, rinse, and finished result.",
+        "cta_type": "audit",
+        "cta_label": "Plan a CIP test"
+      },
+      {
+        "id": "cooling-water",
+        "label": "Cooling water",
+        "detail": "Towers, loops, exchangers, treatment, and restart.",
+        "result_detail": "Match the water system, buildup, treatment plan, service schedule, and restart.",
+        "cta_type": "audit",
+        "cta_label": "Plan my water program"
+      },
+      {
+        "id": "fleet-wash",
+        "label": "Fleet wash",
+        "detail": "Vehicles, equipment, finishes, wash water, and speed.",
+        "result_detail": "Match road film and grease to the finish, wash setup, vehicles per day, and dry result.",
+        "cta_type": "quote",
+        "cta_label": "Price my fleet wash"
+      },
+      {
+        "id": "exterior-bio-grime",
+        "label": "Outdoor stains & growth",
+        "detail": "Facades, hardscape, roofs, algae, moss, and outdoor stains.",
+        "result_detail": "Match the surface and buildup to access, nearby landscaping, wash water, and finished appearance.",
+        "cta_type": "audit",
+        "cta_label": "Plan an exterior test"
+      }
     ]
   },
   "industries": [
-  {
-    "slug": "aviation-fbos-mro-airports",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Aviation - FBOs, MRO, Airports",
-    "kind": "supplemental",
-    "icon": "ph-airplane-tilt",
-    "headline": "Precision cleaning around high-value aviation assets.",
+    {
+      "slug": "aviation-fbos-mro-airports",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Aviation - FBOs, MRO, Airports",
+      "kind": "supplemental",
+      "icon": "ph-airplane-tilt",
+      "headline": "Clean aviation equipment without being rough on the finish.",
       "marketing": "CR HD cuts through hydraulic oil and carbon, Neutral cleans sensitive finishes, and AlumiBrite brings dull aluminum back to life.",
-    "operating_outcome": "One focused product set helps crews protect finishes and turn equipment around faster.",
-    "cta_label": "Request a material-stack review",
-    "cta_type": "technical",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd", "neutral"],
-      "fleet-wash": ["crhd", "neutral", "alumibrite"]
+      "operating_outcome": "One focused product set helps crews protect finishes and turn equipment around faster.",
+      "cta_label": "Find the right aviation cleaner",
+      "cta_type": "technical",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd",
+          "neutral"
+        ],
+        "fleet-wash": [
+          "crhd",
+          "neutral",
+          "alumibrite"
+        ]
+      },
+      "parent": "manufacturing",
+      "buyer": "FBO, MRO, airport-facility, and aviation ground-support maintenance teams",
+      "distinct_scope": "Aircraft-adjacent and ground-support cleaning under OEM, airworthiness, ramp, FOD, and wastewater controls - not general plant degreasing.",
+      "search_intent": "Aviation GSE degreasing, MRO floor cleaning, and aircraft-compatible maintenance chemistry",
+      "lead_task": "Wash oil, grease, and exhaust grime from ground equipment and approved aircraft-area parts.",
+      "asset": "Ground-support equipment, shop floors, wheel-well tooling, engine stands, and approved aluminum or coated parts",
+      "soil": "Hydraulic oil, lubricating grease, carbon film, rubber transfer, and ramp grime",
+      "method": "Pre-rinse gently, apply the right degreaser, brush where needed, and rinse clean",
+      "products": [
+        "crhd",
+        "neutral",
+        "alumibrite"
+      ],
+      "document_products": [
+        "crhd",
+        "neutral"
+      ],
+      "concentration": "Use only the current CR HD or Neutral label/TDS range; begin at the weakest effective dilution after an aluminum, coating, and elastomer coupon test.",
+      "process": "Record solution temperature, wet soak, brush or parts-washer scrubbing, rinse-water quality, and dry time; never let chemistry dry on the surface.",
+      "boundary": "Use the crew member's maintenance manual, material approvals, lockout, FOD controls, and wash-water capture. No application to flight-critical parts without written engineering approval.",
+      "verification": "Dry visual inspection under task lighting, white-wipe or water-break check where approved, and corrosion/coating inspection before return to service.",
+      "materials": "Aluminum alloy, stainless steel, painted steel, composites, sealants, and elastomers",
+      "wastewater": "Capture ramp and shop wash water; route oil-bearing waste through the airport's approved separator and discharge program."
     },
-    "parent": "manufacturing",
-    "buyer": "FBO, MRO, airport-facility, and aviation ground-support maintenance teams",
-    "distinct_scope": "Aircraft-adjacent and ground-support cleaning under OEM, airworthiness, ramp, FOD, and wastewater controls - not general plant degreasing.",
-    "search_intent": "Aviation GSE degreasing, MRO floor cleaning, and aircraft-compatible maintenance chemistry",
-    "lead_task": "Wash oil, grease, and exhaust grime from ground equipment and approved aircraft-area parts.",
-    "asset": "Ground-support equipment, shop floors, wheel-well tooling, engine stands, and approved aluminum or coated parts",
-    "soil": "Hydraulic oil, lubricating grease, carbon film, rubber transfer, and ramp grime",
-    "method": "Pre-rinse gently, apply the right degreaser, brush where needed, and rinse clean",
-    "products": ["crhd", "neutral", "alumibrite"],
-    "document_products": ["crhd", "neutral"],
-    "concentration": "Use only the current CR HD or Neutral label/TDS range; begin at the weakest effective dilution after an aluminum, coating, and elastomer coupon test.",
-    "process": "Record solution temperature, wet dwell, brush or parts-washer agitation, rinse-water quality, and dry time; never let chemistry dry on the surface.",
-    "boundary": "Use the operator's maintenance manual, material approvals, lockout, FOD controls, and wash-water capture. No application to flight-critical parts without written engineering approval.",
-    "verification": "Dry visual inspection under task lighting, white-wipe or water-break check where approved, and corrosion/coating inspection before return to service.",
-    "materials": "Aluminum alloy, stainless steel, painted steel, composites, sealants, and elastomers",
-    "wastewater": "Capture ramp and shop wash water; route oil-bearing waste through the airport's approved separator and discharge program."
-  },
-  {
-    "slug": "breweries-distilleries-wineries",
-    "field_evidence": {
-      "status": "context_only",
-      "publication_basis": "Owner-confirmed public field media; signed publication scope recorded offline, 2026-07-26",
-      "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf",
-      "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6",
-      "missing": []
-    },
-    "label": "Breweries, Distilleries & Wineries",
-    "kind": "supplemental",
-    "icon": "ph-beer-bottle",
-    "headline": "Two soil classes. Two targeted CIP chemistries.",
+    {
+      "slug": "breweries-distilleries-wineries",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media; signed publication scope recorded offline, 2026-07-26",
+        "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf",
+        "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6",
+        "missing": []
+      },
+      "label": "Breweries, Distilleries & Wineries",
+      "kind": "supplemental",
+      "icon": "ph-beer-bottle",
+      "headline": "Clean brewery organics first. Remove beer stone second.",
       "marketing": "CR clears krausen, protein, yeast, and organic film. HCR follows with beer stone, rust, and mineral scale for a complete two-step CIP clean.",
-    "operating_outcome": "A two-step method gives cellar crews a cleaner rinse, a repeatable cycle, and a faster path back to production.",
-    "cta_label": "Request a CIP trial",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["cr-hd-low-foam"],
-      "descale": ["hcr"],
-      "cip": ["cr", "hcr", "cr-hd-low-foam"]
+      "operating_outcome": "A two-step method gives cellar crews a cleaner rinse, a repeatable cycle, and a faster path back to production.",
+      "cta_label": "Plan a brewery cleaning test",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "cr-hd-low-foam"
+        ],
+        "descale": [
+          "hcr"
+        ],
+        "cip": [
+          "cr",
+          "hcr",
+          "cr-hd-low-foam"
+        ]
+      },
+      "parent": "food-beverage",
+      "buyer": "Brewmasters, cellar teams, distillers, winemakers, and CIP process owners",
+      "distinct_scope": "Validated vessel, transfer-line, keg, and heat-exchanger CIP for krausen, tartrate, beer stone, and fermentation grimes - not general food-plant cleaning.",
+      "search_intent": "Brewery CIP cleaner, beer-stone removal, and distillery or winery tank cleaning",
+      "lead_task": "Run CR first for organic film, then HCR for beer stone, rust, and scale.",
+      "asset": "Fermenters, bright tanks, kettles, fillers, kegs, transfer lines, and plate heat exchangers",
+      "soil": "Krausen, protein, carbohydrate film, yeast, beer stone, tartrate, and mineral scale",
+      "method": "Rinse first, circulate CR, rinse again, then use HCR when beer stone or scale is present. Finish with the brewery's normal sanitation step",
+      "products": [
+        "cr",
+        "hcr",
+        "cr-hd-low-foam"
+      ],
+      "document_products": [
+        "cr",
+        "hcr"
+      ],
+      "case_summary": {
+        "label": "Brewery CIP case summary",
+        "href": "proof#brewery-cip-trials",
+        "description": "CR and HCR replaced the brewery's caustic and acid cleaners across process tanks and heat-exchanger equipment. Open the case page for the result, photos, and full story."
+      },
+      "trial_brief": {
+        "title": "Brewery CIP controlled-trial brief",
+        "objective": "Plan a witnessed circuit trial and measurable release decision before any site-wide chemistry change.",
+        "compatibility_checks": [
+          {
+            "material": "316 stainless steel",
+            "gate": "Confirm grade, finish, weld condition, existing damage, and site approval before circulation."
+          },
+          {
+            "material": "PVC and approved hoses",
+            "gate": "Record exact material, age, prior exposure, and manufacturer limits; coupon-test unknown components."
+          },
+          {
+            "material": "Pump seals, valve seats, and heat-exchanger gaskets",
+            "gate": "Record each elastomer and gasket grade; replace unknown compatibility assumptions with a controlled coupon review."
+          }
+        ]
+      },
+      "concentration": "Current CIP directions use 0.5–1.5 L per 10 gal; select within that range from grime load, circuit volume, temperature, and a witnessed trial.",
+      "process": "Log make-up concentration, return temperature, turbulent flow, circulation time, conductivity, rinse pH, and visual condition at the return.",
+      "boundary": "Isolate the circuit, verify 316 stainless/PVC/gasket compatibility, prevent cross-connections, and keep cleaning separate from the facility's validated sanitizing step.",
+      "verification": "Rinse-return pH and conductivity at baseline, no visible grime at inspection points, plus the plant's ATP, allergen, or microbiological release test.",
+      "materials": "316 stainless steel, PVC, approved hoses, pump seals, valve seats, and heat-exchanger gaskets",
+      "wastewater": "Neutralize and discharge only within the site's pretreatment permit, pH limits, organic loading controls, and volume schedule."
     },
-    "parent": "food-beverage",
-    "buyer": "Brewmasters, cellar teams, distillers, winemakers, and CIP process owners",
-    "distinct_scope": "Validated vessel, transfer-line, keg, and heat-exchanger CIP for krausen, tartrate, beer stone, and fermentation soils - not general food-plant cleaning.",
-    "search_intent": "Brewery CIP cleaner, beer-stone removal, and distillery or winery tank cleaning",
-    "lead_task": "Run CR first for organic film, then HCR for beer stone, rust, and scale.",
-    "asset": "Fermenters, bright tanks, kettles, fillers, kegs, transfer lines, and plate heat exchangers",
-    "soil": "Krausen, protein, carbohydrate film, yeast, beer stone, tartrate, and mineral scale",
-    "method": "Rinse first, circulate CR, rinse again, then use HCR when beer stone or scale is present. Finish with the brewery's normal sanitation step",
-    "products": ["cr", "hcr", "cr-hd-low-foam"],
-    "document_products": ["cr", "hcr"],
-    "case_summary": {
-      "label": "Brewery CIP case summary",
-      "href": "proof#brewery-cip-trials",
-      "description": "CR and HCR replaced conventional caustic and acid chemistry across process tanks and heat-exchanger equipment. Open the case page for the result, photos, and full story."
-    },
-    "trial_brief": {
-      "title": "Brewery CIP controlled-trial brief",
-      "objective": "Plan a witnessed circuit trial and measurable release decision before any site-wide chemistry change.",
-      "compatibility_checks": [
-        {"material": "316 stainless steel", "gate": "Confirm grade, finish, weld condition, existing damage, and site approval before circulation."},
-        {"material": "PVC and approved hoses", "gate": "Record exact material, age, prior exposure, and manufacturer limits; coupon-test unknown components."},
-        {"material": "Pump seals, valve seats, and heat-exchanger gaskets", "gate": "Record each elastomer and gasket grade; replace unknown compatibility assumptions with a controlled coupon review."}
-      ]
-    },
-    "concentration": "Current CIP directions use 0.5–1.5 L per 10 gal; select within that range from soil load, circuit volume, temperature, and a witnessed trial.",
-    "process": "Log make-up concentration, return temperature, turbulent flow, circulation time, conductivity, rinse pH, and visual condition at the return.",
-    "boundary": "Isolate the circuit, verify 316 stainless/PVC/gasket compatibility, prevent cross-connections, and keep cleaning separate from the facility's validated sanitizing step.",
-    "verification": "Rinse-return pH and conductivity at baseline, no visible soil at inspection points, plus the plant's ATP, allergen, or microbiological release test.",
-    "materials": "316 stainless steel, PVC, approved hoses, pump seals, valve seats, and heat-exchanger gaskets",
-    "wastewater": "Neutralize and discharge only within the site's pretreatment permit, pH limits, organic loading controls, and volume schedule."
-  },
-  {
-    "slug": "construction",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen CR applications- grout.moss. grime.algae.pdf", "source_sha256": "7ddeb4c70f64dd8c7dac3976319463e15ba30f93886d9da0d3fbbdd55e234638", "missing": []},
-    "label": "Construction",
-    "kind": "canonical",
-    "icon": "ph-crane",
-    "headline": "Match cement, form oil, and exterior staining to the right mechanism.",
+    {
+      "slug": "construction",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/VertKleen CR applications- grout.moss. grime.algae.pdf",
+        "source_sha256": "7ddeb4c70f64dd8c7dac3976319463e15ba30f93886d9da0d3fbbdd55e234638",
+        "missing": []
+      },
+      "label": "Construction",
+      "kind": "canonical",
+      "icon": "ph-crane",
+      "headline": "Use the right cleaner for cement, form oil, and outdoor stains.",
       "marketing": "HCR or Descaler breaks down cement and mineral residue, CR HD removes form oil, and LAM3 keeps working on outdoor stains.",
-    "operating_outcome": "Get cleaner tools and equipment without adding extra work for the crew or wash-water pickup.",
-    "cta_label": "Request a jobsite test",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd"],
-      "descale": ["descaler", "hcr"],
-      "fleet-wash": ["crhd"],
-      "exterior-bio-soil": ["lam3", "descaler"]
+      "operating_outcome": "Get cleaner tools and equipment without adding extra work for the crew or wash-water pickup.",
+      "cta_label": "Try VertKleen on my jobsite",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd"
+        ],
+        "descale": [
+          "descaler",
+          "hcr"
+        ],
+        "fleet-wash": [
+          "crhd"
+        ],
+        "exterior-bio-grime": [
+          "lam3",
+          "descaler"
+        ]
+      },
+      "lead_task": "Remove cement residue, form oil, and outdoor stains from tools, forms, equipment, and fleet vehicles.",
+      "asset": "Concrete pumps, forms, mixers, hand tools, compact equipment, vehicle exteriors, and finished masonry",
+      "soil": "Cement film, form oil, hydraulic grease, asphalt transfer, rust, and mineral efflorescence",
+      "method": "Clear loose material first, apply the right cleaner, brush where needed, and rinse with low pressure",
+      "products": [
+        "descaler",
+        "hcr",
+        "crhd",
+        "lam3"
+      ],
+      "document_products": [
+        "descaler",
+        "crhd"
+      ],
+      "concentration": "Choose the weakest current-label dilution that removes the identified cement, oil, or mineral grime after a hidden-area compatibility test.",
+      "process": "Record surface temperature, controlled wet soak, brush or low-pressure scrubbing, and rinse volume; prevent mist and never dry-grind a chemical-cleaning residue.",
+      "boundary": "Follow silica controls, equipment OEM limits, coating compatibility, stormwater plans, and site containment. Do not acid-clean uncured or architecturally sensitive concrete without approval.",
+      "verification": "No visible cement or oily film, clean white-wipe where practical, acceptable finish in the test area, and documented wash-water recovery.",
+      "materials": "Carbon steel, aluminum, hydraulic seals, painted equipment, cured concrete, masonry, and form coatings",
+      "wastewater": "Collect slurry and wash water; settle solids and route liquid under the site's SWPPP and local discharge authorization."
     },
-    "lead_task": "Remove cement residue, form oil, and outdoor stains from tools, forms, equipment, and fleet vehicles.",
-    "asset": "Concrete pumps, forms, mixers, hand tools, compact equipment, vehicle exteriors, and finished masonry",
-    "soil": "Cement film, form oil, hydraulic grease, asphalt transfer, rust, and mineral efflorescence",
-    "method": "Clear loose material first, apply the right cleaner, brush where needed, and rinse with low pressure",
-    "products": ["descaler", "hcr", "crhd", "lam3"],
-    "document_products": ["descaler", "crhd"],
-    "concentration": "Choose the weakest current-label dilution that removes the identified cement, oil, or mineral soil after a hidden-area compatibility test.",
-    "process": "Record surface temperature, controlled wet dwell, brush or low-pressure agitation, and rinse volume; prevent mist and never dry-grind a chemical-cleaning residue.",
-    "boundary": "Follow silica controls, equipment OEM limits, coating compatibility, stormwater plans, and site containment. Do not acid-clean uncured or architecturally sensitive concrete without approval.",
-    "verification": "No visible cement or oily film, clean white-wipe where practical, acceptable finish in the test area, and documented wash-water recovery.",
-    "materials": "Carbon steel, aluminum, hydraulic seals, painted equipment, cured concrete, masonry, and form coatings",
-    "wastewater": "Collect slurry and wash water; settle solids and route liquid under the site's SWPPP and local discharge authorization."
-  },
-  {
-    "slug": "data-centers",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Data Centers",
-    "kind": "canonical",
-    "icon": "ph-hard-drives",
-    "headline": "Restore heat transfer inside the maintenance window.",
+    {
+      "slug": "data-centers",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Data Centers",
+      "kind": "canonical",
+      "icon": "ph-hard-drives",
+      "headline": "Get cooling equipment clean and back online on schedule.",
       "marketing": "HCR and Descaler clear scale from cooling equipment. WaterSafe60 helps keep scale and corrosion under control after the clean.",
-    "operating_outcome": "Compare restored flow and heat transfer, the final rinse, and time back online.",
-    "cta_label": "Request a maintenance-window review",
-    "cta_type": "audit",
-    "hero_cta": true,
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "descale": ["hcr", "descaler"],
-      "cooling-water": ["watersafe60", "hcr", "descaler"]
+      "operating_outcome": "Compare restored flow and heat transfer, the final rinse, and time back online.",
+      "cta_label": "Plan my maintenance window",
+      "cta_type": "audit",
+      "hero_cta": true,
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "descale": [
+          "hcr",
+          "descaler"
+        ],
+        "cooling-water": [
+          "watersafe60",
+          "hcr",
+          "descaler"
+        ]
+      },
+      "lead_task": "Clear scale from cooling equipment during planned maintenance without bringing cleaner near live IT equipment.",
+      "asset": "Cooling towers, plate heat exchangers, condenser-water piping, closed loops, strainers, and mechanical-room coils",
+      "soil": "Carbonate scale, iron oxide, corrosion product, silt, and water-side organic fouling",
+      "method": "Take the loop offline, circulate the cleaner, rinse fully, and restart the water treatment",
+      "products": [
+        "watersafe60",
+        "hcr",
+        "descaler"
+      ],
+      "document_products": [
+        "watersafe60",
+        "hcr"
+      ],
+      "concentration": "Set descaler concentration from the current label/user guide, buildup analysis, metallurgy, and loop volume; water-treatment dose remains site-engineered.",
+      "process": "Trend inlet/return temperature, flow, pressure drop, solution pH, iron or hardness response, contact time, scrubbing/recirculation, and rinse conductivity.",
+      "boundary": "Use MOP/SOP/EOP change control, redundancy approval, leak containment, LOTO, and zero open chemical work above live electrical or IT equipment.",
+      "verification": "Recovered approach temperature or pressure drop, stable rinse pH/conductivity, clean strainer inspection, and no leak or alarm after controlled restart.",
+      "materials": "Copper, stainless steel, carbon steel, aluminum coils, elastomers, treatment probes, and coated tower components",
+      "wastewater": "Capture spent cleanout solution; characterize metals and pH before routing through the facility's approved wastewater path."
     },
-    "lead_task": "Clear scale from cooling equipment during planned maintenance without bringing cleaner near live IT equipment.",
-    "asset": "Cooling towers, plate heat exchangers, condenser-water piping, closed loops, strainers, and mechanical-room coils",
-    "soil": "Carbonate scale, iron oxide, corrosion product, silt, and water-side organic fouling",
-    "method": "Take the loop offline, circulate the cleaner, rinse fully, and restart the water treatment",
-    "products": ["watersafe60", "hcr", "descaler"],
-    "document_products": ["watersafe60", "hcr"],
-    "concentration": "Set descaler concentration from the current label/user guide, deposit analysis, metallurgy, and loop volume; water-treatment dose remains site-engineered.",
-    "process": "Trend inlet/return temperature, flow, pressure drop, solution pH, iron or hardness response, contact time, agitation/recirculation, and rinse conductivity.",
-    "boundary": "Use MOP/SOP/EOP change control, redundancy approval, leak containment, LOTO, and zero open chemical work above live electrical or IT equipment.",
-    "verification": "Recovered approach temperature or pressure drop, stable rinse pH/conductivity, clean strainer inspection, and no leak or alarm after controlled restart.",
-    "materials": "Copper, stainless steel, carbon steel, aluminum coils, elastomers, treatment probes, and coated tower components",
-    "wastewater": "Capture spent cleanout solution; characterize metals and pH before routing through the facility's approved wastewater path."
-  },
-  {
-    "slug": "distribution-cold-storage",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Distribution / Cold Storage",
-    "kind": "canonical",
-    "icon": "ph-warehouse",
-    "headline": "Clean cold floors, equipment, and mineral buildup with fewer passes.",
+    {
+      "slug": "distribution-cold-storage",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Distribution / Cold Storage",
+      "kind": "canonical",
+      "icon": "ph-warehouse",
+      "headline": "Clean cold floors, equipment, and mineral buildup with fewer passes.",
       "marketing": "CR HD lifts oil and tire film even in cold areas, MultiWash handles everyday grime, Descaler removes scale, and Purgo tackles odor at its source.",
-    "operating_outcome": "Leave cold floors and equipment cleaner, drier, and ready for traffic sooner.",
-    "cta_label": "Request a cold-floor trial",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd", "multiwash"],
-      "descale": ["descaler"],
-      "cooling-water": ["descaler"],
-      "fleet-wash": ["crhd", "multiwash"]
+      "operating_outcome": "Leave cold floors and equipment cleaner, drier, and ready for traffic sooner.",
+      "cta_label": "Request a cold-floor trial",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd",
+          "multiwash"
+        ],
+        "descale": [
+          "descaler"
+        ],
+        "cooling-water": [
+          "descaler"
+        ],
+        "fleet-wash": [
+          "crhd",
+          "multiwash"
+        ]
+      },
+      "lead_task": "Lift forklift oil, tire marks, food residue, and scale without leaving a slippery film behind.",
+      "asset": "Warehouse floors, loading docks, forklifts, battery areas, drains, cold-room surfaces, and isolated evaporator components",
+      "soil": "Hydraulic oil, tire polymer, pallet grime, food residue, ice-related mineral scale, and drain film",
+      "method": "Sweep or scrape first, pre-treat hard spots, scrub with low foam, recover the wash water, and rinse",
+      "products": [
+        "descaler",
+        "crhd",
+        "multiwash",
+        "purgo"
+      ],
+      "document_products": [
+        "crhd",
+        "multiwash"
+      ],
+      "trial_brief": {
+        "title": "Distribution / Cold Storage controlled-trial brief",
+        "objective": "Plan a witnessed floor, dock, equipment, or isolated cold-room trial with documented recovery, dry-to-traffic, and wastewater routing before broader use.",
+        "compatibility_checks": [
+          {
+            "material": "Sealed concrete, epoxy, and urethane",
+            "gate": "Confirm coating type, condition, floor temperature, and site approval; run the current hidden-area slip-residue and coating test before enlarging the trial."
+          },
+          {
+            "material": "Rubber tires, painted steel, stainless steel, and aluminum",
+            "gate": "Confirm exact substrate, finish, and freezer or OEM limits; isolate traffic and powered equipment during the trial."
+          },
+          {
+            "material": "Drain components",
+            "gate": "Confirm drain materials and the site's interceptor, pretreatment, and discharge schedule before routing recovered scrubber solution."
+          }
+        ]
+      },
+      "concentration": "Use the current low-foam or general-cleaning label range; start weak, increase only after a slip-residue and coating test.",
+      "process": "Log floor temperature, dilution, wet soak, pad/brush scrubbing, recovery passes, final rinse, and dry-to-traffic time.",
+      "boundary": "Segregate food and packaging, isolate traffic and powered equipment, follow freezer/OEM limits, and do not represent cleaning as sanitizing.",
+      "verification": "No visible oil or tire film, dry white-wipe, facility slip-resistance check, clear drains, and release only after the floor is dry.",
+      "materials": "Sealed concrete, epoxy, urethane, rubber tires, painted steel, stainless steel, aluminum, and drain components",
+      "wastewater": "Recover scrubber solution; route grease and solids through the site's interceptor, pretreatment, and discharge schedule."
     },
-    "lead_task": "Lift forklift oil, tire marks, food residue, and scale without leaving a slippery film behind.",
-    "asset": "Warehouse floors, loading docks, forklifts, battery areas, drains, cold-room surfaces, and isolated evaporator components",
-    "soil": "Hydraulic oil, tire polymer, pallet grime, food residue, ice-related mineral scale, and drain film",
-    "method": "Sweep or scrape first, pre-treat hard spots, scrub with low foam, recover the wash water, and rinse",
-    "products": ["descaler", "crhd", "multiwash", "purgo"],
-    "document_products": ["crhd", "multiwash"],
-    "trial_brief": {
-      "title": "Distribution / Cold Storage controlled-trial brief",
-      "objective": "Plan a witnessed floor, dock, equipment, or isolated cold-room trial with documented recovery, dry-to-traffic, and wastewater routing before broader use.",
-      "compatibility_checks": [
-        {"material": "Sealed concrete, epoxy, and urethane", "gate": "Confirm coating type, condition, floor temperature, and site approval; run the current hidden-area slip-residue and coating test before enlarging the trial."},
-        {"material": "Rubber tires, painted steel, stainless steel, and aluminum", "gate": "Confirm exact substrate, finish, and freezer or OEM limits; isolate traffic and powered equipment during the trial."},
-        {"material": "Drain components", "gate": "Confirm drain materials and the site's interceptor, pretreatment, and discharge schedule before routing recovered scrubber solution."}
-      ]
-    },
-    "concentration": "Use the current low-foam or general-cleaning label range; start weak, increase only after a slip-residue and coating test.",
-    "process": "Log floor temperature, dilution, wet dwell, pad/brush agitation, recovery passes, final rinse, and dry-to-traffic time.",
-    "boundary": "Segregate food and packaging, isolate traffic and powered equipment, follow freezer/OEM limits, and do not represent cleaning as sanitizing.",
-    "verification": "No visible oil or tire film, dry white-wipe, facility slip-resistance check, clear drains, and release only after the floor is dry.",
-    "materials": "Sealed concrete, epoxy, urethane, rubber tires, painted steel, stainless steel, aluminum, and drain components",
-    "wastewater": "Recover scrubber solution; route grease and solids through the site's interceptor, pretreatment, and discharge schedule."
-  },
-  {
-    "slug": "drone-cleaning-companies",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Drone Cleaning Companies",
-    "kind": "supplemental",
-    "icon": "ph-drone",
-    "headline": "Use chemistry to make limited pressure and agitation work harder.",
+    {
+      "slug": "drone-cleaning-companies",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Drone Cleaning Companies",
+      "kind": "supplemental",
+      "icon": "ph-drone",
+      "headline": "Let the cleaner do more when pressure and brushing are limited.",
       "marketing": "MultiWash handles everyday exterior grime, LAM3 stays on algae and organic staining longer, and CR HD cuts through oily film.",
-    "operating_outcome": "Dial in even coverage, working time, rinsing, and a streak-free finish before taking on the full property.",
-    "cta_label": "Request a flight-compatible method",
-    "cta_type": "audit",
-    "buyer_roles": ["ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "exterior-bio-soil": ["multiwash", "lam3", "crhd"]
+      "operating_outcome": "Dial in even coverage, working time, rinsing, and a streak-free finish before taking on the full property.",
+      "cta_label": "Plan my drone cleaning test",
+      "cta_type": "audit",
+      "buyer_roles": [
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "exterior-bio-grime": [
+          "multiwash",
+          "lam3",
+          "crhd"
+        ]
+      },
+      "parent": "construction",
+      "buyer": "Cleaning-drone crew members, exterior-service contractors, and property owners evaluating inaccessible-surface work",
+      "distinct_scope": "Tethered or payload-limited low-pressure application on inaccessible facades and steep roofs with flight, overspray, runoff, and public-zone controls - not conventional ground-access construction cleanup.",
+      "search_intent": "Drone facade cleaning, inaccessible roof washing, and tethered exterior-cleaning chemistry",
+      "lead_task": "Use low-pressure drone cleaning on roofs and facades while keeping overspray and runoff under control.",
+      "asset": "Roofs, façades, siding, glazing, solar modules, canopies, and elevated coated surfaces",
+      "soil": "Atmospheric soot, algae and mildew staining, bird residue, salt film, and loose particulate",
+      "method": "Test the cleaner at ground level, apply it with a calibrated low-pressure spray, give it time to work, and rinse when the surface needs it",
+      "products": [
+        "multiwash",
+        "lam3",
+        "crhd"
+      ],
+      "document_products": [
+        "multiwash",
+        "lam3"
+      ],
+      "trial_brief": {
+        "title": "Drone exterior cleaning controlled-trial brief",
+        "objective": "Plan a future witnessed exterior-cleaning trial that records ground-level compatibility, aircraft and spray-system operating controls, runoff capture, and dry matched-angle acceptance before any broader use.",
+        "compatibility_checks": [
+          {
+            "material": "Coated metal, roofing membrane, and painted masonry",
+            "gate": "Identify the exact coating or membrane, condition, repairs, and owner or manufacturer limits; approve the current ground-level finish test before any aerial application."
+          },
+          {
+            "material": "Glass, sealants, and photovoltaic coatings",
+            "gate": "Record the exact glazing, sealant, and coating system; keep unlisted components outside the trial and accept only after the weakest current-label dilution dries without streak or finish change."
+          },
+          {
+            "material": "Landscaping",
+            "gate": "Map exposure and drainage before flight, establish exclusion and protection controls, and require the current ground-level runoff test before treating the planned area."
+          }
+        ]
+      },
+      "concentration": "Use the weakest current-label dilution that passes a ground-level finish and runoff test; never increase concentration to compensate for poor coverage.",
+      "process": "Record ambient/surface temperature, wind, nozzle flow, application rate, working time, any rinse pass, flight path, and treated area.",
+      "boundary": "Follow aircraft and spray-system OEM limits, aviation rules, exclusion zones, overspray controls, landscaping protection, and electrical clearances.",
+      "verification": "Matched-angle before/after images after drying, no streak or residue, coating/gloss check, and complete runoff-capture record.",
+      "materials": "Coated metal, glass, roofing membrane, painted masonry, sealants, photovoltaic coatings, and landscaping",
+      "wastewater": "Map drainage before flight; block storm inlets and capture or divert runoff under the property permit."
     },
-    "parent": "construction",
-    "buyer": "Cleaning-drone operators, exterior-service contractors, and property owners evaluating inaccessible-surface work",
-    "distinct_scope": "Tethered or payload-limited low-pressure application on inaccessible facades and steep roofs with flight, overspray, runoff, and public-zone controls - not conventional ground-access construction cleanup.",
-    "search_intent": "Drone facade cleaning, inaccessible roof washing, and tethered exterior-cleaning chemistry",
-    "lead_task": "Use low-pressure drone cleaning on roofs and facades while keeping overspray and runoff under control.",
-    "asset": "Roofs, façades, siding, glazing, solar modules, canopies, and elevated coated surfaces",
-    "soil": "Atmospheric soot, algae and mildew staining, bird residue, salt film, and loose particulate",
-    "method": "Test the cleaner at ground level, apply it with a calibrated low-pressure spray, give it time to work, and rinse when the surface needs it",
-    "products": ["multiwash", "lam3", "crhd"],
-    "document_products": ["multiwash", "lam3"],
-    "trial_brief": {
-      "title": "Drone exterior cleaning controlled-trial brief",
-      "objective": "Plan a future witnessed exterior-cleaning trial that records ground-level compatibility, aircraft and spray-system operating controls, runoff capture, and dry matched-angle acceptance before any broader use.",
-      "compatibility_checks": [
-        {"material": "Coated metal, roofing membrane, and painted masonry", "gate": "Identify the exact coating or membrane, condition, repairs, and owner or manufacturer limits; approve the current ground-level finish test before any aerial application."},
-        {"material": "Glass, sealants, and photovoltaic coatings", "gate": "Record the exact glazing, sealant, and coating system; keep unlisted components outside the trial and accept only after the weakest current-label dilution dries without streak or finish change."},
-        {"material": "Landscaping", "gate": "Map exposure and drainage before flight, establish exclusion and protection controls, and require the current ground-level runoff test before treating the planned area."}
-      ]
-    },
-    "concentration": "Use the weakest current-label dilution that passes a ground-level finish and runoff test; never increase concentration to compensate for poor coverage.",
-    "process": "Record ambient/surface temperature, wind, nozzle flow, application rate, dwell, any rinse pass, flight path, and treated area.",
-    "boundary": "Follow aircraft and spray-system OEM limits, aviation rules, exclusion zones, overspray controls, landscaping protection, and electrical clearances.",
-    "verification": "Matched-angle before/after images after drying, no streak or residue, coating/gloss check, and complete runoff-capture record.",
-    "materials": "Coated metal, glass, roofing membrane, painted masonry, sealants, photovoltaic coatings, and landscaping",
-    "wastewater": "Map drainage before flight; block storm inlets and capture or divert runoff under the property permit."
-  },
-  {
-    "slug": "education",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf", "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae", "missing": []},
-    "label": "Education Facilities",
-    "kind": "canonical",
-    "icon": "ph-graduation-cap",
-    "headline": "One campus chemistry plan, matched by zone.",
+    {
+      "slug": "education",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf",
+        "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae",
+        "missing": []
+      },
+      "label": "Education Facilities",
+      "kind": "canonical",
+      "icon": "ph-graduation-cap",
+      "headline": "One campus cleaning plan, matched to every area.",
       "marketing": "HCR and WaterSafe60 cover boilers, towers, and scale. CR and MultiWash clean kitchens, floors, and facilities. Purgo helps stop recurring odor.",
-    "operating_outcome": "Fewer products and lower odor make campus cleaning easier for crews and building occupants.",
-    "cta_label": "Request a campus pilot",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["cr", "multiwash"],
-      "descale": ["hcr"],
-      "cooling-water": ["watersafe60", "hcr"],
-      "exterior-bio-soil": ["multiwash"]
+      "operating_outcome": "Fewer products and lower odor make campus cleaning easier for crews and building occupants.",
+      "cta_label": "Test it on my campus",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "cr",
+          "multiwash"
+        ],
+        "descale": [
+          "hcr"
+        ],
+        "cooling-water": [
+          "watersafe60",
+          "hcr"
+        ],
+        "exterior-bio-grime": [
+          "multiwash"
+        ]
+      },
+      "redirect_from": [
+        "schools-universities"
+      ],
+      "lead_task": "Clean campus equipment, kitchens, restrooms, and outdoor areas around the school schedule.",
+      "asset": "Boilers, cooling towers, heat exchangers, kitchen equipment, restroom fixtures, gym floors, drains, and hardscape",
+      "soil": "Mineral scale, rust, grease, soap film, tracked grime, algae staining, and drain residue",
+      "method": "Match the cleaner to each area and schedule the work around classes and building use",
+      "products": [
+        "cr",
+        "hcr",
+        "watersafe60",
+        "multiwash"
+      ],
+      "document_products": [
+        "hcr",
+        "multiwash"
+      ],
+      "concentration": "Use the applicable current label/TDS range and approve the starting dilution through facilities, EHS, and a small-area trial.",
+      "process": "Document solution/surface temperature, working time, scrubbing, rinse, ventilation, barricade time, and dry/reoccupancy release.",
+      "boundary": "Use district chemical review, custodial training, locked storage, occupied-space scheduling, ventilation and traffic isolation, food-service protection, and separate approved disinfection.",
+      "verification": "Visual and white-wipe acceptance, neutral rinse where applicable, no slip residue, and mechanical performance trend for water-side work.",
+      "materials": "Stainless steel, copper, carbon steel, resilient flooring, sealed concrete, ceramic, grout, paint, and elastomers",
+      "wastewater": "Route kitchen grease, scale-bearing cleanout, and floor solution through district-approved pretreatment and local sewer rules."
     },
-    "redirect_from": ["schools-universities"],
-    "lead_task": "Clean campus equipment, kitchens, restrooms, and outdoor areas around the school schedule.",
-    "asset": "Boilers, cooling towers, heat exchangers, kitchen equipment, restroom fixtures, gym floors, drains, and hardscape",
-    "soil": "Mineral scale, rust, grease, soap film, tracked soil, algae staining, and drain residue",
-    "method": "Match the cleaner to each area and schedule the work around classes and building use",
-    "products": ["cr", "hcr", "watersafe60", "multiwash"],
-    "document_products": ["hcr", "multiwash"],
-    "concentration": "Use the applicable current label/TDS range and approve the starting dilution through facilities, EHS, and a small-area trial.",
-    "process": "Document solution/surface temperature, dwell, agitation, rinse, ventilation, barricade time, and dry/reoccupancy release.",
-    "boundary": "Use district chemical review, custodial training, locked storage, occupied-space scheduling, ventilation and traffic isolation, food-service protection, and separate approved disinfection.",
-    "verification": "Visual and white-wipe acceptance, neutral rinse where applicable, no slip residue, and mechanical performance trend for water-side work.",
-    "materials": "Stainless steel, copper, carbon steel, resilient flooring, sealed concrete, ceramic, grout, paint, and elastomers",
-    "wastewater": "Route kitchen grease, scale-bearing cleanout, and floor solution through district-approved pretreatment and local sewer rules."
-  },
-  {
-    "slug": "fleet-trucking-car-washes",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Fleet, Trucking & Car Washes",
-    "kind": "supplemental",
-    "icon": "ph-truck",
-    "headline": "Put wash, degrease, finish care, and aluminum restoration in one lane.",
+    {
+      "slug": "fleet-trucking-car-washes",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Fleet, Trucking & Car Washes",
+      "kind": "supplemental",
+      "icon": "ph-truck",
+      "headline": "Clean the fleet from road film to oxidized aluminum.",
       "marketing": "CR HD and MultiWash remove road film and grease, Torque washes and finishes in one step, and AlumiBrite restores oxidized aluminum.",
-    "operating_outcome": "Use fewer steps, protect the finish, and move more vehicles through each wash lane.",
-    "cta_label": "Request a vehicle-lane benchmark",
-    "cta_type": "quote",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd"],
-      "fleet-wash": ["torque", "crhd", "multiwash", "alumibrite"]
+      "operating_outcome": "Use fewer steps, protect the finish, and move more vehicles through each wash lane.",
+      "cta_label": "Try it in my wash lane",
+      "cta_type": "quote",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd"
+        ],
+        "fleet-wash": [
+          "torque",
+          "crhd",
+          "multiwash",
+          "alumibrite"
+        ]
+      },
+      "parent": "distribution-cold-storage",
+      "buyer": "Fleet wash managers, trucking crew members, transit shops, dealership detail teams, and commercial car-wash crew members",
+      "distinct_scope": "Vehicle exterior, chassis, wheel, tank, and wash-bay cleaning with finish, electrical, reclamation, and fleet-throughput controls - not warehouse-floor maintenance.",
+      "search_intent": "Commercial fleet wash chemical, truck degreasing, and car-wash road-film removal",
+      "lead_task": "Remove road film, bugs, grease, and aluminum oxidation while protecting fleet finishes.",
+      "asset": "Truck and bus exteriors, wheels, aluminum tanks, chassis, engine bays, wash-bay floors, and service equipment",
+      "soil": "Road film, insect residue, diesel soot, lubricating grease, brake dust, salt, and aluminum oxidation",
+      "method": "Pre-rinse cool surfaces, wash or degrease, brush gently, rinse fully, and let the finish dry clean",
+      "products": [
+        "torque",
+        "crhd",
+        "multiwash",
+        "alumibrite"
+      ],
+      "document_products": [
+        "torque",
+        "crhd"
+      ],
+      "concentration": "Stay within the current wash/degreaser label range and establish a separate tested ratio for aluminum brightening; start with the weakest effective solution.",
+      "process": "Record water hardness, solution and panel temperature, working time, brush or pressure scrubbing, rinse volume, and drying conditions.",
+      "boundary": "Keep chemistry off hot panels, brakes, sensors, polished finishes, and unapproved aluminum; follow fleet OEM and wash-equipment limits.",
+      "verification": "No road or oily film, no streaking after dry, gloss/finish acceptance, clean wheel test area, and no oily sheen in recovered water.",
+      "materials": "Clear coat, painted steel, aluminum, stainless steel, chrome, rubber, plastics, glass, and sensor housings",
+      "wastewater": "Use oil-water separation and solids capture; discharge only through the wash bay's permitted reclaim or sewer route."
     },
-    "parent": "distribution-cold-storage",
-    "buyer": "Fleet wash managers, trucking operators, transit shops, dealership detail teams, and commercial car-wash operators",
-    "distinct_scope": "Vehicle exterior, chassis, wheel, tank, and wash-bay cleaning with finish, electrical, reclamation, and fleet-throughput controls - not warehouse-floor maintenance.",
-    "search_intent": "Commercial fleet wash chemical, truck degreasing, and car-wash road-film removal",
-    "lead_task": "Remove road film, bugs, grease, and aluminum oxidation while protecting fleet finishes.",
-    "asset": "Truck and bus exteriors, wheels, aluminum tanks, chassis, engine bays, wash-bay floors, and service equipment",
-    "soil": "Road film, insect residue, diesel soot, lubricating grease, brake dust, salt, and aluminum oxidation",
-    "method": "Pre-rinse cool surfaces, wash or degrease, brush gently, rinse fully, and let the finish dry clean",
-    "products": ["torque", "crhd", "multiwash", "alumibrite"],
-    "document_products": ["torque", "crhd"],
-    "concentration": "Stay within the current wash/degreaser label range and establish a separate tested ratio for aluminum brightening; start with the weakest effective solution.",
-    "process": "Record water hardness, solution and panel temperature, dwell, brush or pressure agitation, rinse volume, and drying conditions.",
-    "boundary": "Keep chemistry off hot panels, brakes, sensors, polished finishes, and unapproved aluminum; follow fleet OEM and wash-equipment limits.",
-    "verification": "No road or oily film, no streaking after dry, gloss/finish acceptance, clean wheel test area, and no oily sheen in recovered water.",
-    "materials": "Clear coat, painted steel, aluminum, stainless steel, chrome, rubber, plastics, glass, and sensor housings",
-    "wastewater": "Use oil-water separation and solids capture; discharge only through the wash bay's permitted reclaim or sewer route."
-  },
-  {
-    "slug": "food-beverage",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf", "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6", "missing": []},
-    "label": "Food & Beverage",
-    "kind": "canonical",
-    "icon": "ph-beer-bottle",
-    "headline": "Build the cleaning cycle around the soil.",
+    {
+      "slug": "food-beverage",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/VertKleen CR and HCR Brewery Trial-Brewlando Brewing.pdf",
+        "source_sha256": "bd970978e7517d02a963a1297025811aa17e4cba2567b149789a3cc59b5fbda6",
+        "missing": []
+      },
+      "label": "Food & Beverage",
+      "kind": "canonical",
+      "icon": "ph-beer-bottle",
+      "headline": "Build the cleaning cycle around what needs to come off.",
       "marketing": "CR removes fat, protein, and organic film. HCR clears beer stone, rust, and scale. Neutral, CR HD, and MultiWash handle open equipment and daily cleaning.",
-    "operating_outcome": "A cleaner two-step routine gives crews a clear rinse and gets equipment back into production faster.",
-    "cta_label": "Request a witnessed process trial",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd", "neutral"],
-      "descale": ["hcr"],
-      "cip": ["cr", "hcr", "neutral"]
+      "operating_outcome": "A cleaner two-step routine gives crews a clear rinse and gets equipment back into production faster.",
+      "cta_label": "Plan my food-plant test",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd",
+          "neutral"
+        ],
+        "descale": [
+          "hcr"
+        ],
+        "cip": [
+          "cr",
+          "hcr",
+          "neutral"
+        ]
+      },
+      "lead_task": "Match each CIP or COP cleaning step to food grime, grease, protein, beer stone, and mineral scale.",
+      "asset": "Process tanks, piping, fillers, pasteurizers, heat exchangers, kettles, conveyors, and removable parts",
+      "soil": "Fat, protein, carbohydrate, yeast, biofilm-supporting residue, beer or milk stone, and hard-water scale",
+      "method": "Pre-rinse, use CR for organics, rinse, use HCR where scale is present, rinse again, then follow the plant's normal sanitation process",
+      "products": [
+        "cr",
+        "hcr",
+        "crhd",
+        "neutral",
+        "multiwash"
+      ],
+      "document_products": [
+        "cr",
+        "hcr"
+      ],
+      "concentration": "For the published CR/HCR CIP use, select 0.5–1.5 L per 10 gal from grime load and trial evidence; other products remain within their current labels.",
+      "process": "Log make-up concentration, temperature, turbulent flow or mechanical action, working time/circulation time, conductivity, return condition, and final rinse pH.",
+      "boundary": "Use the facility SSOP, isolate product and allergen paths, verify food-contact materials, and never substitute a cleaning claim for sanitizing or disinfection.",
+      "verification": "No visible residue, rinse pH/conductivity at baseline, and the facility's ATP, protein/allergen, or microbiological acceptance result.",
+      "materials": "304/316 stainless steel, PVC, approved elastomers, conveyor polymers, aluminum where permitted, and heat-exchanger gaskets",
+      "wastewater": "Balance pH and organic load within the pretreatment permit; schedule discharge volume with the plant's wastewater crew member."
     },
-    "lead_task": "Match each CIP or COP cleaning step to food soil, grease, protein, beer stone, and mineral scale.",
-    "asset": "Process tanks, piping, fillers, pasteurizers, heat exchangers, kettles, conveyors, and removable parts",
-    "soil": "Fat, protein, carbohydrate, yeast, biofilm-supporting residue, beer or milk stone, and hard-water scale",
-    "method": "Pre-rinse, use CR for organics, rinse, use HCR where scale is present, rinse again, then follow the plant's normal sanitation process",
-    "products": ["cr", "hcr", "crhd", "neutral", "multiwash"],
-    "document_products": ["cr", "hcr"],
-    "concentration": "For the published CR/HCR CIP use, select 0.5–1.5 L per 10 gal from soil load and trial evidence; other products remain within their current labels.",
-    "process": "Log make-up concentration, temperature, turbulent flow or mechanical action, dwell/circulation time, conductivity, return condition, and final rinse pH.",
-    "boundary": "Use the facility SSOP, isolate product and allergen paths, verify food-contact materials, and never substitute a cleaning claim for sanitizing or disinfection.",
-    "verification": "No visible residue, rinse pH/conductivity at baseline, and the facility's ATP, protein/allergen, or microbiological acceptance result.",
-    "materials": "304/316 stainless steel, PVC, approved elastomers, conveyor polymers, aluminum where permitted, and heat-exchanger gaskets",
-    "wastewater": "Balance pH and organic load within the pretreatment permit; schedule discharge volume with the plant's wastewater operator."
-  },
-  {
-    "slug": "agriculture",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Agriculture & Farm Operations",
-    "kind": "supplemental",
-    "icon": "ph-plant",
-    "headline": "Target crop residue, grease, and fertilizer deposits with the right chemistry.",
+    {
+      "slug": "agriculture",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Agriculture & Farm Operations",
+      "kind": "supplemental",
+      "icon": "ph-plant",
+      "headline": "Match crop residue, grease, and fertilizer buildup with the right cleaner.",
       "marketing": "MultiWash and CR HD lift crop residue, grease, and farm grime. HCR breaks down fertilizer salts and hard mineral film.",
-    "operating_outcome": "The right cleaner means fewer repeat passes, less water, and less time spent on each job.",
-    "cta_label": "Request an equipment chemistry match",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["multiwash", "crhd"],
-      "descale": ["hcr"],
-      "cip": ["hcr"],
-      "fleet-wash": ["multiwash", "crhd"],
-      "exterior-bio-soil": ["multiwash"]
+      "operating_outcome": "The right cleaner means fewer repeat passes, less water, and less time spent on each job.",
+      "cta_label": "Find my equipment cleaner",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "multiwash",
+          "crhd"
+        ],
+        "descale": [
+          "hcr"
+        ],
+        "cip": [
+          "hcr"
+        ],
+        "fleet-wash": [
+          "multiwash",
+          "crhd"
+        ],
+        "exterior-bio-grime": [
+          "multiwash"
+        ]
+      },
+      "parent": "food-beverage",
+      "buyer": "Farm crew members, produce-packing teams, dairy maintenance crews, and agricultural equipment managers",
+      "distinct_scope": "Crop, grime, fertilizer, manure-adjacent, and milk-film removal around farm equipment, feed, livestock, water, and biosecurity zones - not finished-food processing.",
+      "search_intent": "Farm equipment cleaner, dairy equipment descaling, and produce-packing wash chemistry",
+      "redirect_from": [
+        "food-processing-agriculture"
+      ],
+      "lead_task": "Remove crop residue, farm grime, fertilizer salts, grease, and mineral film from equipment and wash areas.",
+      "asset": "Harvest and packing equipment, bins, hoppers, augers, milking components, wash pads, utility vehicles, irrigation parts, and drains",
+      "soil": "Plant residue, grime, fertilizer salt, grease, manure-adjacent organic buildup, milk film, and hard-water scale",
+      "method": "Pick up loose material first, wash or circulate the right cleaner, brush where needed, recover the wash water, and rinse fully",
+      "products": [
+        "multiwash",
+        "crhd",
+        "hcr"
+      ],
+      "document_products": [
+        "multiwash",
+        "crhd"
+      ],
+      "concentration": "Use the weakest current-label dilution that passes a grime-specific equipment and runoff trial; any milking-system CIP remains under its validated site procedure.",
+      "process": "Track equipment and water temperature, dilution, wet soak, brush or flow action, rinse volume, recovery, and dry inspection time.",
+      "boundary": "Protect crops, livestock, feed, water sources, food-contact surfaces, electrical systems, and biosecurity zones; follow equipment OEM and site sanitation controls.",
+      "verification": "No visible grime or film, acceptable dry white-wipe where practical, no finish or seal damage, and the site's separate sanitation or biosecurity release.",
+      "materials": "Stainless steel, food-grade polymers, belts, hoses, seals, galvanized and painted equipment, aluminum, rubber, and sealed concrete",
+      "wastewater": "Screen solids and manage nutrients, fats/oils/grease, pH, and hydraulic load under the farm's approved collection and discharge plan."
     },
-    "parent": "food-beverage",
-    "buyer": "Farm operators, produce-packing teams, dairy maintenance crews, and agricultural equipment managers",
-    "distinct_scope": "Crop, soil, fertilizer, manure-adjacent, and milk-film removal around farm equipment, feed, livestock, water, and biosecurity zones - not finished-food processing.",
-    "search_intent": "Farm equipment cleaner, dairy equipment descaling, and produce-packing wash chemistry",
-    "redirect_from": ["food-processing-agriculture"],
-    "lead_task": "Remove crop residue, farm soil, fertilizer salts, grease, and mineral film from equipment and wash areas.",
-    "asset": "Harvest and packing equipment, bins, hoppers, augers, milking components, wash pads, utility vehicles, irrigation parts, and drains",
-    "soil": "Plant residue, soil, fertilizer salt, grease, manure-adjacent organic buildup, milk film, and hard-water scale",
-    "method": "Pick up loose material first, wash or circulate the right cleaner, brush where needed, recover the wash water, and rinse fully",
-    "products": ["multiwash", "crhd", "hcr"],
-    "document_products": ["multiwash", "crhd"],
-    "concentration": "Use the weakest current-label dilution that passes a soil-specific equipment and runoff trial; any milking-system CIP remains under its validated site procedure.",
-    "process": "Track equipment and water temperature, dilution, wet dwell, brush or flow action, rinse volume, recovery, and dry inspection time.",
-    "boundary": "Protect crops, livestock, feed, water sources, food-contact surfaces, electrical systems, and biosecurity zones; follow equipment OEM and site sanitation controls.",
-    "verification": "No visible soil or film, acceptable dry white-wipe where practical, no finish or seal damage, and the site's separate sanitation or biosecurity release.",
-    "materials": "Stainless steel, food-grade polymers, belts, hoses, seals, galvanized and painted equipment, aluminum, rubber, and sealed concrete",
-    "wastewater": "Screen solids and manage nutrients, fats/oils/grease, pH, and hydraulic load under the farm's approved collection and discharge plan."
-  },
-  {
-    "slug": "golf-courses",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Golf Courses & Sports Facilities",
-    "kind": "canonical",
-    "icon": "ph-flag",
-    "headline": "Clean equipment, irrigation, hardscape, and facilities with less disruption.",
+    {
+      "slug": "golf-courses",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Golf Courses & Sports Facilities",
+      "kind": "canonical",
+      "icon": "ph-flag",
+      "headline": "Clean equipment, irrigation, hardscape, and facilities with less disruption.",
       "marketing": "Torque and MultiWash clean carts and equipment, HCR clears irrigation scale, LAM3 works on outdoor growth, and Purgo helps control odor.",
-    "operating_outcome": "Protect turf and finishes while cleaning around players, guests, and irrigation schedules.",
-    "cta_label": "Request a low-disruption trial",
-    "cta_type": "sample",
-    "hero_cta": true,
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["multiwash"],
-      "descale": ["hcr"],
-      "fleet-wash": ["torque", "multiwash"],
-      "exterior-bio-soil": ["lam3", "multiwash"]
+      "operating_outcome": "Protect turf and finishes while cleaning around players, guests, and irrigation schedules.",
+      "cta_label": "Test it around my schedule",
+      "cta_type": "sample",
+      "hero_cta": true,
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "multiwash"
+        ],
+        "descale": [
+          "hcr"
+        ],
+        "fleet-wash": [
+          "torque",
+          "multiwash"
+        ],
+        "exterior-bio-grime": [
+          "lam3",
+          "multiwash"
+        ]
+      },
+      "redirect_from": [
+        "golf-courses-sports-facilities"
+      ],
+      "lead_task": "Clean carts, grounds equipment, irrigation parts, hardscape, locker rooms, and public areas.",
+      "asset": "Carts, mowers, utility vehicles, irrigation hardware, stadium hardscape, locker-room floors, sport flooring, pavers, and fountains",
+      "soil": "Grass oil, grease, rubber transfer, body-grime film, fertilizer salt, mineral scale, algae staining, mud, and tracked organic buildup",
+      "method": "Wash equipment with low foam, descale only where needed, and give outdoor cleaners time to work before recovery",
+      "products": [
+        "torque",
+        "lam3",
+        "hcr",
+        "multiwash",
+        "purgo"
+      ],
+      "document_products": [
+        "torque",
+        "multiwash"
+      ],
+      "concentration": "Set each task within the current product label/TDS range; start weak near painted equipment, turf, water features, and irrigation elastomers.",
+      "process": "Log dilution, surface temperature, working time, pad/brush or low-pressure action, rinse/recovery, ventilation, and dry-to-use time.",
+      "boundary": "Close the work zone, protect athletes and guests, isolate irrigation and electrical assets, and keep facility disinfection under its approved program.",
+      "verification": "No visible film, acceptable slip condition, same-angle dry photos, restored irrigation flow when targeted, and no turf-edge injury.",
+      "materials": "Sport flooring, sealed concrete, painted metal, aluminum, plastics, rubber, tile, grout, irrigation polymers, and turf",
+      "wastewater": "Use designated wash pads and floor drains; intercept solids/oil and keep runoff out of playing fields and surface water."
     },
-    "redirect_from": ["golf-courses-sports-facilities"],
-    "lead_task": "Clean carts, grounds equipment, irrigation parts, hardscape, locker rooms, and public areas.",
-    "asset": "Carts, mowers, utility vehicles, irrigation hardware, stadium hardscape, locker-room floors, sport flooring, pavers, and fountains",
-    "soil": "Grass oil, grease, rubber transfer, body-soil film, fertilizer salt, mineral scale, algae staining, mud, and tracked organic soil",
-    "method": "Wash equipment with low foam, descale only where needed, and give outdoor cleaners time to work before recovery",
-    "products": ["torque", "lam3", "hcr", "multiwash", "purgo"],
-    "document_products": ["torque", "multiwash"],
-    "concentration": "Set each task within the current product label/TDS range; start weak near painted equipment, turf, water features, and irrigation elastomers.",
-    "process": "Log dilution, surface temperature, dwell, pad/brush or low-pressure action, rinse/recovery, ventilation, and dry-to-use time.",
-    "boundary": "Close the work zone, protect athletes and guests, isolate irrigation and electrical assets, and keep facility disinfection under its approved program.",
-    "verification": "No visible film, acceptable slip condition, same-angle dry photos, restored irrigation flow when targeted, and no turf-edge injury.",
-    "materials": "Sport flooring, sealed concrete, painted metal, aluminum, plastics, rubber, tile, grout, irrigation polymers, and turf",
-    "wastewater": "Use designated wash pads and floor drains; intercept solids/oil and keep runoff out of playing fields and surface water."
-  },
-  {
-    "slug": "healthcare",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/NEW VertKleen Triple Zero on site at the University of Florida with Clean Team USA.docx", "source_sha256": "7d2cda9f253c2ccb5e12b1f7eefb1a8cdc8ab75e08f6cfd233cf789e36d68606", "missing": []},
-    "label": "Healthcare",
-    "kind": "canonical",
-    "icon": "ph-hospital",
-    "headline": "Recover mechanical and facility assets without turning maintenance into an event.",
+    {
+      "slug": "healthcare",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/NEW VertKleen Triple Zero on site at the University of Florida with Clean Team USA.docx",
+        "source_sha256": "7d2cda9f253c2ccb5e12b1f7eefb1a8cdc8ab75e08f6cfd233cf789e36d68606",
+        "missing": []
+      },
+      "label": "Healthcare",
+      "kind": "canonical",
+      "icon": "ph-hospital",
+      "headline": "Clean HVAC and facility equipment with less odor and disruption.",
       "marketing": "HCR and Descaler remove scale from mechanical equipment, CR clears organic buildup, and WaterSafe60 plus Purgo support ongoing water care.",
-    "operating_outcome": "Lower odor helps crews finish the work with less disruption to nearby patients and staff.",
-    "cta_label": "Request an occupied-site method",
-    "cta_type": "audit",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "descale": ["hcr", "descaler"],
-      "cooling-water": ["watersafe60", "hcr", "descaler"]
+      "operating_outcome": "Lower odor helps crews finish the work with less disruption to nearby patients and staff.",
+      "cta_label": "Plan cleaning around patients",
+      "cta_type": "audit",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "descale": [
+          "hcr",
+          "descaler"
+        ],
+        "cooling-water": [
+          "watersafe60",
+          "hcr",
+          "descaler"
+        ]
+      },
+      "lead_task": "Remove scale and buildup from mechanical equipment and facility areas around patient-care schedules.",
+      "asset": "Cooling towers, closed loops, heat exchangers, steam-plant equipment, kitchen/laundry equipment, drains, and nonclinical hard surfaces",
+      "soil": "Scale, rust, corrosion product, grease, soap film, mineral buildup, and ordinary facility grime",
+      "method": "Take the equipment or area offline, clean it thoroughly, rinse, and follow the facility's normal disinfection step",
+      "products": [
+        "watersafe60",
+        "purgo",
+        "hcr",
+        "cr",
+        "descaler"
+      ],
+      "document_products": [
+        "watersafe60",
+        "hcr"
+      ],
+      "concentration": "Set descaling concentration from the current label/user guide, buildup analysis, and metallurgy; all treatment dosing remains under the facility water plan.",
+      "process": "Record temperature, concentration, flow/scrubbing, contact time, rinse pH/conductivity, ventilation, barricade, and restart readings.",
+      "boundary": "Use infection-control risk assessment, LOTO, ASHRAE 188/water-management controls, and facility-approved disinfectants. Cleaning is not disinfection.",
+      "verification": "Mechanical trend recovery plus neutral/stable rinse; environmental ATP or microbiological release only when required and interpreted by the facility.",
+      "materials": "Copper, stainless and carbon steel, aluminum, elastomers, coated tower parts, tile, sealed flooring, and approved polymers",
+      "wastewater": "Characterize pH, metals, and biocide/treatment residuals; route under hospital EHS and wastewater authorization."
     },
-    "lead_task": "Remove scale and buildup from mechanical equipment and facility areas around patient-care schedules.",
-    "asset": "Cooling towers, closed loops, heat exchangers, steam-plant equipment, kitchen/laundry equipment, drains, and nonclinical hard surfaces",
-    "soil": "Scale, rust, corrosion product, grease, soap film, mineral deposit, and ordinary facility soil",
-    "method": "Take the equipment or area offline, clean it thoroughly, rinse, and follow the facility's normal disinfection step",
-    "products": ["watersafe60", "purgo", "hcr", "cr", "descaler"],
-    "document_products": ["watersafe60", "hcr"],
-    "concentration": "Set descaling concentration from the current label/user guide, deposit analysis, and metallurgy; all treatment dosing remains under the facility water plan.",
-    "process": "Record temperature, concentration, flow/agitation, contact time, rinse pH/conductivity, ventilation, barricade, and restart readings.",
-    "boundary": "Use infection-control risk assessment, LOTO, ASHRAE 188/water-management controls, and facility-approved disinfectants. Cleaning is not disinfection.",
-    "verification": "Mechanical trend recovery plus neutral/stable rinse; environmental ATP or microbiological release only when required and interpreted by the facility.",
-    "materials": "Copper, stainless and carbon steel, aluminum, elastomers, coated tower parts, tile, sealed flooring, and approved polymers",
-    "wastewater": "Characterize pH, metals, and biocide/treatment residuals; route under hospital EHS and wastewater authorization."
-  },
-  {
-    "slug": "healthcare-senior-living",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Healthcare & Senior Living",
-    "kind": "supplemental",
-    "icon": "ph-hospital",
-    "headline": "Clean resident-facing zones with lower odor, residue, and disruption.",
+    {
+      "slug": "healthcare-senior-living",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Healthcare & Senior Living",
+      "kind": "supplemental",
+      "icon": "ph-hospital",
+      "headline": "Keep resident areas clean with less odor and disruption.",
       "marketing": "Neutral and MultiWash handle everyday cleaning across mixed surfaces, Descaler removes scale, and Purgo tackles recurring odor.",
-    "operating_outcome": "Lower-odor cleaning makes the job easier on crews and helps rooms reopen sooner.",
-    "cta_label": "Request an occupied-zone trial",
-    "cta_type": "audit",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "descale": ["descaler"],
-      "exterior-bio-soil": ["neutral", "multiwash"]
+      "operating_outcome": "Lower-odor cleaning makes the job easier on crews and helps rooms reopen sooner.",
+      "cta_label": "Test it in one care area",
+      "cta_type": "audit",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "descale": [
+          "descaler"
+        ],
+        "exterior-bio-grime": [
+          "neutral",
+          "multiwash"
+        ]
+      },
+      "parent": "healthcare",
+      "buyer": "Senior-living facility directors, environmental-services leaders, infection-prevention teams, and building engineers",
+      "distinct_scope": "Resident-occupied kitchen, laundry, restroom, floor, and mechanical cleaning with reoccupancy and infection-prevention handoff - not acute-care clinical cleaning.",
+      "search_intent": "Senior-living facility cleaner, nursing-home kitchen degreasing, and occupied-care descaling",
+      "lead_task": "Remove grease, scale, and everyday grime from resident-facing areas and building equipment.",
+      "asset": "Kitchens, laundries, mechanical rooms, restroom fixtures, nonclinical floors, drains, carts, and isolated heat-transfer equipment",
+      "soil": "Cooking grease, laundry film, soap scum, hard-water scale, tracked grime, and drain residue",
+      "method": "Use a low-odor cleaner, give it time to work, brush where needed, rinse fully, then follow the facility's normal disinfection step",
+      "products": [
+        "neutral",
+        "multiwash",
+        "descaler"
+      ],
+      "document_products": [
+        "neutral",
+        "multiwash"
+      ],
+      "concentration": "Use the lowest current-label dilution that passes a finish and residue test; descaling ratios require fixture metallurgy and buildup review.",
+      "process": "Document dilution, surface temperature, wet soak, scrubbing, rinse/recovery, ventilation, dry time, and reoccupancy release.",
+      "boundary": "Coordinate infection prevention, resident protection, food service, ventilation, fall prevention, and chemical storage. No disinfectant claim is borrowed.",
+      "verification": "No visible grime or film, dry white-wipe, acceptable slip condition, rinse baseline for descaling, then the facility's separate hygiene endpoint.",
+      "materials": "Resilient flooring, tile, grout, stainless steel, copper, chrome, plastics, sealed stone, painted surfaces, and elastomers",
+      "wastewater": "Route grease through interceptors and descaling solution under facility pH/discharge limits; never use resident-area storm drains."
     },
-    "parent": "healthcare",
-    "buyer": "Senior-living facility directors, environmental-services leaders, infection-prevention teams, and building engineers",
-    "distinct_scope": "Resident-occupied kitchen, laundry, restroom, floor, and mechanical cleaning with reoccupancy and infection-prevention handoff - not acute-care clinical cleaning.",
-    "search_intent": "Senior-living facility cleaner, nursing-home kitchen degreasing, and occupied-care descaling",
-    "lead_task": "Remove grease, scale, and everyday grime from resident-facing areas and building equipment.",
-    "asset": "Kitchens, laundries, mechanical rooms, restroom fixtures, nonclinical floors, drains, carts, and isolated heat-transfer equipment",
-    "soil": "Cooking grease, laundry film, soap scum, hard-water scale, tracked soil, and drain residue",
-    "method": "Use a low-odor cleaner, give it time to work, brush where needed, rinse fully, then follow the facility's normal disinfection step",
-    "products": ["neutral", "multiwash", "descaler"],
-    "document_products": ["neutral", "multiwash"],
-    "concentration": "Use the lowest current-label dilution that passes a finish and residue test; descaling ratios require fixture metallurgy and deposit review.",
-    "process": "Document dilution, surface temperature, wet dwell, agitation, rinse/recovery, ventilation, dry time, and reoccupancy release.",
-    "boundary": "Coordinate infection prevention, resident protection, food service, ventilation, fall prevention, and chemical storage. No disinfectant claim is borrowed.",
-    "verification": "No visible soil or film, dry white-wipe, acceptable slip condition, rinse baseline for descaling, then the facility's separate hygiene endpoint.",
-    "materials": "Resilient flooring, tile, grout, stainless steel, copper, chrome, plastics, sealed stone, painted surfaces, and elastomers",
-    "wastewater": "Route grease through interceptors and descaling solution under facility pH/discharge limits; never use resident-area storm drains."
-  },
-  {
-    "slug": "hotels-property-management",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Hotels, Resorts & Property Management",
-    "kind": "canonical",
-    "icon": "ph-buildings",
-    "headline": "Standardize chemistry by property zone, not by bottle count.",
+    {
+      "slug": "hotels-property-management",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Hotels, Resorts & Property Management",
+      "kind": "canonical",
+      "icon": "ph-buildings",
+      "headline": "Give every part of the property a simple cleaning plan.",
       "marketing": "CR HD cuts kitchen grease, Descaler clears fixture and equipment scale, MultiWash handles daily grime, and LAM3 works on exterior stains.",
-    "operating_outcome": "One clear plan helps every crew clean more consistently with less disruption to guests.",
-    "cta_label": "Request a property chemistry plan",
-    "cta_type": "audit",
-    "hero_cta": true,
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["multiwash", "neutral"],
-      "descale": ["descaler"],
-      "cooling-water": ["descaler"],
-      "exterior-bio-soil": ["multiwash", "lam3"]
+      "operating_outcome": "One clear plan helps every crew clean more consistently with less disruption to guests.",
+      "cta_label": "Build my property cleaning plan",
+      "cta_type": "audit",
+      "hero_cta": true,
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "multiwash",
+          "neutral"
+        ],
+        "descale": [
+          "descaler"
+        ],
+        "cooling-water": [
+          "descaler"
+        ],
+        "exterior-bio-grime": [
+          "multiwash",
+          "lam3"
+        ]
+      },
+      "redirect_from": [
+        "hotels-resorts-property-management"
+      ],
+      "lead_task": "Remove kitchen grease, soap film, scale, and outdoor stains while keeping guest areas presentable.",
+      "asset": "Commercial kitchens, laundry equipment, restroom fixtures, mechanical rooms, pool-side hardscape, façades, drains, and parking surfaces",
+      "soil": "Cooking grease, soap scum, carbonate scale, body-grime film, algae staining, tire marks, and atmospheric grime",
+      "method": "Use the right degreaser, descaler, or outdoor cleaner for each area and schedule the work around guests",
+      "products": [
+        "multiwash",
+        "lam3",
+        "descaler",
+        "neutral"
+      ],
+      "document_products": [
+        "multiwash",
+        "descaler"
+      ],
+      "concentration": "Use the weakest current-label dilution that removes the target grime after a hidden-area finish, grout, sealant, and slip-residue test.",
+      "process": "Record dilution, surface temperature, working time, scrubbing, rinse/recovery, ventilation, odor check, dry time, and area release.",
+      "boundary": "Barricade guest traffic, protect food/pools/landscaping, follow finish warranties, and keep cleaning separate from pool treatment and disinfection.",
+      "verification": "Dry visual and white-wipe acceptance, no streak or slippery film, neutral rinse where applicable, and no finish change in the test area.",
+      "materials": "Tile, grout, stone, stainless steel, chrome, glass, sealed concrete, paint, roofing, plastics, and landscaping",
+      "wastewater": "Use kitchen interceptors and approved sanitary drains; block storm inlets and protect pool and landscape water."
     },
-    "redirect_from": ["hotels-resorts-property-management"],
-    "lead_task": "Remove kitchen grease, soap film, scale, and outdoor stains while keeping guest areas presentable.",
-    "asset": "Commercial kitchens, laundry equipment, restroom fixtures, mechanical rooms, pool-side hardscape, façades, drains, and parking surfaces",
-    "soil": "Cooking grease, soap scum, carbonate scale, body-soil film, algae staining, tire marks, and atmospheric grime",
-    "method": "Use the right degreaser, descaler, or outdoor cleaner for each area and schedule the work around guests",
-    "products": ["multiwash", "lam3", "descaler", "neutral"],
-    "document_products": ["multiwash", "descaler"],
-    "concentration": "Use the weakest current-label dilution that removes the target soil after a hidden-area finish, grout, sealant, and slip-residue test.",
-    "process": "Record dilution, surface temperature, dwell, agitation, rinse/recovery, ventilation, odor check, dry time, and area release.",
-    "boundary": "Barricade guest traffic, protect food/pools/landscaping, follow finish warranties, and keep cleaning separate from pool treatment and disinfection.",
-    "verification": "Dry visual and white-wipe acceptance, no streak or slippery film, neutral rinse where applicable, and no finish change in the test area.",
-    "materials": "Tile, grout, stone, stainless steel, chrome, glass, sealed concrete, paint, roofing, plastics, and landscaping",
-    "wastewater": "Use kitchen interceptors and approved sanitary drains; block storm inlets and protect pool and landscape water."
-  },
-  {
-    "slug": "hvac-water",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen Descaler-Res AC coil cleaned and preserved.pdf", "source_sha256": "36f23bbd0bdea7841b8554ae174c8dc6daae096bf733c7a2f708bbdc109e2c2e", "missing": []},
-    "trial_brief": {
-      "title": "HVAC / Water Treatment controlled-trial brief",
-      "objective": "Plan a witnessed isolated water-side circulation or soak trial that records deposit, metallurgy, operating conditions, rinse baseline, and approved recommissioning before broader use.",
-      "compatibility_checks": [
-        {"material": "Copper, carbon steel, and stainless steel", "gate": "Confirm exact metallurgy, existing corrosion, and treatment-vendor approval before circulation; keep concentration within the current guide and monitor the reaction."},
-        {"material": "Aluminum, galvanized steel, tower polymers, and elastomers", "gate": "Confirm the exact material and condition, then obtain treatment-vendor approval before exposure; keep unlisted components outside the trial."},
-        {"material": "Treatment sensors", "gate": "Bypass or isolate sensors under LOTO, record the current treatment baseline, and require restart chemistry back in range before release."}
-      ]
-    },
-    "label": "HVAC / Water Treatment",
-    "kind": "canonical",
-    "icon": "ph-wind",
-    "headline": "Controlled mineral removal for flow, heat transfer, and water-system work.",
+    {
+      "slug": "hvac-water",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/VertKleen Descaler-Res AC coil cleaned and preserved.pdf",
+        "source_sha256": "36f23bbd0bdea7841b8554ae174c8dc6daae096bf733c7a2f708bbdc109e2c2e",
+        "missing": []
+      },
+      "trial_brief": {
+        "title": "HVAC / Water Treatment controlled-trial brief",
+        "objective": "Plan a witnessed isolated water-side circulation or soak trial that records buildup, metallurgy, operating conditions, rinse baseline, and approved recommissioning before broader use.",
+        "compatibility_checks": [
+          {
+            "material": "Copper, carbon steel, and stainless steel",
+            "gate": "Confirm exact metallurgy, existing corrosion, and treatment-vendor approval before circulation; keep concentration within the current guide and monitor the reaction."
+          },
+          {
+            "material": "Aluminum, galvanized steel, tower polymers, and elastomers",
+            "gate": "Confirm the exact material and condition, then obtain treatment-vendor approval before exposure; keep unlisted components outside the trial."
+          },
+          {
+            "material": "Treatment sensors",
+            "gate": "Bypass or isolate sensors under LOTO, record the current treatment baseline, and require restart chemistry back in range before release."
+          }
+        ]
+      },
+      "label": "HVAC / Water Treatment",
+      "kind": "canonical",
+      "icon": "ph-wind",
+      "headline": "Remove scale and rust. Bring back flow and heat transfer.",
       "marketing": "HCR breaks down hard carbonate scale and rust. WaterSafe60 helps keep pH, scale, and corrosion under control after the system is clean.",
-    "operating_outcome": "Compare the removed buildup, restored flow, cleaner heat transfer, final rinse, and restart time.",
-    "cta_label": "Request a circulation trial",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "descale": ["hcr"],
-      "cooling-water": ["watersafe60", "purgo", "hcr", "cr"]
+      "operating_outcome": "Compare the removed buildup, restored flow, cleaner heat transfer, final rinse, and restart time.",
+      "cta_label": "Plan my descaling test",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "descale": [
+          "hcr"
+        ],
+        "cooling-water": [
+          "watersafe60",
+          "purgo",
+          "hcr",
+          "cr"
+        ]
+      },
+      "lead_task": "Remove scale and rust from water-side equipment, rinse it clean, and restart the treatment program.",
+      "asset": "Cooling towers, fill, plate and shell heat exchangers, condensers, boilers, closed loops, coils, strainers, and piping",
+      "soil": "Calcium carbonate, iron oxide, mixed mineral scale, silt, corrosion product, and organic fouling",
+      "method": "Take the equipment offline, circulate or soak with cleaner, drain, rinse, inspect, and restart treatment",
+      "products": [
+        "watersafe60",
+        "purgo",
+        "hcr",
+        "cr"
+      ],
+      "document_products": [
+        "watersafe60",
+        "hcr"
+      ],
+      "concentration": "Select within the current HCR/user-guide range from buildup loading, metallurgy, volume, and reaction monitoring; treatment dose is site-engineered.",
+      "process": "Track concentration, solution temperature, flow/scrubbing, pH trend, iron/hardness response, working time, rinse conductivity, and restart chemistry.",
+      "boundary": "Use LOTO, bypass controls, ventilation, Legionella/water-management procedures, metallurgy checks, and treatment-vendor approval.",
+      "verification": "Improved approach temperature, flow, or pressure drop; stable rinse pH/conductivity; clean inspection point; treatment residual back in range.",
+      "materials": "Copper, carbon steel, stainless steel, aluminum, galvanized steel, tower polymers, elastomers, and treatment sensors",
+      "wastewater": "Characterize spent solution for pH and metals; neutralize and discharge only through the approved facility route."
     },
-    "lead_task": "Remove scale and rust from water-side equipment, rinse it clean, and restart the treatment program.",
-    "asset": "Cooling towers, fill, plate and shell heat exchangers, condensers, boilers, closed loops, coils, strainers, and piping",
-    "soil": "Calcium carbonate, iron oxide, mixed mineral scale, silt, corrosion product, and organic fouling",
-    "method": "Take the equipment offline, circulate or soak with cleaner, drain, rinse, inspect, and restart treatment",
-    "products": ["watersafe60", "purgo", "hcr", "cr"],
-    "document_products": ["watersafe60", "hcr"],
-    "concentration": "Select within the current HCR/user-guide range from deposit loading, metallurgy, volume, and reaction monitoring; treatment dose is site-engineered.",
-    "process": "Track concentration, solution temperature, flow/agitation, pH trend, iron/hardness response, dwell, rinse conductivity, and restart chemistry.",
-    "boundary": "Use LOTO, bypass controls, ventilation, Legionella/water-management procedures, metallurgy checks, and treatment-vendor approval.",
-    "verification": "Improved approach temperature, flow, or pressure drop; stable rinse pH/conductivity; clean inspection point; treatment residual back in range.",
-    "materials": "Copper, carbon steel, stainless steel, aluminum, galvanized steel, tower polymers, elastomers, and treatment sensors",
-    "wastewater": "Characterize spent solution for pH and metals; neutralize and discharge only through the approved facility route."
-  },
-  {
-    "slug": "manufacturing",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/KN filter degreasing with VertKleen CRHD.pdf", "source_sha256": "912ef6e40bfbffa40bb5f3a2e586f057bc6dcba311dc270063ea98683fbaaa6b", "missing": []},
-    "label": "Manufacturing",
-    "kind": "canonical",
-    "icon": "ph-factory",
-    "headline": "Match process oil, organic soil, and mineral deposits to different mechanisms.",
+    {
+      "slug": "manufacturing",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/KN filter degreasing with VertKleen CRHD.pdf",
+        "source_sha256": "912ef6e40bfbffa40bb5f3a2e586f057bc6dcba311dc270063ea98683fbaaa6b",
+        "missing": []
+      },
+      "label": "Manufacturing",
+      "kind": "canonical",
+      "icon": "ph-factory",
+      "headline": "Choose the right cleaner for oil, grease, rust, and scale.",
       "marketing": "CR HD cuts oil and grease, CR clears organic process buildup, and HCR or Descaler removes rust and hard mineral scale.",
-    "operating_outcome": "Use the right mix, time, and brushing to cut repeat passes and return equipment to production sooner.",
-    "cta_label": "Request a bath benchmark",
-    "cta_type": "audit",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["cr", "crhd"],
-      "descale": ["hcr", "descaler"],
-      "cip": ["cr", "hcr"]
+      "operating_outcome": "Use the right mix, time, and brushing to cut repeat passes and return equipment to production sooner.",
+      "cta_label": "Try it on my equipment",
+      "cta_type": "audit",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "cr",
+          "crhd"
+        ],
+        "descale": [
+          "hcr",
+          "descaler"
+        ],
+        "cip": [
+          "cr",
+          "hcr"
+        ]
+      },
+      "lead_task": "Remove process oil, carbon, grease, and scale from production equipment and get it back to work.",
+      "asset": "Parts, machine tools, floors, conveyors, tanks, heat exchangers, molds, dies, and utility piping",
+      "soil": "Cutting oil, hydraulic fluid, grease, carbonized residue, adhesive film, rust, and mineral scale",
+      "method": "Use a parts washer, foam, spray, brushing, or circulation based on the equipment and buildup",
+      "products": [
+        "hcr",
+        "cr",
+        "crhd",
+        "descaler"
+      ],
+      "document_products": [
+        "crhd",
+        "hcr"
+      ],
+      "concentration": "Use the current label/TDS range and establish the weakest effective starting point through a material coupon and grime-loading trial.",
+      "process": "Record bath/surface temperature, concentration, working time, spray/brush/flow scrubbing, rinse quality, dry time, and bath-loading limits.",
+      "boundary": "LOTO and de-inventory equipment, verify coatings/seals/metallurgy, protect controls and bearings, and segregate incompatible waste streams.",
+      "verification": "Water-break or white-wipe acceptance where appropriate, specified surface energy/cleanliness, restored flow or pressure drop, and no corrosion/finish change.",
+      "materials": "Carbon and stainless steel, aluminum, copper, engineered polymers, elastomers, paint, powder coat, and conversion coatings",
+      "wastewater": "Profile oil, metals, pH, and solids; use oil-water separation or hazardous/industrial waste routes defined by the plant."
     },
-    "lead_task": "Remove process oil, carbon, grease, and scale from production equipment and get it back to work.",
-    "asset": "Parts, machine tools, floors, conveyors, tanks, heat exchangers, molds, dies, and utility piping",
-    "soil": "Cutting oil, hydraulic fluid, grease, carbonized residue, adhesive film, rust, and mineral scale",
-    "method": "Use a parts washer, foam, spray, brushing, or circulation based on the equipment and buildup",
-    "products": ["hcr", "cr", "crhd", "descaler"],
-    "document_products": ["crhd", "hcr"],
-    "concentration": "Use the current label/TDS range and establish the weakest effective starting point through a material coupon and soil-loading trial.",
-    "process": "Record bath/surface temperature, concentration, dwell, spray/brush/flow agitation, rinse quality, dry time, and bath-loading limits.",
-    "boundary": "LOTO and de-inventory equipment, verify coatings/seals/metallurgy, protect controls and bearings, and segregate incompatible waste streams.",
-    "verification": "Water-break or white-wipe acceptance where appropriate, specified surface energy/cleanliness, restored flow or pressure drop, and no corrosion/finish change.",
-    "materials": "Carbon and stainless steel, aluminum, copper, engineered polymers, elastomers, paint, powder coat, and conversion coatings",
-    "wastewater": "Profile oil, metals, pH, and solids; use oil-water separation or hazardous/industrial waste routes defined by the plant."
-  },
-  {
-    "slug": "marine",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/NEW VertKleen Torque Wash on a 43 Yellow Fin vessel-1.pdf", "source_sha256": "30696ceaf0199fc7c1371610becfcba0f8b3674e6254323dc6dfa78e11eaa4fa", "missing": []},
-    "label": "Marine",
-    "kind": "canonical",
-    "icon": "ph-anchor",
-    "headline": "Separate oily-film lift, salt removal, aluminum care, and finish protection.",
-      "marketing": "CR HD and MultiWash remove oily film, HCR clears mineral deposits, AlumiBrite restores aluminum, and Torque washes and finishes in one step.",
-    "operating_outcome": "A smaller product set makes the job easier while helping crews protect each finish.",
-    "cta_label": "Request a contained vessel trial",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd", "multiwash"],
-      "fleet-wash": ["torque", "alumibrite", "multiwash"],
-      "exterior-bio-soil": ["multiwash"]
+    {
+      "slug": "marine",
+      "redirect_from": [
+        "marine-marinas-boatyards"
+      ],
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/NEW VertKleen Torque Wash on a 43 Yellow Fin vessel-1.pdf",
+        "source_sha256": "30696ceaf0199fc7c1371610becfcba0f8b3674e6254323dc6dfa78e11eaa4fa",
+        "missing": []
+      },
+      "label": "Marine, Marinas & Boatyards",
+      "kind": "canonical",
+      "icon": "ph-anchor",
+      "headline": "Eight marine cleaners for boats, docks, bilges, and boatyards.",
+      "marketing": "Wash boats, cut grease, remove scale, clear drains, brighten aluminum, or choose Purgo's certified antimicrobial chemistry—all with a marine-ready VertKleen label.",
+      "operating_outcome": "Choose the cleaner by job, check it on the surface, and keep wash water contained while you work.",
+      "marine_brand_release": {
+        "owner": "MASEST Consulting LLC",
+        "approved_by_role": "Owner",
+        "approved_on": "2026-08-21",
+        "status": "owner_approved_marketing_names",
+        "trademark_scope": "Approved for MASEST marketing use; trademark registration or external legal clearance is not asserted."
+      },
+      "approved_product_names": [
+        {
+          "name": "Scale Buster",
+          "base_product": "hcr-t16",
+          "sku": "VK-HCR-T16",
+          "label": "docs/labels/marine/vertkleen-scale-buster-label.pdf"
+        },
+        {
+          "name": "SeaVap Coil Kleener",
+          "base_product": "descaler",
+          "sku": "VK-DESC",
+          "label": "docs/labels/marine/vertkleen-seavap-coil-kleener-label.pdf"
+        },
+        {
+          "name": "Sea Drain Kleener",
+          "base_product": "cr2",
+          "sku": "VK-CR2",
+          "label": "docs/labels/marine/vertkleen-sea-drain-kleener-label.pdf"
+        },
+        {
+          "name": "MultiWash",
+          "base_product": "multiwash",
+          "sku": "VK-MW",
+          "label": "docs/labels/marine/vertkleen-multiwash-label.pdf"
+        },
+        {
+          "name": "Marine Degreaser",
+          "base_product": "crhd",
+          "sku": "VK-CRHD",
+          "label": "docs/labels/marine/vertkleen-marine-degreaser-label.pdf"
+        },
+        {
+          "name": "AlumiBrite",
+          "base_product": "alumibrite",
+          "sku": "VK-ALB",
+          "label": "docs/labels/marine/vertkleen-alumibrite-label.pdf"
+        },
+        {
+          "name": "Marine Wash & Wax",
+          "base_product": "torque",
+          "sku": "VK-TRQ",
+          "label": "docs/labels/marine/vertkleen-marine-wash-wax-label.pdf"
+        },
+        {
+          "name": "Marine Antimicrobial",
+          "base_product": "purgo",
+          "sku": "VK-PRG",
+          "label": "docs/labels/marine/vertkleen-marine-antimicrobial-label.pdf"
+        }
+      ],
+      "cta_label": "Find my marine cleaner",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd",
+          "multiwash"
+        ],
+        "descale": [
+          "hcr-t16",
+          "descaler"
+        ],
+        "fleet-wash": [
+          "torque",
+          "alumibrite",
+          "multiwash"
+        ],
+        "exterior-bio-grime": [
+          "torque",
+          "multiwash"
+        ]
+      },
+      "buyer": "Vessel owners, boatyards, marina crew members, mobile marine-wash contractors, and vessel service managers",
+      "search_intent": "Marine vessel cleaning, boatyard washwater cleaning, marina hull washing, and service-bay degreasing",
+      "lead_task": "Remove salt, marine film, oil, mineral scale, and oxidation from boats, trailers, docks, lifts, and service equipment.",
+      "asset": "Hulls, decks, topsides, bilges, engine-room surfaces, lifts, aluminum rails, trailers, dock equipment, and service floors",
+      "soil": "Salt film, algae staining, diesel soot, bilge oil, grease, fish residue, road film, and aluminum oxidation",
+      "method": "Pre-rinse with fresh water, wash, degrease, descale, or brighten only where needed, brush gently, rinse, and recover the wash water",
+      "products": [
+        "hcr-t16",
+        "descaler",
+        "cr2",
+        "multiwash",
+        "crhd",
+        "alumibrite",
+        "torque",
+        "purgo"
+      ],
+      "document_products": [
+        "hcr-t16",
+        "descaler",
+        "cr2",
+        "multiwash",
+        "crhd",
+        "alumibrite",
+        "torque",
+        "purgo"
+      ],
+      "trial_brief": {
+        "title": "Marine vessel controlled-trial brief",
+        "objective": "Plan a witnessed contained-pad vessel trial with documented material compatibility, washwater recovery, and dry-finish acceptance before broader use.",
+        "compatibility_checks": [
+          {
+            "material": "Gelcoat, painted steel, and specialty coatings",
+            "gate": "Identify the coating system, age, repairs, condition, and OEM or owner restrictions; approve a hidden-area test before enlarging the trial."
+          },
+          {
+            "material": "Aluminum, stainless steel, and zincs",
+            "gate": "Record the alloy, anodizing or passivation, and sacrificial-anode locations; isolate zincs and approve chemistry and contact time on a representative test area."
+          },
+          {
+            "material": "Glazing, vinyl, rubber, sealants, and teak",
+            "gate": "Confirm the exact material, age, and condition; keep teak, electrical systems, and unknown components out of scope unless separately approved."
+          }
+        ]
+      },
+      "concentration": "Keep wash, degreaser, and descaler within current label ranges; establish brightener strength only after an alloy, anodizing, coating, and sealant test.",
+      "process": "Record panel temperature, salinity of rinse water, dilution, working time, brush/low-pressure action, rinse volume, and dry inspection.",
+      "boundary": "Protect antifouling and specialty coatings, shore power, electrical systems, bilges, zincs, glazing, and adjacent water; follow yard permits, vessel-owner authorization, and OEM rules.",
+      "verification": "No salt or oily film after dry, no gloss/coating change, clean white-wipe at the test area, and no visible sheen in recovered water.",
+      "materials": "Gelcoat, painted steel, aluminum, stainless steel, teak kept out unless approved, vinyl, rubber, glass, and marine sealants",
+      "wastewater": "Use a contained wash pad or mobile recovery; separate oil and solids and never discharge cleaning solution directly to surface water."
     },
-    "lead_task": "Remove salt, marine film, oil, and oxidation from boats, trailers, docks, and service equipment.",
-    "asset": "Hulls, decks, topsides, bilges, engine-room surfaces, aluminum rails, trailers, dock equipment, and service floors",
-    "soil": "Salt film, algae staining, diesel soot, bilge oil, grease, fish residue, road film, and aluminum oxidation",
-    "method": "Pre-rinse with fresh water, wash, degrease or brighten where needed, brush gently, rinse, and recover the wash water",
-    "products": ["torque", "alumibrite", "multiwash", "crhd"],
-    "document_products": ["torque", "crhd"],
-    "trial_brief": {
-      "title": "Marine vessel controlled-trial brief",
-      "objective": "Plan a witnessed contained-pad vessel trial with documented material compatibility, washwater recovery, and dry-finish acceptance before broader use.",
-      "compatibility_checks": [
-        {"material": "Gelcoat, painted steel, and specialty coatings", "gate": "Identify the coating system, age, repairs, condition, and OEM or owner restrictions; approve a hidden-area test before enlarging the trial."},
-        {"material": "Aluminum, stainless steel, and zincs", "gate": "Record the alloy, anodizing or passivation, and sacrificial-anode locations; isolate zincs and approve chemistry and contact time on a representative test area."},
-        {"material": "Glazing, vinyl, rubber, sealants, and teak", "gate": "Confirm the exact material, age, and condition; keep teak, electrical systems, and unknown components out of scope unless separately approved."}
-      ]
+    {
+      "slug": "mechanical-contractors-water-treatment",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Mechanical Contractors & Water Treatment",
+      "kind": "supplemental",
+      "icon": "ph-wind",
+      "headline": "Give technicians a descaling method they can explain and repeat.",
+      "marketing": "Identify the buildup, choose HCR or Descaler, and build a clear circulation and rinse plan around the equipment.",
+      "operating_outcome": "A clear circulation and rinse plan cuts guesswork and helps prevent callbacks.",
+      "cta_label": "Plan my contractor job",
+      "cta_type": "quote",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "descale": [
+          "hcr",
+          "descaler"
+        ],
+        "cooling-water": [
+          "hcr",
+          "descaler",
+          "watersafe60"
+        ]
+      },
+      "parent": "hvac-water",
+      "buyer": "Mechanical service contractors, water-treatment providers, commissioning teams, and facility project managers",
+      "distinct_scope": "Temporary circulation rigs, written method statements, descaling execution, rinse verification, and owner handoff - not ongoing owner-operated water treatment.",
+      "search_intent": "Heat-exchanger descaling contractor, boiler chemical cleaning, and temporary-loop flushing",
+      "lead_task": "Remove scale from boilers, heat exchangers, coils, and water loops, then return them clean and ready for treatment.",
+      "asset": "Plate and shell heat exchangers, boilers, cooling towers, coils, pumps, closed loops, strainers, and temporary circulation rigs",
+      "soil": "Carbonate and mixed mineral scale, iron oxide, corrosion product, silt, and water-side organic film",
+      "method": "Lock out and isolate the equipment, set up circulation, watch the clean, drain, rinse, inspect, and restart",
+      "products": [
+        "hcr",
+        "descaler",
+        "watersafe60"
+      ],
+      "document_products": [
+        "hcr",
+        "watersafe60"
+      ],
+      "concentration": "Choose within the current HCR/Descaler guide from buildup, metallurgy, loop volume, and reaction rate; do not use a universal ratio.",
+      "process": "Log flow, solution temperature, concentration, pH/reaction trend, working time, iron/hardness response, rinse conductivity, and restart chemistry.",
+      "boundary": "Written method statement, LOTO, pressure relief, venting, hose/rig compatibility, spill containment, owner approval, and Legionella controls.",
+      "verification": "Recovered flow, pressure drop, or approach temperature; stable rinse baseline; clean inspection point; treatment residual restored.",
+      "materials": "Copper, carbon and stainless steel, aluminum, galvanized steel, elastomers, brazing alloys, plastics, and sensors",
+      "wastewater": "Characterize pH and dissolved metals; neutralize and route through the owner's authorized discharge or waste-hauler process."
     },
-    "concentration": "Keep wash and degreaser within current label ranges; establish brightener strength only after an alloy, anodizing, coating, and sealant test.",
-    "process": "Record panel temperature, salinity of rinse water, dilution, dwell, brush/low-pressure action, rinse volume, and dry inspection.",
-    "boundary": "Protect antifouling and specialty coatings, electrical systems, bilges, zincs, glazing, and adjacent water; follow marina and vessel OEM rules.",
-    "verification": "No salt or oily film after dry, no gloss/coating change, clean white-wipe at the test area, and no visible sheen in recovered water.",
-    "materials": "Gelcoat, painted steel, aluminum, stainless steel, teak kept out unless approved, vinyl, rubber, glass, and marine sealants",
-    "wastewater": "Use a contained wash pad or mobile recovery; separate oil and solids and never discharge cleaning solution directly to surface water."
-  },
-  {
-    "slug": "marine-marinas-boatyards",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Marine, Marinas & Boatyards",
-    "kind": "supplemental",
-    "icon": "ph-anchor",
-    "headline": "Three actions for vessel wash, aluminum brightening, and mineral removal.",
-      "marketing": "Torque removes marine film and leaves a polished finish, AlumiBrite clears oxidation, and HCR breaks down scale and rust.",
-    "operating_outcome": "Give the yard one simpler set of cleaners for wash, grease, oxidation, rust, and scale.",
-    "cta_label": "Request a yard chemistry plan",
-    "cta_type": "quote",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "fleet-wash": ["torque", "alumibrite"],
-      "exterior-bio-soil": ["torque"]
+    {
+      "slug": "military-government",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf",
+        "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae",
+        "missing": []
+      },
+      "label": "Military / Government",
+      "kind": "canonical",
+      "icon": "ph-seal-check",
+      "headline": "Give every crew a cleaner and method they can repeat.",
+      "marketing": "Match one VertKleen product to the job, use the same cleaning steps each time, and keep the result easy to explain.",
+      "operating_outcome": "A clear method makes training, field use, and repeat ordering easier.",
+      "cta_label": "Build my cleaning package",
+      "cta_type": "audit",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd"
+        ],
+        "descale": [
+          "hcr",
+          "descaler"
+        ],
+        "fleet-wash": [
+          "crhd",
+          "alumibrite"
+        ]
+      },
+      "lead_task": "Clean vehicles, buildings, and utility equipment with one clear product and work plan.",
+      "asset": "Motor-pool vehicles, ground equipment, hangar floors, public works machinery, heat exchangers, water assets, and maintenance shops",
+      "soil": "Petroleum grease, hydraulic oil, carbon, road film, rust, mineral scale, and ordinary facility grime",
+      "method": "Match the product to the work card, clean the part or equipment, recover the wash water, and record the result",
+      "products": [
+        "hcr",
+        "descaler",
+        "crhd",
+        "alumibrite"
+      ],
+      "document_products": [
+        "hcr",
+        "crhd"
+      ],
+      "concentration": "Use only current controlled label/TDS ranges and the task order's approved starting dilution after material and process review.",
+      "process": "Record product lot, dilution, temperature, working time, scrubbing or circulation, rinse, waste volume, inspection result, and return-to-service authorization.",
+      "boundary": "Follow technical orders, SDS approval, LOTO, environmental plan, security/access rules, material authorization, and contract scope.",
+      "verification": "Work-card inspection criterion, white-wipe/water-break where specified, mechanical performance endpoint, and signed chain-of-custody record.",
+      "materials": "Painted and bare metals, aluminum, stainless steel, composites, elastomers, concrete, coatings, and government-specified materials",
+      "wastewater": "Profile and containerize by installation rules; use approved separators, industrial discharge, or waste contracts."
     },
-    "parent": "marine",
-    "buyer": "Boatyards, marina operators, mobile marine-wash contractors, and vessel service managers",
-    "distinct_scope": "Haul-out, dockside, bilge, lift, trailer, and service-bay cleaning inside a yard washwater and owner-authorization workflow - not vessel operations at large.",
-    "search_intent": "Boatyard washwater cleaning, marina hull washing, and marine service-bay degreasing",
-    "lead_task": "Clean boat exteriors, service bays, bilges, and aluminum parts with a simpler yard-ready product set.",
-    "asset": "Hull and topside surfaces, decks, bilges, engine bays, lifts, trailers, aluminum rails, docks, and service floors",
-    "soil": "Salt, algae staining, oil and grease, diesel soot, fish residue, road film, and aluminum oxidation",
-    "method": "Rinse with fresh water, wash or degrease, brighten aluminum where needed, recover the wash water, and inspect dry",
-    "products": ["torque", "alumibrite", "hcr"],
-    "document_products": ["torque", "hcr"],
-    "concentration": "Use the current wash or descaler label range; determine any aluminum-brightening ratio on a hidden alloy/finish coupon first.",
-    "process": "Document surface temperature, dilution, dwell, agitation, rinse volume, recovery, and dry finish condition.",
-    "boundary": "Confirm coating and alloy, isolate shore power, protect bilges and water, and comply with yard permits and vessel-owner authorization.",
-    "verification": "Dry no-film inspection, gloss/finish acceptance, white-wipe where practical, and zero visible sheen outside containment.",
-    "materials": "Gelcoat, marine paint, aluminum, stainless steel, vinyl, rubber, glass, sealants, and antifouling systems",
-    "wastewater": "Capture at the work area; route through yard solids/oil controls and the authorized sanitary or waste-hauler path."
-  },
-  {
-    "slug": "mechanical-contractors-water-treatment",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Mechanical Contractors & Water Treatment",
-    "kind": "supplemental",
-    "icon": "ph-wind",
-    "headline": "Give technicians a descaling method they can explain and repeat.",
-      "marketing": "Identify the deposit, choose HCR or Descaler, and build a clear circulation and rinse plan around the equipment.",
-    "operating_outcome": "A clear circulation and rinse plan cuts guesswork and helps prevent callbacks.",
-    "cta_label": "Request a contractor job method",
-    "cta_type": "quote",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "descale": ["hcr", "descaler"],
-      "cooling-water": ["hcr", "descaler", "watersafe60"]
+    {
+      "slug": "municipalities-water-utilities",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Municipalities & Water Utilities",
+      "kind": "canonical",
+      "icon": "ph-buildings",
+      "headline": "Clear scale, rust, and grease from hard-working utility equipment.",
+      "marketing": "WaterSafe60 helps control pH, scale, and corrosion. HCR removes mineral buildups. HVAC CR cuts through greasy utility work.",
+      "operating_outcome": "Restore flow, rinse clean, and give crews a method they can repeat on the next job.",
+      "cta_label": "Test it at my utility",
+      "cta_type": "quote",
+      "hero_cta": true,
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "descale": [
+          "hcr"
+        ],
+        "cooling-water": [
+          "watersafe60",
+          "hcr"
+        ],
+        "fleet-wash": [
+          "cr2"
+        ]
+      },
+      "lead_task": "Remove scale, rust, and grease from pumps, pipes, basins, and other utility equipment.",
+      "asset": "Pumps, valves, screens, strainers, heat exchangers, treatment skids, maintenance floors, and out-of-service storage components",
+      "soil": "Carbonate scale, iron and manganese buildup, rust, grease, silt, and treatment-chemical residue",
+      "method": "Take the equipment offline, remove loose buildup, circulate or soak with cleaner, brush, drain, rinse, and inspect",
+      "products": [
+        "cr2",
+        "watersafe60",
+        "hcr"
+      ],
+      "document_products": [
+        "watersafe60",
+        "hcr"
+      ],
+      "concentration": "Set cleaning concentration from the current label/user guide, buildup sample, metallurgy, and asset volume; treatment dosing is utility-engineered.",
+      "process": "Track concentration, solution temperature, flow/scrubbing, pH, working time, metal response, rinse conductivity/turbidity, and controlled restart.",
+      "boundary": "Use LOTO, confined-space rules, cross-connection control, permit requirements, and the utility's separate disinfection and sampling plan for potable assets.",
+      "verification": "Clean inspection point, restored flow or pressure drop, stable rinse pH/conductivity/turbidity, then required utility bacteriological release.",
+      "materials": "Ductile iron, carbon and stainless steel, copper, concrete, coatings, PVC/HDPE, elastomers, and treatment instruments",
+      "wastewater": "Characterize pH, metals, solids, and treatment residuals; route only under the utility's NPDES, sewer, or hauled-waste authorization."
     },
-    "parent": "hvac-water",
-    "buyer": "Mechanical service contractors, water-treatment providers, commissioning teams, and facility project managers",
-    "distinct_scope": "Temporary circulation rigs, written method statements, descaling execution, rinse verification, and owner handoff - not ongoing owner-operated water treatment.",
-    "search_intent": "Heat-exchanger descaling contractor, boiler chemical cleaning, and temporary-loop flushing",
-    "lead_task": "Remove scale from boilers, heat exchangers, coils, and water loops, then return them clean and ready for treatment.",
-    "asset": "Plate and shell heat exchangers, boilers, cooling towers, coils, pumps, closed loops, strainers, and temporary circulation rigs",
-    "soil": "Carbonate and mixed mineral scale, iron oxide, corrosion product, silt, and water-side organic film",
-    "method": "Lock out and isolate the equipment, set up circulation, watch the clean, drain, rinse, inspect, and restart",
-    "products": ["hcr", "descaler", "watersafe60"],
-    "document_products": ["hcr", "watersafe60"],
-    "concentration": "Choose within the current HCR/Descaler guide from deposit, metallurgy, loop volume, and reaction rate; do not use a universal ratio.",
-    "process": "Log flow, solution temperature, concentration, pH/reaction trend, dwell, iron/hardness response, rinse conductivity, and restart chemistry.",
-    "boundary": "Written method statement, LOTO, pressure relief, venting, hose/rig compatibility, spill containment, owner approval, and Legionella controls.",
-    "verification": "Recovered flow, pressure drop, or approach temperature; stable rinse baseline; clean inspection point; treatment residual restored.",
-    "materials": "Copper, carbon and stainless steel, aluminum, galvanized steel, elastomers, brazing alloys, plastics, and sensors",
-    "wastewater": "Characterize pH and dissolved metals; neutralize and route through the owner's authorized discharge or waste-hauler process."
-  },
-  {
-    "slug": "military-government",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Brevard County- HVAC farm rust removal and cleaning.pdf", "source_sha256": "efdf1a0d332cf424155415467c08ac995e428bb20c9a19cb64c980c1110dbaae", "missing": []},
-    "label": "Military / Government",
-    "kind": "canonical",
-    "icon": "ph-seal-check",
-    "headline": "Turn chemistry, task, and result into a repeatable work card.",
-      "marketing": "Match one VertKleen product to the job, document the method and result, and give buyers a cleaner record they can stand behind.",
-    "operating_outcome": "Repeatable work cards make training, field use, and repeat purchasing easier.",
-    "cta_label": "Request a performance package",
-    "cta_type": "audit",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd"],
-      "descale": ["hcr", "descaler"],
-      "fleet-wash": ["crhd", "alumibrite"]
+    {
+      "slug": "oil-gas",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/VertKleen HCR-Rust and Descaling Test for DDC Eng.pdf",
+        "source_sha256": "9b4e8c27cae606d2da5cf4dbc31eb88535e7c878ab8564de3d29062d8aafb5e7",
+        "missing": []
+      },
+      "label": "Oil, Gas & Process Plants",
+      "kind": "canonical",
+      "icon": "ph-gas-can",
+      "headline": "Use one cleaner for oil and grease, another for rust and scale.",
+      "marketing": "CR HD and Neutral lift oil and greasy film. HCR and Descaler loosen scale, rust, and mineral buildups.",
+      "operating_outcome": "Restore flow with lower fumes and a wash-water cleanup plan the crew can manage.",
+      "cta_label": "Test it without harsh acid fumes",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd",
+          "neutral"
+        ],
+        "descale": [
+          "hcr",
+          "descaler"
+        ]
+      },
+      "redirect_from": [
+        "oil-gas-industrial-plants"
+      ],
+      "lead_task": "Remove oil, grease, rust, and scale from rigs, terminals, and support equipment cleared for maintenance.",
+      "asset": "Tanks, heat exchangers, separators, pipe spools, pumps, valves, rig equipment, containment floors, and vehicle components",
+      "soil": "Crude and refined hydrocarbon film, grease, drilling residue, carbon, iron oxide, carbonate scale, and mixed buildups",
+      "method": "Drain and clear the equipment, remove loose product, degrease or circulate descaler, recover, rinse, and inspect",
+      "products": [
+        "hcr",
+        "descaler",
+        "crhd",
+        "neutral"
+      ],
+      "document_products": [
+        "crhd",
+        "hcr"
+      ],
+      "concentration": "Select within the current label/TDS range from buildup analysis, metallurgy, grime load, and a contained field trial.",
+      "process": "Log LEL/O2 status, solution temperature, concentration, working time, flow or mechanical scrubbing, rinse/recovery volume, pH, and waste profile.",
+      "boundary": "Permit to work, LOTO/blinding, gas testing, confined-space control, ignition control, materials review, and spill containment are prerequisites.",
+      "verification": "Gas-free status maintained, no visible/free oil, white-wipe or specified cleanliness, recovered flow/pressure drop, and acceptable rinse endpoint.",
+      "materials": "Carbon and stainless steel, specialty alloys, coatings/linings, elastomers, FRP, concrete, and instrument components",
+      "wastewater": "Profile hydrocarbons, metals, pH, and solids; route to the site's oily-water treatment or licensed waste stream."
     },
-    "lead_task": "Clean vehicles, buildings, and utility equipment with one clear product and work plan.",
-    "asset": "Motor-pool vehicles, ground equipment, hangar floors, public works machinery, heat exchangers, water assets, and maintenance shops",
-    "soil": "Petroleum grease, hydraulic oil, carbon, road film, rust, mineral scale, and ordinary facility soil",
-    "method": "Match the product to the work card, clean the part or equipment, recover the wash water, and record the result",
-    "products": ["hcr", "descaler", "crhd", "alumibrite"],
-    "document_products": ["hcr", "crhd"],
-    "concentration": "Use only current controlled label/TDS ranges and the task order's approved starting dilution after material and process review.",
-    "process": "Record product lot, dilution, temperature, dwell, agitation/flow, rinse, waste volume, inspection result, and return-to-service authorization.",
-    "boundary": "Follow technical orders, SDS approval, LOTO, environmental plan, security/access rules, material authorization, and contract scope.",
-    "verification": "Work-card inspection criterion, white-wipe/water-break where specified, mechanical performance endpoint, and signed chain-of-custody record.",
-    "materials": "Painted and bare metals, aluminum, stainless steel, composites, elastomers, concrete, coatings, and government-specified materials",
-    "wastewater": "Profile and containerize by installation rules; use approved separators, industrial discharge, or waste contracts."
-  },
-  {
-    "slug": "municipalities-water-utilities",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Municipalities & Water Utilities",
-    "kind": "canonical",
-    "icon": "ph-buildings",
-    "headline": "Controlled chemistry for scale, rust, grease, and utility flow.",
-      "marketing": "WaterSafe60 helps control pH, scale, and corrosion. HCR removes mineral deposits. HVAC CR cuts through greasy utility work.",
-    "operating_outcome": "Restore flow, rinse clean, and give crews a method they can repeat on the next job.",
-    "cta_label": "Request a utility pilot",
-    "cta_type": "quote",
-    "hero_cta": true,
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "descale": ["hcr"],
-      "cooling-water": ["watersafe60", "hcr"],
-      "fleet-wash": ["cr2"]
-    },
-    "lead_task": "Remove scale, rust, and grease from pumps, pipes, basins, and other utility equipment.",
-    "asset": "Pumps, valves, screens, strainers, heat exchangers, treatment skids, maintenance floors, and out-of-service storage components",
-    "soil": "Carbonate scale, iron and manganese deposit, rust, grease, silt, and treatment-chemical residue",
-    "method": "Take the equipment offline, remove loose buildup, circulate or soak with cleaner, brush, drain, rinse, and inspect",
-    "products": ["cr2", "watersafe60", "hcr"],
-    "document_products": ["watersafe60", "hcr"],
-    "concentration": "Set cleaning concentration from the current label/user guide, deposit sample, metallurgy, and asset volume; treatment dosing is utility-engineered.",
-    "process": "Track concentration, solution temperature, flow/agitation, pH, dwell, metal response, rinse conductivity/turbidity, and controlled restart.",
-    "boundary": "Use LOTO, confined-space rules, cross-connection control, permit requirements, and the utility's separate disinfection and sampling plan for potable assets.",
-    "verification": "Clean inspection point, restored flow or pressure drop, stable rinse pH/conductivity/turbidity, then required utility bacteriological release.",
-    "materials": "Ductile iron, carbon and stainless steel, copper, concrete, coatings, PVC/HDPE, elastomers, and treatment instruments",
-    "wastewater": "Characterize pH, metals, solids, and treatment residuals; route only under the utility's NPDES, sewer, or hauled-waste authorization."
-  },
-  {
-    "slug": "oil-gas",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen HCR-Rust and Descaling Test for DDC Eng.pdf", "source_sha256": "9b4e8c27cae606d2da5cf4dbc31eb88535e7c878ab8564de3d29062d8aafb5e7", "missing": []},
-    "label": "Oil, Gas & Process Plants",
-    "kind": "canonical",
-    "icon": "ph-gas-can",
-    "headline": "Use one mechanism for hydrocarbon film and another for scale and oxide.",
-      "marketing": "CR HD and Neutral lift oil and hydrocarbon film. HCR and Descaler break down scale, rust, and oxide.",
-    "operating_outcome": "Restore flow with lower fumes and a wash-water cleanup plan the crew can manage.",
-    "cta_label": "Request a gas-free trial",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd", "neutral"],
-      "descale": ["hcr", "descaler"]
-    },
-    "redirect_from": ["oil-gas-industrial-plants"],
-    "lead_task": "Remove oil, grease, rust, and scale from rigs, terminals, and support equipment cleared for maintenance.",
-    "asset": "Tanks, heat exchangers, separators, pipe spools, pumps, valves, rig equipment, containment floors, and vehicle components",
-    "soil": "Crude and refined hydrocarbon film, grease, drilling residue, carbon, iron oxide, carbonate scale, and mixed deposits",
-    "method": "Drain and clear the equipment, remove loose product, degrease or circulate descaler, recover, rinse, and inspect",
-    "products": ["hcr", "descaler", "crhd", "neutral"],
-    "document_products": ["crhd", "hcr"],
-    "concentration": "Select within the current label/TDS range from deposit analysis, metallurgy, soil load, and a contained field trial.",
-    "process": "Log LEL/O2 status, solution temperature, concentration, dwell, flow or mechanical agitation, rinse/recovery volume, pH, and waste profile.",
-    "boundary": "Permit to work, LOTO/blinding, gas testing, confined-space control, ignition control, materials review, and spill containment are prerequisites.",
-    "verification": "Gas-free status maintained, no visible/free oil, white-wipe or specified cleanliness, recovered flow/pressure drop, and acceptable rinse endpoint.",
-    "materials": "Carbon and stainless steel, specialty alloys, coatings/linings, elastomers, FRP, concrete, and instrument components",
-    "wastewater": "Profile hydrocarbons, metals, pH, and solids; route to the site's oily-water treatment or licensed waste stream."
-  },
-  {
-    "slug": "plumbing",
-    "field_evidence": {"status": "context_only", "publication_basis": "Owner-confirmed public field media, 2026-07-25", "source": "case studies/VertKleen Descaler used in Fire Protection System.pdf", "source_sha256": "f069cf916057fea06b60804cf21f9bbd67e3118f33b058a87a1264f54fc10b46", "missing": []},
-    "label": "Plumbing",
-    "kind": "canonical",
-    "icon": "ph-wrench",
-    "headline": "Restore flow with controlled carbonate chemistry.",
+    {
+      "slug": "plumbing",
+      "field_evidence": {
+        "status": "context_only",
+        "publication_basis": "Owner-confirmed public field media, 2026-07-25",
+        "source": "case studies/VertKleen Descaler used in Fire Protection System.pdf",
+        "source_sha256": "f069cf916057fea06b60804cf21f9bbd67e3118f33b058a87a1264f54fc10b46",
+        "missing": []
+      },
+      "label": "Plumbing",
+      "kind": "canonical",
+      "icon": "ph-wrench",
+      "headline": "Clear hard-water scale and bring the flow back.",
       "marketing": "HCR and Descaler break down hard-water scale, then circulation and rinsing carry the loosened buildup out of the loop.",
-    "operating_outcome": "Give technicians a strong, repeatable clean that is easier to run on the equipment.",
-    "cta_label": "Request a descaling-loop review",
-    "cta_type": "audit",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "descale": ["descaler", "hcr"]
+      "operating_outcome": "Give technicians a strong, repeatable clean that is easier to run on the equipment.",
+      "cta_label": "Plan my descaling job",
+      "cta_type": "audit",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "descale": [
+          "descaler",
+          "hcr"
+        ]
+      },
+      "lead_task": "Clear hard-water scale from tankless heaters, boilers, fixtures, and water equipment to restore flow and heat transfer.",
+      "asset": "Tankless heat exchangers, boilers, recirculation components, valves, fixtures, strainers, pumps, and service piping",
+      "soil": "Calcium carbonate, mixed mineral scale, rust, iron buildup, and soap/mineral film",
+      "method": "Take the equipment offline, circulate or soak with cleaner, watch the clean, drain, rinse, and restart",
+      "products": [
+        "descaler",
+        "hcr",
+        "neutral"
+      ],
+      "document_products": [
+        "descaler",
+        "hcr"
+      ],
+      "concentration": "Choose within the current HCR/Descaler guide from scale severity, metallurgy, water volume, and OEM limits; no universal ratio.",
+      "process": "Log solution temperature, concentration, circulation flow, pH/reaction trend, working time, rinse pH/conductivity, and post-service flow.",
+      "boundary": "Use LOTO and pressure relief, protect potable cross-connections, confirm metals/elastomers, follow OEM warranty, and fully flush before service.",
+      "verification": "Recovered flow or temperature rise, clean inspection point/strainer, stable rinse pH/conductivity, leak check, and potable return-to-service procedure.",
+      "materials": "Copper, stainless steel, brass, nickel alloys, aluminum where approved, PVC/CPVC, PEX kept isolated as required, and elastomers",
+      "wastewater": "Neutralize if required and discharge only under local plumbing/sewer rules; capture metal-rich or prohibited waste."
     },
-    "lead_task": "Clear hard-water scale from tankless heaters, boilers, fixtures, and water equipment to restore flow and heat transfer.",
-    "asset": "Tankless heat exchangers, boilers, recirculation components, valves, fixtures, strainers, pumps, and service piping",
-    "soil": "Calcium carbonate, mixed mineral scale, rust, iron deposit, and soap/mineral film",
-    "method": "Take the equipment offline, circulate or soak with cleaner, watch the clean, drain, rinse, and restart",
-    "products": ["descaler", "hcr", "neutral"],
-    "document_products": ["descaler", "hcr"],
-    "concentration": "Choose within the current HCR/Descaler guide from scale severity, metallurgy, water volume, and OEM limits; no universal ratio.",
-    "process": "Log solution temperature, concentration, circulation flow, pH/reaction trend, dwell, rinse pH/conductivity, and post-service flow.",
-    "boundary": "Use LOTO and pressure relief, protect potable cross-connections, confirm metals/elastomers, follow OEM warranty, and fully flush before service.",
-    "verification": "Recovered flow or temperature rise, clean inspection point/strainer, stable rinse pH/conductivity, leak check, and potable return-to-service procedure.",
-    "materials": "Copper, stainless steel, brass, nickel alloys, aluminum where approved, PVC/CPVC, PEX kept isolated as required, and elastomers",
-    "wastewater": "Neutralize if required and discharge only under local plumbing/sewer rules; capture metal-rich or prohibited waste."
-  },
-  {
-    "slug": "pressure-washing-soft-wash-contractors",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Pressure-Washing & Soft-Wash Contractors",
-    "kind": "supplemental",
-    "icon": "ph-spray-bottle",
-    "headline": "Make low pressure work through wetting, dwell, suspension, and rinse.",
+    {
+      "slug": "pressure-washing-soft-wash-contractors",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Pressure-Washing & Soft-Wash Contractors",
+      "kind": "supplemental",
+      "icon": "ph-spray-bottle",
+      "headline": "Let the cleaner do more so crews can use less pressure.",
       "marketing": "LAM3 stays on algae and organic stains longer, CR HD cuts oily grime, and MultiWash handles everyday exterior film.",
-    "operating_outcome": "Let the cleaner do more of the work so crews can use less pressure, protect the surface, and finish more evenly.",
-    "cta_label": "Request a dilution method",
-    "cta_type": "distributor",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd"],
-      "fleet-wash": ["crhd", "multiwash"],
-      "exterior-bio-soil": ["lam3", "multiwash"]
+      "operating_outcome": "Let the cleaner do more of the work so crews can use less pressure, protect the surface, and finish more evenly.",
+      "cta_label": "Find my starting mix",
+      "cta_type": "distributor",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd"
+        ],
+        "fleet-wash": [
+          "crhd",
+          "multiwash"
+        ],
+        "exterior-bio-grime": [
+          "lam3",
+          "multiwash"
+        ]
+      },
+      "parent": "construction",
+      "buyer": "Mobile pressure-washing and soft-wash contractors serving residential and commercial properties",
+      "distinct_scope": "Substrate-matched exterior washing, working time, rinse, plant protection, stormwater control, and customer dry-photo acceptance - not construction-site cleanup.",
+      "search_intent": "Pressure-wash detergent, soft-wash chemistry, and exterior algae or traffic-film removal",
+      "lead_task": "Lift algae, soot, and traffic film from roofs, siding, hardscape, and other exterior surfaces.",
+      "asset": "Roofs, siding, stucco, painted masonry, concrete, pavers, fences, storefronts, and exterior glass",
+      "soil": "Algae, lichen and mildew staining, soot, pollen, bird residue, tire marks, oil spots, and general grime",
+      "method": "Pre-wet nearby areas, apply the cleaner, give it time to work, brush only where needed, then rinse and recover",
+      "products": [
+        "lam3",
+        "multiwash",
+        "crhd"
+      ],
+      "document_products": [
+        "lam3",
+        "multiwash"
+      ],
+      "concentration": "Use the weakest current-label dilution that clears the test area; never increase chemistry or pressure before checking working time and coverage.",
+      "process": "Record weather, surface temperature, dilution, nozzle pressure/flow, working time, scrubbing, rinse volume, and dry inspection.",
+      "boundary": "Protect plants, occupants, coatings, sealants, electrical entries, neighboring property, and storm drains; observe ladder and work-at-height controls.",
+      "verification": "Matched-angle dry photos, no streak or residue, finish/color acceptance, and no plant or runoff impact after the trial area.",
+      "materials": "Roofing, vinyl, stucco, painted masonry, concrete, pavers, wood only if approved, glass, sealants, and landscaping",
+      "wastewater": "Block storm inlets, recover oily/chemical wash water, and follow local mobile-wash and property discharge rules."
     },
-    "parent": "construction",
-    "buyer": "Mobile pressure-washing and soft-wash contractors serving residential and commercial properties",
-    "distinct_scope": "Substrate-matched exterior washing, dwell, rinse, plant protection, stormwater control, and customer dry-photo acceptance - not construction-site cleanup.",
-    "search_intent": "Pressure-wash detergent, soft-wash chemistry, and exterior algae or traffic-film removal",
-    "lead_task": "Lift algae, soot, and traffic film from roofs, siding, hardscape, and other exterior surfaces.",
-    "asset": "Roofs, siding, stucco, painted masonry, concrete, pavers, fences, storefronts, and exterior glass",
-    "soil": "Algae, lichen and mildew staining, soot, pollen, bird residue, tire marks, oil spots, and general grime",
-    "method": "Pre-wet nearby areas, apply the cleaner, give it time to work, brush only where needed, then rinse and recover",
-    "products": ["lam3", "multiwash", "crhd"],
-    "document_products": ["lam3", "multiwash"],
-    "concentration": "Use the weakest current-label dilution that clears the test area; never increase chemistry or pressure before checking dwell and coverage.",
-    "process": "Record weather, surface temperature, dilution, nozzle pressure/flow, dwell, agitation, rinse volume, and dry inspection.",
-    "boundary": "Protect plants, occupants, coatings, sealants, electrical entries, neighboring property, and storm drains; observe ladder and work-at-height controls.",
-    "verification": "Matched-angle dry photos, no streak or residue, finish/color acceptance, and no plant or runoff impact after the trial area.",
-    "materials": "Roofing, vinyl, stucco, painted masonry, concrete, pavers, wood only if approved, glass, sealants, and landscaping",
-    "wastewater": "Block storm inlets, recover oily/chemical wash water, and follow local mobile-wash and property discharge rules."
-  },
-  {
-    "slug": "restaurants-commercial-kitchens",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Restaurants & Commercial Kitchens",
-    "kind": "supplemental",
-    "icon": "ph-fork-knife",
-    "headline": "Lift hood, floor, drain, and equipment soil with less odor and residue.",
+    {
+      "slug": "restaurants-commercial-kitchens",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Restaurants & Commercial Kitchens",
+      "kind": "supplemental",
+      "icon": "ph-fork-knife",
+      "headline": "Cut kitchen grease and grime with less odor and residue.",
       "marketing": "CR HD breaks through kitchen grease, MultiWash or Neutral handles mixed surfaces, and Purgo attacks recurring odor at the source.",
-    "operating_outcome": "Finish with a cleaner rinse, lower odor, and less kitchen downtime.",
-    "cta_label": "Request a hood or floor trial",
-    "cta_type": "sample",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd", "multiwash", "neutral"]
+      "operating_outcome": "Finish with a cleaner rinse, lower odor, and less kitchen downtime.",
+      "cta_label": "Test my hood or floor",
+      "cta_type": "sample",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd",
+          "multiwash",
+          "neutral"
+        ]
+      },
+      "parent": "food-beverage",
+      "buyer": "Restaurant crew members, commercial-kitchen managers, hood-cleaning contractors, and food-service facility teams",
+      "distinct_scope": "Cookline, hood-filter, floor, wall, drain, and grease-interceptor cleaning before the required rinse and sanitation step - not process-plant CIP.",
+      "search_intent": "Commercial-kitchen degreaser, restaurant floor cleaner, and hood-filter cleaning chemical",
+      "lead_task": "Break through baked-on fat, grease, and carbon on hoods, filters, floors, and kitchen equipment.",
+      "asset": "Hoods, filters, floors, walls, equipment exteriors, grease traps, drains, and wash areas",
+      "soil": "Animal and vegetable fat, polymerized grease, carbonized food, protein film, floor oil, and drain residue",
+      "method": "Let hot equipment cool, scrape away heavy buildup, apply degreaser, brush or foam, rinse, and recover the wash water",
+      "products": [
+        "crhd",
+        "purgo",
+        "multiwash",
+        "neutral"
+      ],
+      "document_products": [
+        "crhd",
+        "multiwash"
+      ],
+      "trial_brief": {
+        "title": "Commercial kitchen controlled-trial brief",
+        "objective": "Plan a witnessed hood-filter, equipment-exterior, floor, or drain-area trial that records gross-grime removal, degreasing, rinse and recovery, dry reopening, and the separate sanitation release before broader use.",
+        "compatibility_checks": [
+          {
+            "material": "Stainless steel and hood components",
+            "gate": "Confirm surface finish and component condition, cool and isolate the work, and isolate hood fire systems only as authorized before the trial."
+          },
+          {
+            "material": "Aluminum, plastics, rubber, and paint",
+            "gate": "Identify each exact material and test the weakest current-label dilution before exposure; keep fryers out unless OEM-approved."
+          },
+          {
+            "material": "Tile, grout, and sealed flooring",
+            "gate": "Run the current grout and slip-residue tests, capture rinse and recovery, and release only after the surface is dry with no slippery film."
+          }
+        ]
+      },
+      "concentration": "Use the current CR HD/MultiWash label range; start at the weakest dilution that passes stainless, aluminum, grout, and slip-residue tests.",
+      "process": "Record surface and solution temperature, dilution, working time, foam/brush action, rinse temperature/volume, recovery, and dry time.",
+      "boundary": "Shut down heat and ignition, protect food, isolate hood fire systems as authorized, verify aluminum, and keep cleaning separate from sanitizing.",
+      "verification": "No visible grease, clean white cloth, no slippery film after dry, clear drain flow, then the kitchen's separate sanitation release.",
+      "materials": "Stainless steel, aluminum only after test, tile, grout, sealed flooring, plastics, rubber, paint, and hood components",
+      "wastewater": "Scrape solids first; route fats/oils/grease through the interceptor and approved sanitary drain, never stormwater."
     },
-    "parent": "food-beverage",
-    "buyer": "Restaurant operators, commercial-kitchen managers, hood-cleaning contractors, and food-service facility teams",
-    "distinct_scope": "Cookline, hood-filter, floor, wall, drain, and grease-interceptor cleaning before the required rinse and sanitation step - not process-plant CIP.",
-    "search_intent": "Commercial-kitchen degreaser, restaurant floor cleaner, and hood-filter cleaning chemical",
-    "lead_task": "Break through baked-on fat, grease, and carbon on hoods, filters, floors, and kitchen equipment.",
-    "asset": "Hoods, filters, floors, walls, equipment exteriors, grease traps, drains, and wash areas",
-    "soil": "Animal and vegetable fat, polymerized grease, carbonized food, protein film, floor oil, and drain residue",
-    "method": "Let hot equipment cool, scrape away heavy buildup, apply degreaser, brush or foam, rinse, and recover the wash water",
-    "products": ["crhd", "purgo", "multiwash", "neutral"],
-    "document_products": ["crhd", "multiwash"],
-    "trial_brief": {
-      "title": "Commercial kitchen controlled-trial brief",
-      "objective": "Plan a witnessed hood-filter, equipment-exterior, floor, or drain-area trial that records gross-soil removal, degreasing, rinse and recovery, dry reopening, and the separate sanitation release before broader use.",
-      "compatibility_checks": [
-        {"material": "Stainless steel and hood components", "gate": "Confirm surface finish and component condition, cool and isolate the work, and isolate hood fire systems only as authorized before the trial."},
-        {"material": "Aluminum, plastics, rubber, and paint", "gate": "Identify each exact material and test the weakest current-label dilution before exposure; keep fryers out unless OEM-approved."},
-        {"material": "Tile, grout, and sealed flooring", "gate": "Run the current grout and slip-residue tests, capture rinse and recovery, and release only after the surface is dry with no slippery film."}
-      ]
-    },
-    "concentration": "Use the current CR HD/MultiWash label range; start at the weakest dilution that passes stainless, aluminum, grout, and slip-residue tests.",
-    "process": "Record surface and solution temperature, dilution, dwell, foam/brush action, rinse temperature/volume, recovery, and dry time.",
-    "boundary": "Shut down heat and ignition, protect food, isolate hood fire systems as authorized, verify aluminum, and keep cleaning separate from sanitizing.",
-    "verification": "No visible grease, clean white cloth, no slippery film after dry, clear drain flow, then the kitchen's separate sanitation release.",
-    "materials": "Stainless steel, aluminum only after test, tile, grout, sealed flooring, plastics, rubber, paint, and hood components",
-    "wastewater": "Scrape solids first; route fats/oils/grease through the interceptor and approved sanitary drain, never stormwater."
-  },
-  {
-    "slug": "solar-panel-cleaning",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Solar Farms & Panel Cleaning",
-    "kind": "canonical",
-    "icon": "ph-sun",
-    "headline": "Release particulate and spotting without treating glass like concrete.",
+    {
+      "slug": "solar-panel-cleaning",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Solar Farms & Panel Cleaning",
+      "kind": "canonical",
+      "icon": "ph-sun",
+      "headline": "Wash away dust, salt, bird residue, and water spots without harsh cleaners.",
       "marketing": "MultiWash loosens dust, salt, bird residue, and light mineral film so panels rinse clean without a harsh cleaner.",
-    "operating_outcome": "Protect the panel coating and judge the result by the dry glass and power output.",
-    "cta_label": "Request an array trial",
-    "cta_type": "quote",
-    "hero_cta": true,
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "exterior-bio-soil": ["multiwash", "lam3"]
+      "operating_outcome": "Protect the panel coating and judge the result by the dry glass and power output.",
+      "cta_label": "Test it on my solar panels",
+      "cta_type": "quote",
+      "hero_cta": true,
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "exterior-bio-grime": [
+          "multiwash",
+          "lam3"
+        ]
+      },
+      "redirect_from": [
+        "solar-farms-panel-cleaning"
+      ],
+      "lead_task": "Remove dust, bird residue, salt, and mineral spots from solar panels while protecting the glass and equipment.",
+      "asset": "Photovoltaic module glass, frames, clamps, trackers, inverter-pad hardscape, and accessible support structures",
+      "soil": "Dust, pollen, bird residue, salt film, industrial fallout, light organic film, and hard-water spotting",
+      "method": "Pre-rinse with low-mineral water, use a low-residue cleaner and soft brush, then rinse spot-free",
+      "products": [
+        "multiwash",
+        "lam3"
+      ],
+      "document_products": [
+        "multiwash",
+        "lam3"
+      ],
+      "concentration": "Use the weakest current-label dilution that passes the module maker's coating and residue test; water-only remains the baseline where OEM-required.",
+      "process": "Record irradiance/weather, glass temperature, water conductivity, dilution, working time, brush pressure, rinse volume, and drying condition.",
+      "boundary": "Follow module/O&M warranty, energized-work, fall, tracker, coating, and electrical-connector restrictions; avoid thermal shock and dry cleaning abrasion.",
+      "verification": "Spot-free dry glass, matched-angle imaging, no coating/scratch change, and normalized before/after power or grimeing-ratio trend when available.",
+      "materials": "Tempered coated glass, anodized aluminum, sealants, backsheet edges, cable jackets, plastics, and painted/galvanized supports",
+      "wastewater": "Map runoff, protect grime and waterways, and capture chemical or contaminated rinse where the site permit requires it."
     },
-    "redirect_from": ["solar-farms-panel-cleaning"],
-    "lead_task": "Remove dust, bird residue, salt, and mineral spots from solar panels while protecting the glass and equipment.",
-    "asset": "Photovoltaic module glass, frames, clamps, trackers, inverter-pad hardscape, and accessible support structures",
-    "soil": "Dust, pollen, bird residue, salt film, industrial fallout, light organic film, and hard-water spotting",
-    "method": "Pre-rinse with low-mineral water, use a low-residue cleaner and soft brush, then rinse spot-free",
-    "products": ["multiwash", "lam3"],
-    "document_products": ["multiwash", "lam3"],
-    "concentration": "Use the weakest current-label dilution that passes the module maker's coating and residue test; water-only remains the baseline where OEM-required.",
-    "process": "Record irradiance/weather, glass temperature, water conductivity, dilution, dwell, brush pressure, rinse volume, and drying condition.",
-    "boundary": "Follow module/O&M warranty, energized-work, fall, tracker, coating, and electrical-connector restrictions; avoid thermal shock and dry cleaning abrasion.",
-    "verification": "Spot-free dry glass, matched-angle imaging, no coating/scratch change, and normalized before/after power or soiling-ratio trend when available.",
-    "materials": "Tempered coated glass, anodized aluminum, sealants, backsheet edges, cable jackets, plastics, and painted/galvanized supports",
-    "wastewater": "Map runoff, protect soil and waterways, and capture chemical or contaminated rinse where the site permit requires it."
-  },
-  {
-    "slug": "warehousing-distribution-centers",
-    "field_evidence": {"status": "absent", "missing": []},
-    "label": "Warehousing & Distribution Centers",
-    "kind": "supplemental",
-    "icon": "ph-warehouse",
-    "headline": "Lift oil and tire film while keeping the scrubber lane moving.",
+    {
+      "slug": "warehousing-distribution-centers",
+      "field_evidence": {
+        "status": "absent",
+        "missing": []
+      },
+      "label": "Warehousing & Distribution Centers",
+      "kind": "supplemental",
+      "icon": "ph-warehouse",
+      "headline": "Lift oil and tire film while keeping the scrubber lane moving.",
       "marketing": "CR HD cuts heavy oil and tire film. MultiWash handles mixed floor, dock, and equipment grime so crews can clean more with fewer bottles.",
-    "operating_outcome": "Compare passes, scrubber speed, dry time, leftover film, rinse water, and total labor.",
-    "cta_label": "Request an aisle benchmark",
-    "cta_type": "quote",
-    "buyer_roles": ["facility-operations", "ehs-compliance", "procurement", "service-contractors"],
-    "job_paths": {
-      "degrease": ["crhd", "multiwash"],
-      "fleet-wash": ["crhd", "multiwash"]
-    },
-    "parent": "distribution-cold-storage",
-    "buyer": "Ambient warehouse operators, third-party logistics teams, dock managers, and distribution-facility maintenance crews",
-    "distinct_scope": "Loading-dock, rack-base, forklift, battery-area, tire-mark, and floor-scrubber work in ambient logistics space - not refrigerated or food cold-chain sanitation.",
-    "search_intent": "Warehouse floor cleaner, loading-dock degreaser, and forklift wash-bay chemistry",
-    "lead_task": "Remove oil, tire marks, and pallet grime from floors, docks, forklifts, and warehouse equipment without leaving residue.",
-    "asset": "Concrete and coated floors, docks, forklifts, pallet jacks, racks, battery areas, shop parts, and drains",
-    "soil": "Hydraulic oil, grease, tire polymer, battery-area residue kept segregated, cardboard dust, adhesive, and tracked grime",
-    "method": "Sweep first, spot-treat hard marks, auto-scrub or degrease with low foam, recover, rinse, and dry",
-    "products": ["crhd", "multiwash"],
-    "document_products": ["crhd", "multiwash"],
-    "concentration": "Use the current label range and establish the weakest effective auto-scrubber or spot-treatment dilution by floor/coating zone.",
-    "process": "Record floor temperature, dilution, dwell, pad/brush choice, scrub/recovery passes, rinse, and dry-to-traffic time.",
-    "boundary": "Isolate traffic and powered equipment, segregate food/packaging, protect rack coatings and battery systems, and control slip risk.",
-    "verification": "No visible oil or tire film, dry white-wipe, facility slip-resistance acceptance, and no foam/residue after the recovery pass.",
-    "materials": "Polished or sealed concrete, epoxy/urethane coatings, painted steel, aluminum, rubber tires, plastics, and drain components",
-    "wastewater": "Recover scrubber solution; separate oil and solids and route through the facility's approved pretreatment/discharge system."
-  }
+      "operating_outcome": "Compare passes, scrubber speed, dry time, leftover film, rinse water, and total labor.",
+      "cta_label": "Price my warehouse cleaning",
+      "cta_type": "quote",
+      "buyer_roles": [
+        "facility-operations",
+        "ehs-compliance",
+        "procurement",
+        "service-contractors"
+      ],
+      "job_paths": {
+        "degrease": [
+          "crhd",
+          "multiwash"
+        ],
+        "fleet-wash": [
+          "crhd",
+          "multiwash"
+        ]
+      },
+      "parent": "distribution-cold-storage",
+      "buyer": "Ambient warehouse crew members, third-party logistics teams, dock managers, and distribution-facility maintenance crews",
+      "distinct_scope": "Loading-dock, rack-base, forklift, battery-area, tire-mark, and floor-scrubber work in ambient logistics space - not refrigerated or food cold-chain sanitation.",
+      "search_intent": "Warehouse floor cleaner, loading-dock degreaser, and forklift wash-bay chemistry",
+      "lead_task": "Remove oil, tire marks, and pallet grime from floors, docks, forklifts, and warehouse equipment without leaving residue.",
+      "asset": "Concrete and coated floors, docks, forklifts, pallet jacks, racks, battery areas, shop parts, and drains",
+      "soil": "Hydraulic oil, grease, tire polymer, battery-area residue kept segregated, cardboard dust, adhesive, and tracked grime",
+      "method": "Sweep first, spot-treat hard marks, auto-scrub or degrease with low foam, recover, rinse, and dry",
+      "products": [
+        "crhd",
+        "multiwash"
+      ],
+      "document_products": [
+        "crhd",
+        "multiwash"
+      ],
+      "concentration": "Use the current label range and establish the weakest effective auto-scrubber or spot-treatment dilution by floor/coating zone.",
+      "process": "Record floor temperature, dilution, working time, pad/brush choice, scrub/recovery passes, rinse, and dry-to-traffic time.",
+      "boundary": "Isolate traffic and powered equipment, segregate food/packaging, protect rack coatings and battery systems, and control slip risk.",
+      "verification": "No visible oil or tire film, dry white-wipe, facility slip-resistance acceptance, and no foam/residue after the recovery pass.",
+      "materials": "Polished or sealed concrete, epoxy/urethane coatings, painted steel, aluminum, rubber tires, plastics, and drain components",
+      "wastewater": "Recover scrubber solution; separate oil and solids and route through the facility's approved pretreatment/discharge system."
+    }
   ]
 }

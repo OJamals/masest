@@ -45,7 +45,7 @@ test("audited pages provide direct navigation, buyer-focused copy, and critical 
   const preview = read("content-preview.html");
   assert.match(preview, /<a class="skip-link" href="#contentPreviewRoot">Skip to content<\/a>/);
 
-  assert.match(read("index.html"), /Industrial Cleaning Power Without the <span class="no-break">Harsh-Chemical<\/span> Tradeoff\./);
+  assert.match(read("index.html"), /Clean the Hard Stuff Without Harsh Acids, Caustics, or Solvents\./);
   for (const path of ["contact.html", "products.html", "programs.html", "resources.html"]) {
     assert.doesNotMatch(read(path), /\b(?:We will|We'll|we offer)\b/, `${path} should address the buyer directly`);
   }

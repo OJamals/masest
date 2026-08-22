@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
 import { canonicalPublicImageUrl } from "../js/image-url.js";
 import { specializedContentDeliveries } from "../js/content-types.js";
+import { organizationJsonLd } from "./company-identity.mjs";
 import { STYLE_VERSION } from "./static-release.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -21,6 +22,12 @@ const SITE_IMAGE_DIMENSIONS = new Map(
     .map((asset) => [asset.public_url, { width: asset.width, height: asset.height }]),
 );
 const CATEGORIES = new Set(["marketing", "technical", "news"]);
+const CATEGORY_LABELS = {
+  marketing: "Product news",
+  technical: "How-to guide",
+  news: "Company news",
+};
+const categoryLabel = (category) => CATEGORY_LABELS[category] || category;
 const REQUIRED = ["title", "category", "date", "excerpt", "body"];
 const COMPARISON_HERO_SIZE = { width: 1448, height: 1086 };
 const COMPARISON_HEROES = new Map([
@@ -45,20 +52,7 @@ const COMPARISON_HEROES = new Map([
     alt: "VertKleen CIP CR and CIP HCR beside Micro Matic Alkaline Beer Line Cleaner",
   }],
 ]);
-const ORG = {
-  "@type": "Organization",
-  name: "MASEST Consulting LLC",
-  url: `${BASE}/`,
-  logo: `${BASE}/img/masest-logo.png`,
-  brand: "VertKleen",
-  description: "VertKleen pairs industrial cleaning performance with HMIS 0-0-0 across every current product MASEST offers.",
-  areaServed: "United States and international commercial accounts",
-  contactPoint: {
-    "@type": "ContactPoint",
-    contactType: "sales",
-    url: `${BASE}/contact`,
-  },
-};
+const ORG = organizationJsonLd();
 
 const text = (s) => escapeHtml(s);
 const attr = (s) => escapeHtml(s);
@@ -156,7 +150,7 @@ function postPage(post, all) {
   const related = relatedPosts(post, all);
   const relatedHtml = related.length
     ? `<aside class="blog-related"><h2>Related reading</h2><ul>${related
-        .map((r) => `<li><a href="../blog/${attr(r.slug)}"><span class="blog-related-cat">${text(r.category)}</span> ${text(r.title)}</a></li>`)
+        .map((r) => `<li><a href="../blog/${attr(r.slug)}"><span class="blog-related-cat">${text(categoryLabel(r.category))}</span> ${text(r.title)}</a></li>`)
         .join("")}</ul></aside>`
     : "";
   const ogImage = hero ? `${BASE}${hero.url}` : `${BASE}/img/og-card.png`;
@@ -193,32 +187,32 @@ function postPage(post, all) {
   <a href="../"><b>MASEST</b></a>
   <a href="../products">Products</a>
   <a href="../services">Services</a>
-  <span>Use Cases</span>
+  <span>Applications</span>
   <a href="../industries">Industries</a>
-  <a href="../proof">Proof</a>
-  <a href="../resources">Resources</a>
+  <a href="../proof">Results</a>
+  <a href="../resources">SDS &amp; Resources</a>
   <a href="../blog">Blog</a>
 </nav>
 </noscript>
 <main id="main">
   <article class="blog-post wrap">
-    <p class="blog-eyebrow"><a href="../blog">Blog</a> · <span class="blog-cat">${text(post.category)}</span></p>
+    <p class="blog-eyebrow"><a href="../blog">Blog</a> · <span class="blog-cat">${text(categoryLabel(post.category))}</span></p>
     <h1 class="display">${text(post.title)}</h1>
     <p class="blog-byline">${post.author ? `${text(post.author)} · ` : ""}${text(fmtDate(post.date))} · ${rt} min read</p>
     ${heroImg}
     <div class="blog-body">${bodyHtml}</div>
     ${relatedHtml}
     <aside class="blog-cta">
-      <h2>Need this chemistry for your facility?</h2>
-      <p>Match a VertKleen product to your application or request program pricing.</p>
+      <h2>Want help with this cleaning job?</h2>
+      <p>Tell us what needs to come off and what it is stuck to. We will point you to the right VertKleen product.</p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="../contact?type=quote">Request a quote</a>
+        <a class="btn btn-primary" href="../contact?type=quote">Get a quote</a>
         <a class="btn btn-ghost" href="../products">Browse products</a>
       </div>
     </aside>
   </article>
 </main>
-<script type="module" src="../js/main.js?v=20260821a"></script>
+<script type="module" src="../js/main.js?v=20260822a"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
@@ -234,7 +228,7 @@ function postCard(post) {
   return `<article class="blog-card" data-slug="${attr(post.slug)}" data-category="${attr(post.category)}" data-tags="${tags}">
     <a class="blog-card-link" href="/blog/${attr(post.slug)}">
       ${thumb}
-      <span class="blog-card-cat">${text(post.category)}</span>
+      <span class="blog-card-cat">${text(categoryLabel(post.category))}</span>
       <h2 class="blog-card-title">${text(post.title)}</h2>
       <p class="blog-card-excerpt">${text(post.excerpt)}</p>
       <span class="blog-card-date">${text(fmtDate(post.date))}</span>
@@ -245,7 +239,7 @@ function postCard(post) {
 function indexPage(posts) {
   const cats = ["all", ...CATEGORIES];
   const chips = cats
-    .map((c) => `<button type="button" class="blog-chip${c === "all" ? " is-active" : ""}" data-filter-cat="${c}" aria-pressed="${c === "all" ? "true" : "false"}">${c === "all" ? "All" : c[0].toUpperCase() + c.slice(1)}</button>`)
+    .map((c) => `<button type="button" class="blog-chip${c === "all" ? " is-active" : ""}" data-filter-cat="${c}" aria-pressed="${c === "all" ? "true" : "false"}">${c === "all" ? "All" : text(categoryLabel(c))}</button>`)
     .join("");
   const cards = posts.map(postCard).join("\n");
   const schema = {
@@ -261,11 +255,11 @@ function indexPage(posts) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blog | MASEST VertKleen</title>
-<meta name="description" content="Field notes, technical guides, and program news on lower-hazard VertKleen cleaning chemistry.">
+<meta name="description" content="Practical cleaning tips, how-to guides, product comparisons, and real VertKleen results for hard commercial and industrial jobs.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta property="og:title" content="Blog | MASEST VertKleen">
-<meta property="og:description" content="Field notes, technical guides, and program news on VertKleen chemistry.">
+<meta property="og:description" content="Straight answers and real results for hard cleaning jobs.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="alternate" type="application/rss+xml" title="MASEST VertKleen Blog" href="/blog/feed.xml">
@@ -289,19 +283,19 @@ function indexPage(posts) {
   <a href="/"><b>MASEST</b></a>
   <a href="products">Products</a>
   <a href="services">Services</a>
-  <span>Use Cases</span>
+  <span>Applications</span>
   <a href="industries">Industries</a>
-  <a href="proof">Proof</a>
-  <a href="resources">Resources</a>
+  <a href="proof">Results</a>
+  <a href="resources">SDS &amp; Resources</a>
   <a href="blog">Blog</a>
 </nav>
 </noscript>
 <main id="main">
   <section class="hero blog-index-hero">
     <div class="wrap">
-      <span class="eyebrow">VertKleen Briefing</span>
-      <h1 class="display">Blog</h1>
-      <p class="subhead">How the chemistry works, why operators switch, and what changes in the field.</p>
+      <span class="eyebrow">Cleaning tips &amp; real results</span>
+      <h1 class="display">Make hard cleaning jobs easier.</h1>
+      <p class="subhead">Straight answers on what to use, how to start, what it costs, and what customers saw on real jobs.</p>
     </div>
   </section>
   <section class="section">
@@ -316,13 +310,13 @@ ${cards}
   <section class="block-dark on-dark cta-band">
     <div class="wrap reveal">
       <h2 class="headline">Start with the cleaning problem.</h2>
-      <p class="subhead">Match mineral deposits, organic soils, mixed facility work, or bio-active control to the exact VertKleen product.</p>
+      <p class="subhead">Tell us what needs to come off and what it is stuck to. We will show you the best VertKleen place to start.</p>
       <a class="btn btn-primary" href="products#catalog">Browse by cleaning problem</a>
     </div>
   </section>
   <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="blog" data-cms-region="body"></div>
 </main>
-<script type="module" src="js/main.js?v=20260821a"></script>
+<script type="module" src="js/main.js?v=20260822a"></script>
 <script type="module" src="js/blog-index.js"></script>
 <script src="js/track.js" defer></script>
 </body>
@@ -350,7 +344,7 @@ function feedXml(posts) {
   <channel>
     <title>MASEST VertKleen Blog</title>
     <link>${BASE}/blog</link>
-    <description>How VertKleen chemistry works, why operators switch, and what changes in the field.</description>
+    <description>Practical cleaning tips, real VertKleen results, and easier ways to handle hard jobs.</description>
     <language>en-us</language>
 ${items}
   </channel>

@@ -112,7 +112,7 @@ function wireDocumentRoomCapture(authModule) {
   import(authModule).then(async ({ getToken }) => {
     const registered = Boolean(await getToken().catch(() => null));
     document.querySelectorAll("[data-document-request]").forEach((control) => {
-      setDocumentRequestState(control, registered ? "Request access" : "Register to request");
+      setDocumentRequestState(control, registered ? "Request file" : "Sign in to request");
     });
   }).catch(() => {});
   document.addEventListener("click", async (event) => {
@@ -123,7 +123,7 @@ function wireDocumentRoomCapture(authModule) {
       requestControl.disabled = true;
       const documentId = requestControl.dataset.documentId || "";
       const documentRevision = requestControl.dataset.documentRevision || "";
-      const docName = requestControl.dataset.documentName || requestControl.textContent || "Technical document";
+      const docName = requestControl.dataset.documentName || requestControl.textContent || "Product file";
       try {
         const { api, getToken } = await import(authModule);
         if (!await getToken()) {
@@ -143,7 +143,7 @@ function wireDocumentRoomCapture(authModule) {
           if (access.url) location.assign(access.url);
           return;
         }
-        setDocumentRequestState(requestControl, "Request pending", "pending");
+        setDocumentRequestState(requestControl, "Request sent", "pending");
         try {
           if (typeof window.mtrack === "function") window.mtrack("document_request", { document: docName });
         } catch (err) { /* analytics is best-effort */ }
@@ -153,7 +153,7 @@ function wireDocumentRoomCapture(authModule) {
           return;
         }
         setDocumentRequestState(requestControl,
-          error?.status === 409 ? "Document updated - refresh" : "Request failed - retry",
+          error?.status === 409 ? "New version available - refresh" : "Try request again",
           "error");
       } finally {
         requestControl.disabled = false;
@@ -202,18 +202,18 @@ export function renderChrome({
   const links = [
     { href: "products", label: "Products" },
     { href: "services", label: "Services" },
-    { href: "programs", label: "Programs" },
+    { href: "programs", label: "Water Programs" },
     {
       key: "useCases",
-      label: "Use Cases",
+      label: "Applications",
       children: [
         { href: "industries", label: "Industries" },
-        { href: "proof", label: "Proof" }
+        { href: "proof", label: "Results" }
       ]
     },
-    { href: "resources", label: "Resources" },
+    { href: "resources", label: "SDS & Resources" },
     { href: "blog", label: "Blog" },
-    { href: "about", label: "Company" }
+    { href: "about", label: "About" }
   ];
   const isActive = (href) => {
     if (page === href) return true;
@@ -289,8 +289,8 @@ export function renderChrome({
     leadBar.setAttribute("role", "group");
     leadBar.setAttribute("aria-label", "Primary request actions");
     leadBar.innerHTML = `
-      <a href="${root}contact?type=audit"><i class="ph ph-map-trifold" aria-hidden="true"></i><span>Map chemical</span></a>
-      <a href="${root}contact?type=quote"><i class="ph ph-tag" aria-hidden="true"></i><span>Get quote</span></a>
+      <a href="${root}contact?type=audit"><i class="ph ph-map-trifold" aria-hidden="true"></i><span>Find my cleaner</span></a>
+      <a href="${root}contact?type=quote"><i class="ph ph-tag" aria-hidden="true"></i><span>Get a quote</span></a>
     `;
     document.body.append(leadBar);
     const leadSentinel = document.createElement("div");
@@ -416,7 +416,7 @@ export function renderChrome({
         <div>
           <a class="foot-logo-link" href="${homeHref}" aria-label="MASEST home"><img class="foot-logo" src="/img/masest-logo.png" alt="MASEST" width="469" height="585" loading="lazy" decoding="async"></a>
           <div class="foot-brand" translate="no">MASEST VertKleen&trade;</div>
-          <p>Industrial cleaning candidates with current-SDS routing, controlled-trial planning, and quote support from Florida's Space Coast.</p>
+          <p>Industrial cleaners for scale, rust, grease, grime, odor, and water-system buildup—with real support from Florida's Space Coast.</p>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Product Categories</div>
@@ -426,16 +426,16 @@ export function renderChrome({
           <a href="${root}products#cat-exterior">Exterior &amp; Specialty</a>
         </div>
         <div class="foot-secondary">
-          <div class="foot-title">Resources + SDS</div>
+          <div class="foot-title">SDS &amp; Product Help</div>
           <a href="${root}resources">Resources &amp; SDS</a>
-          <a href="${root}programs">Programs &amp; Pricing</a>
-          <a href="${root}proof">Proof</a>
+          <a href="${root}programs">Water Programs &amp; Pricing</a>
+          <a href="${root}proof">Customer Results</a>
           <a href="${root}blog">Blog</a>
         </div>
         <div class="foot-secondary">
           <div class="foot-title">Company</div>
           <a href="${root}industries">Industries</a>
-          <a href="${root}about">Company</a>
+          <a href="${root}about">About MASEST</a>
           <a href="${root}contact">Contact</a>
         </div>
         <div>
@@ -443,13 +443,13 @@ export function renderChrome({
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
           <a href="tel:+18134063852">(813) 406-3852</a>
           <a href="#customerChat" data-customer-chat-open>Customer chat</a>
-          <p style="margin-top:10px;font-size:.8rem;line-height:1.7">Public-sector sourcing and bid support for registered buyers.</p>
+          <p style="margin-top:10px;font-size:.8rem;line-height:1.7">Government quote and bid help is available.</p>
         </div>
       </div>
       ${page === "newsletter" ? "" : `<div class="foot-news">
         <div class="foot-news-copy">
-          <div class="foot-title">VertKleen Briefing</div>
-          <p>Mechanisms, field results, and practical cleaning wins. No spam. Unsubscribe anytime.</p>
+          <div class="foot-title">VertKleen Tips</div>
+          <p>Useful cleaning tips, real job results, and product updates. No spam.</p>
         </div>
         <form class="foot-news-form" id="footNews" novalidate>
           <input type="email" name="email" id="footNewsEmail" autocomplete="email" spellcheck="false" placeholder="you@company.com…" aria-label="Email address" required>
@@ -460,7 +460,7 @@ export function renderChrome({
       </div>`}
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
-        <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">EULA</a></span>
+        <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">Site use</a></span>
         <span translate="no">VertKleen is a trademark of MASEST Consulting LLC.</span>
       </div>
     </div>`;

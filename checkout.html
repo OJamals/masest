@@ -9,14 +9,14 @@
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260821a">
+  <link rel="stylesheet" href="css/style.css?v=20260822a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
   <script type="module" src="js/checkout.js?v=20260821a"></script>
 </head>
 <body class="checkout-flow-page">
 <a class="skip-link" href="#main">Skip to checkout</a>
-<noscript><nav class="nojs-nav" aria-label="Site"><a href="index.html"><b>MASEST</b></a><a href="products.html">Products</a><span>Use Cases</span><a href="industries.html">Industries</a><a href="proof.html">Proof</a><a href="resources.html">Resources</a></nav></noscript>
+<noscript><nav class="nojs-nav" aria-label="Site"><a href="index.html"><b>MASEST</b></a><a href="products.html">Products</a><span>Applications</span><a href="industries.html">Industries</a><a href="proof.html">Results</a><a href="resources.html">SDS &amp; Resources</a></nav></noscript>
 
 <header class="checkout-header">
   <a class="checkout-brand" href="index.html" aria-label="MASEST home">
@@ -36,7 +36,7 @@
 <main id="main" class="checkout-main">
   <div id="checkoutEmpty" class="cart-empty checkout-empty" hidden>
     <h1>Your cart is empty.</h1>
-    <p>Add a purchase-ready product before checkout.</p>
+    <p>Add a product that is available to buy online.</p>
     <a class="btn btn-primary" href="products.html">Browse products</a>
   </div>
 
@@ -93,8 +93,8 @@
           <span>Billing address is same as shipping</span>
         </label>
         <details id="businessOptions" class="checkout-business-options">
-          <summary>Business purchasing options</summary>
-          <p>Need NET terms or a formal quote? <a href="contact.html?type=quote">Request purchasing support</a>.</p>
+          <summary>Need an invoice or quote?</summary>
+          <p>We can help with pay-later terms and quotes. <a href="contact.html?type=quote">Talk with our team</a>.</p>
         </details>
       </div>
 
@@ -117,7 +117,7 @@
       </fieldset>
 
       <p id="checkoutStatus" class="cart-status" role="status" aria-live="polite" hidden></p>
-      <button id="calculateShipping" class="btn btn-primary checkout-confirm" type="submit">Confirm address &amp; view rates</button>
+      <button id="calculateShipping" class="btn btn-primary checkout-confirm" type="submit" disabled>Confirm address &amp; view rates</button>
     </form>
 
     <aside class="checkout-summary" aria-labelledby="checkoutSummaryTitle">

@@ -16,6 +16,8 @@ import test from "node:test";
 
 import {
   documentDistribution,
+  documentEffectiveDate,
+  documentRevision,
   validatePublicDocumentReview,
 } from "../tools/public-document-policy.mjs";
 import { proofCardHtml } from "../js/proof-records.js";
@@ -72,7 +74,7 @@ test("approved PDF ledger covers the exact current document bytes", () => {
   const onDisk = filesUnder("docs/").filter((path) => path.endsWith(".pdf")).sort();
   const recorded = documents.map((document) => document.path).sort();
 
-  assert.equal(review.reviewed_on, "2026-07-25");
+  assert.equal(review.reviewed_on, "2026-08-21");
   assert.ok(review.scope?.trim());
   assert.equal(control.owner, "MASEST Consulting LLC");
   assert.match(control.revision || "", /^\d+\.\d+$/);
@@ -112,7 +114,7 @@ test("approved PDF ledger covers the exact current document bytes", () => {
   assert.deepEqual(
     Object.fromEntries(["no_automated_flags", "reference_only", "resource_only", "restricted"]
       .map((status) => [status, documents.filter((document) => document.status === status).length])),
-    { no_automated_flags: 13, reference_only: 5, resource_only: 9, restricted: 18 },
+    { no_automated_flags: 13, reference_only: 5, resource_only: 28, restricted: 18 },
   );
   assert.deepEqual(
     Object.fromEntries(["public", "request_only", "internal"]
@@ -120,8 +122,49 @@ test("approved PDF ledger covers the exact current document bytes", () => {
         distribution,
         documents.filter((document) => documentDistribution(document) === distribution).length,
       ])),
-    { public: 15, request_only: 30, internal: 0 },
+    { public: 34, request_only: 30, internal: 0 },
   );
+});
+
+test("August label release publishes 10 channel labels and nine organized marine files", () => {
+  const review = JSON.parse(read("data/public-document-review.json"));
+  const release = review.label_release;
+  const manifest = JSON.parse(read(release.manifest));
+  const released = review.documents.filter((document) => document.release_manifest === release.manifest);
+
+  assert.equal(review.pending_sources, undefined);
+  assert.equal(release.owner, "MASEST Consulting LLC");
+  assert.equal(release.status, "approved_for_public_distribution");
+  assert.equal(release.marine_naming_status, "owner_approved_marketing_names");
+  assert.match(release.trademark_scope, /registration.*not asserted/i);
+  assert.equal(manifest.labels.length, 19);
+  assert.equal(released.length, 19);
+  assert.equal(released.filter(({ collection }) => collection === "marine").length, 9);
+  assert.equal(released.filter(({ collection }) => collection !== "marine").length, 10);
+  assert.equal(released.filter(({ source_page }) => Number.isInteger(source_page)).length, 8);
+  for (const document of released) {
+    assert.equal(document.status, "resource_only");
+    assert.deepEqual(document.flags, []);
+    assert.equal(document.revision, release.revision);
+    assert.equal(document.effective_date, release.effective_date);
+    assert.match(document.source, /^updates\/.+\.pdf$/);
+    assert.match(document.path, /^docs\/labels\/(?:cip|general|hvac|marine)\/.+\.pdf$/);
+    assert.equal(documentDistribution(document), "public");
+  }
+});
+
+test("resource label library separates current releases, earlier public files, and request-only records", () => {
+  const resources = read("resources.html");
+  const labels = resources.match(/data-document-category="labels"([\s\S]*?)<\/section>/)?.[1] || "";
+
+  assert.match(labels, /Find the right label for your VertKleen product and application/);
+  assert.match(labels, /data-document-group="marine"[\s\S]*?9 files/);
+  assert.match(labels, /data-document-group="hvac"[\s\S]*?3 files/);
+  assert.match(labels, /data-document-group="cip"[\s\S]*?2 files/);
+  assert.match(labels, /data-document-group="general"[\s\S]*?5 files/);
+  assert.match(labels, /data-document-group="earlier-public"[\s\S]*?6 files/);
+  assert.match(labels, /data-document-group="request-only"[\s\S]*?6 files/);
+  assert.doesNotMatch(labels, /Earlier product labels[\s\S]*?current files/);
 });
 
 test("confidential sources stay excluded while published documents stay in the controlled document room", () => {
@@ -215,6 +258,14 @@ test("proof cards expose conversion records without approval-process copy", () =
   assert.doesNotMatch(proof, /class="(?:doc-link|doc-badge|proof-doc-link)"/, "proof must not expose source-file affordances");
   assert.equal((proof.match(/data-proof-card/g) || []).length, cards.length);
   assert.equal((proof.match(/class="case-disclosure"/g) || []).length, cards.length);
+  assert.equal(
+    (proof.match(/class="case-eyebrow">Product information</g) || []).length,
+    authorityProofSlugs.size,
+  );
+  assert.equal(
+    (proof.match(/class="case-eyebrow">Customer result</g) || []).length,
+    cards.length - authorityProofSlugs.size,
+  );
   assert.doesNotMatch(proof, /not performance proof|unsubstantiated|not established/i);
 
   for (const card of cards) {
@@ -476,8 +527,8 @@ test("customer-facing PDFs embed the approved document-control record", () => {
     const marker = [
       "% MASEST-CONTROL",
       `ID=${document.document_id}`,
-      `REV=${control.revision}`,
-      `EFFECTIVE=${control.effective_date}`,
+      `REV=${documentRevision(document, control)}`,
+      `EFFECTIVE=${documentEffectiveDate(document, control)}`,
       "STATUS=CURRENT",
       "APPROVAL=CUSTOMER-REVIEW",
       "OWNER=MASEST-CONSULTING-LLC",
@@ -486,34 +537,31 @@ test("customer-facing PDFs embed the approved document-control record", () => {
   }
 });
 
-test("public document room indexes every current PDF by ID and revision without governance chrome", () => {
+test("public document room indexes every current PDF without customer-facing governance chrome", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const resources = read("resources.html");
   const listedDocuments = review.documents.filter((entry) => documentDistribution(entry) !== "internal");
 
-  assert.doesNotMatch(resources, /doc-governance|Distribution revision|Effective<\/span>/);
+  assert.doesNotMatch(resources, /doc-governance|doc-control|Distribution revision|Effective<\/span>/);
 
   for (const document of listedDocuments) {
     const path = document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const id = String(document.document_id || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const skus = document.skus.join(" ");
     if (documentDistribution(document) === "request_only") {
+      const revision = documentRevision(document, review.document_control);
       const request = new RegExp(
-        `<button[^>]+data-document-request[^>]+data-document-id="${id}"[^>]+data-document-revision="${review.document_control.revision}"[^>]+data-document-skus="${skus}"`,
+        `<button[^>]+data-document-request[^>]+data-document-id="${id}"[^>]+data-document-revision="${revision}"[^>]+data-document-skus="${skus}"`,
       );
       assert.match(resources, request, `${document.path} needs a controlled request entry`);
       assert.doesNotMatch(resources, new RegExp(`href="${path}"`), `${document.path} must not expose a public URL`);
     } else {
+      const revision = documentRevision(document, review.document_control);
       const link = new RegExp(
-        `<a[^>]+href="${path}"[^>]+data-document-id="${id}"[^>]+data-document-revision="${review.document_control.revision}"[^>]+data-document-skus="${skus}"`,
+        `<a[^>]+href="${path}"[^>]+data-document-id="${id}"[^>]+data-document-revision="${revision}"[^>]+data-document-skus="${skus}"`,
       );
       assert.match(resources, link, `${document.path} needs a controlled document-room entry`);
     }
-    assert.match(
-      resources,
-      new RegExp(`${id}[^<]*· Rev ${review.document_control.revision.replace(".", "\\.")}[^<]*· SKUs: ${document.skus.join(", ")}`),
-      `${document.path} needs concise document control`,
-    );
   }
 
   const indexedIds = [...resources.matchAll(/data-document-id="(MAS-[A-Z0-9-]+)"/g)]
@@ -522,7 +570,7 @@ test("public document room indexes every current PDF by ID and revision without 
   assert.equal(new Set(indexedIds).size, indexedIds.length, "document room must not duplicate document IDs");
 });
 
-test("generated product and industry PDF links expose visible document control", () => {
+test("generated product and industry PDF links keep control metadata out of customer copy", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const reviewByPath = new Map(review.documents.map((document) => [document.path, document]));
   const pages = [
@@ -542,9 +590,9 @@ test("generated product and industry PDF links expose visible document control",
         `${page} links unavailable document ${path}`,
       );
       assert.match(link, new RegExp(`data-document-id="${document.document_id}"`), `${page} PDF link needs its exact document ID`);
-      assert.match(link, new RegExp(`data-document-revision="${review.document_control.revision.replace(".", "\\.")}"`), `${page} PDF link needs the current revision`);
-      assert.match(link, /class="doc-control"/, `${page} PDF link needs visible document control`);
-      assert.match(link, new RegExp(`${document.document_id}[^<]*· Rev ${review.document_control.revision.replace(".", "\\.")}[^<]*· SKUs:`), `${page} PDF link needs concise control`);
+      const revision = documentRevision(document, review.document_control);
+      assert.match(link, new RegExp(`data-document-revision="${revision.replace(".", "\\.")}"`), `${page} PDF link needs the current revision`);
+      assert.doesNotMatch(link, /class="doc-control"/, `${page} PDF link should stay customer-friendly`);
       assert.doesNotMatch(link, /Distribution:|Claims:|Approved|Authenticated|Signed|Verified/i);
     }
     for (const request of html.matchAll(/<button\b[^>]*data-document-request[^>]*>[\s\S]*?<\/button>/g)) {

@@ -39,7 +39,7 @@ test('canonical industry registry owns discovery taxonomy and presentation', () 
   ]);
   assert.deepEqual(
     jobIds,
-    ['degrease', 'descale', 'cip', 'cooling-water', 'fleet-wash', 'exterior-bio-soil'],
+    ['degrease', 'descale', 'cip', 'cooling-water', 'fleet-wash', 'exterior-bio-grime'],
   );
 
   const customDiscovery = structuredClone(industryRegistry.discovery);
@@ -72,15 +72,32 @@ test('P3 keeps distinct industry routes and permanently redirects retired overla
     ['/industries/food-processing-agriculture', '/industries/agriculture'],
     ['/industries/golf-courses-sports-facilities', '/industries/golf-courses'],
     ['/industries/hotels-resorts-property-management', '/industries/hotels-property-management'],
+    ['/industries/marine-marinas-boatyards', '/industries/marine'],
     ['/industries/oil-gas-industrial-plants', '/industries/oil-gas'],
     ['/industries/schools-universities', '/industries/education'],
     ['/industries/solar-farms-panel-cleaning', '/industries/solar-panel-cleaning'],
   ]);
   const slugs = new Set(industries.map((industry) => industry.slug));
 
-  assert.equal(industries.length, 27);
-  assert.equal(industries.filter((industry) => industry.kind === 'supplemental').length, 11);
+  assert.equal(industries.length, 26);
+  assert.equal(industries.filter((industry) => industry.kind === 'supplemental').length, 10);
   assert.equal(slugs.has('agriculture'), true);
+
+  const marine = industries.find((industry) => industry.slug === 'marine');
+  assert.equal(marine.label, 'Marine, Marinas & Boatyards');
+  assert.deepEqual(marine.job_paths.descale, ['hcr-t16', 'descaler']);
+  assert.deepEqual(
+    marine.products,
+    ['hcr-t16', 'descaler', 'cr2', 'multiwash', 'crhd', 'alumibrite', 'torque', 'purgo'],
+  );
+  assert.equal(marine.approved_product_names.length, 8);
+  assert.deepEqual(
+    marine.approved_product_names.map(({ name }) => name),
+    [
+      'Scale Buster', 'SeaVap Coil Kleener', 'Sea Drain Kleener', 'MultiWash',
+      'Marine Degreaser', 'AlumiBrite', 'Marine Wash & Wax', 'Marine Antimicrobial',
+    ],
+  );
 
   for (const [from, to] of redirects) {
     assert.equal(existsSync(new URL(`${from}.html`.slice(1), root)), false, `${from}: stale page`);
@@ -111,7 +128,7 @@ test('industry redirects reject unsafe or duplicate current routes', () => {
 });
 
 test('each industry route has one captioned image gallery containing every accepted generated image', () => {
-  assert.equal(industries.length, 27);
+  assert.equal(industries.length, 26);
   const renderedTaskImages = new Set();
   const renderedSupplementalImages = new Set();
   const sampleFiles = siteImages
@@ -277,6 +294,16 @@ test('gallery media fails closed between generated scenes, field context, and qu
       evidence.status === 'context_only' && !industry.case_summary,
       `${industry.slug}: field context must follow record status`,
     );
+    assert.equal(
+      (gallery.match(/<span class="ind-media-kind">Job photo<\/span>/g) || []).length,
+      figures.filter((kind) => kind === 'field-context').length,
+      `${industry.slug}: context media must not be labeled as a result`,
+    );
+    assert.equal(
+      (gallery.match(/<span class="ind-media-kind">Real job result<\/span>/g) || []).length,
+      figures.filter((kind) => kind === 'field-proof').length,
+      `${industry.slug}: result label requires qualified proof`,
+    );
 
     const fieldImages = [...gallery.matchAll(
       /<figure class="ind-shot" data-evidence-kind="(?:field-context|field-proof)">\s*<img src="\.\.(\/img\/industries\/[^"]+)" alt="([^"]+)"[^>]+width="(\d+)" height="(\d+)">/g,
@@ -303,7 +330,7 @@ test('gallery media fails closed between generated scenes, field context, and qu
     }
   }
 
-  assert.deepEqual(statusCounts, { absent: 16, context_only: 11, qualified: 0 });
+  assert.deepEqual(statusCounts, { absent: 15, context_only: 11, qualified: 0 });
 });
 
 test("public image registry excludes customer logos but retains owner-approved field records", () => {
@@ -321,12 +348,12 @@ test('P1 registry covers every industry route with task-specific operating conte
   const expectedSlugs = industryFiles.map((file) => file.replace(/\.html$/, '')).sort();
   const actualSlugs = industries.map((industry) => industry.slug).sort();
 
-  assert.equal(industries.length, 27);
+  assert.equal(industries.length, 26);
   assert.deepEqual(actualSlugs, expectedSlugs);
   assert.equal(new Set(actualSlugs).size, actualSlugs.length);
 
   const supplemental = industries.filter((industry) => industry.kind === 'supplemental');
-  assert.equal(supplemental.length, 11);
+  assert.equal(supplemental.length, 10);
 
   for (const industry of industries) {
     for (const field of [
@@ -404,6 +431,8 @@ test('industry hub generates linkable role and job discovery with decision conte
   assert.equal((hub.match(/data-industry-discovery(?!-)/g) || []).length, 1);
   assert.equal((hub.match(/data-industry-discovery-card/g) || []).length, industries.length);
   assert.doesNotMatch(hub, /Start with a quote/);
+  assert.equal((hub.match(/<dt>What you can see<\/dt>/g) || []).length, industries.length);
+  assert.doesNotMatch(hub, /<dt>Proof<\/dt>/);
 
   for (const role of roleIds) {
     assert.match(hub, new RegExp(`href="\\?role=${role}#industry-discovery"`));
@@ -432,7 +461,7 @@ test('industry hub generates linkable role and job discovery with decision conte
     assert.match(card, /Products to start with/, `${industry.slug}: products`);
     assert.match(card, /class="industry-discovery-products"/, `${industry.slug}: product list`);
     assert.doesNotMatch(card, /data-industry-discovery-product[^>]*>[^<]+<\/a>,/);
-    assert.match(card, /<dt>Proof<\/dt>/, `${industry.slug}: proof path`);
+    assert.match(card, /<dt>What you can see<\/dt>/, `${industry.slug}: result-photo path`);
     assert.match(card, /data-industry-discovery-path hidden/, `${industry.slug}: path framing`);
     assert.match(card, /href="contact\?[^"]+type=(?:audit|quote)/, `${industry.slug}: prefilled CTA`);
   }
@@ -528,6 +557,8 @@ test('every industry page renders one task-led applications and job-fit module',
       1,
       `${slug}: one primary CTA`,
     );
+    assert.match(cta, /Try before you switch/);
+    assert.match(cta, /Put VertKleen to work on one real cleaning job\./);
     assert.match(cta, new RegExp(industry.cta_label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.equal(
       new URLSearchParams(
@@ -553,7 +584,8 @@ test('every industry page renders one task-led applications and job-fit module',
       assert.match(html, new RegExp(`>${label}<`), `${slug}: missing ${label}`);
     }
 
-    assert.match(html, /<span>HMIS<\/span><strong>0-0-0 across every VertKleen product offered<\/strong>/);
+    assert.match(html, /SDS, labels & guides/);
+    assert.match(html, /Download what you need or ask us for help\./);
 
     assert.match(html, /message=/, `${slug}: CTA must prefill the cleaning brief`);
   }
@@ -653,9 +685,9 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   assert.equal(brewery.field_evidence.status, 'context_only');
   assert.equal(brewery.evidence_files, undefined);
   assert.match(brewery.field_evidence.publication_basis, /signed publication scope recorded offline/i);
-  assert.match(breweryBrief, /Real-world result available/);
+  assert.match(breweryBrief, /Field photos available/);
   assert.match(breweryHtml, /data-industry-case-summary/);
-  assert.match(breweryHtml, /CR and HCR replaced conventional caustic and acid chemistry/i);
+  assert.match(breweryHtml, /CR and HCR replaced the brewery's caustic and acid cleaners/i);
   assert.match(breweryHtml, /href="\.\.\/proof#brewery-cip-trials"/);
   assert.doesNotMatch(
     breweryHtml,
@@ -680,7 +712,7 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
     const brief = briefs.get(slug);
     assert.equal(industry.field_evidence.status, 'absent');
     assert.equal(industry.evidence_files, undefined);
-    assert.match(brief, /Ready for a side-by-side test/);
+    assert.match(brief, /Ready to try/);
     assert.doesNotMatch(
       `${JSON.stringify(industry.trial_brief)}\n${brief}`,
       forbidden,
@@ -691,7 +723,7 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   const hvacBrief = briefs.get(hvac.slug);
   assert.equal(hvac.field_evidence.status, 'context_only');
   assert.equal(hvac.evidence_files, undefined);
-  assert.match(hvacBrief, /Real-world result available/);
+  assert.match(hvacBrief, /Field photos available/);
   assert.doesNotMatch(hvacBrief, /customer references?/i);
   assert.doesNotMatch(
     `${JSON.stringify(hvac.trial_brief)}\n${hvacBrief}`,
@@ -707,7 +739,7 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   assert.deepEqual(drone.field_evidence.missing, []);
   assert.equal(drone.evidence_files, undefined);
   assert.match(droneBrief, /Drone Cleaning Companies: let one real job decide/i);
-  assert.match(droneBrief, /Ready for a side-by-side test/);
+  assert.match(droneBrief, /Ready to try/);
   assert.match(droneBrief, /Take a before photo and note how long the job usually takes/);
   assert.match(droneBrief, /Count the whole job/);
   assert.equal(
@@ -723,18 +755,18 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   const marineBrief = briefs.get(marine.slug);
   const marineHtml = read('industries/marine.html');
   const marineGallery = marineHtml.match(
-    /<section class="section section-slim ind-gallery-sec" aria-label="Marine image gallery">([\s\S]*?)<\/section>/,
+    /<section class="section section-slim ind-gallery-sec" aria-label="Marine, Marinas & Boatyards image gallery">([\s\S]*?)<\/section>/,
   )?.[1] || '';
   assert.equal(marine.field_evidence.status, 'context_only');
   assert.equal(marine.evidence_files, undefined);
-  assert.match(marineBrief, /Marine: let one real job decide/i);
-  assert.match(marineBrief, /Real-world result available/);
+  assert.match(marineBrief, /Marine, Marinas &amp; Boatyards: let one real job decide/i);
+  assert.match(marineBrief, /Field photos available/);
   assert.equal(
     (marineGallery.match(/data-evidence-kind="field-context"/g) || []).length,
     3,
   );
   assert.equal(
-    (marineGallery.match(/<span class="ind-media-kind">Field result<\/span>/g) || []).length,
+    (marineGallery.match(/<span class="ind-media-kind">Job photo<\/span>/g) || []).length,
     3,
   );
   assert.doesNotMatch(
@@ -766,7 +798,7 @@ test('industry proof links resolve locally and exclude restricted customer recor
   }
 });
 
-test('localized CTA structures wastewater and reopening boundaries beside trial context', () => {
+test('localized CTA keeps technical boundaries in the registry and asks customers plain questions', () => {
   const contactHtml = read('contact.html');
   const contactIndustries = new Set(
     [...contactHtml.matchAll(/<option>([^<]+)<\/option>/g)]
@@ -784,19 +816,18 @@ test('localized CTA structures wastewater and reopening boundaries beside trial 
     assert.ok(contactIndustries.has(params.get('industry')), `${slug}: contact industry must preselect`);
     const industry = industries.find((item) => item.slug === slug);
     assert.ok(industry, `${slug}: registry entry`);
-    assert.equal(params.get('wastewater_route'), industry.wastewater, `${slug}: wastewater route`);
-    assert.equal(
-      params.get('reopening_criteria'),
-      industry.verification,
-      `${slug}: reopening / return-to-service criteria`,
-    );
+    assert.ok(industry.wastewater?.trim(), `${slug}: wastewater guidance stays in registry`);
+    assert.ok(industry.verification?.trim(), `${slug}: finished-result guidance stays in registry`);
+    assert.equal(params.get('wastewater_route'), null, `${slug}: no technical wastewater payload in customer URL`);
+    assert.equal(params.get('reopening_criteria'), null, `${slug}: no technical reopening payload in customer URL`);
     const message = params.get('message') || '';
     for (const prompt of [
-      'Asset / substrate:',
-      'Soil / deposit:',
-      'Operating conditions:',
-      'Materials:',
-      'Buying deadline:',
+      'Industry:',
+      'What needs cleaning:',
+      'What needs to come off:',
+      'Cleaner or method used today:',
+      'Result wanted:',
+      'When it is needed:',
     ]) {
       assert.match(message, new RegExp(prompt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${slug}: ${prompt}`);
     }

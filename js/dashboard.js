@@ -154,7 +154,7 @@ function orderLifecycleBadge(order) {
   const lifecycle = orderLifecycleFor(order);
   return statusBadge(lifecycle.stage || order.status, lifecycle.label || orderStatusLabel(order.status));
 }
-function bizStatusLabel(s) { return ({ approved: 'Verified', pending: 'Under review', rejected: 'Needs attention', suspended: 'Suspended' })[s] || s; }
+function bizStatusLabel(s) { return ({ approved: 'Ready', pending: 'Review in progress', rejected: 'Needs an update', suspended: 'Paused' })[s] || s; }
 function trackingSteps(order) {
   const status = order.tracking_status || 'processing';
   const steps = [
@@ -194,15 +194,15 @@ function renderOverviewWorkspace() {
   const orderingState = ACCOUNT?.can_checkout ? 'Enabled' : (c ? 'Pending' : 'Set up');
   const netState = ACCOUNT?.can_use_net_terms ? `NET-${c?.net_terms_days || 0}` : 'Not enabled';
   const body = c
-    ? 'Procurement, order tracking, account-team messages, and business readiness in one workspace.'
-    : 'Create a business profile to unlock B2B ordering, programs, and account-team support.';
+    ? 'Orders, messages, company details, and account help in one place.'
+    : 'Add your business to use bulk ordering, service programs, and account support.';
   box.innerHTML = `
     <div>
-      <p class="dash-eyebrow">User workspace</p>
+      <p class="dash-eyebrow">Your account</p>
       <h2>${esc(name)}</h2>
       <p class="muted">${esc(body)}</p>
     </div>
-    <div class="dash-overview-markers" aria-label="Dashboard readiness">
+    <div class="dash-overview-markers" aria-label="Account status">
       <span class="dash-overview-marker"><small>Business</small><b>${esc(businessState)}</b></span>
       <span class="dash-overview-marker"><small>Ordering</small><b>${esc(orderingState)}</b></span>
       <span class="dash-overview-marker"><small>NET terms</small><b>${esc(netState)}</b></span>
@@ -215,9 +215,9 @@ async function renderOverview() {
   const banner = $('approvalBanner');
   if (!c) {
     // The "Business setup" steps card is the single setup CTA — only banner when it's absent.
-    banner.innerHTML = ACCOUNT?.setup?.steps?.length ? '' : `<div class="banner info"><i class="ph ph-rocket-launch" aria-hidden="true"></i><span>Your account is ready. <a href="#business">Set up your business</a> to unlock B2B ordering, QuickBooks invoicing, and service programs.</span></div>`;
+    banner.innerHTML = ACCOUNT?.setup?.steps?.length ? '' : `<div class="banner info"><i class="ph ph-rocket-launch" aria-hidden="true"></i><span>Your account is ready. <a href="#business">Add your business</a> to use bulk ordering, invoicing, and service programs.</span></div>`;
   } else if (c.status === 'pending') {
-    banner.innerHTML = `<div class="banner info"><i class="ph ph-clock-countdown" aria-hidden="true"></i><span>We’re verifying your business — usually 1–2 business days. B2B ordering and programs unlock once it’s approved.</span></div>`;
+    banner.innerHTML = `<div class="banner info"><i class="ph ph-clock-countdown" aria-hidden="true"></i><span>We’re reviewing your business details. We’ll let you know when the business account is ready.</span></div>`;
   } else if (c.status === 'rejected' || c.status === 'suspended') {
     banner.innerHTML = `<div class="banner warn"><i class="ph ph-warning-circle" aria-hidden="true"></i><span>Your business needs attention. <a href="#business">Review your business details</a> to continue.</span></div>`;
   } else { banner.innerHTML = ''; }
@@ -227,9 +227,9 @@ async function renderOverview() {
     <h2 class="headline dash-section-title dash-section-title-sm">Account snapshot</h2>
     <div class="dash-row"><span>Signed in as</span><b>${esc(ACCOUNT?.email || 'Not set')}</b></div>
     <div class="dash-row"><span>Business</span><b>${esc(c?.name || 'Not set up')}</b></div>
-    <div class="dash-row"><span>Verification</span>${c ? statusBadge(c.status || 'pending', bizStatusLabel(c.status)) : '<span class="badge" data-s="pending">Not set up</span>'}</div>
-    <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Enabled' : (c ? 'Under review' : 'Set up business')}</b></div>
-    <div class="dash-row"><span>NET terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + esc(c?.net_terms_days) : '<a href="contact.html?type=quote">Request NET terms</a>'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
+    <div class="dash-row"><span>Account status</span>${c ? statusBadge(c.status || 'pending', bizStatusLabel(c.status)) : '<span class="badge" data-s="pending">Not set up</span>'}</div>
+    <div class="dash-row"><span>Online ordering</span><b>${ACCOUNT?.can_checkout ? 'Available' : (c ? 'Setup in progress' : 'Add business')}</b></div>
+    <div class="dash-row"><span>Payment terms</span><b>${ACCOUNT?.can_use_net_terms ? 'NET-' + esc(c?.net_terms_days) : '<a href="contact.html?type=quote">Request payment terms</a>'}</b></div>${ACCOUNT?.credit && !ACCOUNT.credit.unlimited ? `
     <div class="dash-row"><span>Balance owed</span><b>${money(ACCOUNT.credit.net_outstanding, 'usd')}</b></div>
     <div class="dash-row"><span>NET credit available</span><b>${money(ACCOUNT.credit.credit_available, 'usd')}</b></div>` : ''}${Number(ACCOUNT?.store_credit?.balance_minor) > 0 ? `
     <div class="dash-row"><span>Account credit</span><b>${money((Number(ACCOUNT.store_credit.available_minor) || 0) / 100, ACCOUNT.store_credit.currency || 'usd')}</b></div>` : ''}`;
@@ -1088,7 +1088,7 @@ function wireAddressForm() {
     try {
       const result = await api('/api/account/addresses', { method: 'POST', body: { address } });
       e.target.reset();
-      status.textContent = result.validation?.corrected ? 'Verified, standardized, and saved.' : 'Verified and saved.';
+      status.textContent = result.validation?.corrected ? 'Address checked, updated, and saved.' : 'Address saved.';
       status.dataset.state = 'ok';
       loaded.addresses = false; renderAddresses();
     } catch (err) {
@@ -1118,7 +1118,7 @@ async function renderPayment() {
   const hasCompany = Boolean(ACCOUNT?.company);
   box.innerHTML = `
     <h2 class="headline dash-section-title dash-section-title-sm">Payment methods</h2>
-    <p class="muted pay-copy">Saved cards are managed securely by Stripe. We never store card details on our servers. NET invoices and credit live under <a href="#business">Business tools</a>.</p>
+    <p class="muted pay-copy">Saved cards are managed securely by Stripe. We never store card details on our servers. Invoices and account credit are under <a href="#business">Business account</a>.</p>
     ${hasCompany
       ? '<button class="btn btn-primary" id="portalBtn">Manage payment methods</button>'
       : '<p class="muted">Set up your business under <a href="#business">Business</a> to save a card on file.</p>'}
@@ -1142,7 +1142,7 @@ async function renderPayment() {
       btn.disabled = false;
     } catch (err) {
       closeReservedTab(portalTab);
-      status.textContent = err.data?.error === 'stripe_not_configured' ? 'Stripe is not configured for this workspace yet.' : 'Could not open the payment portal. Try again.';
+      status.textContent = err.data?.error === 'stripe_not_configured' ? 'Online payments are not set up yet.' : 'Could not open the payment page. Try again.';
       status.dataset.state = 'err';
       btn.textContent = originalText;
       btn.disabled = false;

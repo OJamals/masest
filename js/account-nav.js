@@ -165,7 +165,7 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
     mount.innerHTML = `<details class="acct-dd">
       <summary aria-haspopup="true"><span class="acct-avatar">${esc((label[0] || 'A').toUpperCase())}</span><span class="acct-name">${esc(firstName(label))}</span><i class="ph ph-caret-down" aria-hidden="true"></i></summary>
       <div class="acct-dd-menu">
-        <div class="acct-menu-section"><span class="acct-menu-label">${isStaff ? 'Staff' : 'Workspace'}</span>${items}</div>
+        <div class="acct-menu-section"><span class="acct-menu-label">${isStaff ? 'Staff' : 'Main'}</span>${items}</div>
         <div class="acct-menu-section"><span class="acct-menu-label">Account</span>${accountItems}</div>
         <div class="acct-menu-section"><button type="button" class="acct-signout"><i class="ph ph-sign-out" aria-hidden="true"></i>Sign out</button></div>
       </div>

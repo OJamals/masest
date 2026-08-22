@@ -72,15 +72,15 @@ test("admin quote inbox and drawer surface shared request details", () => {
   assert.deepEqual(
     QUOTE_TASK_DETAILS.map(({ label }) => label),
     [
-      "Current chemical",
-      "Current dilution",
-      "Labor per completed task",
-      "Water per completed task",
-      "Downtime per completed task",
-      "Disposal per completed task",
-      "Asset life context",
-      "Wastewater route",
-      "Reopening / return-to-service criteria",
+      "Cleaner used now",
+      "Current mix",
+      "People and time",
+      "Water used",
+      "Time out of service",
+      "Cleanup and wash water",
+      "Maintenance schedule",
+      "Wash water",
+      "Ready-to-use check",
     ],
   );
   assert.match(QUOTES_JS, /requestDetailsHtml\(quote\)/, "list rows should render request payload details");

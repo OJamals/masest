@@ -229,7 +229,7 @@ test("dashboard business panel renders and submits company setup form", () => {
   assert.match(js, /function renderCompanySetupForm\(/, "business hub should render company setup form");
   assert.match(js, /id="companySetupForm"/, "company setup form should have a stable id");
   assert.match(js, /id="companyName"/, "business hub should let account-only users create a company profile");
-  assert.match(js, /Submit for approval/, "company creation should be framed as an approval request");
+  assert.match(js, /Send business details/, "company creation should use a clear customer action");
   assert.match(js, /\/api\/account\/company/, "company setup form should submit to account company endpoint");
   assert.match(js, /tax_exempt/, "company setup form should include tax-exempt control");
   assert.match(js, /profile\?\.role === 'admin'/, "existing company edits should be shown only to company admins");

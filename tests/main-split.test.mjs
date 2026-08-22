@@ -57,7 +57,7 @@ test("main entrypoint imports chrome rendering from a split module", () => {
   const chrome = read("js/main/chrome.js");
   assert.match(chrome, /export function renderChrome\s*\(/);
   assert.match(chrome, /foot-secondary/);
-  assert.match(chrome, /Resources \+ SDS/);
+  assert.match(chrome, /SDS & Resources/);
 });
 
 test("main entrypoint imports common effects from a split module", () => {

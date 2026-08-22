@@ -88,7 +88,7 @@ test('audited cart and checkout states are compact and unambiguous', () => {
 
 test('the requisition form stays collapsed but the quote route does not', () => {
   assert.match(cart, /<details class="cart-secondary-options"/);
-  assert.match(cart, /Saved requisition/);
+  assert.match(cart, /Save this cart/);
   // Bulk sizes (55 gal drums, 275 gal totes) are quote-routed and cannot be bought
   // online, so "Get formal quote" is the only path for a large share of buyers. It was
   // collapsed into the disclosure alongside the requisition form, which hid the primary

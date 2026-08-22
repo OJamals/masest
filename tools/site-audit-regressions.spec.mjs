@@ -141,7 +141,7 @@ test("footer legal links keep touch-sized hit areas", async ({ page }) => {
     };
   }));
 
-  expect(legalLinks.map((link) => link.text)).toEqual(["Privacy", "Terms", "EULA"]);
+  expect(legalLinks.map((link) => link.text)).toEqual(["Privacy", "Terms", "Site use"]);
   for (const link of legalLinks) {
     expect(link.height, `${link.text} footer link height`).toBeGreaterThanOrEqual(44);
     expect(link.display, `${link.text} footer link display`).toBe("flex");
@@ -296,10 +296,10 @@ test("mobile non-catalog pages expose persistent quote and chemical-map actions"
   await expect(bar).toBeHidden();
   await page.mouse.wheel(0, 700);
   await expect(bar).toBeVisible();
-  await expect(bar.getByRole("link", { name: /map chemical/i })).toHaveAttribute("href", /type=audit/);
-  await expect(bar.getByRole("link", { name: /get quote/i })).toHaveAttribute("href", /type=quote/);
+  await expect(bar.getByRole("link", { name: /find my cleaner/i })).toHaveAttribute("href", /type=audit/);
+  await expect(bar.getByRole("link", { name: /get a quote/i })).toHaveAttribute("href", /type=quote/);
 
-  const quoteBox = await bar.getByRole("link", { name: /get quote/i }).boundingBox();
+  const quoteBox = await bar.getByRole("link", { name: /get a quote/i }).boundingBox();
   expect(quoteBox?.y, "quote action top edge").toBeGreaterThanOrEqual(0);
   expect((quoteBox?.y || 0) + (quoteBox?.height || 0), "quote action bottom edge").toBeLessThanOrEqual(844);
 });
@@ -412,8 +412,8 @@ test("mobile industry detail pages keep quote and chemical-map actions", async (
   await expect(bar).toBeHidden();
   await page.mouse.wheel(0, 700);
   await expect(bar).toBeVisible();
-  await expect(bar.getByRole("link", { name: /map chemical/i })).toHaveAttribute("href", /type=audit/);
-  await expect(bar.getByRole("link", { name: /get quote/i })).toHaveAttribute("href", /type=quote/);
+  await expect(bar.getByRole("link", { name: /find my cleaner/i })).toHaveAttribute("href", /type=audit/);
+  await expect(bar.getByRole("link", { name: /get a quote/i })).toHaveAttribute("href", /type=quote/);
 });
 
 test("mobile hamburger menu centers use-case trigger and exposes child links", async ({ page }) => {
@@ -431,7 +431,7 @@ test("mobile hamburger menu centers use-case trigger and exposes child links", a
 
   await page.locator(".nav-group summary").click();
   await expect(nav.getByRole("link", { name: "Industries" })).toHaveAttribute("href", "../industries");
-  await expect(nav.getByRole("link", { name: "Proof" })).toHaveAttribute("href", "../proof");
+  await expect(nav.getByRole("link", { name: "Results" })).toHaveAttribute("href", "../proof");
 
   const labelDelta = await page.locator(".nav-group summary").evaluate((node) => {
     const label = node.querySelector(".nav-group-label");

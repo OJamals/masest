@@ -10,10 +10,10 @@ import { esc, safeUrl, money, fmtDate, confirmDialog, openReservedTab, sendReser
 const $ = (id) => document.getElementById(id);
 
 const TIERS = [
-  { key: 'Bronze', tag: 'Entry', desc: 'Quarterly treatment + SDS/compliance pack. Good for a single system or seasonal use.' },
-  { key: 'Silver', tag: 'Standard', desc: 'Monthly treatment, priority dispatch, and usage tracking across multiple systems.' },
-  { key: 'Gold', tag: 'Preferred', desc: 'Scheduled service visits, NET terms, and account-manager support for multi-site operations.' },
-  { key: 'Platinum', tag: 'Enterprise', desc: 'Custom program, dedicated manager, on-site reviews, and consolidated billing.' },
+  { key: 'Bronze', tag: 'Starter', desc: 'Quarterly care, an SDS packet, and support for one system or seasonal use.' },
+  { key: 'Silver', tag: 'Most popular', desc: 'Monthly care, faster shipping, and simple usage tracking across several systems.' },
+  { key: 'Gold', tag: 'Multi-site', desc: 'Scheduled visits, payment terms, and account support for larger operations.' },
+  { key: 'Platinum', tag: 'Custom', desc: 'A custom program, a dedicated contact, on-site reviews, and one clear bill.' },
 ];
 
 // Verification dossier option lists (labels mirror the allowed sets in functions/api/account/company.js).
@@ -22,7 +22,7 @@ const INDUSTRIES = [['hvac', 'HVAC / mechanical'], ['facilities', 'Facilities / 
 const VOLUME_BANDS = [['under_10k', 'Under $10k / year'], ['10k_50k', '$10k–$50k / year'], ['50k_250k', '$50k–$250k / year'], ['250k_plus', '$250k+ / year']];
 const NET_TERMS = [['0', 'Pay as you go (no terms)'], ['15', 'NET-15'], ['30', 'NET-30'], ['45', 'NET-45'], ['60', 'NET-60']];
 
-const STATUS_LABEL = { approved: 'Verified', pending: 'Under review', rejected: 'Needs attention', suspended: 'Suspended' };
+const STATUS_LABEL = { approved: 'Ready', pending: 'Review in progress', rejected: 'Needs an update', suspended: 'Paused' };
 
 function optionList(pairs, selected) {
   const sel = selected == null ? '' : String(selected);
@@ -53,12 +53,12 @@ function renderBusinessHub(data = {}) {
   const orderingText = data.can_checkout ? 'Enabled' : (c ? 'Pending' : 'Register');
   box.innerHTML = `
     <div>
-      <p class="biz-eyebrow">Business workspace</p>
+      <p class="biz-eyebrow">Business account</p>
       <h2>${esc(c?.name || 'Set up your business')}</h2>
-      <p class="lead">Manage verification, invoices, programs, bulk quote requests, and team access from one place.</p>
+      <p class="lead">Manage company details, invoices, programs, bulk quotes, and team access in one place.</p>
     </div>
     <div class="biz-hub-metrics" aria-label="Business status">
-      <span class="biz-hub-metric"><small>Verification</small><b><span class="badge" data-s="${esc(c ? status : 'pending')}">${esc(statusText)}</span></b></span>
+      <span class="biz-hub-metric"><small>Account status</small><b><span class="badge" data-s="${esc(c ? status : 'pending')}">${esc(statusText)}</span></b></span>
       <span class="biz-hub-metric"><small>Setup</small><b data-numeric>${esc(setupMetric(data))}</b></span>
       <span class="biz-hub-metric"><small>Ordering</small><b>${esc(orderingText)}</b></span>
       <span class="biz-hub-metric"><small>NET terms</small><b>${esc(netTermsText(data))}</b></span>
@@ -73,7 +73,7 @@ function renderProfile(data) {
   if (!c) {
     box.innerHTML = `
       <h2>Your business</h2>
-      <p class="muted">Your user account is active. Register your business below to unlock B2B ordering, service programs, and QuickBooks invoicing — MASEST reviews and approves each business before those features turn on.</p>`;
+      <p class="muted">Add your business to use bulk ordering, service programs, and invoicing. We’ll review the details before those features turn on.</p>`;
     return;
   }
   const label = STATUS_LABEL[status] || 'Not set up';
@@ -81,17 +81,17 @@ function renderProfile(data) {
   // raised by the account team from an accepted quote. Say so instead of promising an unlock.
   const note = {
     approved: data.can_use_net_terms
-      ? `Your business is verified. B2B ordering, programs, and QuickBooks invoicing are unlocked. Your account carries NET-${esc(c.net_terms_days || 0)} terms — <a href="contact.html?type=quote">request a quote</a> and your account team places the order on those terms.`
-      : 'Your business is verified. B2B ordering, programs, and QuickBooks invoicing are unlocked. To buy on NET terms, <a href="contact.html?type=quote">request a quote</a> and your account team will arrange them.',
-    pending: 'We’re verifying your business — this usually takes 1–2 business days. You’ll get a dashboard notification when it’s approved.',
-    rejected: c.rejection_reason ? `We couldn’t verify this business: ${esc(c.rejection_reason)} Update the details below and resubmit.` : 'We couldn’t verify this business yet. Update the details below and resubmit.',
-    suspended: 'This account is suspended. Contact your account team to restore access.',
+      ? `Your business account is ready. Bulk ordering, programs, and invoicing are available. You have NET-${esc(c.net_terms_days || 0)} terms — <a href="contact.html?type=quote">request a quote</a> and your account team will place the order.`
+      : 'Your business account is ready. Bulk ordering, programs, and invoicing are available. Need payment terms? <a href="contact.html?type=quote">Ask your account team</a>.',
+    pending: 'We’re reviewing your business details. We’ll notify you here when the account is ready.',
+    rejected: c.rejection_reason ? `We need one update: ${esc(c.rejection_reason)} Change the details below and send them again.` : 'We need a little more information. Update the details below and send them again.',
+    suspended: 'This business account is paused. Contact your account team for help.',
   }[status] || '';
   const tone = status === 'approved' ? 'ok' : status === 'pending' ? 'info' : 'warn';
   box.innerHTML = `
     <h2>Business summary</h2>
     <div class="biz-row"><span>Business</span><b>${esc(c.name || 'Not set up')}</b></div>
-    <div class="biz-row"><span>Verification</span><span class="badge" data-s="${esc(status || 'pending')}">${esc(label)}</span></div>
+    <div class="biz-row"><span>Account status</span><span class="badge" data-s="${esc(status || 'pending')}">${esc(label)}</span></div>
     <div class="biz-row"><span>NET terms</span><b>${data.can_use_net_terms ? 'NET-' + c.net_terms_days : 'Not enabled'}</b></div>
     <div class="biz-row"><span>Tax-exempt</span><b>${c.tax_exempt ? 'Yes' : 'No'}</b></div>
     ${note ? `<p class="biz-banner" data-tone="${tone}">${note}</p>` : ''}
@@ -134,14 +134,14 @@ function bizFields(c = {}, allowUpload = false) {
       <label><span>Requested payment terms</span><select id="reqNet" name="requested_net_terms">${optionList(NET_TERMS, c.requested_net_terms == null ? '0' : c.requested_net_terms)}</select></label>
     </div>
     <details class="biz-detail-options"${hasAdvanced ? ' open' : ''}>
-      <summary>Verification, tax, and contact details</summary>
+      <summary>More business, tax, and contact details</summary>
       <div class="biz-reg-grid">
         <label><span>Doing business as (DBA)</span><input id="dba" name="dba" type="text" autocomplete="organization" value="${esc(c.dba || '')}" placeholder="Optional trade name…"></label>
         <label><span>Business entity type</span><select id="entityType" name="entity_type"><option value="">Select…</option>${optionList(ENTITY_TYPES, c.entity_type)}</select></label>
         <label><span>Federal Tax ID / EIN</span><input id="taxId" name="tax_id" type="text" autocomplete="off" spellcheck="false" value="${esc(c.tax_id || '')}" placeholder="12-3456789…"></label>
         <label><span>Website</span><input id="website" name="website" type="url" autocomplete="url" spellcheck="false" value="${esc(c.website || '')}" placeholder="https://…"></label>
         <label><span>Estimated annual volume</span><select id="estVolume" name="estimated_annual_volume"><option value="">Select…</option>${optionList(VOLUME_BANDS, c.est_annual_volume)}</select></label>
-        <label><span>Authorized contact</span><input id="contactName" name="contact_name" type="text" autocomplete="name" value="${esc(c.contact_name || '')}" placeholder="Marisol Vega…"></label>
+        <label><span>Main contact</span><input id="contactName" name="contact_name" type="text" autocomplete="name" value="${esc(c.contact_name || '')}" placeholder="Marisol Vega…"></label>
         <label><span>Contact title</span><input id="contactTitle" name="contact_title" type="text" autocomplete="organization-title" value="${esc(c.contact_title || '')}" placeholder="Operations Manager…"></label>
         <label class="biz-reg-full"><span>Resale / tax-exempt certificate URL</span><input id="resaleCertUrl" name="resale_cert_url" type="url" autocomplete="off" spellcheck="false" value="${esc(c.resale_cert_url || '')}" placeholder="Link to certificate (optional)…"></label>
         ${allowUpload ? `
@@ -165,24 +165,24 @@ function renderCompanySetupForm(data) {
   const status = c?.status || null;
   const isCreate = !c;
   if (!isCreate && data.profile?.role !== 'admin') {
-    box.innerHTML = '<h2>Business details</h2><p class="lead">Only a company admin can update shared verification, billing, and compliance details.</p>';
+    box.innerHTML = '<h2>Business details</h2><p class="lead">Only a company admin can update shared billing, tax, and contact details.</p>';
     return;
   }
-  const heading = isCreate ? 'Register your business' : status === 'approved' ? 'Business details' : 'Verification details';
-  const submitText = isCreate ? 'Submit for approval' : status === 'rejected' ? 'Update & resubmit' : 'Save business details';
+  const heading = isCreate ? 'Add your business' : 'Business details';
+  const submitText = isCreate ? 'Send business details' : status === 'rejected' ? 'Update and send again' : 'Save business details';
   // "Requested payment terms" is a request routed to sales, not a self-serve switch —
   // say so here so the field is never read as unlocking NET checkout.
   const intro = isCreate
-    ? 'Start with the essentials. Add tax and verification details only when they apply. Requested payment terms go to your account team for review.'
+    ? 'Start with the basics. Add tax details only if they apply. Your account team will follow up about any requested payment terms.'
     : status === 'approved'
-      ? 'Your business is verified. Keep these details current for invoicing and compliance.'
-      : 'Keep these details current while we verify your business.';
+      ? 'Your business account is ready. Keep these details current so orders and invoices reach the right people.'
+      : 'Keep these details current while we finish setting up your business account.';
   box.innerHTML = `
     <h2>${esc(heading)}</h2>
     <p class="lead">${esc(intro)}</p>
     <form id="companySetupForm" class="biz-reg-form" novalidate data-biz-status="${esc(status || '')}">
       ${bizFields(c || {}, !isCreate)}
-      ${isCreate ? '<p class="biz-verify-note"><i class="ph ph-shield-check" aria-hidden="true"></i> Submitting starts admin verification. Your user account stays active either way — business features turn on once approved.</p>' : ''}
+      ${isCreate ? '<p class="biz-verify-note"><i class="ph ph-shield-check" aria-hidden="true"></i> Send this form to start the business review. Your personal account stays active while we work.</p>' : ''}
       <div class="actions">
         <button class="btn btn-primary btn-sm" type="submit">${esc(submitText)}</button>
       </div>
@@ -245,9 +245,9 @@ function wireCompanySetup() {
       const freshStatus = $('companySetupStatus');
       if (freshStatus) {
         freshStatus.textContent = res.created
-          ? 'Business submitted for verification. We’ll notify you when it’s approved.'
+          ? 'Business details sent. We’ll notify you when the account is ready.'
           : wasRejected
-            ? 'Resubmitted for verification — we’ll notify you once it’s reviewed.'
+            ? 'Updated details sent. We’ll notify you when the review is done.'
             : 'Business details saved.';
         freshStatus.dataset.state = 'ok';
         freshStatus.setAttribute('tabindex', '-1');
@@ -337,7 +337,7 @@ async function renderInvoicing(data) {
   if (data.can_checkout !== true) {
     box.innerHTML = `
       <h2>Business invoices</h2>
-      <p class="lead">Once your business is verified, your account team can place orders on NET terms and bill them through QuickBooks. Card payments are always available in <a href="#payment">Payment methods</a>.</p>`;
+      <p class="lead">Once your business account is ready, your account team can place orders on payment terms and send invoices through QuickBooks. Card payments are always available in <a href="#payment">Payment methods</a>.</p>`;
     return;
   }
   box.innerHTML = `
@@ -416,7 +416,7 @@ async function downloadInvoicePdf(orderId, btn) {
 function renderTiers(canRequest = false, hasCompany = true) {
   if (!hasCompany) {
     // Four disabled tiles are noise before registration — one teaser line instead.
-    $('tierGrid').innerHTML = `<p class="muted">Programs unlock once your business is registered and verified. <a href="programs.html">See the program tiers.</a></p>`;
+    $('tierGrid').innerHTML = `<p class="muted">Add your business to request a service program. <a href="programs.html">See the program options.</a></p>`;
     return;
   }
   $('tierGrid').innerHTML = TIERS.map((t) => `
@@ -424,7 +424,7 @@ function renderTiers(canRequest = false, hasCompany = true) {
       <div class="tier-tag">${esc(t.tag)}</div>
       <h3>${esc(t.key)}</h3>
       <p>${esc(t.desc)}</p>
-      <button type="button" class="btn btn-primary btn-sm" data-tier="${esc(t.key)}" ${canRequest ? '' : 'disabled'}>${canRequest ? 'Request' : 'Verify first'}</button>
+      <button type="button" class="btn btn-primary btn-sm" data-tier="${esc(t.key)}" ${canRequest ? '' : 'disabled'}>${canRequest ? 'Request' : 'Finish setup'}</button>
     </div>`).join('');
   $('tierGrid').querySelectorAll('[data-tier]').forEach((b) => {
     if (!b.disabled) b.addEventListener('click', () => requestProgram(b.dataset.tier, b));
@@ -444,13 +444,13 @@ async function requestProgram(tier, btn) {
     if (e.status === 409 && e.data?.fallback) {
       try {
         await api('/api/account/messages', { method: 'POST', body: {
-          body: `Program enrollment request - ${tier} tier. Please scope a plan and pricing for our operation.`,
+          body: `Program request - ${tier} tier. Please recommend a plan and price for our operation.`,
         } });
         status.textContent = `${tier} request sent - your account team will follow up in your dashboard messages.`;
         status.dataset.state = 'ok';
       } catch { status.textContent = 'Could not send the request. Try again.'; status.dataset.state = 'err'; }
     } else if (e.status === 403 && e.data?.error === 'not_approved') {
-      status.textContent = 'Your business must be verified before starting a program.'; status.dataset.state = 'err';
+      status.textContent = 'Finish setting up your business account before starting a program.'; status.dataset.state = 'err';
     } else if (e.status === 401) {
       status.textContent = 'Please sign in again.'; status.dataset.state = 'err';
     } else {
@@ -461,12 +461,12 @@ async function requestProgram(tier, btn) {
 
 async function renderProgramStatus(data) {
   if (!data?.company) {
-    $('programStatus').textContent = 'Register your business before requesting a program.';
+    $('programStatus').textContent = 'Add your business before requesting a program.';
     $('programStatus').dataset.state = '';
     return;
   }
   if (!data.can_checkout) {
-    $('programStatus').textContent = 'Programs unlock after your business is verified.';
+    $('programStatus').textContent = 'Programs become available when your business account is ready.';
     $('programStatus').dataset.state = '';
     return;
   }
@@ -523,7 +523,7 @@ function toggleBulkCard(data) {
   const locked = !data?.company;
   if (form) form.hidden = locked;
   if (locked && !note) {
-    form?.insertAdjacentHTML('beforebegin', '<p class="muted" data-bulk-locked>Bulk quotes unlock once your business is registered — <a href="#bizCompanySetup">register your business</a> first.</p>');
+    form?.insertAdjacentHTML('beforebegin', '<p class="muted" data-bulk-locked>Bulk quotes are available after you add your business. <a href="#bizCompanySetup">Add your business</a> first.</p>');
   } else if (!locked && note) {
     note.remove();
   }
@@ -546,7 +546,7 @@ function wireBulk() {
       status.dataset.state = 'ok';
     } catch (err) {
       status.textContent = err.status === 401 ? 'Please sign in again.'
-        : err.data?.error === 'no_company' ? 'Register your business first — bulk quotes are tied to your business account.'
+        : err.data?.error === 'no_company' ? 'Add your business first so we can prepare the quote for the right account.'
         : 'Could not send. Try again.';
       status.dataset.state = 'err';
     }
@@ -556,7 +556,7 @@ function wireBulk() {
 /* ---------- team (company admins) ---------- */
 let teamSelf = {};   // { id, email } of the signed-in admin, so we never offer self role-change/remove
 function teamStatus(text, kind) { const st = $('inviteStatus'); if (st) { st.textContent = text; st.dataset.state = kind || ''; } }
-const TEAM_ROLES = [['buyer', 'Buyer'], ['admin', 'Admin']];
+const TEAM_ROLES = [['buyer', 'Member'], ['admin', 'Admin']];
 async function loadTeam() {
   let t;
   $('teamMembers').innerHTML = `<div class="skeleton skeleton-block biz-team-skeleton"></div>`.repeat(2);
@@ -564,7 +564,7 @@ async function loadTeam() {
   const isSelf = (m) => (teamSelf.id && m.id === teamSelf.id) || (teamSelf.email && m.email && m.email.toLowerCase() === teamSelf.email.toLowerCase());
   $('teamMembers').innerHTML = (t.members || []).map((m) => {
     const name = `${esc(m.full_name || m.email || 'Member')}${m.email && m.full_name ? ` <span class="muted">· ${esc(m.email)}</span>` : ''}`;
-    if (isSelf(m)) return `<div class="biz-row"><span>${name} <span class="muted">(you)</span></span><b>${esc(m.role)}</b></div>`;
+    if (isSelf(m)) return `<div class="biz-row"><span>${name} <span class="muted">(you)</span></span><b>${esc(TEAM_ROLES.find(([value]) => value === m.role)?.[1] || m.role)}</b></div>`;
     const opts = TEAM_ROLES.map(([v, l]) => `<option value="${v}"${m.role === v ? ' selected' : ''}>${l}</option>`).join('');
     return `<div class="biz-row"><span>${name}</span><span class="biz-row-actions">
       <span class="field"><select name="member_role" data-role-for="${esc(m.id)}" aria-label="Role for ${esc(m.email || m.full_name || 'member')}">${opts}</select></span>

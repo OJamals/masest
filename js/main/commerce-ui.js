@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260821a";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260822a";
 import { smoothPref } from "./engagement.js";
 
 function imageDimsAttr(src) {
@@ -392,10 +392,10 @@ export function catalogDecisionHTML(id, copy) {
     : "";
   const proofRow = proof
     ? `<p class="shop-card-decision-row shop-card-proof">
-        <span class="shop-card-decision-label" aria-hidden="true">Proof</span>
+        <span class="shop-card-decision-label" aria-hidden="true">Results</span>
         <span class="shop-card-proof-copy">
           <span class="shop-card-proof-cue">${proof}</span>
-          <a class="shop-card-proof-link" href="products/${id}" aria-label="Review proof for ${PRODUCTS[id]?.name || id}">Review proof</a>
+          <a class="shop-card-proof-link" href="products/${id}" aria-label="See results for ${PRODUCTS[id]?.name || id}">See details</a>
         </span>
       </p>`
     : "";
@@ -413,7 +413,7 @@ export function catalogCard(id, eager = false) {
   const media = mediaInfo.src
     ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} ${imageDimsAttr(mediaInfo.src)}>`
     : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
-  const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial chemistry");
+  const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial cleaner");
   const quoteFirst = QUOTE_FIRST_IDS.includes(id);
   const buybar = quoteFirst
     ? quoteActionHTML(id)

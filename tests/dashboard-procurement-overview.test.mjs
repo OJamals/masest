@@ -16,7 +16,7 @@ test("buyer dashboard overview has procurement action and activity mounts", () =
 test("buyer dashboard renders procurement actions and recent activity", () => {
   const js = read("js/dashboard.js");
   assert.match(js, /function renderOverviewWorkspace/, "dashboard should render the workspace readiness header");
-  assert.match(js, /Dashboard readiness/, "workspace header should expose accessible readiness markers");
+  assert.match(js, /aria-label="Account status"/, "account header should expose accessible status markers");
   assert.match(js, /function renderBuyerActionRail/, "dashboard should render next action rail");
   assert.match(js, /function renderRecentOrders/, "dashboard should render recent orders");
   assert.match(js, /function renderRecentMessages/, "dashboard should render recent messages");

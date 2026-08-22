@@ -13,6 +13,7 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/service-tabs-a11y.spec.mjs",
     "tools/site-audit-regressions.spec.mjs",
     "tools/story-hmis-visual.spec.mjs",
+    "tools/update-content-regressions.spec.mjs",
   ];
 
   assert.match(scripts.check || "", /node tools\/check-js\.mjs/);

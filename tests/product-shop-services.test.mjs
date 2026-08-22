@@ -63,7 +63,7 @@ function apiPricingPayload() {
       label: variant.label,
       gallons: variant.size_gal,
       active: variant.active,
-      tiers: { retail: Number(variant.sort) * 10, hvac: Number(variant.sort) * 10 },
+      tiers: { retail: Number(variant.sort) * 10, hvac: Number(variant.sort) * 10 + 5 },
     })),
     services: [],
     pricing_tiers: [],
@@ -83,7 +83,7 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.doesNotMatch(productsHtml, /data-service-catalog/, "products page should not embed service catalog");
     assert.match(productsHtml, /Small-pack list pricing/);
     assert.match(productsHtml, /200\+ jugs: 5% off · 1,000\+ gallons \(drums\/totes\): 5% off\./);
-    assert.match(productsHtml, /Request quotes for drums and totes/);
+    assert.match(productsHtml, /Get drum and tote pricing/);
     assert.match(productsHtml, /USD, FOB Ex Plant, Merritt Island FL/);
     assert.match(productsHtml, /href="pricing-hvac-facilities"/);
     assert.match(productsHtml, /href="pricing-cip-food-beverage"/);
@@ -95,7 +95,7 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.match(servicesHtml, /data-service-catalog/, "services page should render the service catalog");
     assert.match(servicesHtml, /Test the switch before you roll it out/);
     assert.match(servicesHtml, /Compare the finish, labor, water, and total job cost/);
-    assert.match(servicesHtml, /With 35 line items and 4 packages/);
+    assert.match(servicesHtml, /With 35 services and 4 packages/);
     assert.match(
       servicesHtml,
       /<img src="img\/representative\/applications\/deposit-analysis-service-v1\.webp"[^>]*width="1536" height="1024">/,
@@ -205,9 +205,9 @@ test("segment pricing pages render isolated metadata with live API prices", asyn
       assert.match(hvacText, /VertKleen AlumiBrite/);
       assert.match(hvacText, /Prices exclude shipping and freight\. FOB Ex Plant, Merritt Island, FL\./);
       assert.match(hvacText, /200\+ jugs: 5% off/);
-      assert.match(hvacText, /VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$8\.00[\s\S]*\$20\.00/);
-      assert.match(hvacText, /VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$8\.00[\s\S]*\$20\.00/);
-      assert.match(hvacText, /VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$8\.00[\s\S]*\$20\.00/);
+      assert.match(hvacText, /VertKleen HCR[\s\S]*2\.5 gal jug[\s\S]*\$10\.00[\s\S]*\$25\.00/);
+      assert.match(hvacText, /VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$10\.00[\s\S]*\$25\.00/);
+      assert.match(hvacText, /VertKleen Purgo[\s\S]*2\.5 gal jug[\s\S]*\$10\.00[\s\S]*\$25\.00/);
 
       const cip = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
       await cip.route("**/api/pricing", (route) => route.fulfill({
@@ -224,6 +224,7 @@ test("segment pricing pages render isolated metadata with live API prices", asyn
       assert.doesNotMatch(cipText, /VertKleen Descaler/);
       assert.match(cipText, /Prices exclude shipping and freight\. FOB Ex Plant, Merritt Island, FL\./);
       assert.match(cipText, /200\+ jugs: 5% off/);
+      assert.match(cipText, /VertKleen CR[\s\S]*2\.5 gal jug[\s\S]*\$8\.00[\s\S]*\$20\.00/);
     } finally {
       await browser.close();
     }

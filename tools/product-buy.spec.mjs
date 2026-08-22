@@ -173,7 +173,7 @@ test("catalog decision cues stay compact and actionable at 390px", async ({ page
 
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
   const card = page.locator('.shop-card[data-id="hcr"]');
-  const proofLink = card.getByRole("link", { name: "Review proof for VertKleen CIP HCR" });
+  const proofLink = card.getByRole("link", { name: "See results for VertKleen CIP HCR" });
 
   await expect(card.locator(".shop-card-fit")).toHaveCount(3);
   await expect(card.locator(".shop-card-proof-cue")).toHaveText(PRODUCT_CATALOG_COPY.hcr.proof);

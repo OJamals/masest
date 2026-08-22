@@ -37,7 +37,7 @@
       "image_h": 844,
       "image_w": 1057,
       "image_alt": "HVAC metal and diamond plate before HCR cleaning",
-      "narrative": "Rust and scale covered the HVAC metal and diamond plate. HCR broke the buildup free and rinsed away, leaving the recorded surfaces visibly cleaner with one straightforward descaling method.",
+      "narrative": "Rust and scale covered the HVAC metal and diamond plate. HCR broke the buildup free and rinsed away, leaving the surfaces visibly cleaner with one straightforward descaling method.",
       "sort_order": 10,
       "image_after": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/farm-rust-after.webp?v=20260617b",
       "image_after_h": 967,
@@ -90,14 +90,14 @@
     },
     {
       "slug": "cr-caustic-replacement",
-      "title": "VertKleen CIP CR caustic-replacement record",
+      "title": "VertKleen CIP CR replaces caustic",
       "kind": "food",
       "chips": [
         "VertKleen CIP CR",
         "Caustic replacement"
       ],
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/products/cip-cr-studio.webp",
-      "result": "VertKleen CIP CR directly replaces caustic in matched brewery CIP work.",
+      "result": "VertKleen CIP CR directly replaces caustic in brewery CIP cleaning.",
       "source": "Source: product record",
       "eyebrow": "VertKleen CIP CR · Equivalency",
       "image_h": 1200,
@@ -110,14 +110,14 @@
     },
     {
       "slug": "cr2-caustic-replacement",
-      "title": "VertKleen HVAC CR 60% caustic-replacement record",
+      "title": "VertKleen HVAC CR replaces 60% caustic",
       "kind": "hvac",
       "chips": [
         "VertKleen HVAC CR",
         "60% sodium hydroxide replacement"
       ],
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/products/hvac-cr-studio.webp",
-      "result": "VertKleen HVAC CR directly replaces 60% sodium hydroxide for matched HVAC and facility cleaning jobs.",
+      "result": "VertKleen HVAC CR directly replaces 60% sodium hydroxide for HVAC and facility cleaning jobs.",
       "source": "Source: product record",
       "eyebrow": "VertKleen HVAC CR · Equivalency",
       "image_h": 1200,
@@ -181,7 +181,7 @@
       "image_h": 681,
       "image_w": 681,
       "image_alt": "Fire-system component after VertKleen descaling",
-      "narrative": "Mineral buildup covered the component. Descaler broke the deposit free and rinsed away, leaving a visibly cleaner surface after the cycle.",
+      "narrative": "Mineral buildup covered the component. Descaler broke the buildup free and rinsed away, leaving a visibly cleaner surface after the cycle.",
       "sort_order": 7,
       "publication_scope": "Published result summary",
       "seo": {}
@@ -223,7 +223,7 @@
       "image_h": 700,
       "image_w": 934,
       "image_alt": "Property surface before VertKleen cleaning",
-      "narrative": "Embedded grime, outdoor growth, and dark grout stains marked the property. CR lifted the ground-in soil while LAM3 stayed on the outdoor buildup longer, revealing cleaner hardscape and grout.",
+      "narrative": "Embedded grime, outdoor growth, and dark grout stains marked the property. CR lifted the ground-in grime while LAM3 stayed on the outdoor buildup longer, revealing cleaner hardscape and grout.",
       "sort_order": 11,
       "image_after": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/grout-after.webp?v=20260617b",
       "image_after_h": 882,
@@ -246,7 +246,7 @@
       "image_h": 471,
       "image_w": 839,
       "image_alt": "Residential AC coil after VertKleen cleaning",
-      "narrative": "Buildup had packed the coil and fin surface. Descaler worked into the fin pack, loosened the deposit, and rinsed away to reveal a visibly cleaner coil.",
+      "narrative": "Buildup had packed the coil and fin surface. Descaler worked into the fin pack, loosened the buildup, and rinsed away to reveal a visibly cleaner coil.",
       "sort_order": 8,
       "publication_scope": "Published result summary",
       "seo": {}
@@ -276,7 +276,7 @@
     },
     {
       "slug": "watersafe60-nsf60",
-      "title": "WaterSafe60 NSF/ANSI/CAN 60 record",
+      "title": "WaterSafe60 NSF/ANSI/CAN 60 certification",
       "kind": "hvac",
       "chips": [
         "WaterSafe60",
@@ -289,7 +289,7 @@
       "image_h": 1200,
       "image_w": 900,
       "image_alt": "WaterSafe60 product",
-      "narrative": "Share the system use, volume, materials, and water data. MASEST will provide the certification record and a practical starting plan for the system.",
+      "narrative": "Share the system use, volume, materials, and water data. MASEST will provide the certification details and a practical starting plan for the system.",
       "sort_order": 15,
       "publication_scope": "Published product record",
       "seo": {}

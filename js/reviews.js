@@ -93,7 +93,7 @@ function writeJsonLd(mount, kind, sku, stats) {
 
 function summaryHtml(stats, kind) {
   if (!stats.count) {
-    return `<div class="rv-summary rv-empty">No reviews yet. Verified buyers can be the first to review this ${esc(kind)}.</div>`;
+    return `<div class="rv-summary rv-empty">No reviews yet. Bought this ${esc(kind)}? Be the first to review it.</div>`;
   }
   return `<div class="rv-summary">
     <span class="rv-stars" aria-hidden="true">${starGlyphs(stats.avg)}</span>
@@ -108,7 +108,7 @@ function listHtml(reviews) {
     <article class="rv-card">
       <div class="rv-card-head">
         <span class="rv-stars" aria-hidden="true">${starGlyphs(r.rating)}</span>
-        ${r.verified_purchase ? '<span class="rv-badge">Verified buyer</span>' : ""}
+        ${r.verified_purchase ? '<span class="rv-badge">Verified purchase</span>' : ""}
       </div>
       ${r.title ? `<h4>${esc(r.title)}</h4>` : ""}
       ${r.body ? `<p>${esc(r.body)}</p>` : ""}
@@ -123,7 +123,7 @@ function listHtml(reviews) {
 // becomes part of a page's default module graph.
 async function mountWriteForm(slot, sku, kind, token) {
   if (!token) {
-    slot.innerHTML = `<p class="rv-gate">Only verified buyers can review this ${esc(kind)}. <a href="/account.html">Sign in</a> to write one.</p>`;
+    slot.innerHTML = `<p class="rv-gate">Bought this ${esc(kind)} from MASEST? <a href="/account.html">Sign in</a> to write a review.</p>`;
     return;
   }
   slot.innerHTML = `
@@ -159,12 +159,12 @@ async function mountWriteForm(slot, sku, kind, token) {
         method: "POST",
         body: { sku, kind, rating: form.rating.value, title: form.title.value, body: form.body.value },
       });
-      msg.textContent = "Thanks - your review is pending approval.";
+      msg.textContent = "Thanks — we received your review.";
       form.hidden = true;
     } catch (err) {
       const code = err && err.data && err.data.error;
       msg.textContent = code === "not_verified_purchaser"
-        ? "Only verified buyers can review this item."
+        ? "Reviews are available after you buy this item."
         : code === "already_reviewed"
           ? "You have already reviewed this item."
           : code === "rate_limited"

@@ -5,6 +5,8 @@ import { PRODUCTS } from "../js/main/catalog-data.js";
 import {
   documentAllowedOnSurface,
   documentDistribution,
+  documentEffectiveDate,
+  documentRevision,
   documentSurfaceMode,
 } from "./public-document-policy.mjs";
 import { STYLE_VERSION } from "./static-release.mjs";
@@ -13,7 +15,6 @@ const root = new URL("../", import.meta.url);
 const registryPath = new URL("data/industry-applications.json", root);
 const reviewPath = new URL("data/public-document-review.json", root);
 const documentReview = JSON.parse(readFileSync(reviewPath, "utf8"));
-const documentRevision = documentReview.document_control.revision;
 const industrySlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const escapeHtml = (value) => String(value)
@@ -75,18 +76,16 @@ export function renderIndustryRedirects(industries) {
 function contactHref(industry, type = "audit", base = "../contact") {
   const message = [
     `Industry: ${industry.label}`,
-    `Asset / substrate: ${industry.asset}`,
-    `Soil / deposit: ${industry.soil}`,
-    "Operating conditions: temperature, available dwell, agitation/flow, rinse water, shutdown window",
-    `Materials: ${industry.materials}`,
-    "Buying deadline: ",
+    `What needs cleaning: ${industry.asset}`,
+    `What needs to come off: ${industry.soil}`,
+    "Cleaner or method used today: ",
+    "Result wanted: ",
+    "When it is needed: ",
   ].join("\n");
   const query = new URLSearchParams({
     industry: industry.label,
     type,
     message,
-    wastewater_route: industry.wastewater,
-    reopening_criteria: industry.verification,
   }).toString();
   return `${base}?${escapeHtml(query)}`;
 }
@@ -100,7 +99,7 @@ function discoveryFilterCard(type, {
   cta_label: ctaLabel,
 }) {
   return `<a class="route-card" href="?${type}=${escapeHtml(id)}#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="${type}" data-filter-value="${escapeHtml(id)}" data-result-detail="${escapeHtml(resultDetail)}" data-cta-type="${escapeHtml(ctaType)}" data-cta-label="${escapeHtml(ctaLabel)}" aria-pressed="false">
-          <span>${type === "role" ? "Buyer role" : "Job path"}</span>
+          <span>${type === "role" ? "Your role" : "Cleaning job"}</span>
           <strong>${escapeHtml(label)}</strong>
           <b>${escapeHtml(detail)}</b>
         </a>`;
@@ -108,9 +107,9 @@ function discoveryFilterCard(type, {
 
 function evidenceStatusLabel(industry) {
   const labels = {
-    absent: "Ready for a side-by-side test",
-    context_only: "Real-world result available",
-    qualified: "Related real-world result available",
+    absent: "Ready to try",
+    context_only: "Field photos available",
+    qualified: "Results available",
   };
   const label = labels[industry.field_evidence?.status];
   if (!label) throw new Error(`${industry.slug}: unsupported field evidence status`);
@@ -146,7 +145,7 @@ function renderDiscoveryCard(industry) {
         <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
         <dl>
           <div><dt>Products to start with</dt><dd>${renderDiscoveryProducts(industry)}</dd></div>
-          <div><dt>Proof</dt><dd>${escapeHtml(evidenceStatusLabel(industry))}</dd></div>
+          <div><dt>What you can see</dt><dd>${escapeHtml(evidenceStatusLabel(industry))}</dd></div>
         </dl>
         <div class="prod-actions">
           <a class="btn btn-secondary btn-sm" href="industries/${escapeHtml(industry.slug)}">See products and results</a>
@@ -164,7 +163,7 @@ export function renderIndustryDiscovery(industries, discovery) {
     <div class="wrap">
       <div class="industry-router buyer-router reveal" id="industry-discovery" data-industry-discovery>
         <div>
-          <span class="eyebrow">Find your fit</span>
+          <span class="eyebrow">Find your cleaner</span>
           <h2>Start with your team or cleaning job.</h2>
           <p class="subhead">Choose what you do or what you need to clean. We will show the best VertKleen starting products, relevant results, and a clear next step.</p>
           <p class="industry-discovery-status" data-industry-discovery-status aria-live="polite">Choose your role or cleaning job.</p>
@@ -204,7 +203,7 @@ function renderHeroFacts(industry) {
         <li><span>Remove</span><strong>${escapeHtml(industry.soil)}</strong></li>
         <li><span>Start with</span><strong>${escapeHtml(industry.method)}</strong></li>
         <li><span>Products</span><strong>${renderProducts(industry)}</strong></li>
-        <li><span>HMIS</span><strong>0-0-0 across every VertKleen product offered</strong></li>
+        <li><span>Before you start</span><strong>Read the label and SDS, then try a small area first</strong></li>
         <li><a href="#applications-and-proof">See products, first-test plan, and results <span aria-hidden="true">↓</span></a></li>
       </ul>`;
 }
@@ -362,12 +361,13 @@ function renderApplications(industry, allIndustries, documents) {
     : "";
   const documentLinks = documents.map((document) => {
     const control = document.control;
-    const metadata = `${control.document_id} · Rev ${documentRevision} · SKUs: ${control.skus.join(", ")}`;
-    const common = `data-document-id="${escapeHtml(control.document_id)}" data-document-revision="${escapeHtml(documentRevision)}" data-document-skus="${escapeHtml(control.skus.join(" "))}" data-document-name="${escapeHtml(document.label)}"`;
+    const revision = documentRevision(control, documentReview.document_control);
+    const effectiveDate = documentEffectiveDate(control, documentReview.document_control);
+    const common = `data-document-id="${escapeHtml(control.document_id)}" data-document-revision="${escapeHtml(revision)}" data-document-effective="${escapeHtml(effectiveDate)}" data-document-skus="${escapeHtml(control.skus.join(" "))}" data-document-name="${escapeHtml(document.label)}"`;
     if (documentSurfaceMode(control, "industry") === "request") {
-      return `<button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Register to request ${escapeHtml(document.label)}"><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-control">${escapeHtml(metadata)}</span><span class="doc-request-state" data-document-request-label>Register to request</span></button>`;
+      return `<button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Request ${escapeHtml(document.label)}"><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-request-state" data-document-request-label>Request file</span></button>`;
     }
-    return `<a class="doc-chip" href="../${escapeHtml(document.file)}" ${common} data-document-download target="_blank" rel="noopener" download><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-control">${escapeHtml(metadata)}</span></a>`;
+    return `<a class="doc-chip" href="../${escapeHtml(document.file)}" ${common} data-document-download target="_blank" rel="noopener" download><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-request-state">Download PDF</span></a>`;
   }).join("\n            ");
 
   return `<section class="section section-slim ind-applications" id="applications-and-proof" data-industry-applications-proof>
@@ -386,8 +386,8 @@ function renderApplications(industry, allIndustries, documents) {
       </dl>${renderTrialBrief(industry)}
       <div class="ind-proof-docs">
         <div>
-          <span class="eyebrow">Product files</span>
-          <h3>Get the SDS, TDS, and product records your team needs.</h3>
+          <span class="eyebrow">SDS, labels & guides</span>
+          <h3>Download what you need or ask us for help.</h3>
         </div>
         <div class="doc-lib-links">
           ${documentLinks}
@@ -419,8 +419,8 @@ function renderCta(industry) {
   return `<section class="block-dark" data-industry-local-cta>
     <div class="wrap cta-band">
       <div class="section-head center">
-        <span class="eyebrow">Start with one job</span>
-        <h2 class="headline">See what VertKleen can do on your next ${escapeHtml(industry.label)} cleaning job.</h2>
+        <span class="eyebrow">Try before you switch</span>
+        <h2 class="headline">Put VertKleen to work on one real cleaning job.</h2>
       </div>
       <div class="hero-ctas">
         <a class="btn btn-light" href="${contactHref(industry, industry.cta_type)}" data-industry-primary-cta>${escapeHtml(industry.cta_label)}</a>

@@ -10,6 +10,11 @@ function escapeHtml(value) {
 
 export function proofCardHtml(card) {
   const chips = Array.isArray(card?.chips) ? card.chips : [];
+  const isProductRecord = card?.publication_scope === "Published product record";
+  const recordType = isProductRecord ? "Product information" : "Customer result";
+  const recordNote = isProductRecord
+    ? "Product details can change. Check the latest label and SDS before use."
+    : "Every job is different. Try it on your surface and compare the result.";
   const image = canonicalPublicImageUrl(card?.image);
   const afterImage = canonicalPublicImageUrl(card?.image_after);
   const imageHtml = image
@@ -25,12 +30,13 @@ export function proofCardHtml(card) {
   return `    <article id="${escapeHtml(card?.slug || "")}" class="case-card reveal" data-proof-card data-proof-kind="${escapeHtml(card?.kind || "all")}">
       ${media}
       <div class="case-body">
-        <span class="case-eyebrow">${escapeHtml(card?.eyebrow || "Result")}</span>
+        <span class="case-eyebrow">${recordType}</span>
         <h3>${escapeHtml(card?.title || "VertKleen result")}</h3>
         <p class="case-result">${escapeHtml(card?.result || "")}</p>
+        <p class="case-publication">${recordNote}</p>
         ${chips.length ? `<div class="case-meta">${chips.map((chip) => `<span class="case-chip">${escapeHtml(chip)}</span>`).join("")}</div>` : ""}
         <details class="case-disclosure">
-          <summary>See how it worked</summary>
+          <summary>Read the story</summary>
           <div class="case-disclosure-body">
             ${card?.narrative ? `<p class="case-narrative">${escapeHtml(card.narrative)}</p>` : ""}
           </div>

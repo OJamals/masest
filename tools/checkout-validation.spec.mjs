@@ -41,6 +41,7 @@ async function openCheckoutWithCart(page) {
   await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ crhd: 1 })));
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("#calculateShipping")).toBeVisible();
+  await expect(page.locator("#calculateShipping")).toBeEnabled();
 }
 
 // The message element is created next to the control, and the control points at it. Asserting
@@ -132,6 +133,44 @@ test("checkout field errors clear as the buyer fixes them", async ({ page }) => 
 
   // The hint a field already carries has to survive the error being attached and removed.
   await expect(page.locator("#phone")).toHaveAttribute("aria-describedby", /phoneHint/);
+});
+
+test("shipping action waits for checkout listeners before enabling", async ({ page }) => {
+  let markCatalogRequested;
+  let releaseCatalog;
+  const catalogRequested = new Promise((resolve) => { markCatalogRequested = resolve; });
+  const catalogReleased = new Promise((resolve) => { releaseCatalog = resolve; });
+
+  await page.route("**/api/products", async (route) => {
+    markCatalogRequested();
+    await catalogReleased;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        products: [
+          { sku: "crhd", name: "VertKleen CR-HD", mode: "buy", active: true, price: 12.5, currency: "usd" },
+        ],
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/checkout.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ crhd: 1 })));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await catalogRequested;
+
+  const calculate = page.locator("#calculateShipping");
+  try {
+    await expect(calculate).toBeVisible();
+    await expect(calculate).toBeDisabled();
+  } finally {
+    releaseCatalog();
+  }
+
+  await expect(calculate).toBeEnabled();
+  await calculate.click();
+  await expectDescribedError(page, "firstName");
 });
 
 test("checkout reports a malformed email rather than accepting it", async ({ page }) => {

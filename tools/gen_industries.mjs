@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { organizationJsonLd } from "./company-identity.mjs";
 import { STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -23,6 +24,7 @@ const INDUSTRY_APPLICATIONS_BY_SLUG = new Map(
   INDUSTRY_APPLICATIONS.map((industry) => [industry.slug, industry]),
 );
 const SITE_IMAGE_BY_PATH = new Map(SITE_IMAGES.map((asset) => [asset.public_url, asset]));
+const ORGANIZATION_SCHEMA = organizationJsonLd();
 
 const INDUSTRIES = INDUSTRY_APPLICATIONS.map((application) => ({
   slug: application.slug,
@@ -41,18 +43,18 @@ const INDUSTRIES = INDUSTRY_APPLICATIONS.map((application) => ({
 }));
 
 const NAV = [
-  ["", "MASEST"], ["products", "Products"], ["services", "Services"], [null, "Use Cases"],
-  ["industries", "Industries"], ["proof", "Proof"],
-  ["resources", "Resources"]
+  ["", "MASEST"], ["products", "Products"], ["services", "Services"], [null, "Applications"],
+  ["industries", "Industries"], ["proof", "Results"],
+  ["resources", "SDS &amp; Resources"]
 ];
 
 // Generated task imagery. Each key is an exact route slug; do not reuse a
 // scene on a merely related industry page.
 const TASK_GALLERY = {
   "aviation-fbos-mro-airports": [
-    ["Aircraft tug and ground-power unit undergoing a contained low-pressure wash after a wet chemical dwell", "Ground-support equipment wash after wet dwell"],
+    ["Aircraft tug and ground-power unit undergoing a contained low-pressure wash after the cleaner had time to work", "Ground-support equipment after the cleaner had time to work"],
     ["Aviation maintenance components moving from greasy to clean in an aqueous parts washer", "Aviation components through a contained parts wash"],
-    ["Ride-on auto-scrubber recovering wet hydraulic-fluid and tire-mark soil from an aircraft hangar floor", "Hangar floor degreasing with scrub-and-recovery"],
+    ["Ride-on auto-scrubber recovering hydraulic-fluid grime and tire marks from an aircraft hangar floor", "Hangar floor degreasing with scrub-and-recovery"],
   ],
   "breweries-distilleries-wineries": [
     ["Fixed CIP spray ball rinsing krausen and beer-stone residue from a stainless fermenter", "Fermenter CIP from wet residue to clean stainless"],
@@ -60,7 +62,7 @@ const TASK_GALLERY = {
     ["Fixed CIP spray head moving from wet mash residue to clean stainless inside an empty lauter tun", "Mash-tun CIP from wet residue to clean stainless"],
   ],
   construction: [
-    ["Technician rinsing wet-treated concrete residue from reusable steel formwork on a contained wash pad", "Wet dwell and rinse on reusable formwork"],
+    ["Technician rinsing treated concrete residue from reusable steel formwork on a contained wash pad", "Let the cleaner work, then rinse reusable formwork"],
     ["Concrete-stained reusable form panels and tools staged on a contained construction wash pad", "Reusable forms staged for final cleaning"],
     ["Concrete-pump hopper moving from wet cement residue through rinse to clean metal over a lined washout", "Pump-hopper cleanout with captured wash water"],
   ],
@@ -69,23 +71,23 @@ const TASK_GALLERY = {
     ["Isolated chilled-water pump and strainer skid connected for a contained closed-loop flush", "Cooling-loop flush connected and contained"],
   ],
   "distribution-cold-storage": [
-    ["Low-foam floor scrubber recovering tire marks and oily soil in a refrigerated distribution aisle", "Low-foam auto-scrub and recovery"],
+    ["Low-foam floor scrubber recovering tire marks and oily grime in a refrigerated distribution aisle", "Low-foam auto-scrub and recovery"],
     ["Technician cleaning an isolated cold-storage evaporator coil over a recovery pan", "Evaporator-coil cleaning in progress"],
   ],
   "drone-cleaning-companies": [
     ["Tethered cleaning drone washing an inaccessible commercial glass facade with a connected low-pressure spray bar", "Tethered facade wash on inaccessible glass"],
-    ["Tethered cleaning drone treating wet algae on an inaccessible steep residential roof", "Steep-roof treatment from wet dwell to clean"],
+    ["Tethered cleaning drone treating algae on an inaccessible steep residential roof", "Steep-roof treatment from soak to clean"],
   ],
   education: [
     ["Cleaned campus stair and masonry walkway during controlled dry-down", "Campus stair wash completed for dry-down"],
     ["School hydronic heat exchanger connected to a contained recirculation cleaning cart", "Hydronic heat exchanger on a closed-loop clean"],
-    ["Walk-behind auto-scrubber recovering wet soil and scuffs from an empty school gym floor", "School gym floor scrub and recovery", "schools-universities-01.webp"],
+    ["Walk-behind auto-scrubber recovering wet grime and scuffs from an empty school gym floor", "School gym floor scrub and recovery", "schools-universities-01.webp"],
     ["Connected low-pressure rinse cleaning an isolated school air-handler coil over recovery", "School air-handler coil cleaning", "schools-universities-02.webp"],
   ],
   "fleet-trucking-car-washes": [
     ["Road-film-covered tractor moving through a fixed commercial wash arch toward a clean finish", "Fleet road-film removal through a fixed wash arch"],
     ["Truck wheel hubs and service parts moving from greasy to clean in an aqueous parts washer", "Fleet parts through a contained aqueous wash"],
-    ["Empty refrigerated trailer interior moving from wet soil through low-pressure rinse to a clean lane", "Contained trailer-interior washout"],
+    ["Empty refrigerated trailer interior moving from wet grime through a low-pressure rinse to a clean lane", "Contained trailer-interior washout"],
   ],
   "food-beverage": [
     ["Clean-in-place spray ball rinsing the interior of a stainless beverage process tank", "CIP spray-ball coverage inside a process tank"],
@@ -93,29 +95,29 @@ const TASK_GALLERY = {
     ["Mounted spray bar and rotary brush cleaning organic process film from an empty stainless food conveyor", "Food conveyor cleaning before sanitation", "food-processing-agriculture-01.webp"],
   ],
   agriculture: [
-    ["Wet-treated organic residue being rinsed from an empty agricultural hopper and auger", "Agricultural hopper wash after wet dwell", "food-processing-agriculture-02.webp"],
+    ["Treated organic residue being rinsed from an empty agricultural hopper and auger", "Agricultural hopper after the cleaner had time to work", "food-processing-agriculture-02.webp"],
     ["Dairy milking clusters and stainless lines connected to a contained CIP wash circuit", "Milking-equipment CIP before sanitation", "food-processing-agriculture-03.webp"],
   ],
   "golf-courses": [
     ["Commercial reel-mower components being washed on a contained golf maintenance pad", "Turf-equipment wash in progress"],
     ["Scaled golf-course irrigation valves and sprinkler parts staged beside cleaned components", "Irrigation parts staged from fouled to clean"],
-    ["Electric golf cart exterior moving from wet turf soil through a protected low-pressure rinse", "Golf-cart exterior wash with protected electricals"],
+    ["Electric golf cart exterior moving from wet turf dirt through a protected low-pressure rinse", "Golf-cart exterior wash with protected electricals"],
     ["Rotary floor scrubber cleaning soap and mineral film from an empty locker-room shower", "Locker-room tile and grout cleaning", "golf-courses-sports-facilities-01.webp"],
-    ["Connected surface cleaner removing wet-treated soil from a stadium concrete walkway", "Stadium walkway cleaning with recovery", "golf-courses-sports-facilities-02.webp"],
+    ["Connected surface cleaner removing treated grime from a stadium concrete walkway", "Stadium walkway cleaning with recovery", "golf-courses-sports-facilities-02.webp"],
   ],
   healthcare: [
     ["Hospital mechanical-room heat exchanger connected to an isolated recirculation cleaning cart", "Water-side heat-exchanger clean in progress"],
     ["Ground-based technician using a connected low-pressure fan spray on an overhead hospital entrance canopy", "Low-pressure canopy wash from ground level"],
   ],
   "healthcare-senior-living": [
-    ["Walk-behind scrubber recovering laundry soil from a senior-living service floor", "Commercial laundry floor cleaning and recovery"],
+    ["Walk-behind scrubber recovering laundry grime from a senior-living service floor", "Commercial laundry floor cleaning and recovery"],
     ["Connected rotary brush cleaning mineral and soap film from an empty accessible shower", "Pre-disinfection shower cleaning"],
   ],
   "hotels-property-management": [
     ["Property-maintenance technician brushing mineral scale from resort pool waterline tile", "Mineral-scale removal at the pool waterline"],
     ["Hotel facade biological staining under a controlled low-pressure exterior wash", "Exterior staining under low-pressure wash"],
     ["Fixed internal rinse jets cleaning detergent and mineral film from a hotel commercial washer drum", "Commercial washer drum cleaning", "hotels-resorts-property-management-01.webp"],
-    ["Hotel kitchen hood filters moving from wet greasy dwell through fixed rinse to clean", "Back-of-house hood-filter cleaning", "hotels-resorts-property-management-02.webp"],
+    ["Hotel kitchen hood filters moving from a grease soak through a fixed rinse to clean", "Back-of-house hood-filter cleaning", "hotels-resorts-property-management-02.webp"],
   ],
   "hvac-water": [
     ["Fin-safe low-pressure cleaning on an isolated aluminum condenser coil", "Fin-safe condenser-coil cleaning"],
@@ -130,10 +132,8 @@ const TASK_GALLERY = {
   marine: [
     ["Boat hull and waterline being washed on a contained boatyard service pad", "Hull and waterline wash on a contained pad"],
     ["Marine technician removing oily residue from a yacht bilge with absorbent recovery", "Bilge degreasing in progress"],
-  ],
-  "marine-marinas-boatyards": [
-    ["Wet-treated oxidation and waterline film being rinsed from an aluminum workboat on a contained pad", "Aluminum workboat wash after wet dwell"],
-    ["Outboard service components moving from wet oily residue to a clean dry finish", "Marine service parts from dwell to clean"],
+    ["Treated oxidation and waterline film being rinsed from an aluminum workboat on a contained pad", "Aluminum workboat after the cleaner had time to work", "marine-marinas-boatyards-01.webp"],
+    ["Outboard service components moving from oily residue to a clean dry finish", "Marine service parts from soak to clean", "marine-marinas-boatyards-02.webp"],
   ],
   "mechanical-contractors-water-treatment": [
     ["Shell-and-tube heat-exchanger tube sheet connected to a contained recirculation cleaning cart", "Exchanger tube-sheet cleaning in progress"],
@@ -144,27 +144,27 @@ const TASK_GALLERY = {
     ["Rust-affected public works pump parts staged on a contained maintenance tray", "Pump parts staged for rust treatment"],
   ],
   "municipalities-water-utilities": [
-    ["Utility technician agitating wet-treated mineral deposits on a removed pump impeller over containment", "Wet dwell and agitation on a pump impeller"],
+    ["Utility technician scrubbing treated mineral buildup on a removed pump impeller over containment", "Soak and scrub on a pump impeller"],
     ["Utility technician removing mineral scale from an isolated gate valve on a service bench", "Valve scale removal in progress"],
     ["Removed lift-station pump and float components undergoing a contained above-ground rinse", "Lift-station equipment cleaning above ground"],
   ],
   "oil-gas": [
     ["Technician degreasing a de-inventoried and gas-free oilfield valve manifold over containment", "Gas-free valve-manifold degreasing"],
     ["Industrial heat-exchanger plates showing fouling beside cleaned metal during an isolated service clean", "Heat-exchanger plates from fouled to clean"],
-    ["Wet hydrocarbon residue being rinsed from an isolated industrial pump skid over containment", "Industrial pump-skid clean after wet dwell", "oil-gas-industrial-plants-01.webp"],
+    ["Oily residue being rinsed from an isolated industrial pump skid over containment", "Industrial pump-skid clean after the cleaner had time to work", "oil-gas-industrial-plants-01.webp"],
     ["Fixed low-pressure manifold cleaning wet oily residue from an isolated fin-fan cooler coil", "Fin-fan cooler cleaning during shutdown", "oil-gas-industrial-plants-02.webp"],
   ],
   plumbing: [
     ["Tankless water heater connected to a compact closed-loop descaling flush pump", "Tankless-heater flush loop in service"],
-    ["Removed pipe flanges shown at wet dwell, brush agitation, and clean dry stages", "Flange scale from wet dwell to clean finish"],
+    ["Removed pipe flanges shown at cleaner soak, brushing, and clean dry stages", "Flange scale from soak to clean finish"],
   ],
   "pressure-washing-soft-wash-contractors": [
     ["Contractor using a connected ground-based soft-wash pole on wet algae at a steep residential roof", "Steep-roof soft wash from ground level"],
-    ["Connected surface cleaner moving from wet chemical dwell to a clean storefront walkway", "Storefront concrete cleaning with recovery"],
-    ["Ground-based contractor moving wet siding soil through a gentle rinse to a clean facade", "Low-pressure siding wash with surface protection"],
+    ["Connected surface cleaner moving from treated grime to a clean storefront walkway", "Storefront concrete cleaning with recovery"],
+    ["Ground-based contractor moving wet siding grime through a gentle rinse to a clean facade", "Low-pressure siding wash with surface protection"],
   ],
   "restaurants-commercial-kitchens": [
-    ["Commercial hood filters moving from wet grease dwell through fixed rinse to clean", "Hood-filter degreasing and rinse"],
+    ["Commercial hood filters moving from a grease soak through fixed rinse to clean", "Hood-filter degreasing and rinse"],
     ["Wet softened grease being agitated from an empty commercial cookline during shutdown", "Cookline degreasing before rinse and sanitation"],
     ["Walk-behind auto-scrubber recovering wet grease from an empty commercial-kitchen tile floor", "Kitchen-floor degreasing before sanitation"],
   ],
@@ -172,11 +172,11 @@ const TASK_GALLERY = {
     ["Technician using a connected water-fed soft brush on utility-scale solar panels", "Water-fed soft-brush cleaning"],
     ["Autonomous soft-brush robot leaving a clean pass across dusty photovoltaic panels", "Automated soft-brush pass in progress"],
     ["Rail-guided soft-brush carriage cleaning a wet dusty section of utility-scale solar modules", "Rail-guided module-row cleaning", "solar-farms-panel-cleaning-01.webp"],
-    ["Connected rail-mounted brush moving from wet spotted modules to a clean dry band", "Wet dwell and soft-brush pass on solar modules", "solar-farms-panel-cleaning-02.webp"],
+    ["Connected rail-mounted brush moving from spotted modules to a clean dry band", "Cleaner working time and a soft-brush pass on solar modules", "solar-farms-panel-cleaning-02.webp"],
   ],
   "warehousing-distribution-centers": [
     ["Connected surface cleaner moving from wet pallet grime to a clean loading-dock lane", "Loading-dock cleaning with recovery"],
-    ["Wet greasy soil being rinsed from a protected electric forklift in a recovery wash bay", "Forklift maintenance-bay cleaning"],
+    ["Grease and grime being rinsed from a protected electric forklift in a recovery wash bay", "Forklift maintenance-bay cleaning"],
   ],
 };
 
@@ -184,8 +184,8 @@ const TASK_GALLERY = {
 // This one supplemental scene has no catalog card, so keep it on its exact route.
 const SAMPLE_GALLERY = {
   "pressure-washing-soft-wash-contractors": [
-    "Exterior-cleaning contractors preparing chemistry and tools for a controlled wash",
-    "Exterior-cleaning chemistry and tool setup",
+    "Exterior-cleaning contractors preparing cleaners and tools for a careful wash",
+    "Cleaner and tool setup",
   ],
 };
 
@@ -216,9 +216,9 @@ const LABEL_VARIANTS = {
     image: "cip-cr-studio.webp",
     productHref: "cr",
     directions: [
-      ["Light / krausen soil", "0.5 L per 10 gal; circulate hot (>140°F), then rinse"],
-      ["Moderate soil", "1 L per 10 gal; circulate, then rinse"],
-      ["Severe soil", "1.5 L per 10 gal; circulate, then rinse with water"],
+      ["Light / krausen buildup", "0.5 L per 10 gal; circulate hot (>140°F), then rinse"],
+      ["Medium buildup", "1 L per 10 gal; circulate, then rinse"],
+      ["Heavy buildup", "1.5 L per 10 gal; circulate, then rinse with water"],
     ],
   },
   "fb-cip-hcr": {
@@ -240,9 +240,9 @@ const LABEL_VARIANTS = {
     image: "crhd-food-beverage-studio.webp",
     productHref: "crhd",
     directions: [
-      ["Kitchen line — light grease", "Spray at 1:16, dwell 3–5 min, then wipe or rinse"],
-      ["Bar mats, fryers & hoods", "Apply at 1:8, agitate, then rinse"],
-      ["Stubborn / baked-on buildup", "Apply neat, dwell, then rinse"],
+      ["Kitchen line — light grease", "Spray at 1:16, let it work 3–5 min, then wipe or rinse"],
+      ["Bar mats, fryers & hoods", "Apply at 1:8, scrub, then rinse"],
+      ["Stubborn / baked-on buildup", "Apply neat, let it work, then rinse"],
     ],
   },
   "fb-multiwash": {
@@ -254,7 +254,7 @@ const LABEL_VARIANTS = {
     directions: [
       ["Bar tops, glass & tables", "Fill a 32 oz spray bottle at 1:16; mist and wipe"],
       ["Floors", "Dilute 1:32 in a mop bucket or auto-scrubber"],
-      ["Restrooms & fixtures", "Spray at 1:16, let stand, then wipe"],
+      ["Restrooms & fixtures", "Spray at 1:16, let it work, then wipe"],
       ["Upholstery & booths", "Spray at 1:16, blot and air-dry"],
     ],
   },
@@ -265,9 +265,9 @@ const LABEL_VARIANTS = {
     image: "crhd-pressure-wash-studio.webp",
     productHref: "crhd",
     directions: [
-      ["Fleet & equipment", "Apply at 1:20 via downstream injector or foam cannon; dwell, then rinse"],
-      ["Concrete oil & grease", "Apply at 1:8, agitate and rinse"],
-      ["Heavy / baked-on buildup", "Apply neat, dwell, then rinse"],
+      ["Fleet & equipment", "Apply at 1:20 through a downstream injector or foam cannon; let it work, then rinse"],
+      ["Concrete oil & grease", "Apply at 1:8, scrub and rinse"],
+      ["Heavy / baked-on buildup", "Apply neat, let it work, then rinse"],
     ],
   },
   "pw-crs": {
@@ -277,9 +277,9 @@ const LABEL_VARIANTS = {
     image: "crs-studio.webp",
     productHref: "descaler",
     directions: [
-      ["Rust & fertilizer stains", "Apply at 1:4, dwell 3–5 min, agitate, then rinse"],
-      ["Battery / deep stains", "Apply at 1:2, dwell, then rinse"],
-      ["Heavy scale & calcium", "Apply neat, dwell, then rinse"],
+      ["Rust & fertilizer stains", "Apply at 1:4, let it work 3–5 min, scrub, then rinse"],
+      ["Battery / deep stains", "Apply at 1:2, let it work, then rinse"],
+      ["Heavy scale & calcium", "Apply neat, let it work, then rinse"],
     ],
   },
   "pw-multiwash": {
@@ -289,8 +289,8 @@ const LABEL_VARIANTS = {
     image: "multiwash-pressure-wash-studio.webp",
     productHref: "multiwash",
     directions: [
-      ["House wash / soft wash", "Apply through a downstream injector at 1:16; dwell, then low-pressure rinse"],
-      ["Concrete & flatwork", "Apply at 1:8, agitate and rinse"],
+      ["House wash / soft wash", "Apply through a downstream injector at 1:16; let it work, then rinse at low pressure"],
+      ["Concrete & flatwork", "Apply at 1:8, scrub and rinse"],
       ["General surfaces", "Dilute 1:32, apply and rinse"],
     ],
   },
@@ -304,7 +304,7 @@ const LABEL_VARIANTS = {
       ["Equipment, machines & mats", "Dilute 1:32; mist onto a cloth or surface and wipe. Do not soak electronics"],
       ["Floors & tile", "Dilute 5:1 in a mop bucket or auto-scrubber"],
       ["Glass & mirrors", "Dilute 4:1 and wipe streak-free"],
-      ["Heavy soil & grout", "Dilute 2:1; apply, let stand, agitate and rinse"],
+      ["Heavy grime & grout", "Dilute 2:1; apply, let it work, scrub, and rinse"],
     ],
   },
   "gym-purgo": {
@@ -314,9 +314,9 @@ const LABEL_VARIANTS = {
     image: "purgo-studio.webp",
     productHref: "purgo",
     directions: [
-      ["High-touch odor", "Dilute 1:16; spray onto equipment, benches and rails; let stand, then wipe"],
+      ["High-touch odor", "Dilute 1:16; spray onto equipment, benches and rails; let it work, then wipe"],
       ["General surfaces", "Dilute 1:32; mist and wipe down — no rinse required"],
-      ["Heavy fouling", "Dilute 1:5; apply, allow full contact time, then wipe"],
+      ["Heavy buildup", "Dilute 1:5; apply, let it work for the full label time, then wipe"],
     ],
   },
 };
@@ -331,23 +331,68 @@ const INDUSTRY_LABEL_VARIANTS = {
   "golf-courses": ["gym-multiwash", "gym-purgo"],
 };
 
+const MARINE_PRODUCT_IMAGES = {
+  "hcr-t16": "hvac-hcr-studio.webp",
+  descaler: "descaler-studio.webp",
+  cr2: "hvac-cr-studio.webp",
+  multiwash: "multiwash-gym-studio.webp",
+  crhd: "crhd-studio.webp",
+  alumibrite: "alumibrite-studio.webp",
+  torque: "torque-studio.webp",
+  purgo: "purgo-studio.webp",
+};
+const marineApplication = INDUSTRY_APPLICATIONS_BY_SLUG.get("marine");
+const MARINE_BASE_NAMES = {
+  "hcr-t16": "HCR-T16",
+  descaler: "Descaler",
+  cr2: "CR2",
+  multiwash: "MultiWash",
+  crhd: "CR HD",
+  alumibrite: "AlumiBrite",
+  torque: "Torque",
+  purgo: "Purgo",
+};
+if (marineApplication?.approved_product_names?.length) {
+  INDUSTRY_LABEL_VARIANTS.marine = marineApplication.approved_product_names.map((approved) => {
+    const key = `marine-${approved.base_product}`;
+    const image = MARINE_PRODUCT_IMAGES[approved.base_product];
+    if (!image) throw new Error(`Missing marine product image: ${approved.base_product}`);
+    LABEL_VARIANTS[key] = {
+      market: "Marine cleaner",
+      name: approved.name,
+      subtitle: `Made with VertKleen ${MARINE_BASE_NAMES[approved.base_product] || approved.base_product}`,
+      image,
+      productHref: approved.base_product,
+      labelPath: approved.label,
+      directions: [],
+    };
+    return key;
+  });
+}
+
 function labelVariantCard(key) {
   const variant = LABEL_VARIANTS[key];
   if (!variant) throw new Error(`Missing label variant: ${key}`);
-  const directions = variant.directions.map(([use, dilution]) =>
+  const directions = (variant.directions || []).map(([use, dilution]) =>
     `<li><strong>${htmlText(use)}:</strong>&nbsp; ${htmlText(dilution)}</li>`,
   ).join("");
+  const directionsBlock = directions
+    ? `<h4>Label mixing directions</h4>
+        <ul class="product-fit-list" aria-label="${htmlText(variant.name)} label directions">${directions}</ul>`
+    : `<p class="label-card-note">Open the label for directions, mixing, and surface guidance.</p>`;
+  const labelAction = variant.labelPath
+    ? `<a class="btn btn-primary" href="../resources#doc-category-labels">Open label library</a>`
+    : `<a class="btn btn-primary" href="../contact?type=quote&amp;product=${enc(variant.name)}&amp;label=${enc(variant.market)}">Request this label</a>`;
 
   return `<article class="prod-card" data-label-variant="${key}">
         <img class="product-shot" src="../img/products/${variant.image}" alt="${htmlText(variant.name)} ${variant.market} jug" width="900" height="1200" loading="lazy">
         <span class="catalog-type">${variant.market}</span>
         <h3>${htmlText(variant.name)}</h3>
         <div class="replaces">${htmlText(variant.subtitle)}</div>
-        <h4>Label dilution / concentration</h4>
-        <ul class="product-fit-list" aria-label="${htmlText(variant.name)} label directions">${directions}</ul>
+        ${directionsBlock}
         <div class="prod-actions">
-          <a class="btn btn-secondary" href="../products/${variant.productHref}">View base product</a>
-          <a class="btn btn-primary" href="../contact?type=quote&amp;product=${enc(variant.name)}&amp;label=${enc(variant.market)}">Request this label</a>
+          <a class="btn btn-secondary" href="../products/${variant.productHref}">See product details</a>
+          ${labelAction}
         </div>
       </article>`;
 }
@@ -357,12 +402,13 @@ function industryLabelVariantsBlock(ind) {
   if (!keys?.length) return "";
   const cards = keys.map(labelVariantCard).join("\n      ");
 
+  const marine = ind.slug === "marine";
   return `\n<section class="section section-slim" data-industry-label-variants="${ind.slug}">
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">Industry label variants</span>
-        <h2 class="headline">Use the label built for this work.</h2>
-        <p class="subhead">Use the application-specific directions shown on each label. Open the base product for specs, documentation, and purchasing.</p>
+        <span class="eyebrow">${marine ? "VertKleen marine cleaners" : "Labels for your work"}</span>
+        <h2 class="headline">${marine ? "Eight marine cleaners made for real boatyard work." : "Use the label made for this job."}</h2>
+        <p class="subhead">${marine ? "Each marine name is the exact VertKleen cleaner shown on its card, packaged with a marine-use label. Open the label for directions and mixing guidance." : "Choose the label for the job, then open the product page for details, pricing, and help."}</p>
       </div>
       <div class="prod-grid prod-grid-rec">
       ${cards}
@@ -384,11 +430,11 @@ function industryDetailBlock(ind) {
   return `<section class="section section-slim">
     <div class="wrap ind-specific">
       <div class="section-head">
-        <h2 class="headline">What matters before you switch chemistry.</h2>
+        <h2 class="headline">What to check before you switch cleaners.</h2>
       </div>
       <div class="proof-callout">
-        <p>Prove removal on the actual soil and surface before replacing the incumbent.</p>
-        <p>Compare cost per completed job across labor, rinse water, wastewater handling, downtime, and return to service.</p>
+        <p>Try VertKleen on the real mess and surface before changing the whole operation.</p>
+        <p>Compare the finished result, product, labor, water, repeat passes, and downtime—not the jug price alone.</p>
       </div>
     </div>
   </section>`;
@@ -398,16 +444,7 @@ function industrySchema(ind, plain) {
   return {
     "@context": "https://schema.org",
     "@graph": [
-      {
-        "@type": "Organization",
-        name: "MASEST Consulting LLC",
-        url: "https://masest.co/",
-        logo: "https://masest.co/img/masest-logo.png",
-        brand: "VertKleen",
-        description: "VertKleen pairs industrial cleaning performance with HMIS 0-0-0 across every current product MASEST offers.",
-        areaServed: "United States and international commercial accounts",
-        contactPoint: { "@type": "ContactPoint", contactType: "sales", url: "https://masest.co/contact" }
-      },
+      ORGANIZATION_SCHEMA,
       {
         "@type": "WebPage",
         name: `${ind.name} VertKleen replacements`,
@@ -417,8 +454,8 @@ function industrySchema(ind, plain) {
       {
         "@type": "Service",
         name: `${ind.name} VertKleen replacement program`,
-        provider: { "@type": "Organization", name: "MASEST Consulting LLC", url: "https://masest.co/" },
-        serviceType: `${ind.name} industrial cleaning chemistry replacement`,
+        provider: { "@type": "Organization", name: ORGANIZATION_SCHEMA.name, url: ORGANIZATION_SCHEMA.url },
+        serviceType: `${ind.name} industrial cleaning products`,
         url: `https://masest.co/industries/${ind.slug}`,
         areaServed: "United States and international commercial accounts"
       },
@@ -440,8 +477,8 @@ function ctaBlock(ind) {
   <section class="block-dark">
     <div class="wrap cta-band">
       <div class="section-head center">
-        <span class="eyebrow">Scope the job</span>
-        <h2 class="headline">Plan the next ${ind.name} cleaning task.</h2>
+        <span class="eyebrow">Try before you switch</span>
+        <h2 class="headline">Put VertKleen to work on one real cleaning job.</h2>
       </div>
       <div class="hero-ctas">
         <a class="btn btn-light" href="${q(ind.ctaType)}" data-industry-primary-cta>${ind.ctaLabel}</a>
@@ -484,7 +521,7 @@ function imageGalleryBlock(ind) {
     throw new Error(`${ind.slug}: ${evidence.status} evidence has no field images`);
   }
   const fieldKind = evidence.status === "qualified" ? "field-proof" : "field-context";
-  const fieldLabel = "Field result";
+  const fieldLabel = evidence.status === "qualified" ? "Real job result" : "Job photo";
   const fieldFigs = shots.map((asset, i) => {
     if (!asset.alt?.trim() || !asset.width || !asset.height) {
       throw new Error(`${ind.slug}: incomplete canonical field image g${i + 1}`);
@@ -570,7 +607,7 @@ ${nav}
   <section class="section section-slim">
     <div class="wrap ind-intro-copy">
       <span class="ind-icon"><i class="ph ${ind.icon}" aria-hidden="true"></i></span>
-      <h2 class="headline">Cleaning chemistry for ${ind.name}.</h2>
+      <h2 class="headline">Cleaning products for ${ind.name}.</h2>
       <p>${ind.intro}</p>
       <a class="btn btn-ink" href="../proof">See VertKleen results</a>
     </div>
@@ -583,7 +620,7 @@ ${industryDetailBlock(ind)}${imageGalleryBlock(ind)}
       <div class="section-head">
         <span class="eyebrow">Recommended</span>
         <h2 class="headline">VertKleen products for ${ind.name}.</h2>
-          <p class="subhead">Match the formula to the soil, surface, and cleaning process.</p>
+          <p class="subhead">Match the cleaner to the mess, surface, and way your team cleans.</p>
       </div>
       <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>
@@ -592,7 +629,7 @@ ${industryDetailBlock(ind)}${imageGalleryBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js?v=20260821a"></script>
+<script type="module" src="../js/main.js?v=20260822a"></script>
 </body>
 </html>
 `;

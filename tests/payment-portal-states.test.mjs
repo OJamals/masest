@@ -20,6 +20,6 @@ test("dashboard payment portal uses the same explicit states", () => {
   assert.match(dashboard, /Opening Stripe/, "dashboard portal launch should show Stripe-specific progress");
   assert.match(dashboard, /openReservedTab/, "dashboard portal should reserve a new tab before awaiting Stripe");
   assert.match(dashboard, /Payment portal opened in a new tab/, "dashboard portal should announce the new-tab handoff");
-  assert.match(dashboard, /Stripe is not configured for this workspace yet/, "dashboard not-configured copy should be specific");
+  assert.match(dashboard, /Online payments are not set up yet\./, "dashboard not-configured copy should be clear");
   assert.match(dashboard, /btn\.textContent = originalText/, "dashboard button label should recover after failure");
 });

@@ -31,8 +31,12 @@ import {
 import { proofRecordsHtml } from "../js/proof-records.js";
 import {
   documentAllowedOnSurface,
+  documentEffectiveDate,
+  documentRevision,
   documentSurfaceMode,
+  documentType,
 } from "./public-document-policy.mjs";
+import { organizationJsonLd } from "./company-identity.mjs";
 import { STYLE_VERSION } from "./static-release.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
@@ -59,11 +63,13 @@ const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document
 const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
 const AUTHORITY_RECORDS = DOCUMENT_REVIEW.documents.flatMap((document) => document.authority_records || []);
 const PROOF_RECORDS_BY_SLUG = new Map(PROOF_RECORDS.map((record) => [record.slug, record]));
-const DOCUMENT_REVISION = DOCUMENT_REVIEW.document_control.revision;
 const DOCUMENT_SKU_LABELS = new Map([
   ["VK-HCR", "VertKleen CIP HCR"],
+  ["VK-HCR-T16", "VertKleen HVAC HCR"],
   ["VK-CR", "VertKleen CIP CR"],
+  ["VK-CR2", "VertKleen HVAC CR"],
   ["VK-CRHD", "VertKleen CR HD"],
+  ["VK-ALB", "VertKleen AlumiBrite"],
   ["VK-CRS", "VertKleen CRS"],
   ["VK-DESC", "VertKleen Descaler"],
   ["VK-NEUT", "VertKleen Neutral"],
@@ -92,16 +98,7 @@ const CATALOG_PRODUCTS_BY_SLUG = new Map(
   CATALOG_SEED.products.map((product) => [product.slug, product]),
 );
 
-const ORG = {
-  "@type": "Organization",
-  name: "MASEST Consulting LLC",
-  url: `${BASE}/`,
-  logo: `${BASE}/img/masest-logo.png`,
-  brand: "VertKleen",
-  description: "VertKleen pairs industrial cleaning performance with HMIS 0-0-0 across every current product MASEST offers.",
-  areaServed: "United States and international commercial accounts",
-  contactPoint: { "@type": "ContactPoint", contactType: "sales", url: `${BASE}/contact` },
-};
+const ORG = organizationJsonLd();
 
 const PUBLIC = {
   "index.html": { loc: "/", priority: "1.0", changefreq: "weekly", jsonld: [ORG, { "@type": "WebSite", name: "MASEST VertKleen", url: `${BASE}/` }] },
@@ -132,12 +129,22 @@ Object.assign(PUBLIC, Object.fromEntries([
 ].map(([file, loc, priority]) => [file, { loc, priority, changefreq: "monthly" }])));
 
 const PRIVATE = [
+  "404.html",
   "account.html",
   "admin.html",
   "business.html",
   "cart.html",
+  "checkout.html",
+  "content-preview.html",
   "dashboard.html",
   "order-confirmed.html",
+  "review.html",
+];
+
+const RELEASE_ONLY = [
+  "quickbooks-connect.html",
+  "quickbooks-disconnect.html",
+  "quickbooks-launch.html",
 ];
 
 const attr = (value) => String(value ?? "")
@@ -184,7 +191,7 @@ function productProofRecords(productId) {
 }
 
 function documentControl(document) {
-  return `${document.document_id} · Rev ${DOCUMENT_REVISION} · SKUs: ${document.skus.join(", ")}`;
+  return `${document.document_id} · Rev ${documentRevision(document, DOCUMENT_REVIEW.document_control)} · SKUs: ${document.skus.join(", ")}`;
 }
 
 function documentAnalyticsName(document) {
@@ -193,33 +200,109 @@ function documentAnalyticsName(document) {
     .replace("Technical Data Sheet", "TDS");
 }
 
-function documentLibrary() {
-  const groups = new Map([...DOCUMENT_SKU_LABELS].map(([sku, label]) => [sku, { label, documents: [] }]));
-  for (const document of DOCUMENT_REVIEW.documents.filter(
-    (entry) => documentAllowedOnSurface(entry, "resource"),
-  )) {
-    const group = groups.get(document.skus[0]);
-    if (!group) throw new Error(`Unknown primary document SKU: ${document.skus[0]}`);
-    group.documents.push(document);
-  }
+function documentDisplayTitle(document) {
+  return document.title
+    .replace("VertKleen Cooling Tower Chemistry Brochure", "VertKleen Cooling Tower Brochure");
+}
 
-  return [...groups.entries()].map(([sku, group]) => {
-    const documents = group.documents
-      .sort((left, right) => left.title.localeCompare(right.title))
-      .map((document) => {
-        const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(DOCUMENT_REVISION)}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
-        if (documentSurfaceMode(document, "resource") === "request") {
-          return `          <button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Register to request ${attr(document.title)}"><span class="doc-title">${text(document.title)}</span><span class="doc-control">${text(documentControl(document))}</span><span class="doc-request-state" data-document-request-label>Register to request</span></button>`;
-        }
-        return `          <a class="doc-chip" href="${attr(document.path)}" ${common} data-document-download target="_blank" rel="noopener" download aria-label="Download ${attr(document.title)} (PDF)"><span class="doc-title">${text(document.title)}</span><span class="doc-control">${text(documentControl(document))}</span></a>`;
-      })
-      .join("\n");
-    return `        <div class="doc-lib-item" data-document-sku="${attr(sku)}">
-          <div class="doc-lib-head"><b>${text(group.label)}</b><span>${attr(sku)} · ${group.documents.length} current ${group.documents.length === 1 ? "file" : "files"}</span></div>
-          <div class="doc-lib-links">
-${documents}
+function documentLibrary() {
+  const available = DOCUMENT_REVIEW.documents.filter(
+    (entry) => documentAllowedOnSurface(entry, "resource"),
+  );
+  const categories = [
+    {
+      key: "labels",
+      label: "Labels",
+      description: "Find the right label for your VertKleen product and application.",
+      matches: (document) => /label/i.test(document.title),
+    },
+    {
+      key: "safety-data-sheets",
+      label: "Safety Data Sheets",
+      description: "Request the latest SDS for the product you use.",
+      matches: (document) => documentType(document) === "sds",
+    },
+    {
+      key: "technical-data-sheets",
+      label: "Technical Data Sheets",
+      description: "Request product details, directions, and extra product information.",
+      matches: (document) => documentType(document) === "tds",
+    },
+    {
+      key: "supporting-documents",
+      label: "Guides, Tests & Results",
+      description: "Browse practical guides, test results, comparisons, and product help.",
+      matches: () => true,
+    },
+  ];
+  const assigned = new Set();
+  const labelCollections = new Map([
+    ["marine", "Marine labels"],
+    ["hvac", "HVAC labels"],
+    ["cip", "CIP labels"],
+    ["general", "General product labels"],
+    ["earlier-public", "Other product labels"],
+    ["request-only", "Labels available by request"],
+  ]);
+
+  const renderDocument = (document) => {
+    const revision = documentRevision(document, DOCUMENT_REVIEW.document_control);
+    const displayTitle = documentDisplayTitle(document);
+    const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(revision)}" data-document-effective="${attr(documentEffectiveDate(document, DOCUMENT_REVIEW.document_control))}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
+    if (documentSurfaceMode(document, "resource") === "request") {
+      return `            <button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Request ${attr(displayTitle)}"><span class="doc-title">${text(displayTitle)}</span><span class="doc-request-state" data-document-request-label>Request file</span></button>`;
+    }
+    return `            <a class="doc-chip" href="${attr(document.path)}" ${common} data-document-download target="_blank" rel="noopener" download aria-label="Download ${attr(displayTitle)} (PDF)"><span class="doc-title">${text(displayTitle)}</span><span class="doc-request-state">Download PDF</span></a>`;
+  };
+
+  return categories.map((category) => {
+    const documents = available.filter((document) => {
+      if (assigned.has(document.document_id) || !category.matches(document)) return false;
+      assigned.add(document.document_id);
+      return true;
+    });
+    const groups = new Map();
+    for (const document of documents) {
+      const groupKey = category.key === "labels"
+        ? document.collection || (documentSurfaceMode(document, "resource") === "request" ? "request-only" : "earlier-public")
+        : document.skus[0];
+      const groupLabel = category.key === "labels"
+        ? labelCollections.get(groupKey)
+        : DOCUMENT_SKU_LABELS.get(groupKey);
+      if (!groupLabel) throw new Error(`Unknown document group: ${groupKey}`);
+      if (!groups.has(groupKey)) groups.set(groupKey, { label: groupLabel, documents: [] });
+      groups.get(groupKey).documents.push(document);
+    }
+    const groupHtml = [...groups.entries()].map(([groupKey, group]) => {
+      const links = group.documents
+        .sort((left, right) => left.title.localeCompare(right.title))
+        .map(renderDocument)
+        .join("\n");
+      const sku = category.key === "labels" ? "" : groupKey;
+      const lifecycle = category.key === "labels"
+        ? groupKey === "earlier-public"
+          ? "earlier public"
+          : groupKey === "request-only"
+            ? "request-only"
+            : "current"
+        : "current";
+      const count = `${group.documents.length} ${group.documents.length === 1 ? "file" : "files"}`;
+      return `          <div class="doc-lib-item" data-document-group="${attr(groupKey)}" data-document-lifecycle="${attr(lifecycle.replaceAll(" ", "-"))}"${sku ? ` data-document-sku="${attr(sku)}"` : ""}>
+            <div class="doc-lib-head"><b>${text(group.label)}</b><span>${sku ? `${attr(sku)} · ` : ""}${count}</span></div>
+            <div class="doc-lib-links">
+${links}
+            </div>
+          </div>`;
+    }).join("\n");
+    return `        <section class="doc-lib-category" data-document-category="${attr(category.key)}" aria-labelledby="doc-category-${attr(category.key)}">
+          <div class="doc-lib-category-head">
+            <h3 id="doc-category-${attr(category.key)}">${text(category.label)}</h3>
+            <p>${text(category.description)}</p>
           </div>
-        </div>`;
+          <div class="doc-lib-category-grid">
+${groupHtml}
+          </div>
+        </section>`;
   }).join("\n");
 }
 
@@ -313,7 +396,7 @@ function serviceReviewNodes(reviewsSnapshot) {
       name: svc.name,
       sku,
       ...(svc.category ? { serviceType: svc.category } : {}),
-      provider: { "@type": "Organization", name: "MASEST Consulting LLC", url: `${BASE}/` },
+      provider: { "@type": "Organization", name: ORG.name, url: ORG.url },
       aggregateRating,
     });
   }
@@ -463,6 +546,17 @@ async function processPage(file, meta, isPrivate = false) {
   return 0;
 }
 
+async function processReleaseOnlyPage(file) {
+  const before = await readFile(file, "utf8");
+  const html = before.replace(
+    /css\/style\.css\?v=[^"']+/g,
+    `css/style.css?v=${STYLE_VERSION}`,
+  );
+  if (html === before) return 0;
+  await writeFile(file, html);
+  return 1;
+}
+
 // Retain DBNPA as a legacy quote-only ID for old records. It is discontinued,
 // excluded from CATALOG_ORDER, and has no public product route.
 const QUOTE_ONLY_IDS = new Set([...QUOTE_FIRST_IDS, "dbnpa"]);
@@ -474,8 +568,8 @@ function terminate(part) {
 
 function productRouteCopy(id) {
   return QUOTE_ONLY_IDS.has(id)
-    ? "Quoted before purchase."
-    : "Small packs are available online; drums and totes are quoted to fit the job.";
+    ? "Ask us for current pricing."
+    : "Shop available sizes online. Need a drum or tote? Ask for a quote.";
 }
 
 function productDescription(id, product) {
@@ -516,7 +610,7 @@ function productSchema(id, product, reviewsSnapshot) {
         name: product.name,
         ...(sku ? { sku } : {}),
         brand: { "@type": "Brand", name: "VertKleen" },
-        category: "Industrial cleaning chemistry",
+        category: "Industrial cleaning products",
         description: productDescription(id, product),
         url: `${BASE}/products/${id}`,
         image: product.image ? `${BASE}/${product.image}` : `${BASE}/${PRODUCT_FALLBACK_IMAGE}`,
@@ -529,7 +623,7 @@ function productSchema(id, product, reviewsSnapshot) {
           },
           {
             "@type": "PropertyValue",
-            name: "Procurement",
+            name: "How to buy",
             value: QUOTE_ONLY_IDS.has(id) ? "Quoted before purchase" : "Small packs in stock; bulk quoted",
           },
           { "@type": "PropertyValue", name: "Shipping", value: "Non-hazmat" },
@@ -585,7 +679,7 @@ function productPage(id, product, reviewsSnapshot) {
   const proofRecords = productProofRecords(id);
   const proofLinks = proofRecords
     .map((record) => (
-      `<li class="doc-file"><a href="../proof#${attr(record.slug)}"><span class="doc-file-copy">${text(record.title)}<span class="doc-control">${text(record.record_label)}</span></span><span class="doc-pill">Proof</span></a></li>`
+      `<li class="doc-file"><a href="../proof#${attr(record.slug)}"><span class="doc-file-copy">${text(record.title)}</span><span class="doc-pill">Result</span></a></li>`
     ))
     .join("\n");
   // The hero asks for the purchase decision while the evidence for its strongest claim sits
@@ -593,18 +687,18 @@ function productPage(id, product, reviewsSnapshot) {
   // from the claim without spending the buyer's place on the page.
   const heroProof = proofRecords.length
     ? `
-        <a class="product-hero-proof" href="#records"><i class="ph ph-seal-check" aria-hidden="true"></i>See ${proofRecords.length} field result${proofRecords.length === 1 ? "" : "s"}</a>`
+        <a class="product-hero-proof" href="#records"><i class="ph ph-seal-check" aria-hidden="true"></i>See ${proofRecords.length} real job result${proofRecords.length === 1 ? "" : "s"}</a>`
     : "";
   const docs = (product.docs || [])
     .flatMap((doc) => {
       if (doc && typeof doc === "object" && doc.file) {
         const document = currentDocument(doc.file, "product");
         if (!document) return [];
-        const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(DOCUMENT_REVISION)}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
+        const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(documentRevision(document, DOCUMENT_REVIEW.document_control))}" data-document-effective="${attr(documentEffectiveDate(document, DOCUMENT_REVIEW.document_control))}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
         if (documentSurfaceMode(document, "product") === "request") {
-          return [`<li class="doc-file doc-request"><button type="button" data-document-request ${common} aria-label="Register to request ${attr(document.title)}"><span class="doc-file-copy">${text(doc.label)}<span class="doc-control">${text(documentControl(document))}</span></span><span class="doc-pill doc-pill-req" data-document-request-label>Register to request</span></button></li>`];
+          return [`<li class="doc-file doc-request"><button type="button" data-document-request ${common} aria-label="Request ${attr(document.title)}"><span class="doc-file-copy">${text(doc.label)}</span><span class="doc-pill doc-pill-req" data-document-request-label>Request file</span></button></li>`];
         }
-        return [`<li class="doc-file"><a href="../${attr(doc.file)}" ${common} data-document-download target="_blank" rel="noopener" download><span class="doc-file-copy">${text(doc.label)}<span class="doc-control">${text(documentControl(document))}</span></span><span class="doc-pill">PDF</span></a></li>`];
+        return [`<li class="doc-file"><a href="../${attr(doc.file)}" ${common} data-document-download target="_blank" rel="noopener" download><span class="doc-file-copy">${text(doc.label)}</span><span class="doc-pill">Download</span></a></li>`];
       }
       const label = doc && typeof doc === "object" ? doc.label : doc;
       const href = `../contact?type=technical&product=${encodeURIComponent(product.name)}&doc=${encodeURIComponent(label)}`;
@@ -612,13 +706,13 @@ function productPage(id, product, reviewsSnapshot) {
     })
     .join("\n");
   const backingSections = [
-    proofLinks && `<h3 id="records">Records and results</h3><ul class="product-fit-list">${proofLinks}</ul>`,
-    docs && `<h3>Documents</h3><ul class="product-fit-list">${docs}</ul>`,
+    proofLinks && `<h3 id="records">Results</h3><ul class="product-fit-list">${proofLinks}</ul>`,
+    docs && `<h3>SDS, labels & guides</h3><ul class="product-fit-list">${docs}</ul>`,
   ].filter(Boolean).join("\n        ");
   const procurement = QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
     : "Buy small packs online or ask us to price drums, totes, and recurring supply.";
-  const replacement = String(product.replaces || "Industrial chemistry")
+  const replacement = String(product.replaces || "Industrial cleaner")
     .replace(/^(?:Replaces|Compared with|Evaluated against|Evaluated for)\s+/i, "");
   const supply = QUOTE_ONLY_IDS.has(id) ? "Quoted to fit" : "Small packs in stock";
   const eyebrow = id === "dbnpa" ? "Program component" : "VertKleen product";
@@ -656,10 +750,10 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   <a href="../"><b>MASEST</b></a>
   <a href="../products">Products</a>
   <a href="../services">Services</a>
-  <span>Use Cases</span>
+  <span>Applications</span>
   <a href="../industries">Industries</a>
-  <a href="../proof">Proof</a>
-  <a href="../resources">Resources</a>
+  <a href="../proof">Results</a>
+  <a href="../resources">SDS &amp; Resources</a>
 </nav>
 </noscript>
 <main id="main">
@@ -670,12 +764,12 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         <h1 class="display">${text(product.name)}</h1>
         <div class="product-hero-facts" aria-label="Product highlights">
           <span><b>HMIS</b>${text(product.hmis || "0-0-0")}</span>
-          <span><b>Alternative to</b>${text(replacement)}</span>
-          <span><b>Supply</b>${text(supply)}</span>
+          <span><b>Replaces</b>${text(replacement)}</span>
+          <span><b>Available</b>${text(supply)}</span>
         </div>${heroProof}${QUOTE_ONLY_IDS.has(id) ? "" : `
         <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
              incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
-             the "Request a quote" CTA below (data-quote-fallback="off" keeps this empty
+             the "Get a quote" CTA below (data-quote-fallback="off" keeps this empty
              when the catalog API is unavailable). -->
         <div class="product-hero-buy">
           <span class="shop-card-price" data-commerce-price="${id}" hidden></span>
@@ -683,10 +777,10 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         </div>`}
         <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
-          <a class="btn ${quoteButtonClass}" href="../contact?type=quote&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.quote_cta || "Request a quote")}</a>
-          <a class="btn btn-ghost" href="../contact?type=sample&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.sample_cta || "Request free sample")}</a>
+          <a class="btn ${quoteButtonClass}" href="../contact?type=quote&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.quote_cta || "Get a quote")}</a>
+          <a class="btn btn-ghost" href="../contact?type=sample&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.sample_cta || "Try a free sample")}</a>
         </div>
-        <a class="product-back-link" href="../products">All products</a>
+        <a class="product-back-link" href="../products">Browse all cleaners</a>
       </div>
       ${heroMedia}
     </div>
@@ -695,12 +789,12 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     <div class="wrap product-static-grid">${applicationMedia ? `
       ${applicationMedia}` : ""}
       <article class="product-static-panel">
-        <h2>Alternative to ${text(replacement)}</h2>
+        <h2>Made for jobs like these.</h2>
         <p>${text(procurement)}</p>
         <ul class="product-fit-list">${uses}</ul>
       </article>
       <article class="product-static-panel">
-        <h2>Why teams make the switch.</h2>
+        <h2>Why crews choose it.</h2>
         <ul class="spec-list">${specs}</ul>${backingSections ? `
         ${backingSections}` : ""}
       </article>
@@ -710,15 +804,15 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     <div class="wrap">
       <article class="product-static-panel product-handling-panel">
         <div>
-          <span class="eyebrow">HMIS 0-0-0</span>
-          <h2 id="product-handling-${id}">Serious cleaning power. A much easier workday.</h2>
-          <p>Every VertKleen product MASEST offers is HMIS 0-0-0 and ships non-hazmat. Crews get industrial cleaning power with simpler freight, storage, training, and day-to-day handling.</p>
+          <span class="eyebrow">Before you clean</span>
+          <h2 id="product-handling-${id}">Use ${text(product.name)} with confidence.</h2>
+          <p>Read the latest label and SDS, try a small area first, and follow the safety rules for your workplace.</p>
         </div>
         <ul class="product-handling-list">
-          <li><b>HMIS 0-0-0</b><span>Zero for health, flammability, and physical hazard.</span></li>
-          <li><b>Non-hazmat shipping</b><span>Simpler freight without hazmat requirements.</span></li>
-          <li><b>Standard ventilation</b><span>No special ventilation or area clearance for routine cleaning.</span></li>
-          <li><b>One linewide standard</b><span>Every VertKleen product we offer carries the same 0-0-0 profile.</span></li>
+          <li><b>Read the directions</b><span>Use the label made for this product and package.</span></li>
+          <li><b>Check the surface</b><span>Try a small, hidden area before cleaning the whole job.</span></li>
+          <li><b>Follow workplace rules</b><span>Use the PPE, ventilation, and rinse-water steps required at your site.</span></li>
+          <li><b>Ask us</b><span>Not sure where to start? MASEST can help with product choice and first-use planning.</span></li>
         </ul>
       </article>
     </div>
@@ -730,7 +824,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   </section>
   ${contentPageMount(`products/${id}`)}
 </main>
-<script type="module" src="../js/main.js?v=20260821a"></script>
+<script type="module" src="../js/main.js?v=20260822a"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>
@@ -812,6 +906,41 @@ ${entries.map((entry) => `  <url><loc>${BASE}${entry.loc}</loc><lastmod>${entry.
   return 0;
 }
 
+const sqlLiteral = (value) => `'${String(value).replaceAll("'", "''")}'`;
+
+function proofSeedSql() {
+  const rows = [...PROOF_RECORDS]
+    .sort((left, right) => Number(left.sort_order) - Number(right.sort_order))
+    .map((record) => {
+      const { slug, title, seo = {}, ...payload } = record;
+      return `  ('proof_card', ${sqlLiteral(slug)}, ${sqlLiteral(title)}, 'published', 'en', ${sqlLiteral(JSON.stringify(payload))}::jsonb, ${sqlLiteral(JSON.stringify(seo))}::jsonb)`;
+    });
+
+  return `-- Seed VertKleen customer-result and product-information cards as published CMS entries.
+-- Generated from data/content/proof.json by npm run seo-inject. Idempotent.
+
+insert into public.content_entries (type, slug, title, status, locale, payload, seo)
+values
+${rows.join(",\n")}
+on conflict (type, slug, locale) do update
+  set title = excluded.title, status = excluded.status, payload = excluded.payload,
+      seo = excluded.seo, published_at = coalesce(public.content_entries.published_at, now()), updated_at = now();
+
+update public.content_entries set published_at = coalesce(published_at, now())
+  where type = 'proof_card' and status = 'published';
+`;
+}
+
+async function writeProofSeed() {
+  const file = "supabase/seed-proof-cards.sql";
+  const sql = proofSeedSql();
+  const before = existsSync(file) ? await readFile(file, "utf8") : "";
+  if (before === sql) return 0;
+  await writeFile(file, sql);
+  console.log("updated", file);
+  return 1;
+}
+
 let changed = 0;
 const contentPageMeta = loadContentPageMeta();
 const reviewsSnapshot = loadReviewsSnapshot();
@@ -822,7 +951,9 @@ for (const [file, meta] of Object.entries(PUBLIC)) {
   changed += await processPage(file, applyContentPageMeta(meta.loc, meta, contentPageMeta), false);
 }
 for (const file of PRIVATE) changed += await processPage(file, null, true);
+for (const file of RELEASE_ONLY) changed += await processReleaseOnlyPage(file);
 changed += await writeProductPages(reviewsSnapshot);
+changed += await writeProofSeed();
 changed += await writeSitemap();
 
 console.log(`\nseo-inject: ${changed} files changed`);

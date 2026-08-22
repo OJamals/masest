@@ -6,11 +6,11 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260821a";
+const MAIN_RELEASE = "20260822a";
 const ADMIN_RELEASE = "20260821a";
 const ADMIN_PAGE_RELEASE = "20260821a";
 const ADMIN_CHROME_RELEASE = "20260821a";
-const CHROME_RELEASE = "20260821a";
+const CHROME_RELEASE = MAIN_RELEASE;
 const ACCOUNT_NAV_RELEASE = "20260821a";
 const CUSTOMER_CHAT_RELEASE = "20260821a";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
@@ -87,6 +87,20 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("products/hcr.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("index.html"), new RegExp(`story\\.css\\?v=${STORY_RELEASE}`));
   assert.match(read("index.html"), new RegExp(`story\\.js\\?v=${STORY_RELEASE}`));
+});
+
+test("segment pricing entrypoints and pricing-data importers share the public release", () => {
+  for (const path of ["pricing-hvac-facilities.html", "pricing-cip-food-beverage.html"]) {
+    assert.match(read(path), new RegExp(`segment-pricing\\.js\\?v=${MAIN_RELEASE}`), path);
+  }
+
+  for (const path of [
+    "js/main/content-snapshots.js",
+    "js/main/service-catalog.js",
+    "js/main/segment-pricing.js",
+  ]) {
+    assert.match(read(path), new RegExp(`pricing-data\\.js\\?v=${MAIN_RELEASE}`), path);
+  }
 });
 
 test("account login button and form submit share the same handler", () => {

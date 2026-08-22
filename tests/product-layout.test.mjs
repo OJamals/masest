@@ -36,7 +36,7 @@ test("catalog cards derive compact proof and fit cues from catalog data", () => 
     );
     assert.ok(
       html.includes(
-        `class="shop-card-proof-link" href="products/${id}" aria-label="Review proof for ${PRODUCTS[id].name}"`,
+        `class="shop-card-proof-link" href="products/${id}" aria-label="See results for ${PRODUCTS[id].name}"`,
       ),
       `${id} should route proof review to its detail page`,
     );
@@ -60,8 +60,8 @@ test("generated product pages reuse existing highlights without added science or
     const html = readProject(`products/${id}.html`);
     assert.doesNotMatch(html, /product-science-section|authority-section|authority-records/);
     assert.match(html, /<b>How it works<\/b>/);
-    assert.match(html, /<b>Why buyers switch<\/b>/);
-    assert.match(html, /<b>Real-world proof<\/b>/);
+    assert.match(html, /<b>Why customers switch<\/b>/);
+    assert.match(html, /<b>Results and support<\/b>/);
   }
 });
 
@@ -289,11 +289,11 @@ test("all product pages explain platform science, operator advantage, and next a
     assert.ok(html.includes(htmlText(copy.mechanism)), `${id}: mechanism copy`);
     assert.ok(html.includes(htmlText(copy.operator_advantage)), `${id}: operator advantage copy`);
     assert.ok(
-      html.includes(htmlText(copy.sample_cta || "Request free sample")),
+      html.includes(htmlText(copy.sample_cta || "Try a free sample")),
       `${id}: sample action`,
     );
     assert.ok(
-      html.includes(htmlText(copy.quote_cta || "Request a quote")),
+      html.includes(htmlText(copy.quote_cta || "Get a quote")),
       `${id}: quote action`,
     );
   }
@@ -303,8 +303,8 @@ test("all public products route quote actions by buyer job", () => {
   const expected = {
     hcr: "Plan my brewery cleaning cycle",
     "hcr-t16": "Price a bulk HVAC descaling job",
-    descaler: "Test my mineral deposit",
-    sar: "Match SAR to my deposit",
+    descaler: "Test my mineral buildup",
+    sar: "Match SAR to my buildup",
     cr: "Plan my brewery wash cycle",
     cr2: "Plan my HVAC CR cleaning job",
     crhd: "Test CR HD on my toughest job",
@@ -346,7 +346,7 @@ test("product pages deep-link only their own real-world results", () => {
   }
   for (const id of Object.keys(expected)) {
     const html = readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8");
-    assert.match(html, /Real-world result/);
+    assert.match(html, /id="records">Results<\/h3>/);
   }
 });
 
@@ -358,7 +358,7 @@ test("specialty product pages explain their fit in plain language", () => {
   assert.match(pages.purgo, /works on odor-causing organic residue instead of masking the smell/i);
   assert.match(pages.lam3, /stays wet longer so it can work into organic growth and staining/i);
   assert.match(pages.alumibrite, /loosens oxide and mineral film, and brings back a cleaner, brighter finish/i);
-  assert.match(pages.torque, /surfactants release road film, salt, grime, and bugs/i);
+  assert.match(pages.torque, /loosens road film, salt, grime, and bugs, then leaves a clean, polished finish/i);
   assert.doesNotMatch(
     Object.values(pages).join("\n"),
     /Yellowfin|tourist airboat|landscape friendliness|material-friendly|microbial burden|general use|Brightening Index 90\.1/i,

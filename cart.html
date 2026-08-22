@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260821a">
+  <link rel="stylesheet" href="css/style.css?v=20260822a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
   <link rel="stylesheet" href="css/components.css?v=20260805a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260821a"></script>
+  <script type="module" src="js/main.js?v=20260822a"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -23,10 +23,10 @@
     <a href="index.html"><b>MASEST</b></a>
     <a href="products.html">Products</a>
   <a href="services.html">Services</a>
-    <span>Use Cases</span>
+    <span>Applications</span>
     <a href="industries.html">Industries</a>
-    <a href="proof.html">Proof</a>
-    <a href="resources.html">Resources</a>
+    <a href="proof.html">Results</a>
+    <a href="resources.html">SDS &amp; Resources</a>
   </nav>
 </noscript>
 <main id="main">
@@ -34,7 +34,7 @@
     <div class="container cart-shell">
       <div class="cart-panel">
         <div class="section-head">
-          <p class="eyebrow">Order lines</p>
+          <p class="eyebrow">Your order</p>
           <h1>Your cart</h1>
         </div>
         <div id="cartLines" class="cart-lines" aria-live="polite"></div>
@@ -83,19 +83,19 @@
             <div class="cart-path-heading">
               <small>Need documented pricing, or a bulk size that ships by freight?</small>
             </div>
-            <a class="btn btn-secondary" id="checkoutQuote" href="contact.html?type=quote">Get formal quote</a>
+            <a class="btn btn-secondary" id="checkoutQuote" href="contact.html?type=quote">Get a quote</a>
           </div>
           <details class="cart-secondary-options">
-            <summary>Saved requisition</summary>
+            <summary>Save this cart</summary>
             <form id="saveRequisitionForm" class="cart-requisition cart-path cart-path-requisition" hidden>
               <div class="cart-path-heading">
-                <span>Save requisition</span>
-                <small>Keep these canonical order lines for repeat purchasing.</small>
+                <span>Save for later</span>
+                <small>Name this cart so you can order it again quickly.</small>
               </div>
               <label class="field-label" for="requisitionName">Save this cart</label>
               <input id="requisitionName" name="requisition_name" class="cart-input" type="text" maxlength="80" autocomplete="off" placeholder="Monthly plant supplies…">
-              <p class="cart-field-help">Save a named requisition to your buyer account for fast repeat orders.</p>
-              <div class="cart-actions"><button class="btn btn-secondary" id="saveRequisition" type="submit">Save requisition</button></div>
+              <p class="cart-field-help">Your saved cart will appear in your account.</p>
+              <div class="cart-actions"><button class="btn btn-secondary" id="saveRequisition" type="submit">Save cart</button></div>
               <p id="requisitionStatus" class="cart-field-help" role="status" aria-live="polite"></p>
             </form>
           </details>
@@ -242,7 +242,7 @@
     if (checkoutActive) checkoutActive.hidden = !cartItems.length;
     if (status && !cartItems.length) status.hidden = true;
     if (!cartItems.length) {
-      lines.innerHTML = `<div class="cart-empty"><h2>No products in the cart.</h2><p>Use the product catalog to add purchase-ready SKUs, or send a quote request for volume pricing.</p><a class="btn btn-primary" href="products.html">Browse products</a></div>`;
+      lines.innerHTML = `<div class="cart-empty"><h2>Your cart is empty.</h2><p>Browse products to buy small packs online, or ask for a quote on larger quantities.</p><a class="btn btn-primary" href="products.html">Browse products</a></div>`;
       updateSubtotal();
       return;
     }
@@ -332,11 +332,11 @@
 
   const ESTIMATE_MESSAGES = {
     shipping_estimate_postal_invalid: "Enter a 5-digit US ZIP code.",
-    shipping_domestic_only: "Online rates cover US delivery. Request a quote for international freight.",
+    shipping_domestic_only: "Online rates cover US delivery. Get a freight quote for international delivery.",
     shipping_estimate_unavailable: "This cart ships as more than one carton, so the exact rate is calculated at checkout.",
-    shipping_product_unavailable: "A bulk size in this cart ships by freight, not parcel. Request a quote for it.",
-    shipping_cart_too_large: "This cart needs freight planning. Request a quote for a consolidated shipment.",
-    shipping_package_profile_missing: "An item is missing shipping dimensions. Request a quote for this cart.",
+    shipping_product_unavailable: "A bulk size in this cart ships by freight, not parcel. Get a freight quote for it.",
+    shipping_cart_too_large: "This cart is too large for parcel rates. Get one freight quote for the full shipment.",
+    shipping_package_profile_missing: "An item is missing shipping dimensions. Ask us to price delivery for this cart.",
     shipping_rates_unavailable: "No carrier rate came back for that ZIP. The exact rate is calculated at checkout.",
     shipping_rates_timeout: "Carrier rates took too long to respond. Try the estimate again.",
     shipping_rates_not_configured: "Estimates are offline right now. The exact rate is calculated at checkout.",
@@ -448,20 +448,20 @@
     event.preventDefault();
     const name = requisitionName.value.trim();
     if (!name) {
-      requisitionStatus.textContent = "Name this requisition before saving.";
+      requisitionStatus.textContent = "Name this cart before saving.";
       requisitionName.focus();
       return;
     }
     saveRequisition.disabled = true;
-    requisitionStatus.textContent = "Saving requisition…";
+    requisitionStatus.textContent = "Saving cart…";
     try {
       await api("/api/account/orders", { method: "POST", body: { name, cart: items() } });
       requisitionName.value = "";
-      requisitionStatus.innerHTML = 'Requisition saved. <a href="dashboard.html#orders">View saved requisitions</a>.';
+      requisitionStatus.innerHTML = 'Cart saved. <a href="dashboard.html#orders">View saved carts</a>.';
     } catch (error) {
       requisitionStatus.textContent = error?.data?.error === "too_many_requisitions"
-        ? "Delete an older requisition before saving another."
-        : "Could not save this requisition. Try again.";
+        ? "Delete an older saved cart before saving another."
+        : "Could not save this cart. Try again.";
     } finally {
       saveRequisition.disabled = false;
     }
@@ -480,7 +480,7 @@
       box.innerHTML = `<i class="ph ph-user-circle" aria-hidden="true"></i> ${accountMessage}`;
     } else {
       canSaveRequisition = false;
-      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Have an account? <a href="account.html?return=cart.html">Sign in</a> for saved requisitions and reusable checkout addresses.`;
+      box.innerHTML = `<i class="ph ph-user" aria-hidden="true"></i> Have an account? <a href="account.html?return=cart.html">Sign in</a> to save carts and delivery addresses.`;
     }
     render();
     box.hidden = false;

@@ -1,0 +1,47 @@
+{
+  "identity_control": {
+    "owner": "MASEST Consulting LLC",
+    "revision": "1.0",
+    "effective_date": "2026-08-21",
+    "rule": "Only this record may supply public organization schema. A street address remains unpublished until an owner confirms one canonical public address."
+  },
+  "legal_name": "MASEST Consulting LLC",
+  "public_name": "MASEST",
+  "product_brand": "VertKleen",
+  "website": "https://masest.co/",
+  "logo_url": "https://masest.co/img/masest-logo.png",
+  "organization_description": "MASEST helps customers choose and buy VertKleen cleaners for scale, rust, grease, grime, odor, and water-system care.",
+  "service_area": "United States and international commercial accounts",
+  "location": {
+    "locality": "Merritt Island",
+    "region": "FL",
+    "country": "US"
+  },
+  "street_address": {
+    "status": "withheld_pending_confirmation",
+    "value": null
+  },
+  "primary_contact": {
+    "label": "Sales",
+    "email": "sales@masest.co",
+    "phone_e164": "+18134063852",
+    "phone_display": "(813) 406-3852",
+    "url": "https://masest.co/contact"
+  },
+  "named_contacts": [
+    {
+      "name": "Matt Seedial",
+      "role": "Chief Operating Officer",
+      "email": "matthew@masest.co",
+      "phone_e164": "+18134063852",
+      "phone_display": "(813) 406-3852"
+    },
+    {
+      "name": "Mike Seedial",
+      "role": "Technical Director",
+      "email": "mseedial@masest.co",
+      "phone_e164": "+18134517565",
+      "phone_display": "(813) 451-7565"
+    }
+  ]
+}

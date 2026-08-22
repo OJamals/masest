@@ -1,0 +1,212 @@
+{
+  "release_control": {
+    "owner": "MASEST Consulting LLC",
+    "approved_by_role": "Owner",
+    "approval_status": "approved_for_public_distribution",
+    "approved_on": "2026-08-21",
+    "revision": "1.0",
+    "effective_date": "2026-08-21",
+    "source_root_ref": "~/Desktop/masest/updates",
+    "artwork_rule": "Publish the approved source artwork without visual alteration; add only the machine-readable MASEST document-control marker.",
+    "marine_naming_status": "owner_approved_marketing_names",
+    "trademark_scope": "Owner approval records permission to use the supplied marine names and artwork. It does not assert registration or legal clearance by a trademark authority."
+  },
+  "labels": [
+    {
+      "document_id": "MAS-VK-CR-CIP-LABEL-2026",
+      "title": "VertKleen CIP CR Label 6x8",
+      "collection": "cip",
+      "skus": ["VK-CR"],
+      "source_path": "VertKleen_CIP_CR_Label_6x8.pdf",
+      "source_sha256": "74634136c2a6afa595c015377646e7253ec838a14ad89247f3e0d7a42b3a3cf9",
+      "output_path": "docs/labels/cip/vertkleen-cip-cr-label-6x8.pdf"
+    },
+    {
+      "document_id": "MAS-VK-HCR-CIP-LABEL-2026",
+      "title": "VertKleen CIP HCR Label 6x8",
+      "collection": "cip",
+      "skus": ["VK-HCR"],
+      "source_path": "VertKleen_CIP_HCR_Label_6x8.pdf",
+      "source_sha256": "ce3ecdc8389bee23327d5d2f7a3ea95ac348971c75188729bf19527557a70a40",
+      "output_path": "docs/labels/cip/vertkleen-cip-hcr-label-6x8.pdf"
+    },
+    {
+      "document_id": "MAS-VK-CRHD-GENERAL-LABEL-2026",
+      "title": "VertKleen CR HD Label 6x8",
+      "collection": "general",
+      "skus": ["VK-CRHD"],
+      "source_path": "VertKleen_CRHD_Label_6x8.pdf",
+      "source_sha256": "b65bb32777ef8ae0210bb8fe4b9439aa0b49ee3627875f3b60ac1dd858debec9",
+      "output_path": "docs/labels/general/vertkleen-crhd-label-6x8.pdf"
+    },
+    {
+      "document_id": "MAS-VK-CR2-HVAC-LABEL-2026",
+      "title": "VertKleen HVAC CR Label 6x8",
+      "collection": "hvac",
+      "skus": ["VK-CR2"],
+      "source_path": "VertKleen_HVAC_CR_Label_6x8.pdf",
+      "source_sha256": "76a67c17ac94ec433e6a3fa9c8b5ef567736a282ca51412895cb4251f4fcb3f4",
+      "output_path": "docs/labels/hvac/vertkleen-hvac-cr-label-6x8.pdf"
+    },
+    {
+      "document_id": "MAS-VK-DESC-HVAC-LABEL-2026",
+      "title": "VertKleen HVAC Descaler Label 6x8",
+      "collection": "hvac",
+      "skus": ["VK-DESC"],
+      "source_path": "VertKleen_HVAC_Descaler_Label_6x8.pdf",
+      "source_sha256": "0a0ad3dcf5ca18bacb109beb22f955fe7e4ddd0fff7a140a8022105dbb455b70",
+      "output_path": "docs/labels/hvac/vertkleen-hvac-descaler-label-6x8.pdf"
+    },
+    {
+      "document_id": "MAS-VK-HCR-T16-HVAC-LABEL-2026",
+      "title": "VertKleen HVAC HCR Label 6x8",
+      "collection": "hvac",
+      "skus": ["VK-HCR-T16"],
+      "source_path": "VertKleen_HVAC_HCR_Label_6x8.pdf",
+      "source_sha256": "13f51b0010d8633ab152d1b298d94ae06ac1fde56357a5eee6da0950e6f5aadd",
+      "output_path": "docs/labels/hvac/vertkleen-hvac-hcr-label-6x8.pdf"
+    },
+    {
+      "document_id": "MAS-VK-LAM3-GENERAL-LABEL-2026",
+      "title": "VertKleen LAM3 Label 6x8",
+      "collection": "general",
+      "skus": ["VK-LAM3"],
+      "source_path": "VertKleen_LAM3_Label_6x8.pdf",
+      "source_sha256": "7cbe354b527f3bbd5a552879715178ad310df2caf8f4c4f759ba438db11f106b",
+      "output_path": "docs/labels/general/vertkleen-lam3-label-6x8.pdf"
+    },
+    {
+      "document_id": "MAS-VK-MW-GENERAL-LABEL-2026",
+      "title": "VertKleen MultiWash Label 6x8",
+      "collection": "general",
+      "skus": ["VK-MW"],
+      "source_path": "VertKleen_MultiWash_Label_6x8.pdf",
+      "source_sha256": "532d845e2717ea33e4e133879dd7cc854958e33455916c8bee1a3085f89659bb",
+      "output_path": "docs/labels/general/vertkleen-multiwash-label-6x8.pdf"
+    },
+    {
+      "document_id": "MAS-VK-TRQ-GENERAL-LABEL-2026",
+      "title": "VertKleen Torque Label 4x5",
+      "collection": "general",
+      "skus": ["VK-TRQ"],
+      "source_path": "VertKleen_Torque_4x5.pdf",
+      "source_sha256": "4c116f0561ecda1bf87233019b81fd4638ae60ac34d79aca20e3abfce6a9a052",
+      "output_path": "docs/labels/general/vertkleen-torque-label-4x5.pdf"
+    },
+    {
+      "document_id": "MAS-VK-WS60-GENERAL-LABEL-2026",
+      "title": "VertKleen WaterSafe60 Label 4x5",
+      "collection": "general",
+      "skus": ["VK-WS60"],
+      "source_path": "VertKleen_WaterSafe60_4x5.pdf",
+      "source_sha256": "b15a02df295e800f9d07cba9ad05e695758eae75faad8737f8f4ca927bcd6b51",
+      "output_path": "docs/labels/general/vertkleen-watersafe60-label-4x5.pdf"
+    },
+    {
+      "document_id": "MAS-VK-HCR-T16-MARINE-SCALE-BUSTER-LABEL",
+      "title": "VertKleen Scale Buster Marine Label",
+      "collection": "marine",
+      "marine_name": "Scale Buster",
+      "base_product": "hcr-t16",
+      "skus": ["VK-HCR-T16"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "source_page": 1,
+      "output_path": "docs/labels/marine/vertkleen-scale-buster-label.pdf"
+    },
+    {
+      "document_id": "MAS-VK-DESC-MARINE-SEAVAP-LABEL",
+      "title": "VertKleen SeaVap Coil Kleener Marine Label",
+      "collection": "marine",
+      "marine_name": "SeaVap Coil Kleener",
+      "base_product": "descaler",
+      "skus": ["VK-DESC"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "source_page": 2,
+      "output_path": "docs/labels/marine/vertkleen-seavap-coil-kleener-label.pdf"
+    },
+    {
+      "document_id": "MAS-VK-CR2-MARINE-SEA-DRAIN-LABEL",
+      "title": "VertKleen Sea Drain Kleener Marine Label",
+      "collection": "marine",
+      "marine_name": "Sea Drain Kleener",
+      "base_product": "cr2",
+      "skus": ["VK-CR2"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "source_page": 3,
+      "output_path": "docs/labels/marine/vertkleen-sea-drain-kleener-label.pdf"
+    },
+    {
+      "document_id": "MAS-VK-MW-MARINE-LABEL",
+      "title": "VertKleen MultiWash Marine Label",
+      "collection": "marine",
+      "marine_name": "MultiWash",
+      "base_product": "multiwash",
+      "skus": ["VK-MW"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "source_page": 4,
+      "output_path": "docs/labels/marine/vertkleen-multiwash-label.pdf"
+    },
+    {
+      "document_id": "MAS-VK-CRHD-MARINE-DEGREASER-LABEL",
+      "title": "VertKleen Marine Degreaser Label",
+      "collection": "marine",
+      "marine_name": "Marine Degreaser",
+      "base_product": "crhd",
+      "skus": ["VK-CRHD"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "source_page": 5,
+      "output_path": "docs/labels/marine/vertkleen-marine-degreaser-label.pdf"
+    },
+    {
+      "document_id": "MAS-VK-ALB-MARINE-LABEL",
+      "title": "VertKleen AlumiBrite Marine Label",
+      "collection": "marine",
+      "marine_name": "AlumiBrite",
+      "base_product": "alumibrite",
+      "skus": ["VK-ALB"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "source_page": 6,
+      "output_path": "docs/labels/marine/vertkleen-alumibrite-label.pdf"
+    },
+    {
+      "document_id": "MAS-VK-TRQ-MARINE-WASH-WAX-LABEL",
+      "title": "VertKleen Marine Wash & Wax Label",
+      "collection": "marine",
+      "marine_name": "Marine Wash & Wax",
+      "base_product": "torque",
+      "skus": ["VK-TRQ"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "source_page": 7,
+      "output_path": "docs/labels/marine/vertkleen-marine-wash-wax-label.pdf"
+    },
+    {
+      "document_id": "MAS-VK-PRG-MARINE-ANTIMICROBIAL-LABEL",
+      "title": "VertKleen Marine Antimicrobial Label",
+      "collection": "marine",
+      "marine_name": "Marine Antimicrobial",
+      "base_product": "purgo",
+      "skus": ["VK-PRG"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "source_page": 8,
+      "output_path": "docs/labels/marine/vertkleen-marine-antimicrobial-label.pdf"
+    },
+    {
+      "document_id": "MAS-VK-MARINE-LABEL-SET",
+      "title": "VertKleen Marine Label Set",
+      "collection": "marine",
+      "skus": ["VK-HCR-T16", "VK-DESC", "VK-CR2", "VK-MW", "VK-CRHD", "VK-ALB", "VK-TRQ", "VK-PRG"],
+      "source_path": "VertKleen_Marine_Labels_FINAL 1.pdf",
+      "source_sha256": "d0b6d283569ac23710943a6f503d724b4b321a7eaf9975d669e8b061838f4a1b",
+      "expected_page_count": 8,
+      "output_path": "docs/labels/marine/vertkleen-marine-label-set.pdf"
+    }
+  ]
+}

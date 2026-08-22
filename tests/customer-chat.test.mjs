@@ -50,7 +50,7 @@ test("customer chat is always mounted and gates sending on an auth session", () 
   assert.match(chat, /Sign up \/ Log in/);
   assert.match(chat, /masest:auth/);
   assert.match(chat, /masest:session-expired/);
-  assert.equal((chat.match(/Request a quote with this context/g) || []).length, 2);
+  assert.equal((chat.match(/Get a quote with this info/g) || []).length, 2);
   assert.match(chat, /request-context\.js/);
 });
 
@@ -139,7 +139,7 @@ test("logged-out visitors always see chat and get a sign-up/login link", async (
       assert.equal(await link.textContent(), "Sign up / Log in");
       const quoteLink = page.locator(".customer-chat__guest .customer-chat__quote-link");
       await quoteLink.waitFor();
-      assert.equal(await quoteLink.textContent(), "Request a quote with this context");
+      assert.equal(await quoteLink.textContent(), "Get a quote with this info");
       assert.equal(await quoteLink.getAttribute("class"), "customer-chat__quote-link");
       assert.equal(await toggle.locator("svg.customer-chat__icon").count(), 1);
       const panel = page.locator(".customer-chat__panel");

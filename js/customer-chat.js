@@ -74,7 +74,7 @@ export async function initCustomerChat() {
       <div class="customer-chat__guest" hidden>
         <p>Sign in or create an account to send a secure message to the MASEST team.</p>
         <a class="btn btn-primary" href="${root}account.html">Sign up / Log in</a>
-        <a class="customer-chat__quote-link" href="${root}contact.html">Request a quote with this context</a>
+        <a class="customer-chat__quote-link" href="${root}contact.html">Get a quote with this info</a>
       </div>
       <div class="customer-chat__thread" hidden>
         <div class="customer-chat__messages" aria-live="polite" aria-label="Messages"></div>
@@ -83,7 +83,7 @@ export async function initCustomerChat() {
           <textarea id="customerChatBody" name="chat_message" autocomplete="off" maxlength="4000" required placeholder="Ask about VertKleen, an order, or your account…"></textarea>
           <div class="customer-chat__form-row"><p class="customer-chat__status" role="status" aria-live="polite"></p><button class="btn btn-primary" type="submit">Send</button></div>
           <a class="customer-chat__inbox-link" href="${root}dashboard.html#messages">Open full message inbox</a>
-          <a class="customer-chat__quote-link" href="${root}contact.html">Request a quote with this context</a>
+          <a class="customer-chat__quote-link" href="${root}contact.html">Get a quote with this info</a>
         </form>
       </div>
     </section>

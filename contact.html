@@ -3,22 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Request | MASEST VertKleen</title>
-<meta name="description" content="Request a VertKleen quote, chemical audit, sample kit, technical document, or distributor conversation with MASEST.">
+<title>Contact MASEST | VertKleen Product Help</title>
+<meta name="description" content="Get help choosing a VertKleen cleaner, request a quote or sample, or ask for labels, SDS, and product information.">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260821a">
+<link rel="stylesheet" href="css/style.css?v=20260822a">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
 <link rel="stylesheet" href="css/components.css">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/contact">
-<meta property="og:title" content="Request | MASEST VertKleen">
-<meta property="og:description" content="Request a VertKleen quote, chemical audit, sample kit, technical document, or distributor conversation with MASEST.">
+<meta property="og:title" content="Contact MASEST | VertKleen Product Help">
+<meta property="og:description" content="Get help choosing a VertKleen cleaner, request a quote or sample, or ask for labels, SDS, and product information.">
 <meta property="og:url" content="https://masest.co/contact">
 <meta property="og:image" content="https://masest.co/img/og-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/","logo":"https://masest.co/img/masest-logo.png","brand":"VertKleen","description":"VertKleen pairs industrial cleaning performance with HMIS 0-0-0 across every current product MASEST offers.","areaServed":"United States and international commercial accounts","contactPoint":{"@type":"ContactPoint","contactType":"sales","url":"https://masest.co/contact"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"MASEST Consulting LLC","url":"https://masest.co/","logo":"https://masest.co/img/masest-logo.png","brand":"VertKleen","description":"MASEST helps customers choose and buy VertKleen cleaners for scale, rust, grease, grime, odor, and water-system care.","areaServed":"United States and international commercial accounts","contactPoint":{"@type":"ContactPoint","contactType":"sales","url":"https://masest.co/contact","email":"sales@masest.co","telephone":"+18134063852"}}</script>
 <!-- /seo:auto -->
 </head>
 <body>
@@ -28,10 +28,10 @@
   <a href="/"><b>MASEST</b></a>
   <a href="products">Products</a>
   <a href="services">Services</a>
-  <span>Use Cases</span>
+  <span>Applications</span>
   <a href="industries">Industries</a>
-  <a href="proof">Proof</a>
-  <a href="resources">Resources</a>
+  <a href="proof">Results</a>
+  <a href="resources">SDS &amp; Resources</a>
 </nav>
 </noscript>
 
@@ -66,7 +66,7 @@
           <button type="button" class="cta-choice active" data-intent="quote" aria-pressed="true"><i class="ph ph-tag" aria-hidden="true"></i> Quote</button>
           <button type="button" class="cta-choice" data-intent="audit" aria-pressed="false"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Replace a Cleaner</button>
           <button type="button" class="cta-choice" data-intent="sample" aria-pressed="false"><i class="ph ph-package" aria-hidden="true"></i> Sample Kit</button>
-          <button type="button" class="cta-choice" data-intent="technical" aria-pressed="false"><i class="ph ph-file-text" aria-hidden="true"></i> Product Docs</button>
+          <button type="button" class="cta-choice" data-intent="technical" aria-pressed="false"><i class="ph ph-file-text" aria-hidden="true"></i> Labels &amp; SDS</button>
           <button type="button" class="cta-choice" data-intent="distributor" aria-pressed="false"><i class="ph ph-handshake" aria-hidden="true"></i> Distributor</button>
         </div>
 
@@ -115,7 +115,7 @@
 
         <div class="field-grid" data-intent-group="quote">
           <div class="field">
-            <label for="fProduct">Product Interest</label>
+            <label for="fProduct">Product, if known</label>
             <select id="fProduct" name="product">
               <option value="">Select product</option>
               <option>VertKleen HCR</option>
@@ -143,10 +143,10 @@
             </select>
           </div>
           <div class="field">
-            <label for="fVolume">Volume / Intent</label>
+            <label for="fVolume">Order size</label>
             <select id="fVolume" name="volume">
               <option value="">Select volume</option>
-              <option>Sample / Trial</option>
+              <option>Sample</option>
               <option>1-10 pails</option>
               <option>1-5 drums</option>
               <option>5+ drums</option>
@@ -155,7 +155,7 @@
             </select>
           </div>
           <div class="field">
-            <label for="fTimeline">Timeline</label>
+            <label for="fTimeline">When do you need it?</label>
             <select id="fTimeline" name="timeline">
               <option value="">Select timeline</option>
               <option>Immediate (this month)</option>
@@ -167,9 +167,9 @@
         </div>
 
         <div class="field-grid" data-intent-group="audit" hidden>
-          <div class="field"><label for="fSystem">System or asset to audit *</label><input id="fSystem" name="system" type="text" autocomplete="off" placeholder="Cooling tower, CIP line, fleet wash bay…" data-req></div>
+          <div class="field"><label for="fSystem">What are you cleaning? *</label><input id="fSystem" name="system" type="text" autocomplete="off" placeholder="Cooling tower, brewery line, fleet wash bay…" data-req></div>
           <div class="field">
-            <label for="fAuditWhen">Preferred timeframe</label>
+            <label for="fAuditWhen">When would you like to start?</label>
             <select id="fAuditWhen" name="audit_timeframe">
               <option value="">Select timeframe</option>
               <option>This month</option>
@@ -181,7 +181,7 @@
 
         <div data-intent-group="sample" hidden>
           <fieldset class="field sample-fieldset" aria-describedby="sampleHint">
-            <legend>Pick products to trial *</legend>
+            <legend>Choose products to sample *</legend>
             <div class="sample-picker">
               <label><input type="checkbox" name="samples" value="VertKleen CR"> VertKleen CR</label>
               <label><input type="checkbox" name="samples" value="VertKleen CR2"> VertKleen CR2</label>
@@ -222,12 +222,12 @@
           <legend>Compare one cleaning job</legend>
           <p class="form-note">Optional. Share what the job takes today so MASEST can plan a fair side-by-side test.</p>
           <div class="field-grid">
-            <div class="field"><label for="fCurrentChemical">Current chemical</label><input id="fCurrentChemical" name="current_chemical" type="text" maxlength="240" autocomplete="off" placeholder="Product or current method…"></div>
-            <div class="field"><label for="fCurrentDilution">Current dilution</label><input id="fCurrentDilution" name="current_dilution" type="text" maxlength="160" autocomplete="off" placeholder="e.g., 1:20 or ready to use…"></div>
-            <div class="field"><label for="fLaborPerTask">Labor per completed task</label><input id="fLaborPerTask" name="labor_per_task" type="text" maxlength="160" autocomplete="off" placeholder="People and time…"></div>
-            <div class="field"><label for="fWaterPerTask">Water per completed task</label><input id="fWaterPerTask" name="water_per_task" type="text" maxlength="160" autocomplete="off" placeholder="Estimated volume…"></div>
-            <div class="field"><label for="fDowntimePerTask">Downtime per completed task</label><input id="fDowntimePerTask" name="downtime_per_task" type="text" maxlength="160" autocomplete="off" placeholder="Shutdown through return to service…"></div>
-            <div class="field"><label for="fDisposalPerTask">Disposal per completed task</label><input id="fDisposalPerTask" name="disposal_per_task" type="text" maxlength="240" autocomplete="off" placeholder="Current handling or cost…"></div>
+            <div class="field"><label for="fCurrentChemical">Cleaner you use now</label><input id="fCurrentChemical" name="current_chemical" type="text" maxlength="240" autocomplete="off" placeholder="Product or current method…"></div>
+            <div class="field"><label for="fCurrentDilution">Current mix</label><input id="fCurrentDilution" name="current_dilution" type="text" maxlength="160" autocomplete="off" placeholder="e.g., 1:20 or ready to use…"></div>
+            <div class="field"><label for="fLaborPerTask">People and time</label><input id="fLaborPerTask" name="labor_per_task" type="text" maxlength="160" autocomplete="off" placeholder="How many people and how long…"></div>
+            <div class="field"><label for="fWaterPerTask">Water used</label><input id="fWaterPerTask" name="water_per_task" type="text" maxlength="160" autocomplete="off" placeholder="Best estimate…"></div>
+            <div class="field"><label for="fDowntimePerTask">Time out of service</label><input id="fDowntimePerTask" name="downtime_per_task" type="text" maxlength="160" autocomplete="off" placeholder="From shutdown until it is ready again…"></div>
+            <div class="field"><label for="fDisposalPerTask">Cleanup and wash water</label><input id="fDisposalPerTask" name="disposal_per_task" type="text" maxlength="240" autocomplete="off" placeholder="How cleanup works today…"></div>
             <div class="field quote-task-detail-wide"><label for="fAssetLife">Equipment maintenance</label><input id="fAssetLife" name="asset_life" type="text" maxlength="240" autocomplete="off" placeholder="Current cleaning, maintenance, or replacement interval…"></div>
             <div class="field quote-task-detail-wide"><label for="fWastewaterRoute">Wash water</label><textarea id="fWastewaterRoute" name="wastewater_route" rows="3" maxlength="1000" placeholder="How the wash water is handled today…"></textarea></div>
             <div class="field quote-task-detail-wide"><label for="fReopeningCriteria">Ready-to-use check</label><textarea id="fReopeningCriteria" name="reopening_criteria" rows="3" maxlength="1000" placeholder="How your team decides the equipment or area is ready again…"></textarea></div>
@@ -262,15 +262,15 @@
         </div>
         <div class="contact-card">
           <i class="ph ph-wrench" aria-hidden="true"></i>
-          <h2>Technical</h2>
+          <h2>Product help</h2>
           <p>Mike Seedial, Technical Director</p>
           <a href="tel:+18134517565">(813) 451-7565</a>
           <a href="mailto:mseedial@masest.co">mseedial@masest.co</a>
         </div>
         <div class="contact-card">
           <i class="ph ph-seal-check" aria-hidden="true"></i>
-          <h2>Government Buyers</h2>
-          <p>Public-sector sourcing, registration, bid-file, and solicitation support.</p>
+          <h2>Government Purchasing</h2>
+          <p>Help with government quotes, vendor registration, bids, and product documents.</p>
         </div>
       </aside>
     </div>
@@ -287,12 +287,12 @@
         <div>
           <span>2</span>
           <b>We match the product.</b>
-          <p>VertKleen fit, real-world results, product files, and the right pack size.</p>
+          <p>Why it fits, real-job results, product files, and the right pack size.</p>
         </div>
         <div>
           <span>3</span>
           <b>You get a clear next step.</b>
-          <p>Buy a small pack, request a sample, plan a side-by-side test, or get a bulk quote.</p>
+          <p>Buy a small pack, try a free sample, compare it with your current cleaner, or get bulk pricing.</p>
         </div>
       </div>
     </div>
@@ -301,7 +301,7 @@
 <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="contact" data-cms-region="body"></div>
 </main>
 
-<script type="module" src="js/main.js?v=20260821a"></script>
+<script type="module" src="js/main.js?v=20260822a"></script>
 <script src="js/track.js" defer></script>
 </body>
 </html>

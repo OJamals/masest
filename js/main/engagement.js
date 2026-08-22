@@ -238,19 +238,19 @@ export function initIndustryDiscovery() {
           "href",
           industryDiscoveryCtaHref(cta.getAttribute("href"), type, window.location.href),
         );
-        cta.textContent = ctaControl.dataset.ctaLabel || "Scope audit";
+        cta.textContent = ctaControl.dataset.ctaLabel || "Plan my first test";
       }
     });
 
     if (results) results.hidden = !visibleCount;
     if (clear) clear.hidden = !active;
     if (status) {
-      if (!active) status.textContent = "Choose a buyer role or job path.";
-      else if (!visibleCount) status.textContent = "No industry routes match both filters.";
+      if (!active) status.textContent = "Choose your role or cleaning job.";
+      else if (!visibleCount) status.textContent = "No industries match both choices.";
       else if (filters.role && !filters.job) {
-        status.textContent = `${visibleCount} industry routes match this role. Add a job path to narrow.`;
+        status.textContent = `${visibleCount} industries match this role. Choose a cleaning job to narrow the list.`;
       } else {
-        status.textContent = `${visibleCount} industry route${visibleCount === 1 ? "" : "s"} match.`;
+        status.textContent = `${visibleCount} industry option${visibleCount === 1 ? "" : "s"} match.`;
       }
     }
   };
@@ -307,6 +307,10 @@ export function initQuoteForm() {
   const pre = requestContext?.product || (customerChatAttempt ? "" : params.get("product"));
   const productSelect = form.querySelector('[name="product"]');
   let preMatched = pre ? selectOption(productSelect, pre) : false;
+  const BUNDLE_SKU = /^VK-BND-[A-Z0-9]{2,24}(?:-[A-Z0-9]{1,24}){1,5}$/;
+  if (pre && !preMatched && BUNDLE_SKU.test(pre)) {
+    preMatched = appendContextOption(productSelect, pre, `Bundle SKU: ${pre}`);
+  }
   if (requestContext?.product && !preMatched) {
     preMatched = appendContextOption(productSelect, requestContext.product, `Product / SKU: ${requestContext.product}`);
   }
@@ -559,7 +563,7 @@ export function initQuoteForm() {
       if (title) title.textContent = accepted ? "Request received." : "Almost there: send the request.";
       if (copy) {
         copy.innerHTML = accepted
-          ? "MASEST has received your request. A sales or technical contact will review the details and follow up directly."
+          ? "MASEST received your request. The right person will review it and follow up directly."
           : 'We couldn’t submit automatically. Use the prepared email link below, then hit send in your email app. If your device blocks email links, email <a href="mailto:matthew@masest.co" style="font-weight:700;color:var(--accent-ink)">matthew@masest.co</a> or call <a href="tel:+18134063852" style="font-weight:700;color:var(--accent-ink)">(813) 406-3852</a>.';
       }
       if (mail) mail.hidden = accepted;

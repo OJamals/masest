@@ -32,10 +32,10 @@ test("static summary matches four visual acts", () => {
   assert.ok(summary, "expected accessible story summary");
   assert.equal((summary.match(/<li>/g) || []).length, 4);
   for (const phrase of [
-    "The field problem",
-    "Buildup becomes operating cost",
-    "What VertKleen replaces",
-    "One fair side-by-side",
+    "Start with the mess",
+    "Count the real cost",
+    "Choose the right VertKleen product",
+    "Try it side by side",
   ]) {
     assert.match(summary, new RegExp(phrase));
   }
@@ -51,8 +51,8 @@ test("reduced-motion, missing-library, no-JS, and mobile modes expose complete c
 });
 
 test("story actions, proof, and visual media retain accessible names", () => {
-  assert.match(story, /aria-label="Shop VertKleen by cleaning job"/);
-  assert.match(story, /aria-label="Plan a VertKleen field trial"/);
+  assert.match(story, /aria-label="Shop VertKleen products"/);
+  assert.match(story, /aria-label="Try VertKleen on my cleaning job"/);
   assert.equal((story.match(/<canvas class="fx-canvas" aria-hidden="true">/g) || []).length, 2);
   assert.match(story, /<svg class="pipe-diagram"[^>]*role="img" aria-label="[^"]+"/);
   assert.doesNotMatch(story, /<img(?![^>]*\salt=")[^>]*>/);
