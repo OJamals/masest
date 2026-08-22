@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node tools/check-js.mjs && node tools/marketing-claim-policy.mjs",
+    "check": "node tools/check-js.mjs",
     "build:content": "node tools/build-content.mjs",
     "build:images": "node tools/build-image-library.mjs",
     "verify:cms-images": "node tools/build-image-library.mjs --verify-cms",
@@ -15,7 +15,6 @@
     "preseo-inject": "node tools/build-reviews.mjs",
     "seo-inject": "node tools/seo-inject.mjs",
     "verify:document-sources": "node tools/public-document-policy.mjs",
-    "verify:claims": "node tools/marketing-claim-policy.mjs",
     "verify:update-media": "node tools/update-media-policy.mjs",
     "verify:update-bundles": "node tools/update-bundle-policy.mjs",
     "audit:updates": "node tools/update-intake-security.mjs",

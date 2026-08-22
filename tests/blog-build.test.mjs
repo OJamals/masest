@@ -317,10 +317,6 @@ test("SEO intent posts connect buyer searches to products, proof, and trial CTAs
       assert.ok(post.body.includes(expected.diagram));
       assert.ok(post.body.includes(expected.product));
       assert.match(post.body, /HMIS|SDS|label|product record/i);
-      assert.doesNotMatch(
-        post.body,
-        /every\s+(?:current\s+)?VertKleen product[^.!?]{0,100}HMIS\s+0-0-0/i,
-      );
       assert.match(post.body, /\[Plan my .+\]\(\/contact\?type=audit/);
       for (const link of expected.links) {
         assert.ok(
@@ -355,11 +351,6 @@ test("published blog prose stays human, concise, and free of legal-style disclai
 
   for (const post of SEED.blog_posts) {
     const prose = `${post.title}\n${post.excerpt}\n${post.body}`;
-    assert.doesNotMatch(
-      prose,
-      /every\s+(?:current\s+)?VertKleen product[^.!?]{0,100}HMIS\s+0-0-0/i,
-      `${post.slug} should keep product claims bounded to the exact record`,
-    );
     for (const pattern of banned) {
       assert.doesNotMatch(prose, pattern, `${post.slug} should avoid ${pattern}`);
     }

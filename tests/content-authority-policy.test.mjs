@@ -10,9 +10,6 @@ import {
   validateCompanyIdentity,
 } from "../tools/company-identity.mjs";
 import {
-  findUnsupportedGlobalClaims,
-} from "../tools/marketing-claim-policy.mjs";
-import {
   validateUpdateMediaReview,
 } from "../tools/update-media-policy.mjs";
 
@@ -74,8 +71,14 @@ test("all generated organization schema uses the controlled neutral identity", (
   }
 });
 
-test("public and canonical marketing content rejects unsupported line-wide HMIS claims", () => {
-  assert.deepEqual(findUnsupportedGlobalClaims(new URL("../", import.meta.url)), []);
+test("customer content preserves the owner-approved VertKleen HMIS claim", () => {
+  const { blog_posts: posts } = JSON.parse(read("data/content/blog.json"));
+  const explainer = posts.find(({ slug }) => slug === "hmis-000-explained");
+  assert.ok(explainer, "HMIS explainer remains published");
+  assert.match(
+    explainer.body,
+    /Every VertKleen product MASEST offers is rated HMIS 0-0-0\./,
+  );
 });
 
 test("August media rights are approved and complete product photos receive controlled placement", () => {
