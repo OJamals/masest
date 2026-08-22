@@ -7948,6 +7948,7 @@ body.product-detail-page main > section.product-static-section {
 .doc-lib-category {
   display: grid;
   gap: 16px;
+  padding: 0;
 }
 .doc-lib-category-head {
   display: grid;
