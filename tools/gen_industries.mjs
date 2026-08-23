@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { organizationJsonLd } from "./company-identity.mjs";
-import { COMPONENT_VERSION, STYLE_VERSION } from "./static-release.mjs";
+import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, "..", "industries");
@@ -577,7 +577,7 @@ function page(ind) {
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
-<link rel="stylesheet" href="../css/navigation.css?v=20260713a">
+<link rel="stylesheet" href="../css/navigation.css?v=${NAVIGATION_VERSION}">
 <link rel="stylesheet" href="../css/components.css?v=${COMPONENT_VERSION}">
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 <!-- seo:auto -->

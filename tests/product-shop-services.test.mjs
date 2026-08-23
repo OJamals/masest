@@ -254,6 +254,32 @@ test("staff product pages route commerce work to catalog management", async () =
       await support.waitFor();
       const bounds = await support.boundingBox();
       assert.ok(bounds && bounds.width <= 56, `mobile staff support launcher should stay compact: ${JSON.stringify(bounds)}`);
+
+      const leadBar = page.locator(".lead-action-bar");
+      await leadBar.evaluate((node) => {
+        node.classList.add("is-visible");
+        node.classList.remove("is-suppressed");
+        node.dataset.customerChatObstructionActive = "true";
+      });
+      await leadBar.waitFor({ state: "visible" });
+      const [leadBounds, dockedBounds] = await Promise.all([
+        leadBar.boundingBox(),
+        support.boundingBox(),
+      ]);
+      assert.ok(leadBounds && dockedBounds, "staff support and lead actions should both have measurable bounds");
+      assert.ok(
+        dockedBounds.y + dockedBounds.height <= leadBounds.y,
+        `staff support must clear the mobile lead actions: ${JSON.stringify({ leadBounds, dockedBounds })}`,
+      );
+
+      await support.click();
+      const drawerBounds = await page.locator(".site-support__drawer").boundingBox();
+      assert.ok(drawerBounds, "staff support drawer should open");
+      assert.ok(drawerBounds.y >= 0, `staff support drawer should stay inside the viewport: ${JSON.stringify(drawerBounds)}`);
+      assert.ok(
+        drawerBounds.y + drawerBounds.height <= 844,
+        `staff support drawer should not clip below the viewport: ${JSON.stringify(drawerBounds)}`,
+      );
     } finally {
       await browser.close();
     }

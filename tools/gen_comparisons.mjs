@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { COMPONENT_VERSION, STYLE_VERSION } from "./static-release.mjs";
+import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, "..", "comparisons");
@@ -202,7 +202,7 @@ function pageHtml(page) {
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
-<link rel="stylesheet" href="../css/navigation.css?v=20260713a">
+<link rel="stylesheet" href="../css/navigation.css?v=${NAVIGATION_VERSION}">
 <link rel="stylesheet" href="../css/components.css?v=${COMPONENT_VERSION}">
 <meta property="og:title" content="${html(page.seoTitle)} | MASEST VertKleen">
 <meta property="og:description" content="${html(page.description)}">

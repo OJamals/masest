@@ -38,13 +38,18 @@ test("request page leads into the form before process reassurance", () => {
   assert.match(css, /#quoteForm\s*{[^}]*scroll-margin-top:\s*74px;/s, "form anchor should clear the sticky header");
 });
 
-test("mobile chat clears the persistent lead actions", () => {
+test("mobile support clears the persistent lead actions", () => {
   const navigation = read("css/navigation.css");
 
   assert.match(
     navigation,
-    /body:has\(\.lead-action-bar\.is-visible:not\(\.is-suppressed\)\) \.customer-chat\s*{[^}]*bottom:\s*calc\(max\(12px, env\(safe-area-inset-bottom\)\) \+ 76px \+ var\(--customer-chat-avoid, 0px\)\);/s,
-    "chat launcher should move above the visible mobile lead bar",
+    /body:has\(\.lead-action-bar\.is-visible:not\(\.is-suppressed\)\) :is\(\.customer-chat, \.site-support\)\s*{[^}]*bottom:\s*calc\(max\(12px, env\(safe-area-inset-bottom\)\) \+ 76px \+ var\(--customer-chat-avoid, 0px\)\);/s,
+    "buyer and staff support launchers should move above the visible mobile lead bar",
+  );
+  assert.match(
+    navigation,
+    /body:has\(\.lead-action-bar\.is-visible:not\(\.is-suppressed\)\) \.site-support__drawer\s*{[^}]*height:\s*min\(720px, calc\(100dvh - 164px\)\);/s,
+    "the lifted staff drawer should remain inside the mobile viewport",
   );
 });
 
