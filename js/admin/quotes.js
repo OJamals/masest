@@ -127,8 +127,8 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
   // ---- View toggle (injected once, survives list innerHTML swaps) ----
   // List, Board and Reports are three workspaces over the same leads, not three
   // shapes of one list, so the switcher sits where every other panel-level toggle
-  // sits — under the title, above the filter row it does not belong to. It used to
-  // sit inside the card *below* those five filters, which only drive List.
+  // sits — under the title. List and Board share the filtered server page; Reports
+  // owns its own full-pipeline query and hides those filters.
   function quotesPanel() { return $('admQuotes')?.closest('[data-panel="quotes"]') || null; }
   function reflectToggle() {
     const wrap = quotesPanel()?.querySelector('.pipe-toggle');

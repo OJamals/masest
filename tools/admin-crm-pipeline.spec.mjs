@@ -165,15 +165,14 @@ test("quotes list bulk action posts an ids array", async ({ page }) => {
 // pinned to the same contract as every other sub-view toggle in the console: a
 // labelled group above the filter row, not a bare pill buried under it.
 //
-// The visibility assertions matter more than they look. `.adm-tools` and
-// `.adm-panel-header` both carry `display:flex`, which beats the UA `[hidden]` rule,
-// so the code setting `.hidden = true` was a silent no-op and five dead filter
-// controls stayed on screen over Board and Reports. Asserting the attribute would
-// have passed the whole time — assert what the user can see.
-test("quote view switcher is a labelled sub-view toggle that hides the list-only filters", async ({ page }) => {
+// The visibility assertions matter more than they look. Board consumes the same
+// filtered quote page as List, while Reports owns a separate full-pipeline query.
+// Keep useful filters on Board; hide them only where they no longer drive output.
+test("quote view switcher keeps shared filters on Board and hides them on Reports", async ({ page }) => {
   await bootAsStaff(page);
   await page.route("**/api/admin/quotes**", (route) => {
     const url = route.request().url();
+    if (url.includes("view=report")) return route.fulfill(json({ report: REPORT }));
     if (url.includes("view=pipeline")) return route.fulfill(json({ summary: SUMMARY }));
     return route.fulfill(json({ quotes: [QUOTE], total: 1, has_more: false, new_count: 1, urgent_count: 0 }));
   });
@@ -184,7 +183,7 @@ test("quote view switcher is a labelled sub-view toggle that hides the list-only
 
   const panel = page.locator('.adm-panel[data-panel="quotes"]');
   const toggle = panel.locator(".pipe-toggle");
-  const filters = panel.locator(".adm-tools").first();
+  const filters = panel.locator(".adm-workspace-card > .adm-tools");
 
   // A panel-level control, above the filter row, announced as one group.
   await expect(panel.locator(":scope > .pipe-toggle")).toHaveCount(1);
@@ -198,12 +197,12 @@ test("quote view switcher is a labelled sub-view toggle that hides the list-only
   await expect(toggle.locator('[data-view="list"]')).toHaveAttribute("aria-pressed", "true");
   await expect(toggle.locator('[data-view="board"]')).toHaveAttribute("aria-pressed", "false");
 
-  // List is the only view the filters drive, so they go away with it.
+  // List and Board share filters; Reports uses a separate full-pipeline query.
   await expect(filters).toBeVisible();
   await toggle.locator('[data-view="board"]').click();
   await expect(toggle.locator('[data-view="board"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(filters).toBeHidden();
-  await expect(panel.locator(".adm-panel-header")).toBeHidden();
+  await expect(filters).toBeVisible();
+  await expect(panel.locator(".adm-panel-header")).toBeVisible();
 
   // The board scrolls inside its card rather than pushing it past the viewport.
   await expect(page.locator(".pipe-col")).toHaveCount(6);
@@ -212,6 +211,11 @@ test("quote view switcher is a labelled sub-view toggle that hides the list-only
     return Math.round(card.getBoundingClientRect().right - document.documentElement.clientWidth);
   });
   expect(overflow).toBeLessThanOrEqual(0);
+
+  await toggle.locator('[data-view="report"]').click();
+  await expect(toggle.locator('[data-view="report"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(filters).toBeHidden();
+  await expect(panel.locator(".adm-panel-header")).toBeHidden();
 
   await toggle.locator('[data-view="list"]').click();
   await expect(filters).toBeVisible();

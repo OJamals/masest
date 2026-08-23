@@ -105,7 +105,7 @@ test("account delete failures show useful copy instead of raw JSON", async ({ pa
   await expect(page.locator('[data-au-row="user-1"]')).toBeVisible();
 
   await page.locator('[data-au-delete="user-1"]').click();
-  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
 
   await expect(page.locator("#auStatus")).toHaveText("Could not delete the user. Retry.");
   await expect(page.locator('[data-au-delete="user-1"]')).toBeEnabled();
@@ -131,7 +131,7 @@ test("account delete success removes the user and reports completion", async ({ 
   await expect(page.locator('[data-au-row="user-1"]')).toBeVisible();
 
   await page.locator('[data-au-delete="user-1"]').click();
-  await page.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
 
   await expect.poll(() => captured).toMatchObject({ action: "delete_user", user_id: "user-1" });
   await expect(page.locator("#auStatus")).toHaveText("User deleted.");

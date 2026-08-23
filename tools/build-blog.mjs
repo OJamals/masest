@@ -10,7 +10,7 @@ import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
 import { canonicalPublicImageUrl } from "../js/image-url.js";
 import { specializedContentDeliveries } from "../js/content-types.js";
 import { organizationJsonLd } from "./company-identity.mjs";
-import { STYLE_VERSION } from "./static-release.mjs";
+import { COMPONENT_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = "https://masest.co";
@@ -170,7 +170,7 @@ function postPage(post, all) {
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
-<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/components.css?v=${COMPONENT_VERSION}">
 <link rel="stylesheet" href="../css/blog.css">
 <!-- seo:auto -->
 <link rel="canonical" href="${BASE}/blog/${post.slug}">
@@ -266,7 +266,7 @@ function indexPage(posts) {
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
-<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/components.css?v=${COMPONENT_VERSION}">
 <link rel="stylesheet" href="css/blog.css">
 <!-- seo:auto -->
 <link rel="canonical" href="${BASE}/blog">

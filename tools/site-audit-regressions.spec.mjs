@@ -106,7 +106,19 @@ test("mobile catalog filters stay inside the page width", async ({ page }) => {
 test("shared chrome keeps one skip link after hydration", async ({ page }) => {
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
-  await expect(page.locator('.skip-link[href="#main"]')).toHaveCount(1);
+  const skipLink = page.locator('.skip-link[href="#main"]');
+  await expect(skipLink).toHaveCount(1);
+
+  const transitionSeconds = await skipLink.evaluate((node) =>
+    getComputedStyle(node).transitionDuration
+      .split(",")
+      .map((value) => Number.parseFloat(value) || 0)
+  );
+  expect(Math.max(...transitionSeconds), "skip link must not flash through a partly hidden frame").toBe(0);
+
+  await skipLink.focus();
+  const focusedBox = await skipLink.boundingBox();
+  expect(focusedBox?.y, "focused skip link top edge").toBeGreaterThanOrEqual(0);
 });
 
 test("newsletter signup keeps a labelled touch-sized email field", async ({ page }) => {

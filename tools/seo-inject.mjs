@@ -37,7 +37,7 @@ import {
   documentType,
 } from "./public-document-policy.mjs";
 import { organizationJsonLd } from "./company-identity.mjs";
-import { STYLE_VERSION } from "./static-release.mjs";
+import { COMPONENT_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const SPECIALIZED_CONTENT = specializedContentDeliveries();
@@ -529,6 +529,10 @@ async function processPage(file, meta, isPrivate = false) {
   let html = await readFile(file, "utf8");
   const before = html;
   html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
+  html = html.replace(
+    /css\/components\.css(?:\?v=[^"']+)?/g,
+    `css/components.css?v=${COMPONENT_VERSION}`,
+  );
   html = stripOld(html);
   if (file === "resources.html") html = injectDocumentLibrary(html);
   if (file === "proof.html") html = injectProofRecords(html);
@@ -551,10 +555,12 @@ async function processPage(file, meta, isPrivate = false) {
 
 async function processReleaseOnlyPage(file) {
   const before = await readFile(file, "utf8");
-  const html = before.replace(
-    /css\/style\.css\?v=[^"']+/g,
-    `css/style.css?v=${STYLE_VERSION}`,
-  );
+  const html = before
+    .replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`)
+    .replace(
+      /css\/components\.css(?:\?v=[^"']+)?/g,
+      `css/components.css?v=${COMPONENT_VERSION}`,
+    );
   if (html === before) return 0;
   await writeFile(file, html);
   return 1;
@@ -737,7 +743,7 @@ function productPage(id, product, reviewsSnapshot) {
 <link rel="stylesheet" href="../vendor/phosphor/style.css">
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=20260713a">
-<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/components.css?v=${COMPONENT_VERSION}">
 <!-- seo:auto -->
 <link rel="canonical" href="${BASE}/products/${id}">
 <meta property="og:url" content="${BASE}/products/${id}">

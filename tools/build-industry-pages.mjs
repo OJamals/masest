@@ -9,7 +9,7 @@ import {
   documentRevision,
   documentSurfaceMode,
 } from "./public-document-policy.mjs";
-import { STYLE_VERSION } from "./static-release.mjs";
+import { COMPONENT_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const root = new URL("../", import.meta.url);
 const registryPath = new URL("data/industry-applications.json", root);
@@ -443,6 +443,10 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
   }
 
   html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
+  html = html.replace(
+    /css\/components\.css(?:\?v=[^"']+)?/g,
+    `css/components.css?v=${COMPONENT_VERSION}`,
+  );
   html = html.replace(
     /data-ind-products="[^"]*"/,
     `data-ind-products="${escapeHtml(industry.products.join(" "))}"`,

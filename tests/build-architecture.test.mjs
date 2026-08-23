@@ -104,6 +104,30 @@ test("HTML pages link shared stylesheet with a cache-buster", () => {
   }
 });
 
+test("every components stylesheet link uses the shared current cache-buster", () => {
+  const release = read("tools/static-release.mjs");
+  const componentVersion = release.match(/COMPONENT_VERSION\s*=\s*"([0-9a-z]+)"/i)?.[1];
+  assert.ok(componentVersion, "static release config must define COMPONENT_VERSION");
+
+  const pages = ["", "blog/", "comparisons/", "industries/", "products/"]
+    .flatMap((directory) => readdirSync(new URL(directory, root))
+      .filter((name) => name.endsWith(".html"))
+      .map((name) => `${directory}${name}`))
+    .sort();
+  let linkedPages = 0;
+
+  for (const page of pages) {
+    const links = [...read(page).matchAll(/href="(?:\.\.\/)?css\/components\.css(?:\?v=([^"']+))?"/g)];
+    if (!links.length) continue;
+    linkedPages += 1;
+    for (const link of links) {
+      assert.equal(link[1], componentVersion, `${page} must use current components.css cache-buster`);
+    }
+  }
+
+  assert.ok(linkedPages > 90, "cache-buster guard must cover the public component stylesheet graph");
+});
+
 test("architecture doc captures current app boundaries and target structure", () => {
   assert.equal(existsSync(new URL("docs/ARCHITECTURE.md", root)), true);
   const doc = read("docs/ARCHITECTURE.md");

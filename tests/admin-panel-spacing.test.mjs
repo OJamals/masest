@@ -274,6 +274,57 @@ test("mobile admin navigation stays collapsed until requested and closes after s
   });
 });
 
+test("admin overview stays compact and touchable across desktop and mobile", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser();
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+    await context.addInitScript(() => {
+      window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
+      window.MASEST_SUPABASE_ANON = "stub-anon";
+      localStorage.setItem("sb-stub-auth-token", JSON.stringify({ access_token: "stub-token" }));
+    });
+    await context.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "text/javascript", body: authModule }));
+    const page = await context.newPage();
+    try {
+      await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector('.adm-panel[data-panel="overview"][data-active="true"]', { timeout: 10000 });
+      await page.waitForSelector(".adm-report-card .dash-row-route", { timeout: 10000 });
+
+      const setupGapHeight = await page.evaluate(() => {
+        const card = [...document.querySelectorAll(".adm-report-grid > .adm-card")]
+          .find((element) => element.querySelector("h2")?.textContent.trim() === "Setup gaps");
+        return Math.round(card?.getBoundingClientRect().height || 0);
+      });
+      assert.ok(setupGapHeight > 0 && setupGapHeight <= 120, `Setup gaps card stretches to ${setupGapHeight}px`);
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      const mobile = await page.evaluate(() => ({
+        searchHeight: Math.round(document.getElementById("admGlobalSearch")?.getBoundingClientRect().height || 0),
+        rows: [...document.querySelectorAll(".adm-report-card .dash-row-route")].map((row) => {
+          const rowBox = row.getBoundingClientRect();
+          const arrowBox = row.querySelector(".ph-arrow-right")?.getBoundingClientRect();
+          return {
+            height: Math.round(rowBox.height),
+            arrowInset: Math.round(rowBox.right - (arrowBox?.right || 0)),
+            arrowOpacity: Number.parseFloat(getComputedStyle(row.querySelector(".ph-arrow-right")).opacity),
+          };
+        }),
+      }));
+
+      assert.ok(mobile.searchHeight >= 44, `global search target is ${mobile.searchHeight}px tall`);
+      assert.ok(mobile.rows.length >= 10, "expected overview metric routes");
+      for (const row of mobile.rows) {
+        assert.ok(row.height >= 48 && row.height <= 72, `mobile overview route is ${row.height}px tall`);
+        assert.ok(row.arrowInset >= 0 && row.arrowInset <= 16, `mobile overview arrow is ${row.arrowInset}px from the right edge`);
+        assert.equal(row.arrowOpacity, 1, "mobile overview routes should keep their arrow affordance visible");
+      }
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  });
+});
+
 test("read-only staff see their role and cannot trigger mutation controls", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser();

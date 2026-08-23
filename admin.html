@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="vendor/phosphor/style.css?v=20260711u">
 <link rel="stylesheet" href="css/style.css?v=20260822c">
 <link rel="stylesheet" href="css/navigation.css?v=20260713a">
-<link rel="stylesheet" href="css/components.css?v=20260725f">
+<link rel="stylesheet" href="css/components.css?v=20260822d">
 <style>
   /* The staff chrome bar is sticky at 59px, so anchor jumps and scrollIntoView
      (the #qbo deep link, for one) would otherwise land their target underneath
@@ -29,7 +29,7 @@
   .adm-search-global { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); }
   .adm-search-global:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   .adm-search-icon { color: var(--muted); font-size: 1rem; }
-  .adm-search-input { flex: 1 1 auto; min-width: 0; min-height: 38px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .9rem; }
+  .adm-search-input { flex: 1 1 auto; min-width: 0; min-height: 44px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .9rem; }
   .adm-search-input:focus { outline: none; }
   .adm-search-input::-webkit-search-cancel-button { display: none; }
   .adm-search-kbd { flex: 0 0 auto; padding: 2px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-raised); color: var(--muted); font-size: .68rem; font-weight: 800; }
@@ -84,7 +84,7 @@
 .adm-workspace-card > .adm-panel-header p { margin: 5px 0 0; }
 .adm-overview-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .34fr); gap: 16px; align-items: start; }
 .adm-ops-summary, .adm-request-queue { min-width: 0; }
-.adm-report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.adm-report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-items: start; }
 .adm-report-card { min-height: 100%; box-shadow: var(--shadow-xs); }
 .adm-report-card h2 { display: flex; align-items: center; gap: 8px; }
 .adm-report-card h2 i { color: var(--accent); font-size: 1.1rem; }
@@ -750,6 +750,18 @@
     .adm-panel-header { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: left; }
+    .adm-report-card .dash-row-route {
+      display: grid;
+      grid-template-areas: "label arrow" "value arrow";
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      column-gap: 10px;
+      row-gap: 2px;
+      min-height: 52px;
+    }
+    .adm-report-card .dash-row-route > span { grid-area: label; }
+    .adm-report-card .dash-row-route > b { grid-area: value; }
+    .adm-report-card a.dash-row-route > .ph-arrow-right { grid-area: arrow; align-self: center; justify-self: end; opacity: 1; }
   }
   @media (max-width: 420px) {
     .adm-action-item { grid-template-columns: 38px minmax(0, 1fr); }
