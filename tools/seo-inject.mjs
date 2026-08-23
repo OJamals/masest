@@ -200,7 +200,9 @@ function documentAnalyticsName(document) {
     .replace("Technical Data Sheet", "TDS");
 }
 
-function documentDisplayTitle(document) {
+function documentDisplayTitle(document, categoryKey = "") {
+  if (categoryKey === "safety-data-sheets") return "Safety Data Sheet";
+  if (categoryKey === "technical-data-sheets") return "Technical Data Sheet";
   return document.title
     .replace("VertKleen Cooling Tower Chemistry Brochure", "VertKleen Cooling Tower Brochure");
 }
@@ -245,14 +247,15 @@ function documentLibrary() {
     ["request-only", "Labels available by request"],
   ]);
 
-  const renderDocument = (document) => {
+  const renderDocument = (document, categoryKey) => {
     const revision = documentRevision(document, DOCUMENT_REVIEW.document_control);
-    const displayTitle = documentDisplayTitle(document);
+    const displayTitle = documentDisplayTitle(document, categoryKey);
+    const accessibleTitle = documentDisplayTitle(document);
     const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(revision)}" data-document-effective="${attr(documentEffectiveDate(document, DOCUMENT_REVIEW.document_control))}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
     if (documentSurfaceMode(document, "resource") === "request") {
-      return `            <button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Request ${attr(displayTitle)}"><span class="doc-title">${text(displayTitle)}</span><span class="doc-request-state" data-document-request-label>Request file</span></button>`;
+      return `            <button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Request ${attr(accessibleTitle)}"><span class="doc-title">${text(displayTitle)}</span><span class="doc-request-state" data-document-request-label>Request file</span></button>`;
     }
-    return `            <a class="doc-chip" href="${attr(document.path)}" ${common} data-document-download target="_blank" rel="noopener" download aria-label="Download ${attr(displayTitle)} (PDF)"><span class="doc-title">${text(displayTitle)}</span><span class="doc-request-state">Download PDF</span></a>`;
+    return `            <a class="doc-chip" href="${attr(document.path)}" ${common} data-document-download target="_blank" rel="noopener" download aria-label="Download ${attr(accessibleTitle)} (PDF)"><span class="doc-title">${text(displayTitle)}</span><span class="doc-request-state">Download PDF</span></a>`;
   };
 
   return categories.map((category) => {
@@ -276,7 +279,7 @@ function documentLibrary() {
     const groupHtml = [...groups.entries()].map(([groupKey, group]) => {
       const links = group.documents
         .sort((left, right) => left.title.localeCompare(right.title))
-        .map(renderDocument)
+        .map((document) => renderDocument(document, category.key))
         .join("\n");
       const sku = category.key === "labels" ? "" : groupKey;
       const lifecycle = category.key === "labels"
@@ -824,7 +827,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   </section>
   ${contentPageMount(`products/${id}`)}
 </main>
-<script type="module" src="../js/main.js?v=20260822b"></script>
+<script type="module" src="../js/main.js?v=20260822c"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>

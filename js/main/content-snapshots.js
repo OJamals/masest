@@ -1,12 +1,12 @@
 import { initReveal } from "./effects.js";
 import { esc } from "../util.js";
 import { canonicalPublicImageUrl } from "../image-url.js?v=20260723a";
-import { proofCardHtml } from "../proof-records.js?v=20260822b";
+import { proofCardHtml } from "../proof-records.js?v=20260822c";
 import {
   browserContentDeliveries,
   normalizeContentPageKey,
 } from "../content-types.js";
-import { loadPricingData } from "./pricing-data.js?v=20260822b";
+import { loadPricingData } from "./pricing-data.js?v=20260822c";
 
 const BROWSER_RENDERERS = Object.freeze({
   proof_card: proofCardHtml,
@@ -134,8 +134,26 @@ function pageSection(row) {
   `;
 }
 
+const PROGRAM_QUOTE_PRODUCT = "Full Cooling Tower Program";
+
+function programTierQuoteHref(tier) {
+  const fallback = `contact?type=quote&product=${encodeURIComponent(PROGRAM_QUOTE_PRODUCT)}`;
+  const href = safeContentHref(tier.href, fallback);
+  const tierText = [tier.badge, tier.name, tier.title, tier.cta].filter(Boolean).join(" ");
+  const tierMatch = tierText.match(/\b(bronze|silver|gold|platinum)\b/i);
+  if (!tierMatch || !/^\/?contact(?:\.html)?(?:[?#]|$)/i.test(href)) return href;
+
+  const tierName = tierMatch[1][0].toUpperCase() + tierMatch[1].slice(1).toLowerCase();
+  const url = new URL(href, "https://masest.co/");
+  url.searchParams.set("type", "quote");
+  url.searchParams.set("product", PROGRAM_QUOTE_PRODUCT);
+  url.searchParams.set("message", `Cooling tower program quote — ${tierName} tier.`);
+  const path = href.startsWith("/") ? url.pathname : url.pathname.slice(1);
+  return `${path}${url.search}${url.hash}`;
+}
+
 function pricingTier(tier) {
-  const href = safeContentHref(tier.href, "contact");
+  const href = programTierQuoteHref(tier);
   const featured = tier.featured === true;
   const features = Array.isArray(tier.features) ? tier.features : [];
   const list = features.length

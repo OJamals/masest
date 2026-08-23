@@ -48,6 +48,27 @@ test("programs pricing tiers mount as a CMS-only region without static fallback"
   assert.doesNotMatch(html, /class="tier-card/, "program tiers must not duplicate CMS values");
 });
 
+test("program tier quote links carry the selected tier into contact prefill", () => {
+  const renderer = contentSnapshotMounts().find(({ type }) => type === "pricing_tier")?.renderer;
+  assert.equal(typeof renderer, "function");
+
+  for (const tier of ["Bronze", "Silver", "Gold", "Platinum"]) {
+    const html = renderer({
+      badge: tier === "Silver" ? "Silver · Most chosen" : tier,
+      name: `${tier} plan`,
+      cta: `Quote ${tier}`,
+      href: "contact?type=quote&product=Full%20Cooling%20Tower%20Program",
+    });
+    const rawHref = html.match(/href="([^"]+)"/)?.[1]?.replaceAll("&amp;", "&");
+    assert.ok(rawHref, `${tier}: quote link exists`);
+    const href = new URL(rawHref, "https://masest.co/");
+    assert.equal(href.pathname, "/contact");
+    assert.equal(href.searchParams.get("type"), "quote");
+    assert.equal(href.searchParams.get("product"), "Full Cooling Tower Program");
+    assert.equal(href.searchParams.get("message"), `Cooling tower program quote — ${tier} tier.`);
+  }
+});
+
 test("industries sector rows mount as a CMS-replaceable region over hardcoded fallback", () => {
   const html = readFileSync(new URL("../industries.html", import.meta.url), "utf8");
   assert.match(html, /data-cms-content="industry_sectors"/, "industries.html must mount the industry_sectors snapshot");

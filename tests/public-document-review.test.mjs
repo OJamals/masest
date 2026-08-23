@@ -167,6 +167,38 @@ test("resource label library separates current releases, earlier public files, a
   assert.doesNotMatch(labels, /Earlier product labels[\s\S]*?current files/);
 });
 
+test("technical document cards use short visible labels and exact accessible names", () => {
+  const review = JSON.parse(read("data/public-document-review.json"));
+  const resources = read("resources.html");
+  const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const expectations = [
+    ["safety-data-sheets", "Safety Data Sheet"],
+    ["technical-data-sheets", "Technical Data Sheet"],
+  ];
+
+  for (const [category, shortTitle] of expectations) {
+    const section = resources.match(new RegExp(`data-document-category="${category}"([\\s\\S]*?)<\\/section>`))?.[1] || "";
+    const documents = review.documents.filter((document) => document.title.endsWith(shortTitle));
+    assert.equal(
+      (section.match(new RegExp(`<span class="doc-title">${shortTitle}<\\/span>`, "g")) || []).length,
+      documents.length,
+      `${category}: every visible card title should be task-first`,
+    );
+    assert.doesNotMatch(
+      section,
+      new RegExp(`<span class="doc-title">[^<]+${shortTitle}<\\/span>`),
+      `${category}: group headings already provide product context`,
+    );
+    for (const document of documents) {
+      assert.match(
+        section,
+        new RegExp(`aria-label="Request ${escapeRegex(document.title)}"`),
+        `${document.document_id}: accessible name keeps exact document identity`,
+      );
+    }
+  }
+});
+
 test("confidential sources stay excluded while published documents stay in the controlled document room", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const proof = read("proof.html");
