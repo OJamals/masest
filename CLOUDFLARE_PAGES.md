@@ -127,8 +127,8 @@ Set QuickBooks config in Cloudflare Pages before enabling the worker. Preferred:
 - `QBO_CONNECT_KEY` — JSON, base64 JSON, or `KEY=value` lines containing:
   `client_id`, `client_secret`, `redirect_uri`, `oauth_state_secret`,
   `sync_secret`, `environment`, and optionally `realm_id` and
-  `income_account_id`. If `income_account_id` is omitted, sync auto-detects an
-  Income account from the connected QuickBooks company.
+  any `*_account_id` mapping listed below. If `income_account_id` is omitted,
+  sync auto-detects an Income account from the connected QuickBooks company.
 
 Or set the individual secrets:
 
@@ -141,10 +141,10 @@ Or set the individual secrets:
 - `QBO_INCOME_ACCOUNT_ID` (optional; otherwise auto-detected after connection)
 - `QBO_ENVIRONMENT=sandbox` or `production`
 
-Admin **Finance → Stripe payout reconciliation** is read-only. It reads recent live
-standard payouts and their balance transactions, using integer minor-unit totals. It does
-not create QuickBooks transactions. The future posting gate remains fail-closed until all
-account IDs below are explicit Cloudflare production bindings:
+Admin **Finance → Stripe bank deposits** reads recent live standard payouts and their
+balance transactions, using integer minor-unit totals. It does not create QuickBooks
+transactions. Future payout posting stays disabled until every account below is supplied
+either inside `QBO_CONNECT_KEY` or as its own Cloudflare production binding:
 
 - `QBO_INCOME_ACCOUNT_ID`
 - `QBO_SHIPPING_INCOME_ACCOUNT_ID`

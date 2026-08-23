@@ -80,7 +80,7 @@ test("published proof_cards replace the hardcoded fallback on proof.html", async
   await expect(disclosure).not.toHaveAttribute("open", "");
   // The disclosure label is the renderer's own copy, not CMS payload — js/proof-records.js
   // and proof.html's static fallback both say this, so the spec follows the copy rewrite.
-  await expect(disclosure.locator("summary")).toHaveText("See how it worked");
+  await expect(disclosure.locator("summary")).toHaveText("Read the story");
   await expect(disclosure).toContainText("Narrative A");
   // b4cae04b ("humanize VertKleen marketing sitewide") dropped the .case-publication chip
   // along with this disclosure's old label. The payload field survives in

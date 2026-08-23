@@ -14,6 +14,15 @@ const connectKeyPayload = {
   oauth_state_secret: "oauth-state-secret",
   sync_secret: "sync-secret",
   income_account_id: "79",
+  shipping_income_account_id: "80",
+  merchant_fees_account_id: "81",
+  postage_expense_account_id: "82",
+  stripe_clearing_account_id: "83",
+  bank_account_id: "84",
+  tax_liability_account_id: "85",
+  discounts_account_id: "86",
+  refunds_account_id: "87",
+  disputes_account_id: "88",
   environment: "production",
   realm_id: "realm-123",
 };
@@ -27,6 +36,15 @@ test("QBO_CONNECT_KEY imports every required QuickBooks runtime value", () => {
   assert.equal(env.QBO_OAUTH_STATE_SECRET, "oauth-state-secret");
   assert.equal(env.QBO_SYNC_SECRET, "sync-secret");
   assert.equal(env.QBO_INCOME_ACCOUNT_ID, "79");
+  assert.equal(env.QBO_SHIPPING_INCOME_ACCOUNT_ID, "80");
+  assert.equal(env.QBO_MERCHANT_FEES_ACCOUNT_ID, "81");
+  assert.equal(env.QBO_POSTAGE_EXPENSE_ACCOUNT_ID, "82");
+  assert.equal(env.QBO_STRIPE_CLEARING_ACCOUNT_ID, "83");
+  assert.equal(env.QBO_BANK_ACCOUNT_ID, "84");
+  assert.equal(env.QBO_TAX_LIABILITY_ACCOUNT_ID, "85");
+  assert.equal(env.QBO_DISCOUNTS_ACCOUNT_ID, "86");
+  assert.equal(env.QBO_REFUNDS_ACCOUNT_ID, "87");
+  assert.equal(env.QBO_DISPUTES_ACCOUNT_ID, "88");
   assert.equal(env.QBO_ENVIRONMENT, "production");
   assert.equal(env.QBO_REALM_ID, "realm-123");
   assert.deepEqual(qboConfigStatus(env).missing, []);

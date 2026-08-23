@@ -1,6 +1,6 @@
-import { api } from '../auth.js?v=20260821a';
-import { dateTime, esc } from '../util.js?v=20260821a';
-import { formatStripeMinor } from './stripe-money.js?v=20260821a';
+import { api } from '../auth.js?v=20260823a';
+import { dateTime, esc } from '../util.js?v=20260823a';
+import { formatStripeMinor } from './stripe-money.js?v=20260823a';
 
 const $ = (id) => document.getElementById(id);
 
@@ -51,8 +51,42 @@ export async function renderStripeStatus() {
   }
 }
 
-function mappingLabel(value) {
-  return String(value || '').replace(/^QBO_/, '').replace(/_ACCOUNT_ID$/, '').replaceAll('_', ' ').toLowerCase();
+const QBO_MAPPING_LABELS = Object.freeze({
+  products_income: 'Product sales',
+  shipping_income: 'Shipping income',
+  merchant_fees: 'Stripe fees',
+  postage_expense: 'Postage',
+  stripe_clearing: 'Stripe clearing',
+  bank: 'Bank deposits',
+  tax: 'Sales tax',
+  discounts: 'Discounts',
+  refunds: 'Refunds',
+  disputes: 'Disputes',
+});
+
+function qboMappingMarkup(mapping = {}) {
+  const accounts = Object.entries(QBO_MAPPING_LABELS).map(([key, label]) => ({
+    label,
+    present: mapping[key] === 'present',
+  }));
+  const connected = accounts.filter((account) => account.present).length;
+  const remaining = accounts.length - connected;
+  const progress = `${connected} of ${accounts.length} accounts matched`;
+  const next = remaining ? `${remaining} still need an account` : 'Account matching complete';
+  const rows = accounts.map((account) => `
+    <li data-state="${account.present ? 'present' : 'missing'}">
+      <span><i class="ph ${account.present ? 'ph-check-circle' : 'ph-circle'}" aria-hidden="true"></i>${esc(account.label)}</span>
+      <small>${account.present ? 'Matched' : 'Not matched'}</small>
+    </li>`).join('');
+  return `<details class="adm-summary-card adm-payout-setup">
+    <summary>
+      <span class="adm-summary-icon"><i class="ph ph-bank" aria-hidden="true"></i></span>
+      <span class="adm-summary-copy"><b>QuickBooks payout setup</b><small>${esc(progress)}. ${esc(next)}.</small></span>
+      <i class="ph ph-caret-down adm-summary-caret" aria-hidden="true"></i>
+    </summary>
+    <p class="adm-payout-setup-note">This setup is for future QuickBooks bookkeeping. It does not affect Stripe payments or bank deposits.</p>
+    <ul class="adm-payout-mapping-list" aria-label="QuickBooks account matching">${rows}</ul>
+  </details>`;
 }
 
 function payoutMarkup(payout) {
@@ -94,23 +128,21 @@ export async function renderStripePayouts() {
   if (refresh) refresh.disabled = true;
   try {
     const result = await api('/api/admin/stripe?view=payouts&limit=3');
-    const missing = Array.isArray(result.qbo_mapping?.missing) ? result.qbo_mapping.missing : [];
-    const ready = result.qbo_mapping?.posting_ready === true;
-    mappings.innerHTML = ready
-      ? '<p class="adm-status" data-state="ok">All required QBO account mappings are present. Posting remains disabled pending accountant-reviewed journal design.</p>'
-      : `<p class="adm-status" data-state="err">QBO posting blocked: ${missing.length} account mapping(s) missing.</p><ul>${missing.map((key) => `<li>${esc(mappingLabel(key))} <code>${esc(key)}</code></li>`).join('')}</ul>`;
+    mappings.innerHTML = qboMappingMarkup(result.qbo_mapping?.mappings);
     const payouts = Array.isArray(result.payouts) ? result.payouts : [];
     list.innerHTML = payouts.length
       ? payouts.map(payoutMarkup).join('')
-      : '<div class="empty-state"><div class="empty-title">No recent payouts</div><div class="empty-body">Stripe returned no payouts for this account.</div></div>';
-    status.textContent = `${payouts.length} recent payout(s) loaded${result.payouts_has_more ? '; older payouts not shown' : ''}. Read-only preview; no QuickBooks writes.`;
-    status.dataset.state = payouts.every((payout) => payout.complete && payout.matches_payout === true) ? 'ok' : '';
+      : '<div class="empty-state"><div class="empty-title">No Stripe bank deposits yet</div><div class="empty-body">Stripe will list deposits here after it sends money to your bank.</div></div>';
+    status.textContent = payouts.length
+      ? `${payouts.length} ${payouts.length === 1 ? 'payout' : 'payouts'} ready to review${result.payouts_has_more ? '. Older payouts are available in Stripe.' : '.'}`
+      : 'No payouts found.';
+    status.dataset.state = payouts.length > 0 && payouts.every((payout) => payout.complete && payout.matches_payout === true) ? 'ok' : '';
   } catch (error) {
     status.textContent = error.data?.error === 'stripe_live_key_required'
-      ? 'Live Stripe key required for payout reconciliation.'
-      : 'Stripe payout preview unavailable. Retry.';
+      ? 'Connect a live Stripe account to view payouts.'
+      : 'Stripe payout history is not available right now. Try again.';
     status.dataset.state = 'err';
-    mappings.textContent = 'QBO mapping readiness unavailable.';
+    mappings.textContent = 'QuickBooks setup could not be checked.';
     list.innerHTML = '';
   } finally {
     if (refresh) refresh.disabled = false;

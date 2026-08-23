@@ -1,4 +1,5 @@
 import { stripeCredentialMode } from './stripe-runtime.js';
+import { qboConfigEnv } from './qbo-config.js';
 
 const STRIPE_API = 'https://api.stripe.com/v1';
 const DEFAULT_PAYOUT_LIMIT = 3;
@@ -71,10 +72,11 @@ export function stripeCurrencyExponent(currency) {
 }
 
 export function qboStripeMappingStatus(env = {}) {
+  const qboEnv = qboConfigEnv(env);
   const mappings = {};
   const missing = [];
   for (const [name, key] of Object.entries(QBO_MAPPING_FIELDS)) {
-    const present = Boolean(text(env[key]));
+    const present = Boolean(text(qboEnv[key]));
     mappings[name] = present ? 'present' : 'missing';
     if (!present) missing.push(key);
   }

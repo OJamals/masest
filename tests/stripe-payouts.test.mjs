@@ -27,6 +27,12 @@ test('QBO Stripe mapping gate is redacted and fail-closed until every account is
 
   const completeEnv = Object.fromEntries(partial.required.map((key) => [key, 'configured']));
   assert.equal(qboStripeMappingStatus(completeEnv).posting_ready, true);
+
+  const bundled = qboStripeMappingStatus({
+    QBO_CONNECT_KEY: JSON.stringify(completeEnv),
+  });
+  assert.equal(bundled.posting_ready, true, 'mapping readiness must use the canonical QuickBooks bundle');
+  assert.equal(JSON.stringify(bundled).includes('configured'), false);
 });
 
 test('Stripe balance transaction summary uses integer minor units and keeps categories distinct', () => {
@@ -163,7 +169,7 @@ test('Stripe payout preview rejects malformed provider collections', async () =>
   );
 });
 
-test('admin Finance UI wires read-only payout preview and QBO mapping blockers', () => {
+test('admin Finance UI wires payout preview and QuickBooks setup state', () => {
   const html = read('admin.html');
   const stripe = read('js/admin/stripe.js');
   const admin = read('js/admin.js');

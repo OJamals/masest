@@ -53,9 +53,9 @@ where singleton = true;
 Keep the gate false during application rollback. Full sequence and bounded rollback:
 [`docs/COMMERCE_WORKFLOW_DEPLOYMENT.md`](COMMERCE_WORKFLOW_DEPLOYMENT.md).
 
-## Payout reconciliation preview
+## Stripe bank deposits
 
-Admin **Finance → Stripe payout reconciliation** calls the staff-only
+Admin **Finance → Stripe bank deposits** calls the staff-only
 `GET /api/admin/stripe?view=payouts&limit=3` endpoint. Access requires the
 `company.credit` capability (owner or finance staff). The endpoint:
 
@@ -68,8 +68,7 @@ Admin **Finance → Stripe payout reconciliation** calls the staff-only
 - marks manual, instant, multi-currency, and provider-truncated compositions incomplete;
 - sends `Cache-Control: no-store` and never returns customers, metadata, raw provider objects, or secrets.
 
-The screen is evidence only: no Stripe mutation and no QuickBooks posting route exists.
-Before posting is designed, configure all `QBO_*_ACCOUNT_ID` mappings documented in
-`.env.example`, have an accountant approve the clearing/refund/dispute journal model, and
-add balanced-entry and idempotency proof. The browser receives only `present`/`missing`
-mapping state.
+The screen does not change Stripe or QuickBooks, and no QuickBooks payout-posting route
+exists. Configure the `QBO_*_ACCOUNT_ID` mappings documented in `.env.example` either as
+individual bindings or inside `QBO_CONNECT_KEY`. The browser receives only
+`present`/`missing` mapping state; account IDs stay server-side.

@@ -28,7 +28,7 @@ test.afterAll(async () => {
   await once(server, "exit").catch(() => {});
 });
 
-test("order confirmation records session reference and clears the active cart", async ({ page }) => {
+test("order confirmation shows session reference and clears the active cart", async ({ page }) => {
   await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
   await page.evaluate(() => {
     localStorage.setItem("masest_cart", JSON.stringify({ crhd: 2 }));
@@ -39,7 +39,7 @@ test("order confirmation records session reference and clears the active cart", 
   });
 
   await expect(page.locator("#sessionSummary")).toContainText("1234567890abcdef");
-  await expect(page.locator("#sessionSummary")).toContainText("recorded");
+  await expect(page.locator("#sessionSummary")).toContainText("We received checkout");
   await expect(page.locator("[data-cart-count]").first()).toHaveText("0");
 
   const storedCart = await page.evaluate(() => localStorage.getItem("masest_cart"));
