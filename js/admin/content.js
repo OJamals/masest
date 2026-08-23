@@ -1,15 +1,15 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260823a";
-import { renderMarkdown } from "../md.js?v=20260823a";
-import { supabase } from "../auth.js?v=20260823a";
-import { createContentAssets } from "./content-assets.js?v=20260823a";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260823a";
-import { createContentRevisions } from "./content-revisions.js?v=20260823a";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260823c";
+import { renderMarkdown } from "../md.js?v=20260823c";
+import { supabase } from "../auth.js?v=20260823c";
+import { createContentAssets } from "./content-assets.js?v=20260823c";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260823c";
+import { createContentRevisions } from "./content-revisions.js?v=20260823c";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260823a";
+} from "./rich-editor.js?v=20260823c";
 import {
   CONTENT_TYPE_DEFINITIONS,
   contentPageOptionsFromSitemap,
@@ -18,7 +18,7 @@ import {
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260823a";
+} from "../content-types.js?v=20260823c";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "image_after", "og_image", "hero"]);
@@ -340,7 +340,7 @@ function formTemplate({ blog = false, admEmpty } = {}) {
       </div>
       <form id="contentForm" onsubmit="return false" data-capability-scope="content.write">
         <div class="adm-inline-actions adm-content-actions adm-content-workspace-actions" aria-label="CMS editor actions">
-          <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft" data-capability="content.write"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save Draft</button>
+          <button class="btn btn-secondary btn-sm" type="button" data-content-action="draft" data-capability="content.write" title="Save current entry (Ctrl/Cmd+S)"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save Draft</button>
           <div class="adm-content-action-group" data-content-action-group="manage" aria-label="Manage entry">
             <button class="btn btn-ghost btn-sm" type="button" data-content-action="new" data-capability="content.write"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
             <button class="btn btn-ghost btn-sm" type="button" data-content-action="duplicate" data-capability="content.write"><i class="ph ph-copy" aria-hidden="true"></i> Duplicate</button>
@@ -1685,6 +1685,11 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
       if (event.target.matches("[data-content-seo-field]")) syncSeoPayload();
     });
     root.addEventListener("keydown", (event) => {
+      if (!event.repeat && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        saveContent({ publish: currentEntry.status === "published" });
+        return;
+      }
       const workspaceButton = event.target.closest?.("[data-content-workspace-tab]");
       if (workspaceButton && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
         const tabs = [...root.querySelectorAll("[data-content-workspace-tab]")];

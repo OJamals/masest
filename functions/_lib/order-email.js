@@ -43,7 +43,7 @@ export function shipmentNotice(trackingStatus, { carrier = null, trackingNumber 
   if (status === 'delivered') {
     return {
       label: 'delivered',
-      body: 'Your order was delivered. Reorder anytime from your dashboard, and reply to this email if anything arrived short or damaged.',
+      body: 'Your order was delivered. Reply to this email if anything arrived short or damaged.',
     };
   }
   if (status === 'shipped') {
@@ -61,7 +61,7 @@ export function shipmentNotice(trackingStatus, { carrier = null, trackingNumber 
     };
   }
   if (status === 'packing') {
-    return { label: 'packing', body: 'Your order is being packed and a shipping label has been created.' };
+    return { label: 'packing', body: 'Your order is being packed and prepared for shipment.' };
   }
   return {
     label: 'tracking updated',
@@ -86,7 +86,9 @@ export function shipmentEmailHtml(order, label, extra) {
 export function shipmentEmailCta(order, label, appUrl = 'https://masest.co') {
   const base = String(appUrl || 'https://masest.co').replace(/\/+$/, '');
   if (label === 'delivered') {
-    return { ctaText: 'View order & reorder', ctaUrl: `${base}/dashboard.html#orders` };
+    return order?.company_id || order?.user_id
+      ? { ctaText: 'View order & reorder', ctaUrl: `${base}/dashboard.html#orders` }
+      : { ctaText: 'Shop VertKleen', ctaUrl: `${base}/products.html` };
   }
   return {
     ctaText: order?.tracking_url ? 'Track shipment' : 'Visit MASEST',
@@ -97,5 +99,5 @@ export function shipmentEmailCta(order, label, appUrl = 'https://masest.co') {
 export function technicalDocumentRequestNoteHtml(appUrl = 'https://masest.co') {
   const base = htmlEscape(String(appUrl).replace(/\/+$/, ''));
   return `<p style="margin:14px 0 0;color:#556;font-size:13px;line-height:1.5">`
-    + `SDS and TDS files are request-only. <a href="${base}/resources">Register or sign in to request access.</a></p>`;
+    + `Need a label or public product file? <a href="${base}/resources">Open VertKleen resources.</a></p>`;
 }

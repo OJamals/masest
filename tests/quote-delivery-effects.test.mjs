@@ -91,11 +91,18 @@ test('notification and email delivery route the Buyer to the real Orders workspa
       payload: { quote_id: QUOTE_ID, email: 'buyer@example.com', product: 'HCR' },
     },
   }, {
-    sendEmail: async (_env, input) => { email = input; return { ok: true }; },
+    sendEmail: async (_env, input) => {
+      email = input;
+      return { ok: true, resendId: 'email-resend-1', status: 200 };
+    },
   });
   assert.match(email.html, /https:\/\/masest\.test\/dashboard\.html#orders/);
   assert.equal(email.idempotencyKey, `masest/quote:${QUOTE_ID}:offer-1/quote-email`);
-  assert.deepEqual(emailResult, { providerRecorded: false, providerResult: {}, skipped: false });
+  assert.deepEqual(emailResult, {
+    providerRecorded: false,
+    providerResult: { resend_id: 'email-resend-1', http_status: 200 },
+    skipped: false,
+  });
 });
 
 test('offer and all three delivery effects are one SQL transaction boundary', () => {

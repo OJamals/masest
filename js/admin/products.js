@@ -2,10 +2,10 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate, money, rowMatchesQuery } from '../util.js?v=20260823a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260823a';
-import { PRODUCTS } from '../main/catalog-data.js?v=20260823a';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260823a';
+import { esc, safeUrl, confirmDialog, delegate, money, rowMatchesQuery } from '../util.js?v=20260823c';
+import { captureDirty, restoreDirty } from './edits.js?v=20260823c';
+import { PRODUCTS } from '../main/catalog-data.js?v=20260823c';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260823c';
 
 export function withCatalogMediaFallback(product = {}) {
   const catalog = PRODUCTS[product.sku === 'cr-hd' ? 'crhd' : product.sku];
@@ -20,6 +20,28 @@ export function withCatalogMediaFallback(product = {}) {
 }
 
 export function createProductsTab({ $, api, state, message, admSkeleton, admEmpty }) {
+  const normalizeProductQuery = (value) => {
+    const query = String(value || '').trim();
+    return query.length <= 100 && !/[\u0000-\u001F\u007F]/.test(query) ? query : '';
+  };
+  const initialProductQuery = typeof location === 'undefined'
+    ? ''
+    : normalizeProductQuery(new URLSearchParams(location.search).get('product_q'));
+  if ($('prodSearch') && !$('prodSearch').value && initialProductQuery) {
+    $('prodSearch').value = initialProductQuery;
+  }
+
+  function syncProductQueryUrl(query) {
+    if (typeof location === 'undefined' || typeof history === 'undefined') return;
+    const params = new URLSearchParams(location.search);
+    if (query) params.set('product_q', query);
+    else params.delete('product_q');
+    const search = params.toString();
+    const next = `${location.pathname}${search ? `?${search}` : ''}${location.hash}`;
+    const current = `${location.pathname}${location.search}${location.hash}`;
+    if (next !== current) history.replaceState(null, '', next);
+  }
+
   async function renderProducts({ refetch = true } = {}) {
     const box = $('admProducts');
     const snap = captureDirty(box);
@@ -38,7 +60,9 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       }
     }
     state.products = (state.products || []).map(withCatalogMediaFallback);
-    const q = $('prodSearch').value.trim().toLowerCase();
+    const productQuery = normalizeProductQuery($('prodSearch').value);
+    syncProductQueryUrl(productQuery);
+    const q = productQuery.toLowerCase();
     const products = state.products.filter((product) => rowMatchesQuery(product, q));
     if (!products.length) {
       box.innerHTML = admEmpty('ph-cube', 'No products', 'Add catalog products to manage them here.');

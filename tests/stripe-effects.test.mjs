@@ -391,6 +391,7 @@ test('buyer confirmation labels account credit separately and restores original 
           data: {
             id: 'order-1',
             order_number: 'MST-00000123',
+            user_id: null,
             status: 'paid',
             customer_email: 'buyer@example.com',
             subtotal: 39.99,
@@ -435,6 +436,63 @@ test('buyer confirmation labels account credit separately and restores original 
   assert.match(email.html, /Account credit<\/td><td[^>]*>&minus;USD 10\.01/);
   assert.match(email.html, /Discount<\/td><td[^>]*>&minus;USD 2\.00/);
   assert.match(email.html, /Total<\/td><td[^>]*>USD 37\.99/);
+  assert.match(email.html, /contact\.html\?message=Question%20about%20order%20MST-00000123/);
+  assert.match(email.html, />Get order help<\/a>/);
+  assert.doesNotMatch(email.html, /dashboard\.html#orders/);
+});
+
+test('account buyer confirmation keeps the authenticated order CTA', async () => {
+  let email;
+  const sb = {
+    from(table) {
+      if (table === 'orders') {
+        return resolvedQuery({
+          data: {
+            id: 'order-2',
+            order_number: 'MST-00000124',
+            user_id: 'user-1',
+            status: 'paid',
+            customer_email: 'account@example.com',
+            subtotal: 25,
+            shipping: 0,
+            tax: 0,
+            total: 25,
+            currency: 'usd',
+            purchase_order_number: null,
+            ship_address: null,
+          },
+          error: null,
+        });
+      }
+      if (table === 'order_items') {
+        return resolvedQuery({
+          data: [{ sku: 'SKU-2', name: 'Product', qty: 1, unit_price: 25, backordered: false }],
+          error: null,
+        });
+      }
+      throw new Error(`unexpected table ${table}`);
+    },
+  };
+
+  await deliverIntegrationEffect({
+    env: {},
+    sb,
+    effect: {
+      id: 'effect-account-confirmation',
+      provider: 'stripe',
+      provider_event_id: 'evt-account-confirmation',
+      effect_key: 'buyer-confirmation',
+      effect_type: 'order_confirmation',
+      payload: { order_id: 'order-2', pending: false, discount: 0 },
+      lease_owner: 'worker-1',
+    },
+  }, {
+    sendEmail: async (_env, input) => { email = input; return true; },
+  });
+
+  assert.match(email.html, /dashboard\.html#orders/);
+  assert.match(email.html, />View your order<\/a>/);
+  assert.doesNotMatch(email.html, />Get order help<\/a>/);
 });
 
 test('worker records provider success before completion and skips provider after response-loss retry', async () => {

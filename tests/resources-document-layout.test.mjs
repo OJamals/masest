@@ -33,7 +33,11 @@ test("resources document categories use library spacing instead of public sectio
       });
     });
 
-    assert.ok(metrics.length >= 4, "expected labels, SDS, TDS, and supporting-document categories");
+    assert.deepEqual(
+      metrics.map((metric) => metric.name),
+      ["labels", "supporting-documents"],
+      "only direct-download public document categories should render",
+    );
     for (const metric of metrics) {
       assert.equal(metric.paddingTop, "0px", `${metric.name} should not inherit public section top padding`);
       assert.equal(metric.paddingBottom, "0px", `${metric.name} should not inherit public section bottom padding`);

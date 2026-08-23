@@ -230,7 +230,7 @@ test("staff can list requests; only content reviewers can approve or deny", asyn
   assert.equal((await listed.json()).total, 1);
 });
 
-test("request workflow is mounted in Accounts and uses the shared authenticated UI", () => {
+test("document request records remain reviewable internally without public request controls", () => {
   const admin = read("admin.html");
   const accounts = read("js/admin/companies.js");
   const chrome = read("js/main/chrome.js");
@@ -249,14 +249,9 @@ test("request workflow is mounted in Accounts and uses the shared authenticated 
   assert.match(accounts, /data-capability="content\.review"/);
   assert.match(accounts, /loadId !== state\.documentRequestLoadId/);
 
-  assert.match(chrome, /data-document-request/);
-  assert.match(chrome, /\/api\/account\/document-requests/);
-  assert.match(chrome, /document_revision:\s*documentRevision/);
-  assert.match(chrome, /mode:\s*"register"/);
+  assert.doesNotMatch(chrome, /data-document-request|\/api\/account\/document-requests|Sign in to request/);
+  assert.doesNotMatch(product, /data-document-request|Request file|Sign in to request/);
   assert.match(account, /params\.get\("mode"\).+"register"/);
-  assert.match(product, /data-document-request/);
-  assert.match(product, /Request file/);
-  assert.match(chrome, /Sign in to request/);
 
   assert.match(schema, /create table if not exists public\.technical_documents/);
   assert.match(schema, /create table if not exists public\.technical_document_requests/);

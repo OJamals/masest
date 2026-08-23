@@ -304,7 +304,7 @@ test("resources page puts dense technical tables behind disclosure", () => {
 
   const summaryTag = resources.slice(disclosureIndex, resources.indexOf(">", disclosureIndex));
   assert.doesNotMatch(summaryTag, /\sopen\b/, "technical disclosure should be closed by default");
-  assert.match(resources, /Get labels, SDS, and product guides/);
+  assert.match(resources, /Get labels, guides, and results/);
   assert.match(resources, /Request a current quote/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.resource-router \.route-grid/);
   assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.resources-reference-disclosure summary/);

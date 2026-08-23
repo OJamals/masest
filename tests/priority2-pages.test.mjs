@@ -122,7 +122,15 @@ test("Tab 4 industry rows each have a generated landing page", () => {
     assert.match(sitemap, new RegExp(`https://masest\\.co/industries/${slug}`), `${slug} should be in sitemap`);
     assert.match(html, new RegExp(`<title>${htmlName} \\| MASEST VertKleen</title>`), `${slug} title should match Tab 4 row`);
     assert.match(html, new RegExp(problem.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 problem`);
-    assert.match(html, new RegExp(`data-ind-products="${industryProducts.get(slug)}"`), `${slug} should use the canonical starting products`);
+    if (slug === "marine") {
+      const marineProducts = industryBySlug.get(slug).approved_product_names;
+      assert.equal((html.match(/data-label-variant="marine-/g) || []).length, marineProducts.length);
+      for (const product of marineProducts) {
+        assert.match(html, new RegExp(`href="\\.\\.\\/products\\/${product.base_product}\\?market=marine"`));
+      }
+    } else {
+      assert.match(html, new RegExp(`data-ind-products="${industryProducts.get(slug)}"`), `${slug} should use the canonical starting products`);
+    }
     assert.match(html, new RegExp(cta.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${slug} should include the Tab 4 CTA`);
     assert.match(contact, new RegExp(`<option>${htmlName}</option>`), `${name} should be available in the industry dropdown`);
   }

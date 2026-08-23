@@ -427,7 +427,7 @@ async function rpcData(sb, name, args) {
 
 async function loadOrder(sb, orderId) {
   const { data: order, error: orderError } = await sb.from('orders')
-    .select('id,order_number,status,customer_email,subtotal,shipping,tax,total,currency,purchase_order_number,ship_address')
+    .select('id,order_number,user_id,status,customer_email,subtotal,shipping,tax,total,currency,purchase_order_number,ship_address')
     .eq('id', orderId)
     .maybeSingle();
   if (orderError || !order) throw errorWithCode('effect_order_not_found');
@@ -490,11 +490,17 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
       address.country,
     ].filter(Boolean).map(htmlEscape).join('<br>')}</p>`
     : '';
-  const appUrl = env.APP_URL || 'https://masest.co';
+  const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
   const documentNote = technicalDocumentRequestNoteHtml(appUrl);
   const discount = Number(effectRow.payload.discount) || 0;
   const storeCredit = Math.max(0, Number(effectRow.payload.store_credit) || 0);
   const originalSubtotal = Math.round((Number(order.subtotal || 0) + storeCredit) * 100) / 100;
+  const cta = order.user_id
+    ? { text: 'View your order', url: `${appUrl}/dashboard.html#orders` }
+    : {
+      text: 'Get order help',
+      url: `${appUrl}/contact.html?message=${encodeURIComponent(`Question about order ${reference || order.id}`)}`,
+    };
   const html = `
   <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
     <div style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
@@ -527,7 +533,7 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
         </table>
         ${shipBlock}
         <div style="margin:24px 0 0">
-          <a href="${appUrl}/dashboard.html#orders" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">View your order</a>
+          <a href="${htmlEscape(cta.url)}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">${htmlEscape(cta.text)}</a>
         </div>
       </div>
       <div style="background:#0b0d12;padding:18px 28px;color:#8a93a0;font-size:11px;line-height:1.7">
@@ -606,7 +612,7 @@ async function sendShipmentNotificationEffect(env, sb, effectRow, send) {
     return { skipped: projection.skipped || 'no_notifiable_transition' };
   }
   const { data: order, error } = await sb.from('orders')
-    .select('id,order_number,company_id,customer_email,carrier,tracking_number,tracking_url,estimated_delivery_at')
+    .select('id,order_number,user_id,company_id,customer_email,carrier,tracking_number,tracking_url,estimated_delivery_at')
     .eq('id', projection.order_id)
     .maybeSingle();
   if (error || !order) throw errorWithCode('effect_order_not_found');
@@ -1186,7 +1192,12 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
     return { providerRecorded: false, providerResult: delivered, skipped: true };
   }
   if (delivered && typeof delivered === 'object' && 'ok' in delivered) {
-    if (delivered.ok) return { providerRecorded: false, providerResult: {}, skipped: false };
+    if (delivered.ok) {
+      const providerResult = {};
+      if (delivered.resendId) providerResult.resend_id = String(delivered.resendId).slice(0, 160);
+      if (Number.isInteger(delivered.status)) providerResult.http_status = delivered.status;
+      return { providerRecorded: false, providerResult, skipped: false };
+    }
     // A hard-suppressed recipient or an unconfigured mailer will never succeed. Retrying
     // eight times and dead-lettering the row buries the genuinely transient failures.
     if (delivered.retryable === false) {

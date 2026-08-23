@@ -142,7 +142,7 @@ test("proof records expose source scope before outcome copy", async ({ page }) =
   expect(issues).toEqual([]);
 });
 
-test("marine route exposes the eight approved names and controlled label library", async ({ page }) => {
+test("marine route exposes all eight substantiated products and labels", async ({ page }) => {
   const issues = captureRuntimeIssues(page);
   await page.goto(`${BASE_URL}/industries/marine.html`, { waitUntil: "networkidle" });
 
@@ -151,12 +151,18 @@ test("marine route exposes the eight approved names and controlled label library
     "https://masest.co/industries/marine",
   );
   await expect(page.locator(".hero-split > .wrap > .eyebrow")).toContainText("Marine, Marinas & Boatyards");
-  await expect(page.locator("h1")).toContainText("Eight marine cleaners for boats, docks, bilges, and boatyards.");
-  await expect(page.locator('[data-ind-products="hcr-t16 descaler cr2 multiwash crhd alumibrite torque purgo"]')).toHaveCount(1);
-  await expect(page.locator("[data-ind-products] .prod-card")).toHaveCount(8);
-  await revealEach(page.locator("[data-ind-products] .prod-card"), "marine product");
+  await expect(page.locator("h1")).toContainText("Eight marine products for boats, docks, bilges, and boatyards.");
+  await expect(page.locator('[data-ind-products]')).toHaveCount(0);
   const marineLabels = page.locator('[data-industry-label-variants="marine"] [data-label-variant]');
   await expect(marineLabels).toHaveCount(8);
+  await revealEach(marineLabels, "marine product");
+  await expect(page.locator('[data-industry-label-variants="marine"]')).toContainText("Choose the marine cleaner by job.");
+  await expect(page.locator('[data-industry-label-variants="marine"] a', { hasText: "Open marine label PDF" })).toHaveCount(8);
+  const antimicrobialCard = page.locator('[data-label-variant="marine-purgo"]');
+  await expect(antimicrobialCard.getByRole("link", { name: "See sizes & pricing" })).toHaveCount(1);
+  await expect(antimicrobialCard.getByRole("link", {
+    name: "Download VertKleen Marine Antimicrobial Label (PDF)",
+  })).toHaveCount(1);
   for (const name of [
     "Scale Buster",
     "SeaVap Coil Kleener",
@@ -186,19 +192,18 @@ test("marine route exposes the eight approved names and controlled label library
   expect(issues).toEqual([]);
 });
 
-test("resource room organizes labels before SDS, TDS, and supporting documents", async ({ page }) => {
+test("resource room lists only document categories with immediate public downloads", async ({ page }) => {
   const issues = captureRuntimeIssues(page);
   await page.goto(`${BASE_URL}/resources.html`, { waitUntil: "networkidle" });
 
   const categories = page.locator("[data-document-category]");
-  await expect(categories).toHaveCount(4);
+  await expect(categories).toHaveCount(2);
   expect(await categories.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-document-category")))).toEqual([
     "labels",
-    "safety-data-sheets",
-    "technical-data-sheets",
     "supporting-documents",
   ]);
-  await expect(page.locator('[data-document-category="labels"] [data-document-id]')).toHaveCount(31);
+  await expect(page.getByText(/Request file|Sign in to request/i)).toHaveCount(0);
+  await expect(page.locator('[data-document-category="labels"] [data-document-id]')).toHaveCount(25);
   await expect(page.locator('[data-document-category="labels"] [data-document-group="marine"] [data-document-id]')).toHaveCount(9);
   await expect(page.locator('[data-document-category="labels"] [data-document-group="hvac"] [data-document-id]')).toHaveCount(3);
   await expect(page.locator('[data-document-category="labels"] [data-document-group="cip"] [data-document-id]')).toHaveCount(2);

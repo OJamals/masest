@@ -30,6 +30,20 @@ function hcrProduct() {
   };
 }
 
+function marineHcrProduct() {
+  return {
+    sku: "hcr-t16",
+    name: "VertKleen HVAC HCR",
+    active: true,
+    mode: "buy",
+    image_url: "https://example.com/hcr-t16.png",
+    photo_alt: "VertKleen HVAC HCR pail",
+    product_variants: [
+      { vsku: "hcr-t16-1", label: "1 gal bottle", gallons: 1, price: 29.5, currency: "usd", active: true, sort: 1 },
+    ],
+  };
+}
+
 function confirmedProducts() {
   return ["watersafe60", "cr2", "sar"].map((sku) => ({
     sku,
@@ -241,20 +255,55 @@ test("cart holds product lines until catalog names and pricing resolve", async (
   });
 });
 
+test("cart preserves marine selection context without changing the canonical line item", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage();
+    try {
+      await routeProducts(page, [marineHcrProduct()]);
+      await page.addInitScript(() => {
+        localStorage.setItem("masest_cart", JSON.stringify({ "hcr-t16-1": 1 }));
+        localStorage.setItem("masest_cart_presentation_v1", JSON.stringify({
+          "hcr-t16-1": { market: "marine", name: "Scale Buster", product: "hcr-t16" },
+        }));
+      });
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+
+      const context = page.locator(".cart-line-market");
+      await context.waitFor();
+      assert.match(await context.textContent(), /Marine selection\s*Scale Buster/);
+      assert.equal(
+        await page.locator(".cart-line-product-link").getAttribute("href"),
+        "products/hcr-t16?market=marine",
+      );
+      assert.match(await page.locator(".cart-line h2").textContent(), /VertKleen HVAC HCR - 1 gal bottle/);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("cart renders untrusted SKU text without creating injected markup", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
     try {
       await page.addInitScript(() => {
-        localStorage.setItem("masest_cart", JSON.stringify({
-          '\"><img src=x data-cart-injection="true">': 1,
+        const sku = '\"><img src=x data-cart-injection="true">';
+        localStorage.setItem("masest_cart", JSON.stringify({ [sku]: 1 }));
+        localStorage.setItem("masest_cart_presentation_v1", JSON.stringify({
+          [sku]: {
+            market: "marine",
+            name: '<img src=x data-market-injection="true">',
+            product: "hcr-t16",
+          },
         }));
       });
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
 
       await page.locator(".cart-line").waitFor();
       assert.equal(await page.locator("[data-cart-injection]").count(), 0);
+      assert.equal(await page.locator("[data-market-injection]").count(), 0);
       assert.match(await page.locator(".cart-line").textContent(), /<img src=x/);
     } finally {
       await browser.close();

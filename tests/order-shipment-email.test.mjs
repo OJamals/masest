@@ -53,7 +53,7 @@ test("tracking updates email buyer + company recipients once, deduplicated", () 
 });
 
 test("public order number is used across confirmation, tracking, dashboard, admin, and CSV", () => {
-  assert.match(STRIPE_EFFECTS, /select\('id,order_number,status,/);
+  assert.match(STRIPE_EFFECTS, /select\('[^']*\border_number\b[^']*\bstatus\b/);
   assert.match(STRIPE_EFFECTS, /orderReference\(order\)/);
   assert.match(ACCOUNT_ORDERS, /select\('id,order_number,status,/);
   assert.match(ADMIN_ORDERS, /select\('id,order_number,status,/);

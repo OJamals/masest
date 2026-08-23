@@ -48,9 +48,14 @@ const BLOG_SNAPSHOT = JSON.parse(readFileSync(
   new URL(`../data/content/${BLOG_DELIVERY.file}`, import.meta.url),
   "utf8",
 ));
-const INDUSTRY_SLUGS = JSON.parse(
+const INDUSTRY_APPLICATIONS = JSON.parse(
   readFileSync(new URL("../data/industry-applications.json", import.meta.url), "utf8"),
-).industries.map((industry) => industry.slug);
+).industries;
+const INDUSTRY_SLUGS = INDUSTRY_APPLICATIONS.map((industry) => industry.slug);
+const MARINE_PRODUCT_NAMES_BY_BASE = new Map(
+  (INDUSTRY_APPLICATIONS.find((industry) => industry.slug === "marine")?.approved_product_names || [])
+    .map((product) => [product.base_product, product]),
+);
 const PROOF_RECORDS = JSON.parse(
   readFileSync(new URL("../data/content/proof.json", import.meta.url), "utf8"),
 ).proof_cards;
@@ -209,7 +214,8 @@ function documentDisplayTitle(document, categoryKey = "") {
 
 function documentLibrary() {
   const available = DOCUMENT_REVIEW.documents.filter(
-    (entry) => documentAllowedOnSurface(entry, "resource"),
+    (entry) => documentAllowedOnSurface(entry, "resource")
+      && documentSurfaceMode(entry, "resource") === "download",
   );
   const categories = [
     {
@@ -221,13 +227,13 @@ function documentLibrary() {
     {
       key: "safety-data-sheets",
       label: "Safety Data Sheets",
-      description: "Request the latest SDS for the product you use.",
+      description: "Download current public SDS files by product.",
       matches: (document) => documentType(document) === "sds",
     },
     {
       key: "technical-data-sheets",
       label: "Technical Data Sheets",
-      description: "Request product details, directions, and extra product information.",
+      description: "Download current public technical product information.",
       matches: (document) => documentType(document) === "tds",
     },
     {
@@ -244,7 +250,6 @@ function documentLibrary() {
     ["cip", "CIP labels"],
     ["general", "General product labels"],
     ["earlier-public", "Other product labels"],
-    ["request-only", "Labels available by request"],
   ]);
 
   const renderDocument = (document, categoryKey) => {
@@ -252,9 +257,6 @@ function documentLibrary() {
     const displayTitle = documentDisplayTitle(document, categoryKey);
     const accessibleTitle = documentDisplayTitle(document);
     const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(revision)}" data-document-effective="${attr(documentEffectiveDate(document, DOCUMENT_REVIEW.document_control))}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
-    if (documentSurfaceMode(document, "resource") === "request") {
-      return `            <button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Request ${attr(accessibleTitle)}"><span class="doc-title">${text(displayTitle)}</span><span class="doc-request-state" data-document-request-label>Request file</span></button>`;
-    }
     return `            <a class="doc-chip" href="${attr(document.path)}" ${common} data-document-download target="_blank" rel="noopener" download aria-label="Download ${attr(accessibleTitle)} (PDF)"><span class="doc-title">${text(displayTitle)}</span><span class="doc-request-state">Download PDF</span></a>`;
   };
 
@@ -264,10 +266,11 @@ function documentLibrary() {
       assigned.add(document.document_id);
       return true;
     });
+    if (!documents.length) return "";
     const groups = new Map();
     for (const document of documents) {
       const groupKey = category.key === "labels"
-        ? document.collection || (documentSurfaceMode(document, "resource") === "request" ? "request-only" : "earlier-public")
+        ? document.collection || "earlier-public"
         : document.skus[0];
       const groupLabel = category.key === "labels"
         ? labelCollections.get(groupKey)
@@ -285,9 +288,7 @@ function documentLibrary() {
       const lifecycle = category.key === "labels"
         ? groupKey === "earlier-public"
           ? "earlier public"
-          : groupKey === "request-only"
-            ? "request-only"
-            : "current"
+          : "current"
         : "current";
       const count = `${group.documents.length} ${group.documents.length === 1 ? "file" : "files"}`;
       return `          <div class="doc-lib-item" data-document-group="${attr(groupKey)}" data-document-lifecycle="${attr(lifecycle.replaceAll(" ", "-"))}"${sku ? ` data-document-sku="${attr(sku)}"` : ""}>
@@ -306,7 +307,7 @@ ${links}
 ${groupHtml}
           </div>
         </section>`;
-  }).join("\n");
+  }).filter(Boolean).join("\n");
 }
 
 function injectDocumentLibrary(html) {
@@ -652,6 +653,12 @@ function productSchema(id, product, reviewsSnapshot) {
 
 function productPage(id, product, reviewsSnapshot) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
+  const marineProduct = MARINE_PRODUCT_NAMES_BY_BASE.get(id);
+  const marineAlias = marineProduct
+    ? `\n        <a class="product-market-alias" href="../industries/marine#products-for-this-industry" data-product-market="marine" data-product-market-name="${attr(marineProduct.name)}" data-product-market-product="${attr(id)}" aria-label="See ${attr(marineProduct.name)} in the VertKleen marine line">
+          <span>Marine line</span><b>${text(marineProduct.name)}</b><small>${text(marineProduct.job_focus)}</small>
+        </a>`
+    : "";
   // Full catalog copy is published in the hero on purpose (see
   // product-layout.test: static heroes are the SEO surface for desc text).
   const heroDesc = productDescription(id, product);
@@ -702,21 +709,16 @@ function productPage(id, product, reviewsSnapshot) {
     .flatMap((doc) => {
       if (doc && typeof doc === "object" && doc.file) {
         const document = currentDocument(doc.file, "product");
-        if (!document) return [];
+        if (!document || documentSurfaceMode(document, "product") !== "download") return [];
         const common = `data-document-id="${attr(document.document_id)}" data-document-revision="${attr(documentRevision(document, DOCUMENT_REVIEW.document_control))}" data-document-effective="${attr(documentEffectiveDate(document, DOCUMENT_REVIEW.document_control))}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}"`;
-        if (documentSurfaceMode(document, "product") === "request") {
-          return [`<li class="doc-file doc-request"><button type="button" data-document-request ${common} aria-label="Request ${attr(document.title)}"><span class="doc-file-copy">${text(doc.label)}</span><span class="doc-pill doc-pill-req" data-document-request-label>Request file</span></button></li>`];
-        }
         return [`<li class="doc-file"><a href="../${attr(doc.file)}" ${common} data-document-download target="_blank" rel="noopener" download><span class="doc-file-copy">${text(doc.label)}</span><span class="doc-pill">Download</span></a></li>`];
       }
-      const label = doc && typeof doc === "object" ? doc.label : doc;
-      const href = `../contact?type=technical&product=${encodeURIComponent(product.name)}&doc=${encodeURIComponent(label)}`;
-      return [`<li class="doc-file doc-request"><a href="${attr(href)}">${text(label)}<span class="doc-pill doc-pill-req">Request</span></a></li>`];
+      return [];
     })
     .join("\n");
   const backingSections = [
     proofLinks && `<h3 id="records">Results</h3><ul class="product-fit-list">${proofLinks}</ul>`,
-    docs && `<h3>SDS, labels & guides</h3><ul class="product-fit-list">${docs}</ul>`,
+    docs && `<h3>Labels & guides</h3><ul class="product-fit-list">${docs}</ul>`,
   ].filter(Boolean).join("\n        ");
   const procurement = QUOTE_ONLY_IDS.has(id)
     ? "Quoted before purchase."
@@ -770,7 +772,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     <div class="wrap hero-grid">
       <div class="hero-copy reveal">
         <span class="eyebrow">${text(eyebrow)}</span>
-        <h1 class="display">${text(product.name)}</h1>
+        <h1 class="display">${text(product.name)}</h1>${marineAlias}
         <div class="product-hero-facts" aria-label="Product highlights">
           <span><b>HMIS</b>${text(product.hmis || "0-0-0")}</span>
           <span><b>Replaces</b>${text(replacement)}</span>
@@ -816,6 +818,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
           <span class="eyebrow">Before you clean</span>
           <h2 id="product-handling-${id}">Use ${text(product.name)} with confidence.</h2>
           <p>Read the latest label and SDS, try a small area first, and follow the safety rules for your workplace.</p>
+          <p>Record the buildup, surface, dilution, temperature, contact time, agitation, and rinse result so repeat jobs can begin from the same tested settings.</p>
         </div>
         <ul class="product-handling-list">
           <li><b>Read the directions</b><span>Use the label made for this product and package.</span></li>
@@ -833,7 +836,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   </section>
   ${contentPageMount(`products/${id}`)}
 </main>
-<script type="module" src="../js/main.js?v=20260822c"></script>
+<script type="module" src="../js/main.js?v=20260823c"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>

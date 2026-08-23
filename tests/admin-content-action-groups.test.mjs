@@ -27,6 +27,14 @@ test("content editor groups normal, review, and management actions", () => {
   assert.match(source, /data-content-action="new"[\s\S]*data-content-action="duplicate"[\s\S]*data-content-action="archive"/);
 });
 
+test("content editor saves safely with the platform keyboard shortcut", () => {
+  const source = read("js/admin/content.js");
+
+  assert.match(source, /title="Save current entry \(Ctrl\/Cmd\+S\)"/);
+  assert.match(source, /\(event\.metaKey \|\| event\.ctrlKey\) && event\.key\.toLowerCase\(\) === "s"/);
+  assert.match(source, /saveContent\(\{ publish: currentEntry\.status === "published" \}\)/);
+});
+
 test("content action groups have mobile-safe wrapping styles", () => {
   const html = read("admin.html");
 

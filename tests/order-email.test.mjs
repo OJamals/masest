@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { money, orderItemsTableHtml, technicalDocumentRequestNoteHtml } from '../functions/_lib/order-email.js';
+import {
+  money,
+  orderItemsTableHtml,
+  shipmentEmailCta,
+  shipmentNotice,
+  technicalDocumentRequestNoteHtml,
+} from '../functions/_lib/order-email.js';
 
 test('money formats currency uppercase with 2 decimals', () => {
   assert.equal(money(34.6, 'usd'), 'USD 34.60');
@@ -32,9 +38,37 @@ test('orderItemsTableHtml omits totals rows that are not provided', () => {
   assert.ok(!/Tax/.test(withTotals), 'tax omitted when null (NET orders)');
 });
 
-test('order emails route SDS and TDS through registered requests', () => {
+test('order emails link public product files without access-gate copy', () => {
   const html = technicalDocumentRequestNoteHtml('https://masest.co/');
-  assert.match(html, /SDS and TDS files are request-only/);
+  assert.doesNotMatch(html, /request-only|register|sign in|request access/i);
   assert.match(html, /href="https:\/\/masest\.co\/resources"/);
-  assert.match(html, /Register or sign in to request access/);
+  assert.match(html, /public product file/i);
+});
+
+test('packing notice does not claim a carrier label already exists', () => {
+  const notice = shipmentNotice('packing');
+  assert.equal(notice.label, 'packing');
+  assert.doesNotMatch(notice.body, /label has been created/i);
+  assert.match(notice.body, /prepared for shipment/i);
+});
+
+test('delivered notice works for guests without promising an account dashboard', () => {
+  const notice = shipmentNotice('delivered');
+  assert.doesNotMatch(notice.body, /dashboard/i);
+  assert.match(notice.body, /short or damaged/i);
+});
+
+test('delivered email sends account buyers to orders and guests to products', () => {
+  assert.deepEqual(
+    shipmentEmailCta({ company_id: 'company-1' }, 'delivered', 'https://masest.co/'),
+    { ctaText: 'View order & reorder', ctaUrl: 'https://masest.co/dashboard.html#orders' },
+  );
+  assert.deepEqual(
+    shipmentEmailCta({ user_id: 'user-1' }, 'delivered', 'https://masest.co/'),
+    { ctaText: 'View order & reorder', ctaUrl: 'https://masest.co/dashboard.html#orders' },
+  );
+  assert.deepEqual(
+    shipmentEmailCta({}, 'delivered', 'https://masest.co/'),
+    { ctaText: 'Shop VertKleen', ctaUrl: 'https://masest.co/products.html' },
+  );
 });

@@ -248,7 +248,10 @@ test("staff product pages route commerce work to catalog management", async () =
 
       assert.equal(await page.locator("html").getAttribute("data-account-kind"), "staff");
       assert.equal(await page.locator("[data-cart-add]").count(), 0, "staff should not receive buyer cart controls");
-      assert.ok(await page.locator('a[href="/admin.html#products"]').count() > 0, "staff should receive a forward path to catalog management");
+      assert.ok(
+        await page.locator('a[href^="/admin.html?product_q="][href$="#products"]').count() > 0,
+        "staff should receive an exact-product path to catalog management",
+      );
 
       const support = page.locator(".site-support__launcher");
       await support.waitFor();

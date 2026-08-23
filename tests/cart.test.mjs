@@ -47,6 +47,30 @@ test("cart recovers from corrupt storage and emits updated totals", async () => 
   assert.deepEqual(events.at(-1).items, cart.items());
 });
 
+test("cart keeps bounded marine presentation context separate from order lines", async () => {
+  const { store } = installBrowserGlobals();
+  const cart = await freshCartModule();
+
+  cart.add("hcr-t16-1", 1, {
+    market: "marine",
+    name: "Scale Buster",
+    product: "hcr-t16",
+  });
+
+  assert.deepEqual(cart.presentationContext("hcr-t16-1"), {
+    market: "marine",
+    name: "Scale Buster",
+    product: "hcr-t16",
+  });
+  assert.deepEqual(cart.items(), [{ sku: "hcr-t16-1", qty: 1 }]);
+  assert.deepEqual(JSON.parse(store.get("masest_cart")), { "hcr-t16-1": 1 });
+
+  cart.setQty("hcr-t16-1", 2);
+  assert.equal(cart.presentationContext("hcr-t16-1")?.name, "Scale Buster");
+  cart.remove("hcr-t16-1");
+  assert.equal(cart.presentationContext("hcr-t16-1"), null);
+});
+
 test("checkout sends normalized line items and clears the cart on success", async () => {
   const { store, events } = installBrowserGlobals();
   const calls = [];
@@ -67,6 +91,8 @@ test("checkout sends normalized line items and clears the cart on success", asyn
   assert.equal(calls[0].options.headers.Authorization, "Bearer abc");
   const requestBody = JSON.parse(calls[0].options.body);
   assert.deepEqual(requestBody.cart, [{ sku: "hcr", qty: 2 }]);
+  assert.equal("presentation" in requestBody, false);
+  assert.equal("market" in requestBody, false);
   assert.equal(requestBody.purchase_order_number, "PO-1042");
   assert.equal(store.get("masest_cart"), "{}");
   assert.equal(events.at(-1).count, 0);

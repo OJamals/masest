@@ -3636,6 +3636,22 @@ fully clickable cards) ---- */
 .cart-summary-empty { margin: 0; color: var(--muted); line-height: 1.55; }
 .cart-lines { display: grid; gap: 14px; }
 
+.cart-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 11px 12px;
+  border: 1px solid rgba(14, 124, 134, .24);
+  border-radius: var(--r-input);
+  background: rgba(235, 248, 248, .72);
+  color: var(--ink-soft);
+  font-size: .9rem;
+}
+.cart-undo[hidden] { display: none !important; }
+.cart-undo .btn { flex: 0 0 auto; min-height: 38px; }
+
 .cart-line-price {
   display: block;
   margin-top: 6px;
@@ -3743,6 +3759,29 @@ fully clickable cards) ---- */
 .cart-line > div { min-width: 0; }
 .cart-line h2,
 .cart-line h3 { margin: 3px 0 6px; font-size: 1.08rem; }
+.cart-line-product-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+.cart-line-product-link:hover { color: var(--accent-ink); text-decoration-color: currentColor; }
+.cart-line-product-link:focus-visible { outline: 3px solid rgba(14, 124, 134, .2); outline-offset: 2px; }
+.cart-line-market {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 8px;
+  color: var(--ink-soft);
+  font-size: .82rem;
+}
+.cart-line-market span {
+  color: var(--accent-ink);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
 .cart-line p { margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.45; }
 .cart-line h2,
 .cart-line p,
@@ -7559,6 +7598,79 @@ body.product-detail-page main > section.product-static-section {
   margin-top: 18px;
 }
 
+.product-detail-page .product-market-alias {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 3px 10px;
+  width: fit-content;
+  max-width: min(100%, 620px);
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(14, 124, 134, .24);
+  border-radius: 14px;
+  background: rgba(235, 248, 248, .72);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.product-detail-page .product-market-alias span {
+  color: var(--accent-ink);
+  font-size: .7rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.product-detail-page .product-market-alias b { font-size: .9rem; }
+.product-detail-page .product-market-alias small {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: .8rem;
+  line-height: 1.4;
+}
+
+.product-detail-page .product-market-alias:hover {
+  border-color: rgba(14, 124, 134, .46);
+  background: rgba(235, 248, 248, .96);
+}
+
+.product-detail-page .product-market-alias:focus-visible {
+  outline: 3px solid rgba(14, 124, 134, .22);
+  outline-offset: 2px;
+}
+
+.marine-product-selector {
+  display: grid;
+  gap: 14px;
+  margin: 24px 0;
+  padding: clamp(16px, 2.5vw, 24px);
+  border: 1px solid rgba(14, 124, 134, .2);
+  border-radius: var(--r-card);
+  background: linear-gradient(135deg, rgba(235, 248, 248, .86), rgba(255, 255, 255, .96));
+}
+
+.marine-product-selector-copy h3,
+.marine-product-selector-copy p,
+.marine-product-selector-status { margin: 0; }
+.marine-product-selector-copy h3 { font-size: clamp(1.1rem, 2vw, 1.35rem); }
+.marine-product-selector-copy p,
+.marine-product-selector-status {
+  margin-top: 5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.marine-product-selector-status { min-height: 1.5em; font-size: .9rem; }
+.marine-product-selector .marine-product-selector-chips {
+  gap: 8px;
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+[data-marine-product-selector][data-selected-job]:not([data-selected-job="all"])
+  [data-marine-product-card].is-marine-match {
+  border-color: rgba(14, 124, 134, .62);
+  box-shadow: 0 0 0 3px rgba(14, 124, 134, .12), 0 18px 42px rgba(4, 50, 54, .12);
+}
+
 .product-detail-page .product-hero-facts span {
   display: inline-flex;
   min-height: 38px;
@@ -8176,7 +8288,8 @@ body.product-detail-page main > section.product-static-section {
 .ind-hero-facts li:last-child a:focus-visible {
   color: var(--accent);
 }
-.ind-applications {
+.ind-applications,
+#products-for-this-industry {
   scroll-margin-top: 132px;
 }
 .ind-related {

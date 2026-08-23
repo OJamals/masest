@@ -3,15 +3,68 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260823a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260823a';
-import { createSavedViews } from './saved-views.js?v=20260823a';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260823c';
+import { captureDirty, restoreDirty } from './edits.js?v=20260823c';
+import { createSavedViews } from './saved-views.js?v=20260823c';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 /* Lifecycle view rather than a column value: everything still owed a shipment.
    Selects the same rows the Overview "Fulfillment queue" number counts. */
 export const NEEDS_FULFILLMENT = 'needs_fulfillment';
 const MANUAL_CREATE_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled'];
+const TERMINAL_ORDER_STATUSES = new Set(['cancelled', 'refunded']);
+
+const REVERSAL_EFFECT_TYPES = {
+  refunded: [
+    'order_refund',
+    'order_restock',
+    'order_accounting_reversal',
+    'order_reversal_complete',
+    'order_refund_email',
+  ],
+  cancelled: [
+    'order_label_void',
+    'order_refund',
+    'order_restock',
+    'order_accounting_reversal',
+    'order_cancelled',
+    'order_reversal_complete',
+    'order_cancellation_email',
+  ],
+};
+
+export function terminalFulfillmentNote(order = {}) {
+  const status = String(order.status || '').trim().toLowerCase();
+  if (!TERMINAL_ORDER_STATUSES.has(status)) return '';
+  const tracking = String(order.tracking_status || 'processing').trim().toLowerCase();
+  const hasShipmentEvidence = Boolean(
+    String(order.tracking_number || '').trim()
+    || (Array.isArray(order.order_shipments) && order.order_shipments.length)
+    || (Array.isArray(order.shipment_events) && order.shipment_events.length),
+  );
+  if (!hasShipmentEvidence && ['processing', 'packing'].includes(tracking)) {
+    return 'Fulfillment closed. No shipment or tracking number was recorded.';
+  }
+  return `Fulfillment closed. Last recorded shipment state: ${tracking || 'unknown'}.`;
+}
+
+export function reversalWorkflowEvidence(order = {}, integrationTimeline = []) {
+  const status = String(order.status || '').trim().toLowerCase();
+  const required = REVERSAL_EFFECT_TYPES[status] || [];
+  const timeline = Array.isArray(integrationTimeline) ? integrationTimeline : [];
+  const steps = required.map((effectType) => {
+    const entries = timeline.filter((entry) => entry?.effect_type === effectType);
+    const entry = entries.find((candidate) => candidate.status === 'completed') || entries[0] || null;
+    return { effectType, entry, complete: entry?.status === 'completed' };
+  });
+  return {
+    applicable: required.length > 0,
+    complete: required.length > 0 && steps.every((step) => step.complete),
+    missing: steps.filter((step) => !step.entry).map((step) => step.effectType),
+    incomplete: steps.filter((step) => step.entry && !step.complete).map((step) => step.effectType),
+    steps,
+  };
+}
 
 function positiveMinor(value) {
   const minor = Number(value);
@@ -123,6 +176,38 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
   function lifecycleSummary(order) {
     const lifecycle = lifecycleFor(order);
     return `<div class="admin-order-lifecycle"><span>Lifecycle</span><b>${statusBadge(lifecycle.stage, lifecycle.label)}</b><small class="muted">${esc(nextActionLabel(lifecycle.next_action))}</small></div>`;
+  }
+
+  function reversalWorkflowHtml(order, integrationTimeline) {
+    const evidence = reversalWorkflowEvidence(order, integrationTimeline);
+    if (!evidence.applicable) return '';
+    const labels = {
+      order_label_void: 'Carrier label void / refund request',
+      order_refund: 'Customer payment refund',
+      order_restock: 'Inventory restored',
+      order_accounting_reversal: 'Accounting reversal',
+      order_cancelled: 'Cancellation finalized',
+      order_reversal_complete: 'Order state finalized',
+      order_refund_email: 'Refund email',
+      order_cancellation_email: 'Cancellation email',
+    };
+    const summary = evidence.complete
+      ? 'All required reversal steps completed.'
+      : evidence.missing.length
+        ? `${evidence.missing.length} required reversal step${evidence.missing.length === 1 ? '' : 's'} not recorded.`
+        : `${evidence.incomplete.length} reversal step${evidence.incomplete.length === 1 ? '' : 's'} still needs attention.`;
+    return `<section class="admin-order-review" data-order-reversal-evidence data-state="${evidence.complete ? 'ok' : 'err'}" aria-label="Reversal workflow" style="margin:16px 0;padding:12px;border:1px solid var(--line)">
+      <h4 style="margin:0 0 4px">Reversal workflow</h4>
+      <p class="muted" style="margin:0 0 8px">${esc(summary)}</p>
+      <ul style="margin:0;padding-left:18px">${evidence.steps.map((step) => {
+        const stateLabel = step.entry?.status || 'not recorded';
+        const observedAt = step.entry
+          ? ` · ${esc(date(step.entry.completed_at || step.entry.dead_at || step.entry.created_at))}`
+          : '';
+        const error = step.entry?.last_error_code ? ` · <code>${esc(step.entry.last_error_code)}</code>` : '';
+        return `<li><b>${esc(labels[step.effectType] || step.effectType)}</b> — ${statusBadge(step.complete ? 'complete' : 'blocked', stateLabel)}${observedAt}${error}</li>`;
+      }).join('')}</ul>
+    </section>`;
   }
 
   function orderStatusOptions(selected, order = {}) {
@@ -699,7 +784,9 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
           <summary><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Manage order</summary>
           <div class="admin-order-actions">
             ${draftEditable(order) ? orderEditor(order) : '<p class="muted admin-inline-note">Economic lines locked after payment/provider commitment. Use refund or cancellation adjustments.</p>'}
-            ${trackingControls(order)}
+            ${terminalFulfillmentNote(order)
+              ? `<p class="muted admin-inline-note" data-order-terminal-fulfillment>${esc(terminalFulfillmentNote(order))}</p>`
+              : trackingControls(order)}
             ${netControls}
             ${refundControls}
             ${lifecycleControls}
@@ -830,8 +917,12 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         }).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Persisted shipments & packages</h4><p class="muted" style="margin:0">No normalized shipment revision yet.</p>';
     const integrationHistory = integrationTimeline.length
-      ? `<h4 style="margin:16px 0 4px">Integration delivery</h4><ul style="margin:0;padding-left:18px">${integrationTimeline.map((entry) =>
-          `<li><b>${esc(entry.provider)}</b> ${esc(entry.effect_type)} — ${esc(entry.status)} · ${esc(date(entry.completed_at || entry.dead_at || entry.created_at))}${entry.result?.skipped ? ` · ${esc(entry.result.skipped)}` : ''}${entry.last_error_code ? ` · <code>${esc(entry.last_error_code)}</code>` : ''}</li>`).join('')}</ul>`
+      ? `<h4 style="margin:16px 0 4px">Integration delivery</h4><ul style="margin:0;padding-left:18px">${integrationTimeline.map((entry) => {
+          const emailDelivery = entry.result?.resend_id
+            ? ` · Resend <code>${esc(entry.result.resend_id)}</code>${entry.result?.email_status ? ` · email ${esc(entry.result.email_status)}` : ''}`
+            : '';
+          return `<li><b>${esc(entry.provider)}</b> ${esc(entry.effect_type)} — ${esc(entry.status)} · ${esc(date(entry.completed_at || entry.dead_at || entry.created_at))}${emailDelivery}${entry.result?.skipped ? ` · ${esc(entry.result.skipped)}` : ''}${entry.last_error_code ? ` · <code>${esc(entry.last_error_code)}</code>` : ''}</li>`;
+        }).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Integration delivery</h4><p class="muted" style="margin:0">No order-scoped provider effects.</p>';
     const financialEntries = (order.order_financial_entries || [])
       .slice().sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
@@ -865,6 +956,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
       ${shipHistory}
       ${shipmentLedger}
+      ${reversalWorkflowHtml(order, integrationTimeline)}
       ${providerLedger}
       ${financialLedger}
       ${cancellationRecovery}

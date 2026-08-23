@@ -10,6 +10,12 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { organizationJsonLd } from "./company-identity.mjs";
+import {
+  documentAllowedOnSurface,
+  documentEffectiveDate,
+  documentRevision,
+  documentSurfaceMode,
+} from "./public-document-policy.mjs";
 import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -19,6 +25,12 @@ const { industries: INDUSTRY_APPLICATIONS } = JSON.parse(
 );
 const { assets: SITE_IMAGES } = JSON.parse(
   readFileSync(resolve(HERE, "..", "data", "content", "site-images.json"), "utf8"),
+);
+const DOCUMENT_REVIEW = JSON.parse(
+  readFileSync(resolve(HERE, "..", "data", "public-document-review.json"), "utf8"),
+);
+const DOCUMENT_BY_PATH = new Map(
+  DOCUMENT_REVIEW.documents.map((document) => [document.path, document]),
 );
 const INDUSTRY_APPLICATIONS_BY_SLUG = new Map(
   INDUSTRY_APPLICATIONS.map((industry) => [industry.slug, industry]),
@@ -342,6 +354,8 @@ const MARINE_PRODUCT_IMAGES = {
   purgo: "purgo-studio.webp",
 };
 const marineApplication = INDUSTRY_APPLICATIONS_BY_SLUG.get("marine");
+const marineProductSelector = marineApplication?.product_selector;
+const MARINE_JOBS_BY_PRODUCT = new Map();
 const MARINE_BASE_NAMES = {
   "hcr-t16": "HCR-T16",
   descaler: "Descaler",
@@ -353,17 +367,50 @@ const MARINE_BASE_NAMES = {
   purgo: "Purgo",
 };
 if (marineApplication?.approved_product_names?.length) {
+  const approvedProductIds = new Set(
+    marineApplication.approved_product_names.map(({ base_product: baseProduct }) => baseProduct),
+  );
+  const selectorJobs = marineProductSelector?.jobs || [];
+  const selectorProductIds = selectorJobs.flatMap(({ products = [] }) => products);
+  if (
+    !marineProductSelector?.prompt
+    || !marineProductSelector?.helper
+    || !selectorJobs.length
+    || selectorProductIds.length !== approvedProductIds.size
+    || new Set(selectorProductIds).size !== selectorProductIds.length
+    || selectorProductIds.some((productId) => !approvedProductIds.has(productId))
+  ) {
+    throw new Error("Marine product selector must assign every approved product exactly once");
+  }
+  for (const job of selectorJobs) {
+    if (!/^[a-z0-9-]{1,60}$/.test(job.id || "") || !job.label?.trim()) {
+      throw new Error("Marine product selector jobs need safe ids and visible labels");
+    }
+    for (const productId of job.products) MARINE_JOBS_BY_PRODUCT.set(productId, [job.id]);
+  }
+
   INDUSTRY_LABEL_VARIANTS.marine = marineApplication.approved_product_names.map((approved) => {
     const key = `marine-${approved.base_product}`;
     const image = MARINE_PRODUCT_IMAGES[approved.base_product];
     if (!image) throw new Error(`Missing marine product image: ${approved.base_product}`);
+    const labelDocument = DOCUMENT_BY_PATH.get(approved.label);
+    if (
+      !labelDocument
+      || !documentAllowedOnSurface(labelDocument, "industry")
+      || documentSurfaceMode(labelDocument, "industry") !== "download"
+    ) {
+      throw new Error(`Marine label must be a public download: ${approved.label}`);
+    }
     LABEL_VARIANTS[key] = {
       market: "Marine cleaner",
       name: approved.name,
-      subtitle: `Made with VertKleen ${MARINE_BASE_NAMES[approved.base_product] || approved.base_product}`,
+      subtitle: `Marine label for VertKleen ${MARINE_BASE_NAMES[approved.base_product] || approved.base_product}`,
       image,
       productHref: approved.base_product,
       labelPath: approved.label,
+      labelDocument,
+      jobFocus: approved.job_focus,
+      jobs: MARINE_JOBS_BY_PRODUCT.get(approved.base_product),
       directions: [],
     };
     return key;
@@ -379,22 +426,56 @@ function labelVariantCard(key) {
   const directionsBlock = directions
     ? `<h4>Label mixing directions</h4>
         <ul class="product-fit-list" aria-label="${htmlText(variant.name)} label directions">${directions}</ul>`
-    : `<p class="label-card-note">Open the label for directions, mixing, and surface guidance.</p>`;
+    : variant.jobFocus
+      ? `<p class="label-card-note"><strong>Start here for:</strong> ${htmlText(variant.jobFocus)}.</p>`
+      : `<p class="label-card-note">Open the label for directions, mixing, and surface guidance.</p>`;
   const labelAction = variant.labelPath
-    ? `<a class="btn btn-primary" href="../resources#doc-category-labels">Open label library</a>`
-    : `<a class="btn btn-primary" href="../contact?type=quote&amp;product=${enc(variant.name)}&amp;label=${enc(variant.market)}">Request this label</a>`;
+    ? `<a class="btn btn-secondary" href="../${htmlAttr(variant.labelPath)}" data-document-id="${htmlAttr(variant.labelDocument.document_id)}" data-document-revision="${htmlAttr(documentRevision(variant.labelDocument, DOCUMENT_REVIEW.document_control))}" data-document-effective="${htmlAttr(documentEffectiveDate(variant.labelDocument, DOCUMENT_REVIEW.document_control))}" data-document-skus="${htmlAttr(variant.labelDocument.skus.join(" "))}" data-document-name="${htmlAttr(variant.labelDocument.title)}" data-document-download target="_blank" rel="noopener" download aria-label="Download ${htmlAttr(variant.labelDocument.title)} (PDF)">Open marine label PDF</a>`
+    : "";
+  const packagingNote = variant.labelPath
+    ? `\n        <small class="label-packaging-note">Base VertKleen packaging shown · exact marine label PDF below</small>`
+    : "";
+  const productQuery = variant.jobs?.length ? "?market=marine" : "";
+  const productAction = `<a class="btn btn-primary" href="../products/${variant.productHref}${productQuery}">${variant.labelPath ? "See sizes &amp; pricing" : "See product details"}</a>`;
+  const productActions = [productAction, labelAction].filter(Boolean).join("\n          ");
+  const imageAlt = variant.labelPath
+    ? `VertKleen ${MARINE_BASE_NAMES[variant.productHref] || variant.name} base-product packaging`
+    : `${variant.name} ${variant.market} jug`;
 
-  return `<article class="prod-card" data-label-variant="${key}">
-        <img class="product-shot" src="../img/products/${variant.image}" alt="${htmlText(variant.name)} ${variant.market} jug" width="900" height="1200" loading="lazy">
+  const marineAttributes = variant.jobs?.length
+    ? ` data-marine-product-card data-marine-jobs="${htmlAttr(variant.jobs.join(" "))}"`
+    : "";
+
+  return `<article class="prod-card" data-label-variant="${key}"${marineAttributes}>
+        <img class="product-shot" src="../img/products/${variant.image}" alt="${htmlAttr(imageAlt)}" width="900" height="1200" loading="lazy">${packagingNote}
         <span class="catalog-type">${variant.market}</span>
         <h3>${htmlText(variant.name)}</h3>
         <div class="replaces">${htmlText(variant.subtitle)}</div>
         ${directionsBlock}
         <div class="prod-actions">
-          <a class="btn btn-secondary" href="../products/${variant.productHref}">See product details</a>
-          ${labelAction}
+          ${productActions}
         </div>
       </article>`;
+}
+
+function marineProductSelectorBlock(ind) {
+  if (ind.slug !== "marine") return "";
+  const jobs = marineProductSelector.jobs.map((job) =>
+    `<button type="button" class="shop-chip" data-marine-product-job="${htmlAttr(job.id)}" aria-pressed="false">${htmlText(job.label)}</button>`,
+  ).join("\n          ");
+  const productCount = ind.products.length;
+  return `      <div class="marine-product-selector">
+        <div class="marine-product-selector-copy">
+          <h3 id="marine-product-selector-label">${htmlText(marineProductSelector.prompt)}</h3>
+          <p>${htmlText(marineProductSelector.helper)}</p>
+        </div>
+        <div class="shop-chips marine-product-selector-chips" role="group" aria-labelledby="marine-product-selector-label">
+          <button type="button" class="shop-chip active" data-marine-product-job="all" aria-pressed="true">All ${productCount}</button>
+          ${jobs}
+        </div>
+        <p class="marine-product-selector-status" data-marine-product-status role="status" aria-live="polite">Showing all ${productCount} marine cleaners.</p>
+      </div>
+`;
 }
 
 function industryLabelVariantsBlock(ind) {
@@ -403,16 +484,30 @@ function industryLabelVariantsBlock(ind) {
   const cards = keys.map(labelVariantCard).join("\n      ");
 
   const marine = ind.slug === "marine";
-  return `\n<section class="section section-slim" data-industry-label-variants="${ind.slug}">
+  return `\n<section class="section section-slim"${marine ? ' id="products-for-this-industry" data-marine-product-selector data-selected-job="all"' : ""} data-industry-label-variants="${ind.slug}">
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">${marine ? "VertKleen marine cleaners" : "Labels for your work"}</span>
-        <h2 class="headline">${marine ? "Eight marine cleaners made for real boatyard work." : "Use the label made for this job."}</h2>
-        <p class="subhead">${marine ? "Each marine name is the exact VertKleen cleaner shown on its card, packaged with a marine-use label. Open the label for directions and mixing guidance." : "Choose the label for the job, then open the product page for details, pricing, and help."}</p>
+        <h2 class="headline">${marine ? "Choose the marine cleaner by job." : "Use the label made for this job."}</h2>
+        <p class="subhead">${marine ? "Eight marine labels map to existing VertKleen formulas. Cards show base-product packaging; open each PDF for the exact marine label and directions." : "Choose the label for the job, then open the product page for details, pricing, and help."}</p>
       </div>
-      <div class="prod-grid prod-grid-rec">
+${marineProductSelectorBlock(ind)}      <div class="prod-grid prod-grid-rec">
       ${cards}
       </div>
+    </div>
+  </section>`;
+}
+
+function recommendedProductsBlock(ind) {
+  if (ind.slug === "marine") return "";
+  return `<section class="section section-slim" id="products-for-this-industry">
+<div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Recommended</span>
+        <h2 class="headline">VertKleen products for ${ind.name}.</h2>
+          <p class="subhead">Match the cleaner to the mess, surface, and way your team cleans.</p>
+      </div>
+      <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
     </div>
   </section>`;
 }
@@ -615,21 +710,12 @@ ${nav}
 
 ${industryDetailBlock(ind)}${imageGalleryBlock(ind)}
 
-<section class="section section-slim">
-<div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Recommended</span>
-        <h2 class="headline">VertKleen products for ${ind.name}.</h2>
-          <p class="subhead">Match the cleaner to the mess, surface, and way your team cleans.</p>
-      </div>
-      <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
-    </div>
-  </section>${industryLabelVariantsBlock(ind)}
+${recommendedProductsBlock(ind)}${industryLabelVariantsBlock(ind)}
 <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="industries/${ind.slug}" data-cms-region="body"></div>
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js?v=20260822c"></script>
+<script type="module" src="../js/main.js?v=20260823c"></script>
 </body>
 </html>
 `;

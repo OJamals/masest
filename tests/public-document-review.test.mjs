@@ -153,7 +153,7 @@ test("August label release publishes 10 channel labels and nine organized marine
   }
 });
 
-test("resource label library separates current releases, earlier public files, and request-only records", () => {
+test("resource label library separates current and earlier public files without access gates", () => {
   const resources = read("resources.html");
   const labels = resources.match(/data-document-category="labels"([\s\S]*?)<\/section>/)?.[1] || "";
 
@@ -163,8 +163,21 @@ test("resource label library separates current releases, earlier public files, a
   assert.match(labels, /data-document-group="cip"[\s\S]*?2 files/);
   assert.match(labels, /data-document-group="general"[\s\S]*?5 files/);
   assert.match(labels, /data-document-group="earlier-public"[\s\S]*?6 files/);
-  assert.match(labels, /data-document-group="request-only"[\s\S]*?6 files/);
+  assert.doesNotMatch(labels, /data-document-group="request-only"|data-document-request|Request file/i);
   assert.doesNotMatch(labels, /Earlier product labels[\s\S]*?current files/);
+});
+
+test("customer-facing pages show direct downloads only, never document access gates", () => {
+  const pages = [
+    "resources.html",
+    ...filesUnder("products/").filter((path) => path.endsWith(".html")),
+    ...filesUnder("industries/").filter((path) => path.endsWith(".html")),
+  ];
+
+  for (const page of pages) {
+    const html = read(page);
+    assert.doesNotMatch(html, /data-document-request|Request file|Sign in to request/i, `${page}: document gate`);
+  }
 });
 
 test("technical document cards use short visible labels and exact accessible names", () => {
@@ -178,7 +191,14 @@ test("technical document cards use short visible labels and exact accessible nam
 
   for (const [category, shortTitle] of expectations) {
     const section = resources.match(new RegExp(`data-document-category="${category}"([\\s\\S]*?)<\\/section>`))?.[1] || "";
-    const documents = review.documents.filter((document) => document.title.endsWith(shortTitle));
+    const documents = review.documents.filter((document) => (
+      document.title.endsWith(shortTitle)
+      && documentDistribution(document) === "public"
+    ));
+    if (!documents.length) {
+      assert.doesNotMatch(resources, new RegExp(`data-document-category="${category}"`));
+      continue;
+    }
     assert.equal(
       (section.match(new RegExp(`<span class="doc-title">${shortTitle}<\\/span>`, "g")) || []).length,
       documents.length,
@@ -569,10 +589,11 @@ test("customer-facing PDFs embed the approved document-control record", () => {
   }
 });
 
-test("public document room indexes every current PDF without customer-facing governance chrome", () => {
+test("public document room indexes every public PDF without customer-facing governance chrome", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const resources = read("resources.html");
-  const listedDocuments = review.documents.filter((entry) => documentDistribution(entry) !== "internal");
+  const listedDocuments = review.documents.filter((entry) => documentDistribution(entry) === "public");
+  const requestOnlyDocuments = review.documents.filter((entry) => documentDistribution(entry) === "request_only");
 
   assert.doesNotMatch(resources, /doc-governance|doc-control|Distribution revision|Effective<\/span>/);
 
@@ -580,20 +601,16 @@ test("public document room indexes every current PDF without customer-facing gov
     const path = document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const id = String(document.document_id || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const skus = document.skus.join(" ");
-    if (documentDistribution(document) === "request_only") {
-      const revision = documentRevision(document, review.document_control);
-      const request = new RegExp(
-        `<button[^>]+data-document-request[^>]+data-document-id="${id}"[^>]+data-document-revision="${revision}"[^>]+data-document-skus="${skus}"`,
-      );
-      assert.match(resources, request, `${document.path} needs a controlled request entry`);
-      assert.doesNotMatch(resources, new RegExp(`href="${path}"`), `${document.path} must not expose a public URL`);
-    } else {
-      const revision = documentRevision(document, review.document_control);
-      const link = new RegExp(
-        `<a[^>]+href="${path}"[^>]+data-document-id="${id}"[^>]+data-document-revision="${revision}"[^>]+data-document-skus="${skus}"`,
-      );
-      assert.match(resources, link, `${document.path} needs a controlled document-room entry`);
-    }
+    const revision = documentRevision(document, review.document_control);
+    const link = new RegExp(
+      `<a[^>]+href="${path}"[^>]+data-document-id="${id}"[^>]+data-document-revision="${revision}"[^>]+data-document-skus="${skus}"`,
+    );
+    assert.match(resources, link, `${document.path} needs a controlled document-room entry`);
+  }
+
+  for (const document of requestOnlyDocuments) {
+    assert.doesNotMatch(resources, new RegExp(`data-document-id="${document.document_id}"`));
+    assert.doesNotMatch(resources, new RegExp(`href="${document.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
   }
 
   const indexedIds = [...resources.matchAll(/data-document-id="(MAS-[A-Z0-9-]+)"/g)]
@@ -627,12 +644,7 @@ test("generated product and industry PDF links keep control metadata out of cust
       assert.doesNotMatch(link, /class="doc-control"/, `${page} PDF link should stay customer-friendly`);
       assert.doesNotMatch(link, /Distribution:|Claims:|Approved|Authenticated|Signed|Verified/i);
     }
-    for (const request of html.matchAll(/<button\b[^>]*data-document-request[^>]*>[\s\S]*?<\/button>/g)) {
-      const id = request[0].match(/data-document-id="([^"]+)"/)?.[1];
-      const document = review.documents.find((entry) => entry.document_id === id);
-      assert.equal(document && documentDistribution(document), "request_only", `${page} requests unavailable document ${id}`);
-      assert.doesNotMatch(request[0], /href=|docs\/|\.pdf/i, `${page} request control leaks a file path`);
-    }
+    assert.doesNotMatch(html, /data-document-request|Request file|Sign in to request/i, `${page}: document access gate`);
   }
 });
 

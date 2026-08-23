@@ -82,85 +82,12 @@ function postNewsletterCapture(payload) {
   }).catch(() => {});
 }
 
-function documentRequestReturnPath() {
-  let path = location.pathname.replace(/^\/+/, "");
-  if (!path) path = "index.html";
-  else if (path.endsWith("/")) path += "index.html";
-  else if (!/\.[a-z0-9]+$/i.test(path)) path += ".html";
-  return `${path}${location.search}${location.hash}`;
-}
-
-function documentRegistrationHref() {
-  const params = new URLSearchParams({
-    mode: "register",
-    return: documentRequestReturnPath(),
-  });
-  return `/account.html?${params}`;
-}
-
-function setDocumentRequestState(control, text, state = "") {
-  const label = control.querySelector("[data-document-request-label]");
-  if (label) label.textContent = text;
-  control.dataset.requestState = state;
-}
-
-function wireDocumentRoomCapture(authModule) {
+function wireDocumentDownloadCapture() {
   if (document.__masestDocumentCapture) return;
-  const controls = [...document.querySelectorAll("[data-document-download], [data-document-request]")];
+  const controls = [...document.querySelectorAll("[data-document-download]")];
   if (!controls.length) return;
   document.__masestDocumentCapture = true;
-  import(authModule).then(async ({ getToken }) => {
-    const registered = Boolean(await getToken().catch(() => null));
-    document.querySelectorAll("[data-document-request]").forEach((control) => {
-      setDocumentRequestState(control, registered ? "Request file" : "Sign in to request");
-    });
-  }).catch(() => {});
-  document.addEventListener("click", async (event) => {
-    const requestControl = event.target?.closest?.("[data-document-request]");
-    if (requestControl) {
-      event.preventDefault();
-      if (requestControl.disabled) return;
-      requestControl.disabled = true;
-      const documentId = requestControl.dataset.documentId || "";
-      const documentRevision = requestControl.dataset.documentRevision || "";
-      const docName = requestControl.dataset.documentName || requestControl.textContent || "Product file";
-      try {
-        const { api, getToken } = await import(authModule);
-        if (!await getToken()) {
-          location.assign(documentRegistrationHref());
-          return;
-        }
-        const result = await api("/api/account/document-requests", {
-          method: "POST",
-          body: {
-            document_id: documentId,
-            document_revision: documentRevision,
-            requested_from: `${location.pathname}${location.search}`,
-          },
-        });
-        if (result.request?.status === "approved") {
-          const access = await api(`/api/account/document-requests?download=${encodeURIComponent(documentId)}`);
-          if (access.url) location.assign(access.url);
-          return;
-        }
-        setDocumentRequestState(requestControl, "Request sent", "pending");
-        try {
-          if (typeof window.mtrack === "function") window.mtrack("document_request", { document: docName });
-        } catch (err) { /* analytics is best-effort */ }
-      } catch (error) {
-        if (error?.status === 401) {
-          location.assign(documentRegistrationHref());
-          return;
-        }
-        setDocumentRequestState(requestControl,
-          error?.status === 409 ? "New version available - refresh" : "Try request again",
-          "error");
-      } finally {
-        requestControl.disabled = false;
-      }
-      return;
-    }
-
+  document.addEventListener("click", (event) => {
     const link = event.target?.closest?.("[data-document-download]");
     if (!link) return;
     const docName = link.dataset.documentName || link.getAttribute("aria-label") || link.textContent || "Document";
@@ -491,7 +418,7 @@ export function renderChrome({
       }
     });
   }
-  wireDocumentRoomCapture(authModule);
+  wireDocumentDownloadCapture();
 
   // Load public config + first-party integrations once per page.
   if (!window.__masestIntegrations) {

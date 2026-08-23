@@ -56,12 +56,12 @@ test("document room keeps downloads instant while offering revision notification
   assert.match(resources, /id="docNotifyEmail"/, "document room should expose an optional email field");
   assert.match(resources, /Notify me when this document is revised\./);
   assert.match(resources, /data-document-download/);
-  assert.match(resources, /data-document-name="VertKleen HCR SDS"/, "download links should carry document names");
+  assert.match(resources, /data-document-name="VertKleen Marine Antimicrobial Label"/, "download links should carry document names");
   assert.doesNotMatch(resources, /required[^>]*id="docNotifyEmail"/, "revision email must stay optional");
 });
 
 test("document downloads are logged with the document name", () => {
-  assert.match(chrome, /wireDocumentRoomCapture\(authModule\)/, "shared chrome should wire document capture");
+  assert.match(chrome, /wireDocumentDownloadCapture\(\)/, "shared chrome should wire direct-download capture");
   assert.match(chrome, /data-document-download/);
   assert.match(chrome, /mtrack\(["']document_download["'],\s*\{/);
   assert.match(chrome, /document:\s*docName/);

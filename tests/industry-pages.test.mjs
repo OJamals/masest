@@ -91,6 +91,26 @@ test('P3 keeps distinct industry routes and permanently redirects retired overla
     ['hcr-t16', 'descaler', 'cr2', 'multiwash', 'crhd', 'alumibrite', 'torque', 'purgo'],
   );
   assert.equal(marine.approved_product_names.length, 8);
+  assert.equal(marine.product_selector.jobs.length, 6);
+  assert.deepEqual(
+    marine.product_selector.jobs.flatMap(({ products }) => products).sort(),
+    [...marine.products].sort(),
+    'marine selector assigns every product to one visible job choice',
+  );
+  assert.equal(
+    new Set(marine.product_selector.jobs.map(({ id }) => id)).size,
+    marine.product_selector.jobs.length,
+    'marine selector job ids stay unique',
+  );
+  assert.ok(
+    marine.approved_product_names.every(({ job_focus: jobFocus }) => jobFocus?.trim()),
+    'every marine label needs buyer-facing job guidance',
+  );
+  assert.equal(
+    marine.approved_product_names.some(({ publication_status: status }) => Boolean(status)),
+    false,
+    'all eight substantiated marine products stay publicly available',
+  );
   assert.deepEqual(
     marine.approved_product_names.map(({ name }) => name),
     [
@@ -471,8 +491,80 @@ test('generated route product mounts follow the canonical industry registry', ()
   for (const industry of industries) {
     const html = read(`industries/${industry.slug}.html`);
     const productIds = html.match(/data-ind-products="([^"]+)"/)?.[1].split(/\s+/) || [];
-    assert.deepEqual(productIds, industry.products, `${industry.slug}: starting products`);
+    assert.deepEqual(
+      productIds,
+      industry.slug === 'marine' ? [] : industry.products,
+      `${industry.slug}: starting products`,
+    );
   }
+});
+
+test('industry hero product CTA lands on the visible product selector', () => {
+  for (const industry of industries) {
+    const html = read(`industries/${industry.slug}.html`);
+    assert.equal((html.match(/id="products-for-this-industry"/g) || []).length, 1, `${industry.slug}: product anchor`);
+    assert.match(html, /href="#products-for-this-industry">See products, first-test plan, and results/);
+  }
+});
+
+test('marine route presents one job-first product set with exact label links', () => {
+  const marine = industries.find((industry) => industry.slug === 'marine');
+  const html = read('industries/marine.html');
+  const css = read('css/style.css');
+  const section = html.match(
+    /<section[^>]+data-industry-label-variants="marine"[\s\S]*?<\/section>/,
+  )?.[0] || '';
+
+  assert.doesNotMatch(html, /data-ind-products=/, 'do not show duplicate base-product grid');
+  assert.equal((section.match(/data-label-variant="marine-/g) || []).length, 8);
+  assert.equal((section.match(/>Open marine label PDF</g) || []).length, 8);
+  assert.equal((section.match(/data-marine-product-job=/g) || []).length, 7);
+  assert.equal((section.match(/data-marine-product-card/g) || []).length, 8);
+  assert.match(section, /Choose the marine cleaner by job\./);
+  assert.match(section, /What are you cleaning\?/);
+  assert.match(section, /Showing all 8 marine cleaners\./);
+  assert.match(section, /All 8/);
+  assert.match(section, /Base VertKleen packaging shown/);
+  assert.doesNotMatch(section, /technical review|revision is in progress/i);
+  assert.doesNotMatch(section, /exact VertKleen cleaner shown on its card/);
+  assert.doesNotMatch(section, /data-marine-product-card[^>]*\bhidden\b/);
+  assert.match(
+    css,
+    /\.marine-product-selector\s+\.marine-product-selector-chips\s*\{[^}]*flex-wrap:\s*wrap;[^}]*overflow-x:\s*visible;/s,
+    'marine job choices must all remain visible on narrow screens',
+  );
+  const marineProductLinks = [...html.matchAll(
+    /href="\.\.\/products\/([a-z0-9-]+)(\?[^"#]*)?"/g,
+  )].filter(([, productId]) => marine.products.includes(productId));
+  assert.ok(marineProductLinks.length >= marine.products.length * 3);
+  for (const [, productId, query] of marineProductLinks) {
+    assert.equal(query, '?market=marine', `${productId}: marine context must survive every product link`);
+  }
+  const heroProducts = html.match(/<li><span>Products<\/span><strong>([\s\S]*?)<\/strong><\/li>/)?.[1] || '';
+
+  for (const approved of marine.approved_product_names) {
+    const key = `marine-${approved.base_product}`;
+    const card = section.match(
+      new RegExp(`<article[^>]+data-label-variant="${key}"[\\s\\S]*?<\\/article>`),
+    )?.[0] || '';
+    assert.match(card, new RegExp(approved.job_focus.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(card, new RegExp(`href="\\.\\.\\/${approved.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(card, />Open marine label PDF</);
+    assert.match(card, />See sizes &amp; pricing</);
+    assert.match(card, /data-marine-jobs="[^"]+"/);
+    assert.match(card, new RegExp(`href="\\.\\.\\/products\\/${approved.base_product}\\?market=marine"`));
+    const escapedName = approved.name.replaceAll('&', '&amp;');
+    assert.match(heroProducts, new RegExp(`>${escapedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<`));
+  }
+});
+
+test('marine field-image descriptions match the visible task and surface', () => {
+  const html = read('industries/marine.html');
+
+  assert.match(html, /Technician washing the hull of a large center-console vessel on a service pad/);
+  assert.match(html, /Technician cleaning the stern and outboard area of a large center-console vessel/);
+  assert.match(html, /Water beading on the cleaned white hull surface after washing/);
+  assert.doesNotMatch(html, /Vessel helm-and-console field image|Vessel bow-to-transom field image/);
 });
 
 test('supplemental routes state a narrower buyer, task scope, and search intent than their parent', () => {
@@ -584,8 +676,9 @@ test('every industry page renders one task-led applications and job-fit module',
       assert.match(html, new RegExp(`>${label}<`), `${slug}: missing ${label}`);
     }
 
-    assert.match(html, /SDS, labels & guides/);
-    assert.match(html, /Download what you need or ask us for help\./);
+    assert.match(html, /Labels & guides/);
+    assert.match(html, /Download current public product files\./);
+    assert.doesNotMatch(html, /data-document-request|Request file|Sign in to request|Request this label/i);
 
     assert.match(html, /message=/, `${slug}: CTA must prefill the cleaning brief`);
   }
@@ -784,12 +877,9 @@ test('industry proof links resolve locally and exclude restricted customer recor
     )?.[1] || '';
     const documents = [...module.matchAll(/href="\.\.\/(docs\/[^"]+\.pdf)"/g)]
       .map((match) => match[1]);
-    const requestIds = [...module.matchAll(/data-document-request[^>]*data-document-id="(MAS-[A-Z0-9-]+)"/g)]
-      .map((match) => match[1]);
-
     assert.ok(
-      documents.length + requestIds.length >= 2,
-      `${slug}: controlled document links or request controls required`,
+      documents.length >= 2,
+      `${slug}: at least two direct public document links required`,
     );
     for (const document of documents) {
       assert.equal(restrictedDocuments.has(document), false, `${slug}: restricted ${document}`);
@@ -873,6 +963,7 @@ test('industry page generation is idempotent', () => {
 
 test('applications anchor clears the sticky navigation', () => {
   const css = read('css/style.css');
-  const offset = css.match(/\.ind-applications\s*\{[^}]*scroll-margin-top:\s*(\d+)px/s)?.[1];
+  const offset = css.match(/\.ind-applications(?:\s*,[^{}]+)?\s*\{[^}]*scroll-margin-top:\s*(\d+)px/s)?.[1];
   assert.ok(Number(offset) >= 120, 'applications anchor needs room for the sticky navigation');
+  assert.match(css, /#products-for-this-industry/);
 });

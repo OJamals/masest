@@ -6,6 +6,7 @@ import {
   industryDiscoveryCtaFilter,
   industryDiscoveryCtaHref,
   industryDiscoveryMatches,
+  marineProductMatches,
 } from '../js/main/engagement.js';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -54,8 +55,16 @@ test('industry discovery gives buyer role CTA precedence for combined filters', 
   assert.equal(industryDiscoveryCtaFilter({}), '');
 });
 
+test('marine job spotlight matches products without hiding the rest of the line', () => {
+  assert.equal(marineProductMatches('scale-rust marine-hvac', 'all'), true);
+  assert.equal(marineProductMatches('scale-rust marine-hvac', 'scale-rust'), true);
+  assert.equal(marineProductMatches('scale-rust marine-hvac', 'grease-soot'), false);
+  assert.equal(marineProductMatches('', 'scale-rust'), false);
+});
+
 test('shared main initializes industry discovery from the engagement module', () => {
   const main = read('js/main.js');
   assert.match(main, /import \{[^}]*initIndustryDiscovery[^}]*\} from "\.\/main\/engagement\.js/);
   assert.match(main, /initIndustryDiscovery\(\);/);
+  assert.match(main, /initMarineProductSelector\(\);/);
 });

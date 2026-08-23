@@ -6,15 +6,16 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260822c";
-const ADMIN_RELEASE = "20260823a";
-const ADMIN_PAGE_RELEASE = "20260823a";
-const ADMIN_CHROME_RELEASE = "20260823a";
+const MAIN_RELEASE = "20260823c";
+const ADMIN_RELEASE = "20260823c";
+const ADMIN_PAGE_RELEASE = "20260823c";
+const ADMIN_WORKFLOW_RELEASE = "20260823c";
+const ADMIN_CHROME_RELEASE = "20260823c";
 const CHROME_RELEASE = MAIN_RELEASE;
 const ACCOUNT_NAV_RELEASE = "20260822c";
 const CUSTOMER_CHAT_RELEASE = "20260822c";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
-const CONTENT_RELEASE = "20260823a";
+const CONTENT_RELEASE = "20260823c";
 const STORY_RELEASE = "20260726a";
 const PUBLIC_SUPPORT_RELEASE = "20260822c";
 const ADMIN_SUPPORT_RELEASE = ADMIN_RELEASE;
@@ -63,14 +64,16 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${dashboardEntry[1]}`));
 
   assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${ADMIN_PAGE_RELEASE}`));
-  for (const module of ["products", "qbo", "companies", "threads"]) {
+  for (const module of ["qbo", "companies", "threads"]) {
     assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_RELEASE}`));
   }
-  assert.match(read("js/admin.js"), new RegExp(`admin/orders\\.js\\?v=${ADMIN_RELEASE}`));
+  for (const module of ["products", "orders"]) {
+    assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_WORKFLOW_RELEASE}`));
+  }
   assert.match(read("js/admin.js"), new RegExp(`admin/content\\.js\\?v=${CONTENT_RELEASE}`));
   assert.match(read("js/admin/content.js"), new RegExp(`content-types\\.js\\?v=${CONTENT_RELEASE}`));
   assert.match(read("js/admin.js"), new RegExp(`admin/chrome\\.js\\?v=${ADMIN_CHROME_RELEASE}`));
-  assert.match(read("js/admin.js"), new RegExp(`admin/session\\.js\\?v=${ADMIN_PAGE_RELEASE}`));
+  assert.match(read("js/admin.js"), new RegExp(`admin/session\\.js\\?v=${ADMIN_RELEASE}`));
   assert.match(read("js/main/chrome.js"), /initAccountNav\(\{ nav, root, authModule, resolveSession \}\)/);
   assert.match(read("js/account-nav.js"), /await import\(authModule\)/);
   assert.match(read("js/main/chrome.js"), /\{ chatRoot: root, authModule \}/);

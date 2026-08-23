@@ -275,6 +275,73 @@ export function initIndustryDiscovery() {
   applyFilters(readFilters());
 }
 
+export function marineProductMatches(cardJobs, selectedJob) {
+  const job = String(selectedJob || "all");
+  return job === "all" || discoveryTokens(cardJobs).has(job);
+}
+
+export function initMarineProductSelector() {
+  const root = document.querySelector("[data-marine-product-selector]");
+  if (!root || root.dataset.marineProductSelectorWired === "true") return;
+
+  const controls = [...root.querySelectorAll("[data-marine-product-job]")];
+  const cards = [...root.querySelectorAll("[data-marine-product-card]")];
+  const status = root.querySelector("[data-marine-product-status]");
+  if (!controls.length || !cards.length) return;
+  root.dataset.marineProductSelectorWired = "true";
+
+  const controlsByJob = new Map(controls.map((control) => [
+    control.dataset.marineProductJob,
+    control,
+  ]));
+
+  const readJob = () => {
+    const requested = new URLSearchParams(window.location.search).get("marine_job") || "all";
+    return controlsByJob.has(requested) ? requested : "all";
+  };
+
+  const applyJob = (job) => {
+    const selectedJob = controlsByJob.has(job) ? job : "all";
+    let matchCount = 0;
+    root.dataset.selectedJob = selectedJob;
+
+    controls.forEach((control) => {
+      const selected = control.dataset.marineProductJob === selectedJob;
+      control.classList.toggle("active", selected);
+      control.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+
+    cards.forEach((card) => {
+      const matches = marineProductMatches(card.dataset.marineJobs, selectedJob);
+      card.classList.toggle("is-marine-match", matches);
+      if (matches) matchCount += 1;
+    });
+
+    if (!status) return;
+    if (selectedJob === "all") {
+      status.textContent = `Showing all ${cards.length} marine cleaners.`;
+      return;
+    }
+    const label = controlsByJob.get(selectedJob)?.textContent?.trim() || "Selected job";
+    status.textContent = `${matchCount} ${matchCount === 1 ? "starting point" : "starting points"} highlighted for ${label}. All ${cards.length} products remain visible.`;
+  };
+
+  controls.forEach((control) => {
+    control.addEventListener("click", () => {
+      const job = control.dataset.marineProductJob || "all";
+      const url = new URL(window.location.href);
+      if (job === "all") url.searchParams.delete("marine_job");
+      else url.searchParams.set("marine_job", job);
+      url.hash = "products-for-this-industry";
+      window.history.pushState({}, "", url);
+      applyJob(job);
+    });
+  });
+
+  window.addEventListener("popstate", () => applyJob(readJob()));
+  applyJob(readJob());
+}
+
 export function initQuoteForm() {
   const form = document.getElementById("quoteForm");
   if (!form) return;

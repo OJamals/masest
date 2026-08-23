@@ -6,6 +6,7 @@ import { normalizeCartLines, normalizeCartQty } from "./cart-shape.js";
 
 const KEY = "masest_cart";
 const QUOTE_KEY = "masest_quote_checkout_v1";
+const PRESENTATION_KEY = "masest_cart_presentation_v1";
 
 export class CheckoutError extends Error {
   constructor(status, payload = {}) {
@@ -32,6 +33,30 @@ function safeReadCart() {
   }
 }
 
+function normalizePresentationContext(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (String(value.market || "").trim().toLowerCase() !== "marine") return null;
+  const name = String(value.name || "").trim().replace(/\s+/g, " ").slice(0, 120);
+  const product = String(value.product || "").trim().toLowerCase();
+  if (!name || !/^[a-z0-9-]{1,80}$/.test(product)) return null;
+  return { market: "marine", name, product };
+}
+
+function safeReadPresentation() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PRESENTATION_KEY) || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).slice(0, 100)
+        .map(([sku, value]) => [String(sku), normalizePresentationContext(value)])
+        .filter(([sku, value]) => sku && sku.length <= 160 && value)
+    );
+  } catch {
+    localStorage.removeItem(PRESENTATION_KEY);
+    return {};
+  }
+}
+
 function cartSignature(lines) {
   return JSON.stringify(
     lines
@@ -40,30 +65,47 @@ function cartSignature(lines) {
   );
 }
 
-function write(cart) {
+function write(cart, presentation = safeReadPresentation()) {
   localStorage.removeItem(QUOTE_KEY);
   localStorage.setItem(KEY, JSON.stringify(cart));
+  const activePresentation = Object.fromEntries(
+    Object.entries(presentation)
+      .filter(([sku]) => Object.hasOwn(cart, sku))
+      .map(([sku, value]) => [sku, normalizePresentationContext(value)])
+      .filter(([, value]) => value)
+  );
+  if (Object.keys(activePresentation).length) {
+    localStorage.setItem(PRESENTATION_KEY, JSON.stringify(activePresentation));
+  } else {
+    localStorage.removeItem(PRESENTATION_KEY);
+  }
   const detail = { count: count(), items: items() };
   document.dispatchEvent(new CustomEvent("cart:updated", { detail }));
   document.dispatchEvent(new CustomEvent("masest:cart", { detail }));
 }
 
-export function add(sku, qty = 1) {
+export function add(sku, qty = 1, context = null) {
   const cleanSku = String(sku || "").trim();
   if (!cleanSku) throw new Error("sku_required");
   const cart = safeReadCart();
+  const presentation = safeReadPresentation();
+  const normalizedContext = normalizePresentationContext(context);
+  if (normalizedContext) presentation[cleanSku] = normalizedContext;
   cart[cleanSku] = Math.max(1, (cart[cleanSku] || 0) + normalizeCartQty(qty || 1));
-  write(cart);
+  write(cart, presentation);
 }
 
-export function setQty(sku, qty) {
+export function setQty(sku, qty, context = null) {
   const cleanSku = String(sku || "").trim();
   if (!cleanSku) return;
   const cart = safeReadCart();
+  const presentation = safeReadPresentation();
+  const normalizedContext = normalizePresentationContext(context);
+  if (normalizedContext) presentation[cleanSku] = normalizedContext;
   const cleanQty = normalizeCartQty(qty);
   if (cleanQty <= 0) delete cart[cleanSku];
   else cart[cleanSku] = cleanQty;
-  write(cart);
+  write(cart, presentation);
 }
 
 export function remove(sku) {
@@ -71,7 +113,7 @@ export function remove(sku) {
 }
 
 export function clear() {
-  write({});
+  write({}, {});
 }
 
 export function items() {
@@ -80,6 +122,11 @@ export function items() {
 
 export function count() {
   return Object.values(safeReadCart()).reduce((total, qty) => total + qty, 0);
+}
+
+export function presentationContext(sku) {
+  const cleanSku = String(sku || "").trim();
+  return cleanSku ? safeReadPresentation()[cleanSku] || null : null;
 }
 
 export function replaceWithQuote({ quoteId, orderId, items: offerItems } = {}) {
@@ -91,7 +138,7 @@ export function replaceWithQuote({ quoteId, orderId, items: offerItems } = {}) {
   const lines = normalizeCartLines(offerItems, { merge: false });
   if (!lines.length || lines.length !== offerItems.length) throw new Error("quote_offer_invalid");
   const cart = Object.fromEntries(lines.map(({ sku, qty }) => [sku, qty]));
-  write(cart);
+  write(cart, {});
   localStorage.setItem(QUOTE_KEY, JSON.stringify({
     quote_id: cleanQuoteId,
     quote_order_id: cleanOrderId,
@@ -169,6 +216,6 @@ export async function checkout({
 
 if (typeof window !== "undefined") {
   window.MASEST = Object.assign(window.MASEST || {}, {
-    cart: { add, setQty, remove, clear, items, count, replaceWithQuote, checkout },
+    cart: { add, setQty, remove, clear, items, count, presentationContext, replaceWithQuote, checkout },
   });
 }

@@ -1101,8 +1101,8 @@
       "label": "Marine, Marinas & Boatyards",
       "kind": "canonical",
       "icon": "ph-anchor",
-      "headline": "Eight marine cleaners for boats, docks, bilges, and boatyards.",
-      "marketing": "Wash boats, cut grease, remove scale, clear drains, brighten aluminum, or choose Purgo's certified antimicrobial chemistry—all with a marine-ready VertKleen label.",
+      "headline": "Eight marine products for boats, docks, bilges, and boatyards.",
+      "marketing": "Choose among eight marine products for routine washing, grease, scale, drains, aluminum, and label-directed antimicrobial cleaning.",
       "operating_outcome": "Choose the cleaner by job, check it on the surface, and keep wash water contained while you work.",
       "marine_brand_release": {
         "owner": "MASEST Consulting LLC",
@@ -1116,51 +1116,109 @@
           "name": "Scale Buster",
           "base_product": "hcr-t16",
           "sku": "VK-HCR-T16",
+          "job_focus": "Hard-water scale and rust on marine cooling and metal surfaces",
           "label": "docs/labels/marine/vertkleen-scale-buster-label.pdf"
         },
         {
           "name": "SeaVap Coil Kleener",
           "base_product": "descaler",
           "sku": "VK-DESC",
+          "job_focus": "Marine HVAC coils, heat exchangers, and water-side scale",
           "label": "docs/labels/marine/vertkleen-seavap-coil-kleener-label.pdf"
         },
         {
           "name": "Sea Drain Kleener",
           "base_product": "cr2",
           "sku": "VK-CR2",
+          "job_focus": "Drains, strainers, grates, and organic buildup",
           "label": "docs/labels/marine/vertkleen-sea-drain-kleener-label.pdf"
         },
         {
           "name": "MultiWash",
           "base_product": "multiwash",
           "sku": "VK-MW",
+          "job_focus": "Decks, vinyl, glass, and everyday marine grime",
           "label": "docs/labels/marine/vertkleen-multiwash-label.pdf"
         },
         {
           "name": "Marine Degreaser",
           "base_product": "crhd",
           "sku": "VK-CRHD",
+          "job_focus": "Bilges, engines, service floors, grease, and diesel soot",
           "label": "docs/labels/marine/vertkleen-marine-degreaser-label.pdf"
         },
         {
           "name": "AlumiBrite",
           "base_product": "alumibrite",
           "sku": "VK-ALB",
+          "job_focus": "Oxidized aluminum rails, pontoons, hardware, and trailers",
           "label": "docs/labels/marine/vertkleen-alumibrite-label.pdf"
         },
         {
           "name": "Marine Wash & Wax",
           "base_product": "torque",
           "sku": "VK-TRQ",
+          "job_focus": "Hulls, decks, topsides, and routine boat washing",
           "label": "docs/labels/marine/vertkleen-marine-wash-wax-label.pdf"
         },
         {
           "name": "Marine Antimicrobial",
           "base_product": "purgo",
           "sku": "VK-PRG",
+          "job_focus": "Label-directed control of odor-causing bacteria and other non-public-health microorganisms",
           "label": "docs/labels/marine/vertkleen-marine-antimicrobial-label.pdf"
         }
       ],
+      "product_selector": {
+        "prompt": "What are you cleaning?",
+        "helper": "Choose a job to highlight good starting points. All eight marine products remain visible.",
+        "jobs": [
+          {
+            "id": "scale-rust",
+            "label": "Scale & rust",
+            "products": [
+              "hcr-t16",
+              "descaler"
+            ]
+          },
+          {
+            "id": "drains",
+            "label": "Drains",
+            "products": [
+              "cr2"
+            ]
+          },
+          {
+            "id": "wash-wax",
+            "label": "Wash & wax",
+            "products": [
+              "multiwash",
+              "torque"
+            ]
+          },
+          {
+            "id": "grease-soot",
+            "label": "Grease & soot",
+            "products": [
+              "crhd"
+            ]
+          },
+          {
+            "id": "aluminum",
+            "label": "Aluminum",
+            "products": [
+              "alumibrite"
+            ]
+          },
+          {
+            "id": "antimicrobial",
+            "label": "Antimicrobial",
+            "products": [
+              "purgo"
+            ]
+          }
+        ]
+      },
       "cta_label": "Find my marine cleaner",
       "cta_type": "sample",
       "buyer_roles": [

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
+
+import { verifyCmsImages } from "../tools/build-image-library.mjs";
 
 import { normalizeContentEntry } from "../functions/_lib/content.js";
 import { normalizeStructuredPayload } from "../js/content-types.js";
@@ -210,6 +213,41 @@ test("image-library builder validates its ledger and verifies public CMS bytes",
   assert.match(builder, /createHash\("sha256"\)/);
   assert.match(builder, /--verify-cms/);
   assert.doesNotMatch(builder, /SUPABASE_SERVICE_ROLE_KEY|x-upsert|--sync-cms/);
+});
+
+test("CMS image verification retries bounded remote rate limits", async () => {
+  const body = Buffer.from("verified image bytes");
+  const delays = [];
+  let attempts = 0;
+  const asset = {
+    storage_path: "/img/test.webp",
+    mime_type: "image/webp",
+    byte_size: body.byteLength,
+    sha256: createHash("sha256").update(body).digest("hex"),
+  };
+
+  const result = await verifyCmsImages([asset], "https://media.example.test", {
+    concurrency: 1,
+    maxAttempts: 3,
+    sleep: async (milliseconds) => delays.push(milliseconds),
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts < 3) {
+        return new Response("rate limited", {
+          status: 429,
+          headers: { "Retry-After": "0" },
+        });
+      }
+      return new Response(body, {
+        status: 200,
+        headers: { "Content-Type": "image/webp" },
+      });
+    },
+  });
+
+  assert.equal(result.count, 1);
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [0, 0]);
 });
 
 test("local preview serves the production-compiled artifact", () => {

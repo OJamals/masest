@@ -204,7 +204,7 @@ function renderHeroFacts(industry) {
         <li><span>Start with</span><strong>${escapeHtml(industry.method)}</strong></li>
         <li><span>Products</span><strong>${renderProducts(industry)}</strong></li>
         <li><span>Before you start</span><strong>Read the label and SDS, then try a small area first</strong></li>
-        <li><a href="#applications-and-proof">See products, first-test plan, and results <span aria-hidden="true">↓</span></a></li>
+        <li><a href="#products-for-this-industry">See products, first-test plan, and results <span aria-hidden="true">↓</span></a></li>
       </ul>`;
 }
 
@@ -226,7 +226,8 @@ function resolveDocuments(industry, reviewByPath) {
       if (!document?.file) return false;
       const review = reviewByPath.get(document.file);
       if (!review) throw new Error(`${industry.slug}: unreviewed document ${document.file}`);
-      return documentAllowedOnSurface(review, "industry");
+      return documentAllowedOnSurface(review, "industry")
+        && documentSurfaceMode(review, "industry") === "download";
     });
     files.sort((left, right) => {
       const rank = (document) => {
@@ -250,7 +251,10 @@ function resolveDocuments(industry, reviewByPath) {
   for (const document of selected) {
     const review = reviewByPath.get(document.file);
     if (!review) throw new Error(`${industry.slug}: unreviewed document ${document.file}`);
-    if (!documentAllowedOnSurface(review, "industry")) {
+    if (
+      !documentAllowedOnSurface(review, "industry")
+      || documentSurfaceMode(review, "industry") !== "download"
+    ) {
       throw new Error(`${industry.slug}: unavailable industry document ${document.file}`);
     }
     if (!existsSync(new URL(document.file, root))) {
@@ -267,10 +271,15 @@ function renderProducts(industry) {
   return industry.products.map((productId) => {
     const product = PRODUCTS[productId];
     if (!product) throw new Error(`${industry.slug}: unknown product ${productId}`);
+    const approvedMarineProduct = industry.slug === "marine"
+      ? industry.approved_product_names?.find(({ base_product: baseProduct }) => baseProduct === productId)
+      : null;
+    const displayName = approvedMarineProduct?.name || product.name;
     const productPage = new URL(`products/${productId}.html`, root);
+    const marketQuery = industry.slug === "marine" ? "?market=marine" : "";
     return existsSync(productPage)
-      ? `<a href="../products/${escapeHtml(productId)}">${escapeHtml(product.name)}</a>`
-      : `<span>${escapeHtml(product.name)}</span>`;
+      ? `<a href="../products/${escapeHtml(productId)}${marketQuery}">${escapeHtml(displayName)}</a>`
+      : `<span>${escapeHtml(displayName)}</span>`;
   }).join(", ");
 }
 
@@ -364,9 +373,6 @@ function renderApplications(industry, allIndustries, documents) {
     const revision = documentRevision(control, documentReview.document_control);
     const effectiveDate = documentEffectiveDate(control, documentReview.document_control);
     const common = `data-document-id="${escapeHtml(control.document_id)}" data-document-revision="${escapeHtml(revision)}" data-document-effective="${escapeHtml(effectiveDate)}" data-document-skus="${escapeHtml(control.skus.join(" "))}" data-document-name="${escapeHtml(document.label)}"`;
-    if (documentSurfaceMode(control, "industry") === "request") {
-      return `<button class="doc-chip doc-request-button" type="button" data-document-request ${common} aria-label="Request ${escapeHtml(document.label)}"><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-request-state" data-document-request-label>Request file</span></button>`;
-    }
     return `<a class="doc-chip" href="../${escapeHtml(document.file)}" ${common} data-document-download target="_blank" rel="noopener" download><span class="doc-title">${escapeHtml(document.label)}</span><span class="doc-request-state">Download PDF</span></a>`;
   }).join("\n            ");
 
@@ -386,8 +392,8 @@ function renderApplications(industry, allIndustries, documents) {
       </dl>${renderTrialBrief(industry)}
       <div class="ind-proof-docs">
         <div>
-          <span class="eyebrow">SDS, labels & guides</span>
-          <h3>Download what you need or ask us for help.</h3>
+          <span class="eyebrow">Labels & guides</span>
+          <h3>Download current public product files.</h3>
         </div>
         <div class="doc-lib-links">
           ${documentLinks}
@@ -438,8 +444,9 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
   );
   const cta = renderCta(industry);
   const productMounts = html.match(/data-ind-products="[^"]*"/g) || [];
-  if (productMounts.length !== 1) {
-    throw new Error(`${industry.slug}: expected one recommended-product mount`);
+  const expectedProductMounts = industry.slug === "marine" ? 0 : 1;
+  if (productMounts.length !== expectedProductMounts) {
+    throw new Error(`${industry.slug}: expected ${expectedProductMounts} recommended-product mount(s)`);
   }
 
   html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
@@ -447,10 +454,12 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
     /css\/components\.css(?:\?v=[^"']+)?/g,
     `css/components.css?v=${COMPONENT_VERSION}`,
   );
-  html = html.replace(
-    /data-ind-products="[^"]*"/,
-    `data-ind-products="${escapeHtml(industry.products.join(" "))}"`,
-  );
+  if (expectedProductMounts) {
+    html = html.replace(
+      /data-ind-products="[^"]*"/,
+      `data-ind-products="${escapeHtml(industry.products.join(" "))}"`,
+    );
+  }
   let output = replaceMarker(html, "hero-facts", hero);
   if (output === null) {
     const heroSubhead = /(<section class="hero-split">[\s\S]*?<p class="subhead">[\s\S]*?<\/p>)/;

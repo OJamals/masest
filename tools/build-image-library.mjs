@@ -68,13 +68,59 @@ async function mapConcurrent(items, limit, worker) {
   await Promise.all(workers);
 }
 
-export async function verifyCmsImages(assets, base = cmsMediaBase()) {
+function sleep(milliseconds) {
+  return new Promise((resolveSleep) => setTimeout(resolveSleep, milliseconds));
+}
+
+function retryDelayMs(response, attempt) {
+  const retryAfter = String(response?.headers?.get("retry-after") || "").trim();
+  if (/^\d+(?:\.\d+)?$/.test(retryAfter)) {
+    return Math.min(15_000, Math.max(0, Math.round(Number(retryAfter) * 1_000)));
+  }
+
+  const retryAt = Date.parse(retryAfter);
+  if (Number.isFinite(retryAt)) return Math.min(15_000, Math.max(0, retryAt - Date.now()));
+  return Math.min(15_000, 1_000 * (2 ** attempt));
+}
+
+async function fetchCmsImage(url, { fetchImpl, maxAttempts, sleepImpl }) {
+  let lastError;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const response = await fetchImpl(url, { cache: "no-store" });
+      const retryable = response.status === 429 || response.status === 500
+        || response.status === 502 || response.status === 503 || response.status === 504;
+      if (response.ok || !retryable || attempt === maxAttempts - 1) return response;
+      await sleepImpl(retryDelayMs(response, attempt));
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxAttempts - 1) throw error;
+      await sleepImpl(Math.min(15_000, 1_000 * (2 ** attempt)));
+    }
+  }
+  throw lastError || new Error("CMS image fetch failed");
+}
+
+export async function verifyCmsImages(assets, base = cmsMediaBase(), options = {}) {
   const failures = [];
   let bytes = 0;
+  const fetchImpl = options.fetchImpl || fetch;
+  const sleepImpl = options.sleep || sleep;
+  const configuredConcurrency = Number.parseInt(
+    String(options.concurrency ?? process.env.CMS_IMAGE_VERIFY_CONCURRENCY ?? "4"),
+    10,
+  );
+  const configuredAttempts = Number.parseInt(String(options.maxAttempts ?? "4"), 10);
+  const concurrency = Math.min(8, Math.max(1, configuredConcurrency || 4));
+  const maxAttempts = Math.min(6, Math.max(1, configuredAttempts || 4));
 
-  await mapConcurrent(assets, 8, async (asset) => {
+  await mapConcurrent(assets, concurrency, async (asset) => {
     try {
-      const response = await fetch(`${base}${asset.storage_path}`, { cache: "no-store" });
+      const response = await fetchCmsImage(`${base}${asset.storage_path}`, {
+        fetchImpl,
+        maxAttempts,
+        sleepImpl,
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const body = Buffer.from(await response.arrayBuffer());
       const mime = String(response.headers.get("content-type") || "").split(";", 1)[0].trim();

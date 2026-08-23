@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260822c";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260823c";
 import { smoothPref } from "./engagement.js";
 
 function imageDimsAttr(src) {
@@ -42,6 +42,12 @@ const commerceState = {
 const COMMERCE_SKU_ALIASES = {
   crhd: "cr-hd",
 };
+
+export function adminCatalogHref(id) {
+  const key = String(id || "").trim().toLowerCase();
+  const sku = COMMERCE_SKU_ALIASES[key] || key;
+  return `/admin.html?product_q=${encodeURIComponent(sku)}#products`;
+}
 
 function commerceRowFor(id) {
   const key = String(id || "").toLowerCase();
@@ -206,7 +212,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
   // into the buyer cart creates a dead end because that route correctly rejects staff.
   if (document.documentElement.dataset.accountKind === "staff") {
     const staffClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-quote";
-    return `<a class="${staffClass} commerce-staff-admin" href="/admin.html#products"><i class="ph ph-package" aria-hidden="true"></i>Manage catalog</a>`;
+    return `<a class="${staffClass} commerce-staff-admin" href="${adminCatalogHref(id)}"><i class="ph ph-package" aria-hidden="true"></i>Manage catalog</a>`;
   }
   // Catalog still in flight → sized skeleton so the buy area isn't blank (and to avoid CLS
   // when the real control swaps in). refreshCommerceActions re-renders once the load settles.
@@ -348,6 +354,18 @@ function refreshCommerceMedia(root = document) {
   });
 }
 
+function productMarketContext() {
+  const market = new URLSearchParams(window.location.search).get("market");
+  if (market !== "marine") return null;
+  const marker = document.querySelector('[data-product-market="marine"]');
+  if (!marker) return null;
+  return {
+    market: "marine",
+    name: marker.dataset.productMarketName,
+    product: marker.dataset.productMarketProduct,
+  };
+}
+
 // Add the selected volume variant (or the button's default vsku) to the cart, with transient feedback.
 async function addToCartFromButton(button) {
   const wrap = button.closest("[data-commerce-buy]");
@@ -359,7 +377,7 @@ async function addToCartFromButton(button) {
   button.textContent = "Adding…";
   try {
     const cart = await import("../cart.js");
-    cart.add(vsku, 1);
+    cart.add(vsku, 1, productMarketContext());
     button.textContent = "Added";
     setTimeout(() => { button.textContent = label; button.disabled = false; }, 900);
   } catch (err) {

@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260822c">
+  <link rel="stylesheet" href="css/style.css?v=20260823f">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
   <link rel="stylesheet" href="css/components.css?v=20260822d">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260822c"></script>
+  <script type="module" src="js/main.js?v=20260823c"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -38,6 +38,7 @@
           <h1>Your cart</h1>
         </div>
         <div id="cartLines" class="cart-lines" aria-live="polite"></div>
+        <div id="cartUndo" class="cart-undo" role="status" aria-live="polite" aria-atomic="true" hidden></div>
       </div>
 
       <aside class="cart-summary" aria-labelledby="orderSummaryTitle" hidden>
@@ -106,7 +107,7 @@
   </section>
 </main>
 <script type="module">
-  import { items, remove, setQty } from "./js/cart.js";
+  import { items, presentationContext, remove, setQty } from "./js/cart.js";
   import { api, me, getToken } from "./js/auth.js?v=20260711w";
   import { safeUrl } from "./js/util.js";
   import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260821a";
@@ -142,6 +143,7 @@
           const label = p.label || "Each";
           vmap.set(p.vsku, {
             name: `${productName} - ${label}`,
+            productSku: parent.sku || p.product_sku || p.sku,
             price: p.price == null ? null : Number(p.price),
             currency: p.currency || parent.currency || "usd",
             imageUrl: parent.image_url || p.image_url || "",
@@ -155,6 +157,7 @@
         if (!variants.length) {
           vmap.set(p.sku, {
             name: p.name,
+            productSku: p.sku,
             price: p.price == null ? null : Number(p.price),
             currency: p.currency || "usd",
             imageUrl: p.image_url || "",
@@ -167,6 +170,7 @@
           if (!v || !v.vsku) return;
           vmap.set(v.vsku, {
             name: `${p.name} - ${v.label}`,
+            productSku: p.sku,
             price: v.price == null ? null : Number(v.price),
             currency: v.currency || p.currency || "usd",
             imageUrl: p.image_url || v.image_url || "",
@@ -179,6 +183,7 @@
   }
 
   const lines = document.getElementById("cartLines");
+  const cartUndo = document.getElementById("cartUndo");
   const estimate = document.getElementById("cartEstimate");
   const status = document.getElementById("cartStatus");
   const checkoutContinue = document.getElementById("checkoutContinue");
@@ -198,6 +203,22 @@
   // the lines change, so the Shipping row can never show a price for a different cart.
   let shipEstimate = null;
   const shipEstimateRequests = createShippingRequestCoordinator();
+  let removedLine = null;
+  let undoTimer = 0;
+
+  function productSlug(productSku) {
+    const raw = String(productSku || "").trim().toLowerCase();
+    const slug = raw === "cr-hd" ? "crhd" : raw;
+    return /^[a-z0-9-]{1,80}$/.test(slug) ? slug : "";
+  }
+
+  function productPath(productSku, context = null) {
+    const slug = productSlug(productSku);
+    if (!slug) return "";
+    const market = context?.market === "marine" ? "?market=marine" : "";
+    return `products/${encodeURIComponent(slug)}${market}`;
+  }
+
   function productName(sku) {
     const fallback = fallbackNames[String(sku).toLowerCase()];
     const name = vmap.get(sku)?.name || fallback || sku;
@@ -256,6 +277,10 @@
     lines.removeAttribute("aria-busy");
     lines.innerHTML = cartItems.map(item => {
       const meta = vmap.get(item.sku);
+      const storedContext = presentationContext(item.sku);
+      const context = storedContext?.product === productSlug(meta?.productSku)
+        ? storedContext
+        : null;
       const name = productName(item.sku);
       const detail = meta?.purchasable
         ? `${priceMoney(meta.price, meta.currency)} each`
@@ -265,6 +290,13 @@
       const safeSku = esc(item.sku);
       const safeName = esc(name);
       const safeDetail = esc(detail);
+      const detailPath = productPath(meta?.productSku, context);
+      const title = detailPath
+        ? `<h2><a class="cart-line-product-link" href="${detailPath}">${safeName}</a></h2>`
+        : `<h2>${safeName}</h2>`;
+      const marketContext = context?.market === "marine"
+        ? `<div class="cart-line-market"><span>Marine selection</span><strong>${esc(context.name)}</strong></div>`
+        : "";
       const imageUrl = safeUrl(meta?.imageUrl);
       const media = imageUrl && imageUrl !== "#"
         ? `<figure class="cart-line-media"><img src="${esc(imageUrl)}" alt="${esc(meta?.imageAlt || `${name} product photo`)}" width="80" height="88" loading="lazy" decoding="async"></figure>`
@@ -275,8 +307,9 @@
           ${media}
           <div>
             <span class="eyebrow">${safeSku}</span>
-            <h2>${safeName}</h2>
+            ${title}
             <p>${safeDetail}</p>
+            ${marketContext}
           </div>
         </div>
         <label>
@@ -354,6 +387,25 @@
     const hadEstimate = Boolean(shipEstimate);
     shipEstimate = null;
     if (hadEstimate) setEstimateNote("Cart changed. Estimate again for an updated rate.");
+  }
+
+  function clearUndo() {
+    window.clearTimeout(undoTimer);
+    undoTimer = 0;
+    removedLine = null;
+    if (cartUndo) {
+      cartUndo.hidden = true;
+      cartUndo.replaceChildren();
+    }
+  }
+
+  function offerUndo(item) {
+    if (!cartUndo || !item) return;
+    window.clearTimeout(undoTimer);
+    removedLine = { sku: item.sku, qty: item.qty, presentation: item.presentation || null };
+    cartUndo.innerHTML = `Removed <strong>${esc(productName(item.sku))}</strong>. <button class="btn btn-ghost btn-sm" type="button" data-undo-cart>Undo</button>`;
+    cartUndo.hidden = false;
+    undoTimer = window.setTimeout(clearUndo, 10000);
   }
 
   shipEstimateZip?.addEventListener("input", clearShipEstimate);
@@ -436,9 +488,22 @@
   lines.addEventListener("click", event => {
     const sku = event.target?.dataset?.remove;
     if (!sku) return;
+    const removedItem = items().find(item => item.sku === sku);
+    if (removedItem) removedItem.presentation = presentationContext(sku);
     remove(sku);
     clearShipEstimate();
     render();
+    offerUndo(removedItem);
+  });
+  cartUndo?.addEventListener("click", event => {
+    if (!event.target.closest("[data-undo-cart]") || !removedLine) return;
+    const restored = removedLine;
+    const current = items().find(item => item.sku === restored.sku);
+    setQty(restored.sku, (current?.qty || 0) + restored.qty, restored.presentation);
+    clearUndo();
+    clearShipEstimate();
+    render();
+    requestAnimationFrame(() => lines.querySelector(`[data-qty="${CSS.escape(restored.sku)}"]`)?.focus());
   });
   checkoutContinue.addEventListener("click", event => {
     if (checkoutContinue.getAttribute("aria-disabled") === "true") event.preventDefault();
