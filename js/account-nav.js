@@ -181,6 +181,13 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
   if (prev) prev.replaceWith(mount);
   else actions.insertBefore(mount, burger || null);
 
+  // Publish the resolved account kind so buyer controls can swap to staff work
+  // without re-fetching account state in every feature module. This is UI state,
+  // not an authorization boundary; APIs still enforce their own capabilities.
+  const accountKind = data?.can_admin === true ? 'staff' : data ? 'customer' : 'guest';
+  document.documentElement.dataset.accountKind = accountKind;
+  document.dispatchEvent(new CustomEvent('masest:account-role', { detail: { accountKind } }));
+
   // Unread notification badge on the avatar (non-blocking; signed-in full accounts only).
   // Not for staff: it counts a buyer's own order and message alerts, and staff have no
   // Notifications destination to open — theirs is the support console's own inbox.

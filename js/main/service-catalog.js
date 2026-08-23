@@ -73,9 +73,9 @@ const CATEGORY_COPY = {
 
 function normalizeText(value) {
   return String(value || "")
-    .replace(/[\u2013\u2014]/g, " - ")
+    .replace(/\s*[\u2013\u2014]\s*/g, " - ")
     .replace(/[·•]/g, " / ")
-    .replace(/\s*-\s*/g, " - ")
+    .replace(/\s+-\s+/g, " - ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -433,4 +433,4 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { loadPricingData } from "./pricing-data.js?v=20260822a";
+import { loadPricingData } from "./pricing-data.js?v=20260822b";

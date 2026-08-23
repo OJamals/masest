@@ -6,18 +6,19 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260822a";
+const MAIN_RELEASE = "20260822b";
 const ADMIN_RELEASE = "20260821a";
 const ADMIN_PAGE_RELEASE = "20260821a";
 const ADMIN_CHROME_RELEASE = "20260821a";
 const CHROME_RELEASE = MAIN_RELEASE;
-const ACCOUNT_NAV_RELEASE = "20260821a";
-const CUSTOMER_CHAT_RELEASE = "20260821a";
+const ACCOUNT_NAV_RELEASE = "20260822b";
+const CUSTOMER_CHAT_RELEASE = "20260822b";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260719c";
 const CONTENT_RELEASE = "20260821a";
 const STORY_RELEASE = "20260726a";
-// The shared support console sits in both module graphs, so it rides ADMIN_RELEASE.
-const SUPPORT_RELEASE = ADMIN_RELEASE;
+const PUBLIC_SUPPORT_RELEASE = "20260822b";
+const ADMIN_SUPPORT_RELEASE = ADMIN_RELEASE;
+const ADMIN_SUPPORT_STYLE_RELEASE = "20260822b";
 const MAIN_RELEASE_OVERRIDES = new Map();
 
 function filesUnder(path) {
@@ -80,9 +81,9 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/main.js"), new RegExp(`main/chrome\\.js\\?v=${CHROME_RELEASE}`));
   assert.match(read("js/main/chrome.js"), new RegExp(`customer-chat\\.js\\?v=${CUSTOMER_CHAT_RELEASE}`));
   assert.match(read("js/customer-chat.js"), new RegExp(`customer-chat\\.css\\?v=${CUSTOMER_CHAT_STYLE_RELEASE}`));
-  assert.match(read("js/customer-chat.js"), new RegExp(`admin-support\\.js\\?v=${SUPPORT_RELEASE}`));
-  assert.match(read("js/admin/threads.js"), new RegExp(`admin-support\\.js\\?v=${SUPPORT_RELEASE}`));
-  assert.match(read("js/admin-support.js"), new RegExp(`admin-support\\.css\\?v=${SUPPORT_RELEASE}`));
+  assert.match(read("js/customer-chat.js"), new RegExp(`admin-support\\.js\\?v=${PUBLIC_SUPPORT_RELEASE}`));
+  assert.match(read("js/admin/threads.js"), new RegExp(`admin-support\\.js\\?v=${ADMIN_SUPPORT_RELEASE}`));
+  assert.match(read("js/admin-support.js"), new RegExp(`admin-support\\.css\\?v=${ADMIN_SUPPORT_STYLE_RELEASE}`));
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("products/hcr.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("index.html"), new RegExp(`story\\.css\\?v=${STORY_RELEASE}`));

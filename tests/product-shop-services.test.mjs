@@ -121,6 +121,33 @@ test("products page is shop-focused and routes services to a standalone page", a
   });
 });
 
+test("service catalog preserves customer-facing compound words", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    try {
+      await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".service-card");
+      const copy = await page.locator(".service-panels").textContent();
+
+      for (const phrase of [
+        "boiler-feed water",
+        "chilled-water chemistry",
+        "closed-loop water",
+        "cooling-tower water",
+        "hard-to-reach equipment",
+        "high-magnification microscope",
+        "sprinkler-system water",
+      ]) {
+        assert.match(copy, new RegExp(phrase), `service copy should preserve ${phrase}`);
+      }
+      assert.doesNotMatch(copy, /\b(?:boiler|chilled|closed|cooling|hard|high|sprinkler)\s+-\s+(?:feed|water|loop|tower|to|magnification|system)\b/i);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("product cards expose price, volume, and add-to-cart as one buying block", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
@@ -182,6 +209,51 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
       );
       assert.equal(cardStates.some((card) => card.id === "eg5050"), false, "retired glycol SKUs should not render in the confirmed catalog");
       assert.deepEqual(apiErrors, []);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("staff product pages route commerce work to catalog management", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.addInitScript(() => {
+      window.MASEST_ENABLE_LOCAL_API = true;
+      localStorage.setItem("sb-test-auth-token", "staff-session");
+    });
+    await page.route("**/js/auth.js*", (route) => route.fulfill({
+      status: 200,
+      contentType: "text/javascript",
+      body: `
+        export async function getToken() { return "staff-token"; }
+        export async function me() { return { email: "staff@example.test", profile: { full_name: "Avery Staff" }, staff: { role: "admin" }, can_admin: true }; }
+        export async function api() { return { messages: [], threads: [], unread: 0 }; }
+        export async function logout() {}
+        export const supabase = { auth: { async getSession() { return { data: { session: { access_token: "staff-token" } }, error: null }; } } };
+      `,
+    }));
+    await page.route("**/api/products", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(apiProductsPayload()),
+    }));
+    await routePricing(page);
+
+    try {
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".nav-account");
+      await page.waitForSelector(".shop-card-buybar");
+
+      assert.equal(await page.locator("html").getAttribute("data-account-kind"), "staff");
+      assert.equal(await page.locator("[data-cart-add]").count(), 0, "staff should not receive buyer cart controls");
+      assert.ok(await page.locator('a[href="/admin.html#products"]').count() > 0, "staff should receive a forward path to catalog management");
+
+      const support = page.locator(".site-support__launcher");
+      await support.waitFor();
+      const bounds = await support.boundingBox();
+      assert.ok(bounds && bounds.width <= 56, `mobile staff support launcher should stay compact: ${JSON.stringify(bounds)}`);
     } finally {
       await browser.close();
     }

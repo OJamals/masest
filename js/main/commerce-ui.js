@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260822a";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260822b";
 import { smoothPref } from "./engagement.js";
 
 function imageDimsAttr(src) {
@@ -202,6 +202,12 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
   if (QUOTE_FIRST_IDS.includes(String(id || "").toLowerCase())) return "";
   // Static-only hosting suppresses commerce; the card's "View details" link is the path.
   if (isLocalStaticCommerceSuppressed()) return "";
+  // Staff manage inventory and customer orders in the admin console. Sending them
+  // into the buyer cart creates a dead end because that route correctly rejects staff.
+  if (document.documentElement.dataset.accountKind === "staff") {
+    const staffClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-quote";
+    return `<a class="${staffClass} commerce-staff-admin" href="/admin.html#products"><i class="ph ph-package" aria-hidden="true"></i>Manage catalog</a>`;
+  }
   // Catalog still in flight → sized skeleton so the buy area isn't blank (and to avoid CLS
   // when the real control swaps in). refreshCommerceActions re-renders once the load settles.
   if (!commerceState.loaded) {
@@ -440,6 +446,8 @@ export function catalogCard(id, eager = false) {
 }
 
 export function initCartButtons() {
+  document.addEventListener("masest:account-role", () => refreshCommerceActions(document));
+
   document.addEventListener("click", e => {
     const button = e.target.closest("[data-cart-add]");
     if (!button || button.closest("#shopGrid")) return;
