@@ -56,7 +56,8 @@ test("document room keeps downloads instant while offering revision notification
   assert.match(resources, /id="docNotifyEmail"/, "document room should expose an optional email field");
   assert.match(resources, /Notify me when this document is revised\./);
   assert.match(resources, /data-document-download/);
-  assert.match(resources, /data-document-name="VertKleen Marine Antimicrobial Label"/, "download links should carry document names");
+  assert.match(resources, /data-document-name="[^"]+"[^>]*data-document-download/, "public download links should carry document names");
+  assert.doesNotMatch(resources, /docs\/labels\/marine|VertKleen Marine Antimicrobial Label/, "internal marine artwork must stay out of the document room");
   assert.doesNotMatch(resources, /required[^>]*id="docNotifyEmail"/, "revision email must stay optional");
 });
 

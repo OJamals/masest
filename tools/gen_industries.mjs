@@ -10,12 +10,6 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { organizationJsonLd } from "./company-identity.mjs";
-import {
-  documentAllowedOnSurface,
-  documentEffectiveDate,
-  documentRevision,
-  documentSurfaceMode,
-} from "./public-document-policy.mjs";
 import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -25,12 +19,6 @@ const { industries: INDUSTRY_APPLICATIONS } = JSON.parse(
 );
 const { assets: SITE_IMAGES } = JSON.parse(
   readFileSync(resolve(HERE, "..", "data", "content", "site-images.json"), "utf8"),
-);
-const DOCUMENT_REVIEW = JSON.parse(
-  readFileSync(resolve(HERE, "..", "data", "public-document-review.json"), "utf8"),
-);
-const DOCUMENT_BY_PATH = new Map(
-  DOCUMENT_REVIEW.documents.map((document) => [document.path, document]),
 );
 const INDUSTRY_APPLICATIONS_BY_SLUG = new Map(
   INDUSTRY_APPLICATIONS.map((industry) => [industry.slug, industry]),
@@ -343,29 +331,9 @@ const INDUSTRY_LABEL_VARIANTS = {
   "golf-courses": ["gym-multiwash", "gym-purgo"],
 };
 
-const MARINE_PRODUCT_IMAGES = {
-  "hcr-t16": "hvac-hcr-studio.webp",
-  descaler: "descaler-studio.webp",
-  cr2: "hvac-cr-studio.webp",
-  multiwash: "multiwash-gym-studio.webp",
-  crhd: "crhd-studio.webp",
-  alumibrite: "alumibrite-studio.webp",
-  torque: "torque-studio.webp",
-  purgo: "purgo-studio.webp",
-};
 const marineApplication = INDUSTRY_APPLICATIONS_BY_SLUG.get("marine");
 const marineProductSelector = marineApplication?.product_selector;
 const MARINE_JOBS_BY_PRODUCT = new Map();
-const MARINE_BASE_NAMES = {
-  "hcr-t16": "HCR-T16",
-  descaler: "Descaler",
-  cr2: "CR2",
-  multiwash: "MultiWash",
-  crhd: "CR HD",
-  alumibrite: "AlumiBrite",
-  torque: "Torque",
-  purgo: "Purgo",
-};
 if (marineApplication?.approved_product_names?.length) {
   const approvedProductIds = new Set(
     marineApplication.approved_product_names.map(({ base_product: baseProduct }) => baseProduct),
@@ -391,24 +359,15 @@ if (marineApplication?.approved_product_names?.length) {
 
   INDUSTRY_LABEL_VARIANTS.marine = marineApplication.approved_product_names.map((approved) => {
     const key = `marine-${approved.base_product}`;
-    const image = MARINE_PRODUCT_IMAGES[approved.base_product];
-    if (!image) throw new Error(`Missing marine product image: ${approved.base_product}`);
-    const labelDocument = DOCUMENT_BY_PATH.get(approved.label);
-    if (
-      !labelDocument
-      || !documentAllowedOnSurface(labelDocument, "industry")
-      || documentSurfaceMode(labelDocument, "industry") !== "download"
-    ) {
-      throw new Error(`Marine label must be a public download: ${approved.label}`);
+    if (!/^img\/products\/vertkleen-.+-marine-studio\.webp$/.test(approved.image || "")) {
+      throw new Error(`Missing final marine product image: ${approved.base_product}`);
     }
     LABEL_VARIANTS[key] = {
-      market: "Marine cleaner",
+      market: "Marine product",
       name: approved.name,
-      subtitle: `Marine label for VertKleen ${MARINE_BASE_NAMES[approved.base_product] || approved.base_product}`,
-      image,
+      subtitle: "For boats, marinas & boatyards",
+      image: approved.image,
       productHref: approved.base_product,
-      labelPath: approved.label,
-      labelDocument,
       jobFocus: approved.job_focus,
       jobs: MARINE_JOBS_BY_PRODUCT.get(approved.base_product),
       directions: [],
@@ -428,18 +387,12 @@ function labelVariantCard(key) {
         <ul class="product-fit-list" aria-label="${htmlText(variant.name)} label directions">${directions}</ul>`
     : variant.jobFocus
       ? `<p class="label-card-note"><strong>Start here for:</strong> ${htmlText(variant.jobFocus)}.</p>`
-      : `<p class="label-card-note">Open the label for directions, mixing, and surface guidance.</p>`;
-  const labelAction = variant.labelPath
-    ? `<a class="btn btn-secondary" href="../${htmlAttr(variant.labelPath)}" data-document-id="${htmlAttr(variant.labelDocument.document_id)}" data-document-revision="${htmlAttr(documentRevision(variant.labelDocument, DOCUMENT_REVIEW.document_control))}" data-document-effective="${htmlAttr(documentEffectiveDate(variant.labelDocument, DOCUMENT_REVIEW.document_control))}" data-document-skus="${htmlAttr(variant.labelDocument.skus.join(" "))}" data-document-name="${htmlAttr(variant.labelDocument.title)}" data-document-download target="_blank" rel="noopener" download aria-label="Download ${htmlAttr(variant.labelDocument.title)} (PDF)">Open marine label PDF</a>`
-    : "";
-  const packagingNote = variant.labelPath
-    ? `\n        <small class="label-packaging-note">Base VertKleen packaging shown · exact marine label PDF below</small>`
-    : "";
+      : `<p class="label-card-note">See product details for directions, mixing, and surface guidance.</p>`;
   const productQuery = variant.jobs?.length ? "?market=marine" : "";
-  const productAction = `<a class="btn btn-primary" href="../products/${variant.productHref}${productQuery}">${variant.labelPath ? "See sizes &amp; pricing" : "See product details"}</a>`;
-  const productActions = [productAction, labelAction].filter(Boolean).join("\n          ");
-  const imageAlt = variant.labelPath
-    ? `VertKleen ${MARINE_BASE_NAMES[variant.productHref] || variant.name} base-product packaging`
+  const productAction = `<a class="btn btn-primary" href="../products/${variant.productHref}${productQuery}">${variant.jobs?.length ? "See sizes &amp; pricing" : "See product details"}</a>`;
+  const imagePath = variant.image.includes("/") ? `../${variant.image}` : `../img/products/${variant.image}`;
+  const imageAlt = variant.jobs?.length
+    ? `${variant.name} marine product jug`
     : `${variant.name} ${variant.market} jug`;
 
   const marineAttributes = variant.jobs?.length
@@ -447,13 +400,13 @@ function labelVariantCard(key) {
     : "";
 
   return `<article class="prod-card" data-label-variant="${key}"${marineAttributes}>
-        <img class="product-shot" src="../img/products/${variant.image}" alt="${htmlAttr(imageAlt)}" width="900" height="1200" loading="lazy">${packagingNote}
+        <img class="product-shot" src="${htmlAttr(imagePath)}" alt="${htmlAttr(imageAlt)}" width="900" height="1200" loading="lazy">
         <span class="catalog-type">${variant.market}</span>
         <h3>${htmlText(variant.name)}</h3>
         <div class="replaces">${htmlText(variant.subtitle)}</div>
         ${directionsBlock}
         <div class="prod-actions">
-          ${productActions}
+          ${productAction}
         </div>
       </article>`;
 }
@@ -487,9 +440,9 @@ function industryLabelVariantsBlock(ind) {
   return `\n<section class="section section-slim"${marine ? ' id="products-for-this-industry" data-marine-product-selector data-selected-job="all"' : ""} data-industry-label-variants="${ind.slug}">
     <div class="wrap">
       <div class="section-head">
-        <span class="eyebrow">${marine ? "VertKleen marine cleaners" : "Labels for your work"}</span>
-        <h2 class="headline">${marine ? "Choose the marine cleaner by job." : "Use the label made for this job."}</h2>
-        <p class="subhead">${marine ? "Eight marine labels map to existing VertKleen formulas. Cards show base-product packaging; open each PDF for the exact marine label and directions." : "Choose the label for the job, then open the product page for details, pricing, and help."}</p>
+        <span class="eyebrow">${marine ? "VertKleen marine line" : "Labels for your work"}</span>
+        <h2 class="headline">${marine ? "Pick the right bottle for the job." : "Use the label made for this job."}</h2>
+        <p class="subhead">${marine ? "Eight marine products. Choose the job, compare good starting points, then see sizes and pricing." : "Choose the label for the job, then open the product page for details, pricing, and help."}</p>
       </div>
 ${marineProductSelectorBlock(ind)}      <div class="prod-grid prod-grid-rec">
       ${cards}
@@ -715,7 +668,7 @@ ${recommendedProductsBlock(ind)}${industryLabelVariantsBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js?v=20260823c"></script>
+<script type="module" src="../js/main.js?v=20260823d"></script>
 </body>
 </html>
 `;

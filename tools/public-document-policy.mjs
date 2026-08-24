@@ -23,6 +23,7 @@ const SENSITIVE_FLAGS = new Set([
   "named_approval",
   "commercial_terms",
   "publication_permission_missing",
+  "internal_artwork",
 ]);
 
 function isSensitive(document) {
@@ -267,6 +268,7 @@ export function validatePublicDocumentReview(
       || labelRelease.approved_by_role !== "Owner"
       || labelRelease.status !== "approved_for_public_distribution"
       || labelRelease.marine_naming_status !== "owner_approved_marketing_names"
+      || labelRelease.marine_artwork_visibility !== "internal_source_only"
       || !/^\d{4}-\d{2}-\d{2}$/.test(labelRelease.approved_on || "")
       || !/^\d+\.\d+$/.test(labelRelease.revision || "")
       || !/^\d{4}-\d{2}-\d{2}$/.test(labelRelease.effective_date || "")
@@ -290,6 +292,7 @@ export function validatePublicDocumentReview(
       || releaseControl.revision !== labelRelease.revision
       || releaseControl.effective_date !== labelRelease.effective_date
       || releaseControl.marine_naming_status !== labelRelease.marine_naming_status
+      || releaseControl.marine_artwork_visibility !== labelRelease.marine_artwork_visibility
       || !hasText(releaseControl.trademark_scope)
       || !Array.isArray(manifest.labels)
       || manifest.labels.length === 0
@@ -316,7 +319,9 @@ export function validatePublicDocumentReview(
         || document.collection !== label.collection
         || !LABEL_COLLECTIONS.has(document.collection)
         || document.status !== "resource_only"
-        || document.flags.length !== 0
+        || JSON.stringify(document.flags) !== JSON.stringify(
+          document.collection === "marine" ? ["internal_artwork"] : [],
+        )
         || documentRevision(document, control) !== labelRelease.revision
         || documentEffectiveDate(document, control) !== labelRelease.effective_date
       ) {

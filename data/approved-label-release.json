@@ -9,6 +9,7 @@
     "source_root_ref": "~/Desktop/masest/updates",
     "artwork_rule": "Publish the approved source artwork without visual alteration; add only the machine-readable MASEST document-control marker.",
     "marine_naming_status": "owner_approved_marketing_names",
+    "marine_artwork_visibility": "internal_source_only",
     "trademark_scope": "Owner approval records permission to use the supplied marine names and artwork. It does not assert registration or legal clearance by a trademark authority."
   },
   "labels": [

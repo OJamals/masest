@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260823c";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260823d";
 import { smoothPref } from "./engagement.js";
 
 function imageDimsAttr(src) {
@@ -332,10 +332,28 @@ function commerceMediaFor(id) {
   };
 }
 
+function productMarketMarker() {
+  const market = new URLSearchParams(window.location.search).get("market");
+  if (market !== "marine") return null;
+  return document.querySelector('[data-product-market="marine"]');
+}
+
+function productMarketMedia() {
+  const marker = productMarketMarker();
+  const src = marker?.dataset.productMarketImage || "";
+  if (!src) return null;
+  return {
+    src,
+    alt: marker.dataset.productMarketImageAlt || `${marker.dataset.productMarketName} marine product jug`,
+  };
+}
+
 function refreshCommerceMedia(root = document) {
   root.querySelectorAll(".shop-card[data-id], [data-commerce-media]").forEach(container => {
     const isDetail = container.hasAttribute("data-commerce-media");
-    const media = commerceMediaFor(isDetail ? container.dataset.commerceMedia : container.dataset.id);
+    const media = isDetail
+      ? productMarketMedia() || commerceMediaFor(container.dataset.commerceMedia)
+      : commerceMediaFor(container.dataset.id);
     if (!media.src) return;
     const slot = isDetail ? container : container.querySelector(".shop-card-media");
     if (!slot) return;
@@ -355,9 +373,7 @@ function refreshCommerceMedia(root = document) {
 }
 
 function productMarketContext() {
-  const market = new URLSearchParams(window.location.search).get("market");
-  if (market !== "marine") return null;
-  const marker = document.querySelector('[data-product-market="marine"]');
+  const marker = productMarketMarker();
   if (!marker) return null;
   return {
     market: "marine",

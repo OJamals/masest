@@ -51,7 +51,6 @@ export const PRODUCTS = {
     ],
     docs: [
       { label: "HVAC Product Label", file: "docs/labels/hvac/vertkleen-hvac-hcr-label-6x8.pdf" },
-      { label: "Marine Label: Scale Buster", file: "docs/labels/marine/vertkleen-scale-buster-label.pdf" },
       "Bulk HCR Program Profile",
       "HCR Product Guide"
     ]
@@ -110,7 +109,6 @@ export const PRODUCTS = {
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-multiwash-sds.pdf" },
       { label: "General Product Label", file: "docs/labels/general/vertkleen-multiwash-label-6x8.pdf" },
-      { label: "Marine Product Label", file: "docs/labels/marine/vertkleen-multiwash-label.pdf" },
     ]
   },
   watersafe60: {
@@ -149,7 +147,6 @@ export const PRODUCTS = {
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-purgo-sds.pdf" },
-      { label: "Marine Label: Marine Antimicrobial", file: "docs/labels/marine/vertkleen-marine-antimicrobial-label.pdf" },
       { label: "Bacterial Persistence Test", file: "docs/sds/vertkleen-purgo-bacterial-persistence-test.pdf" },
       "Treatment Program Data Package"
     ]
@@ -185,7 +182,6 @@ export const PRODUCTS = {
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-crhd-sds.pdf" },
       { label: "General Product Label", file: "docs/labels/general/vertkleen-crhd-label-6x8.pdf" },
-      { label: "Marine Label: Marine Degreaser", file: "docs/labels/marine/vertkleen-marine-degreaser-label.pdf" },
       { label: "Degreaser Comparison", file: "docs/sds/vertkleen-crhd-degreaser-comparison.pdf" },
       "CR HD Job Test Guide"
     ]
@@ -207,7 +203,6 @@ export const PRODUCTS = {
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-descaler-sds.pdf" },
       { label: "HVAC Product Label", file: "docs/labels/hvac/vertkleen-hvac-descaler-label-6x8.pdf" },
-      { label: "Marine Label: SeaVap Coil Kleener", file: "docs/labels/marine/vertkleen-seavap-coil-kleener-label.pdf" },
       "Descaler vs Acids Corrosion Data"
     ]
   },
@@ -227,7 +222,6 @@ export const PRODUCTS = {
     ],
     docs: [
       "Safety Data Sheet (SDS)",
-      { label: "Marine Product Label", file: "docs/labels/marine/vertkleen-alumibrite-label.pdf" },
       "Product Application Guide"
     ]
   },
@@ -247,8 +241,7 @@ export const PRODUCTS = {
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-torque-sds.pdf" },
-      { label: "General Product Label", file: "docs/labels/general/vertkleen-torque-label-4x5.pdf" },
-      { label: "Marine Label: Marine Wash & Wax", file: "docs/labels/marine/vertkleen-marine-wash-wax-label.pdf" }
+      { label: "General Product Label", file: "docs/labels/general/vertkleen-torque-label-4x5.pdf" }
     ]
   },
   lam3: {
@@ -318,7 +311,6 @@ export const PRODUCTS = {
     ],
     docs: [
       { label: "HVAC Product Label", file: "docs/labels/hvac/vertkleen-hvac-cr-label-6x8.pdf" },
-      { label: "Marine Label: Sea Drain Kleener", file: "docs/labels/marine/vertkleen-sea-drain-kleener-label.pdf" },
       "Safety Data Sheet (SDS)"
     ]
   },

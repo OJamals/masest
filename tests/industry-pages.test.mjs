@@ -507,7 +507,7 @@ test('industry hero product CTA lands on the visible product selector', () => {
   }
 });
 
-test('marine route presents one job-first product set with exact label links', () => {
+test('marine route presents one job-first product set with final product packshots', () => {
   const marine = industries.find((industry) => industry.slug === 'marine');
   const html = read('industries/marine.html');
   const css = read('css/style.css');
@@ -517,14 +517,14 @@ test('marine route presents one job-first product set with exact label links', (
 
   assert.doesNotMatch(html, /data-ind-products=/, 'do not show duplicate base-product grid');
   assert.equal((section.match(/data-label-variant="marine-/g) || []).length, 8);
-  assert.equal((section.match(/>Open marine label PDF</g) || []).length, 8);
+  assert.equal((section.match(/>Open marine label PDF</g) || []).length, 0);
   assert.equal((section.match(/data-marine-product-job=/g) || []).length, 7);
   assert.equal((section.match(/data-marine-product-card/g) || []).length, 8);
-  assert.match(section, /Choose the marine cleaner by job\./);
+  assert.match(section, /Pick the right bottle for the job\./);
   assert.match(section, /What are you cleaning\?/);
   assert.match(section, /Showing all 8 marine cleaners\./);
   assert.match(section, /All 8/);
-  assert.match(section, /Base VertKleen packaging shown/);
+  assert.doesNotMatch(section, /Base VertKleen packaging shown|label PDF|docs\/labels\/marine|label-packaging-note/i);
   assert.doesNotMatch(section, /technical review|revision is in progress/i);
   assert.doesNotMatch(section, /exact VertKleen cleaner shown on its card/);
   assert.doesNotMatch(section, /data-marine-product-card[^>]*\bhidden\b/);
@@ -547,9 +547,14 @@ test('marine route presents one job-first product set with exact label links', (
     const card = section.match(
       new RegExp(`<article[^>]+data-label-variant="${key}"[\\s\\S]*?<\\/article>`),
     )?.[0] || '';
+    assert.equal(approved.label, undefined, `${approved.name}: customer data must not expose a label field`);
+    assert.match(approved.artwork_source, /^docs\/labels\/marine\/.+\.pdf$/);
+    assert.match(approved.image, /^img\/products\/vertkleen-.+-marine-studio\.webp$/);
     assert.match(card, new RegExp(approved.job_focus.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.match(card, new RegExp(`href="\\.\\.\\/${approved.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
-    assert.match(card, />Open marine label PDF</);
+    assert.match(card, new RegExp(`src="\\.\\.\\/${approved.image.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.match(card, new RegExp(`alt="${`${approved.name} marine product jug`.replaceAll('&', '&amp;').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+    assert.doesNotMatch(card, new RegExp(approved.artwork_source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.equal((card.match(/class="btn /g) || []).length, 1, `${approved.name}: one product CTA, no document CTA`);
     assert.match(card, />See sizes &amp; pricing</);
     assert.match(card, /data-marine-jobs="[^"]+"/);
     assert.match(card, new RegExp(`href="\\.\\.\\/products\\/${approved.base_product}\\?market=marine"`));
@@ -877,10 +882,7 @@ test('industry proof links resolve locally and exclude restricted customer recor
     )?.[1] || '';
     const documents = [...module.matchAll(/href="\.\.\/(docs\/[^"]+\.pdf)"/g)]
       .map((match) => match[1]);
-    assert.ok(
-      documents.length >= 2,
-      `${slug}: at least two direct public document links required`,
-    );
+    assert.ok(documents.length >= 1, `${slug}: at least one relevant public document link required`);
     for (const document of documents) {
       assert.equal(restrictedDocuments.has(document), false, `${slug}: restricted ${document}`);
       assert.ok(existsSync(new URL(document, root)), `${slug}: missing ${document}`);

@@ -77,6 +77,29 @@ test("generated product routes own the complete public detail surface", () => {
   }
 });
 
+test("marine product routes expose final packshot context without label-document links", () => {
+  const marine = JSON.parse(readProject("data/industry-applications.json"))
+    .industries.find(({ slug }) => slug === "marine");
+
+  for (const product of marine.approved_product_names) {
+    const html = readProject(`products/${product.base_product}.html`);
+    assert.match(
+      html,
+      new RegExp(`data-product-market-image="\\/${product.image.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`),
+      `${product.name}: marine query context must carry its final packshot`,
+    );
+    assert.match(
+      html,
+      new RegExp(`data-product-market-image-alt="${`${product.name} marine product jug`.replaceAll("&", "&amp;").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`),
+    );
+    assert.doesNotMatch(html, /docs\/labels\/marine|Open marine label PDF/i);
+  }
+
+  const commerce = readProject("js/main/commerce-ui.js");
+  assert.match(commerce, /marker\.dataset\.productMarketImage/);
+  assert.match(commerce, /marker\.dataset\.productMarketImageAlt/);
+});
+
 test("product pages show job scenes outside proof", () => {
   const applicationImages = {
     alumibrite: "alumibrite-aluminum-test-patch-v1.webp",

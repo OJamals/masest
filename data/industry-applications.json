@@ -1117,56 +1117,64 @@
           "base_product": "hcr-t16",
           "sku": "VK-HCR-T16",
           "job_focus": "Hard-water scale and rust on marine cooling and metal surfaces",
-          "label": "docs/labels/marine/vertkleen-scale-buster-label.pdf"
+          "image": "img/products/vertkleen-scale-buster-marine-studio.webp",
+          "artwork_source": "docs/labels/marine/vertkleen-scale-buster-label.pdf"
         },
         {
           "name": "SeaVap Coil Kleener",
           "base_product": "descaler",
           "sku": "VK-DESC",
           "job_focus": "Marine HVAC coils, heat exchangers, and water-side scale",
-          "label": "docs/labels/marine/vertkleen-seavap-coil-kleener-label.pdf"
+          "image": "img/products/vertkleen-seavap-coil-kleener-marine-studio.webp",
+          "artwork_source": "docs/labels/marine/vertkleen-seavap-coil-kleener-label.pdf"
         },
         {
           "name": "Sea Drain Kleener",
           "base_product": "cr2",
           "sku": "VK-CR2",
           "job_focus": "Drains, strainers, grates, and organic buildup",
-          "label": "docs/labels/marine/vertkleen-sea-drain-kleener-label.pdf"
+          "image": "img/products/vertkleen-sea-drain-kleener-marine-studio.webp",
+          "artwork_source": "docs/labels/marine/vertkleen-sea-drain-kleener-label.pdf"
         },
         {
           "name": "MultiWash",
           "base_product": "multiwash",
           "sku": "VK-MW",
           "job_focus": "Decks, vinyl, glass, and everyday marine grime",
-          "label": "docs/labels/marine/vertkleen-multiwash-label.pdf"
+          "image": "img/products/vertkleen-multiwash-marine-studio.webp",
+          "artwork_source": "docs/labels/marine/vertkleen-multiwash-label.pdf"
         },
         {
           "name": "Marine Degreaser",
           "base_product": "crhd",
           "sku": "VK-CRHD",
           "job_focus": "Bilges, engines, service floors, grease, and diesel soot",
-          "label": "docs/labels/marine/vertkleen-marine-degreaser-label.pdf"
+          "image": "img/products/vertkleen-marine-degreaser-marine-studio.webp",
+          "artwork_source": "docs/labels/marine/vertkleen-marine-degreaser-label.pdf"
         },
         {
           "name": "AlumiBrite",
           "base_product": "alumibrite",
           "sku": "VK-ALB",
           "job_focus": "Oxidized aluminum rails, pontoons, hardware, and trailers",
-          "label": "docs/labels/marine/vertkleen-alumibrite-label.pdf"
+          "image": "img/products/vertkleen-alumibrite-marine-studio.webp",
+          "artwork_source": "docs/labels/marine/vertkleen-alumibrite-label.pdf"
         },
         {
           "name": "Marine Wash & Wax",
           "base_product": "torque",
           "sku": "VK-TRQ",
           "job_focus": "Hulls, decks, topsides, and routine boat washing",
-          "label": "docs/labels/marine/vertkleen-marine-wash-wax-label.pdf"
+          "image": "img/products/vertkleen-marine-wash-wax-marine-studio.webp",
+          "artwork_source": "docs/labels/marine/vertkleen-marine-wash-wax-label.pdf"
         },
         {
           "name": "Marine Antimicrobial",
           "base_product": "purgo",
           "sku": "VK-PRG",
           "job_focus": "Label-directed control of odor-causing bacteria and other non-public-health microorganisms",
-          "label": "docs/labels/marine/vertkleen-marine-antimicrobial-label.pdf"
+          "image": "img/products/vertkleen-marine-antimicrobial-marine-studio.webp",
+          "artwork_source": "docs/labels/marine/vertkleen-marine-antimicrobial-label.pdf"
         }
       ],
       "product_selector": {

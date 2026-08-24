@@ -31,6 +31,7 @@ const sensitivityFlags = new Set([
   "named_approval",
   "commercial_terms",
   "publication_permission_missing",
+  "internal_artwork",
 ]);
 
 function filesUnder(path) {
@@ -122,11 +123,11 @@ test("approved PDF ledger covers the exact current document bytes", () => {
         distribution,
         documents.filter((document) => documentDistribution(document) === distribution).length,
       ])),
-    { public: 34, request_only: 30, internal: 0 },
+    { public: 25, request_only: 30, internal: 9 },
   );
 });
 
-test("August label release publishes 10 channel labels and nine organized marine files", () => {
+test("August label release publishes 10 channel labels and keeps nine marine artwork sources internal", () => {
   const review = JSON.parse(read("data/public-document-review.json"));
   const release = review.label_release;
   const manifest = JSON.parse(read(release.manifest));
@@ -136,6 +137,7 @@ test("August label release publishes 10 channel labels and nine organized marine
   assert.equal(release.owner, "MASEST Consulting LLC");
   assert.equal(release.status, "approved_for_public_distribution");
   assert.equal(release.marine_naming_status, "owner_approved_marketing_names");
+  assert.equal(release.marine_artwork_visibility, "internal_source_only");
   assert.match(release.trademark_scope, /registration.*not asserted/i);
   assert.equal(manifest.labels.length, 19);
   assert.equal(released.length, 19);
@@ -144,12 +146,13 @@ test("August label release publishes 10 channel labels and nine organized marine
   assert.equal(released.filter(({ source_page }) => Number.isInteger(source_page)).length, 8);
   for (const document of released) {
     assert.equal(document.status, "resource_only");
-    assert.deepEqual(document.flags, []);
+    const marineArtwork = document.collection === "marine";
+    assert.deepEqual(document.flags, marineArtwork ? ["internal_artwork"] : []);
     assert.equal(document.revision, release.revision);
     assert.equal(document.effective_date, release.effective_date);
     assert.match(document.source, /^updates\/.+\.pdf$/);
     assert.match(document.path, /^docs\/labels\/(?:cip|general|hvac|marine)\/.+\.pdf$/);
-    assert.equal(documentDistribution(document), "public");
+    assert.equal(documentDistribution(document), marineArtwork ? "internal" : "public");
   }
 });
 
@@ -158,7 +161,7 @@ test("resource label library separates current and earlier public files without 
   const labels = resources.match(/data-document-category="labels"([\s\S]*?)<\/section>/)?.[1] || "";
 
   assert.match(labels, /Find the right label for your VertKleen product and application/);
-  assert.match(labels, /data-document-group="marine"[\s\S]*?9 files/);
+  assert.doesNotMatch(labels, /data-document-group="marine"|docs\/labels\/marine/i);
   assert.match(labels, /data-document-group="hvac"[\s\S]*?3 files/);
   assert.match(labels, /data-document-group="cip"[\s\S]*?2 files/);
   assert.match(labels, /data-document-group="general"[\s\S]*?5 files/);
@@ -167,9 +170,10 @@ test("resource label library separates current and earlier public files without 
   assert.doesNotMatch(labels, /Earlier product labels[\s\S]*?current files/);
 });
 
-test("customer-facing pages show direct downloads only, never document access gates", () => {
+test("customer-facing pages show direct downloads only, never gates or internal marine artwork", () => {
   const pages = [
     "resources.html",
+    "js/main/catalog-data.js",
     ...filesUnder("products/").filter((path) => path.endsWith(".html")),
     ...filesUnder("industries/").filter((path) => path.endsWith(".html")),
   ];
@@ -177,6 +181,7 @@ test("customer-facing pages show direct downloads only, never document access ga
   for (const page of pages) {
     const html = read(page);
     assert.doesNotMatch(html, /data-document-request|Request file|Sign in to request/i, `${page}: document gate`);
+    assert.doesNotMatch(html, /docs\/labels\/marine|Open marine label PDF|exact marine label PDF/i, `${page}: internal marine artwork`);
   }
 });
 
@@ -675,6 +680,10 @@ test("approved documents publish while technical sheets remain request-only", ()
     .filter((document) => documentDistribution(document) === "request_only")
     .map((document) => document.path)
     .sort();
+  const internal = review.documents
+    .filter((document) => documentDistribution(document) === "internal")
+    .map((document) => document.path)
+    .sort();
 
   const retiredPaths = [
     "docs/trinidad-tank-cleaning-test.pdf",
@@ -728,6 +737,9 @@ test("approved documents publish while technical sheets remain request-only", ()
     }
     for (const path of requestOnly) {
       assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must remain request-only`);
+    }
+    for (const path of internal) {
+      assert.equal(existsSync(new URL(`dist/${path}`, root)), false, `${path} must remain internal`);
     }
     for (const path of publicDocuments) {
       assert.equal(existsSync(new URL(`dist/${path}`, root)), true, `${path} must publish`);

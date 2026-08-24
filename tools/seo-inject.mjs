@@ -654,8 +654,11 @@ function productSchema(id, product, reviewsSnapshot) {
 function productPage(id, product, reviewsSnapshot) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
   const marineProduct = MARINE_PRODUCT_NAMES_BY_BASE.get(id);
+  if (marineProduct && !/^img\/products\/vertkleen-.+-marine-studio\.webp$/.test(marineProduct.image || "")) {
+    throw new Error(`Missing final marine product image for ${id}`);
+  }
   const marineAlias = marineProduct
-    ? `\n        <a class="product-market-alias" href="../industries/marine#products-for-this-industry" data-product-market="marine" data-product-market-name="${attr(marineProduct.name)}" data-product-market-product="${attr(id)}" aria-label="See ${attr(marineProduct.name)} in the VertKleen marine line">
+    ? `\n        <a class="product-market-alias" href="../industries/marine#products-for-this-industry" data-product-market="marine" data-product-market-name="${attr(marineProduct.name)}" data-product-market-product="${attr(id)}" data-product-market-image="/${attr(marineProduct.image)}" data-product-market-image-alt="${attr(marineProduct.name)} marine product jug" aria-label="See ${attr(marineProduct.name)} in the VertKleen marine line">
           <span>Marine line</span><b>${text(marineProduct.name)}</b><small>${text(marineProduct.job_focus)}</small>
         </a>`
     : "";
@@ -836,7 +839,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   </section>
   ${contentPageMount(`products/${id}`)}
 </main>
-<script type="module" src="../js/main.js?v=20260823c"></script>
+<script type="module" src="../js/main.js?v=20260823d"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>
