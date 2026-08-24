@@ -1179,7 +1179,7 @@
       ],
       "product_selector": {
         "prompt": "What are you cleaning?",
-        "helper": "Choose a job to highlight good starting points. All eight marine products remain visible.",
+        "helper": "Choose a job to put good starting points first. All eight marine products remain available.",
         "jobs": [
           {
             "id": "scale-rust",

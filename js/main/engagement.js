@@ -280,6 +280,20 @@ export function marineProductMatches(cardJobs, selectedJob) {
   return job === "all" || discoveryTokens(cardJobs).has(job);
 }
 
+export function prioritizeMarineProductCards(cards, selectedJob) {
+  const orderedCards = Array.from(cards || []);
+  const job = String(selectedJob || "all");
+  if (job === "all") return orderedCards;
+
+  const matches = [];
+  const remaining = [];
+  orderedCards.forEach((card) => {
+    const group = marineProductMatches(card?.dataset?.marineJobs, job) ? matches : remaining;
+    group.push(card);
+  });
+  return [...matches, ...remaining];
+}
+
 export function initMarineProductSelector() {
   const root = document.querySelector("[data-marine-product-selector]");
   if (!root || root.dataset.marineProductSelectorWired === "true") return;
@@ -302,7 +316,8 @@ export function initMarineProductSelector() {
 
   const applyJob = (job) => {
     const selectedJob = controlsByJob.has(job) ? job : "all";
-    let matchCount = 0;
+    const label = controlsByJob.get(selectedJob)?.textContent?.trim() || "Selected job";
+    const matchNames = [];
     root.dataset.selectedJob = selectedJob;
 
     controls.forEach((control) => {
@@ -312,18 +327,41 @@ export function initMarineProductSelector() {
     });
 
     cards.forEach((card) => {
-      const matches = marineProductMatches(card.dataset.marineJobs, selectedJob);
+      const matches = selectedJob !== "all"
+        && marineProductMatches(card.dataset.marineJobs, selectedJob);
       card.classList.toggle("is-marine-match", matches);
-      if (matches) matchCount += 1;
+
+      const catalogType = card.querySelector(".catalog-type");
+      if (catalogType) {
+        catalogType.dataset.defaultText ||= catalogType.textContent?.trim() || "Marine product";
+        catalogType.textContent = matches
+          ? `Recommended for ${label}`
+          : catalogType.dataset.defaultText;
+      }
+
+      if (matches) {
+        const name = card.querySelector("h3")?.textContent?.trim();
+        if (name) matchNames.push(name);
+      }
     });
+
+    const cardGrid = cards[0]?.parentElement;
+    prioritizeMarineProductCards(cards, selectedJob)
+      .forEach((card) => cardGrid?.append(card));
 
     if (!status) return;
     if (selectedJob === "all") {
       status.textContent = `Showing all ${cards.length} marine cleaners.`;
       return;
     }
-    const label = controlsByJob.get(selectedJob)?.textContent?.trim() || "Selected job";
-    status.textContent = `${matchCount} ${matchCount === 1 ? "starting point" : "starting points"} highlighted for ${label}. All ${cards.length} products remain visible.`;
+    if (!matchNames.length) {
+      status.textContent = `No direct starting point mapped for ${label}. All ${cards.length} products remain available.`;
+      return;
+    }
+    const names = matchNames.length === 1
+      ? matchNames[0]
+      : `${matchNames.slice(0, -1).join(", ")} and ${matchNames[matchNames.length - 1]}`;
+    status.textContent = `${names} ${matchNames.length === 1 ? "is" : "are"} shown first for ${label}. All ${cards.length} products remain available.`;
   };
 
   controls.forEach((control) => {
