@@ -1125,7 +1125,7 @@
           "base_product": "descaler",
           "sku": "VK-DESC",
           "job_focus": "Marine HVAC coils, heat exchangers, and water-side scale",
-          "image": "img/products/vertkleen-seavap-coil-kleener-marine-studio.webp",
+          "image": "img/products/vertkleen-seavap-coil-kleener-v2-marine-studio.webp",
           "artwork_source": "docs/labels/marine/vertkleen-seavap-coil-kleener-label.pdf"
         },
         {
@@ -1133,7 +1133,7 @@
           "base_product": "cr2",
           "sku": "VK-CR2",
           "job_focus": "Drains, strainers, grates, and organic buildup",
-          "image": "img/products/vertkleen-sea-drain-kleener-marine-studio.webp",
+          "image": "img/products/vertkleen-sea-drain-kleener-v2-marine-studio.webp",
           "artwork_source": "docs/labels/marine/vertkleen-sea-drain-kleener-label.pdf"
         },
         {
@@ -1141,7 +1141,7 @@
           "base_product": "multiwash",
           "sku": "VK-MW",
           "job_focus": "Decks, vinyl, glass, and everyday marine grime",
-          "image": "img/products/vertkleen-multiwash-marine-studio.webp",
+          "image": "img/products/vertkleen-multiwash-v2-marine-studio.webp",
           "artwork_source": "docs/labels/marine/vertkleen-multiwash-label.pdf"
         },
         {
@@ -1149,7 +1149,7 @@
           "base_product": "crhd",
           "sku": "VK-CRHD",
           "job_focus": "Bilges, engines, service floors, grease, and diesel soot",
-          "image": "img/products/vertkleen-marine-degreaser-marine-studio.webp",
+          "image": "img/products/vertkleen-marine-degreaser-v2-marine-studio.webp",
           "artwork_source": "docs/labels/marine/vertkleen-marine-degreaser-label.pdf"
         },
         {
@@ -1157,7 +1157,7 @@
           "base_product": "alumibrite",
           "sku": "VK-ALB",
           "job_focus": "Oxidized aluminum rails, pontoons, hardware, and trailers",
-          "image": "img/products/vertkleen-alumibrite-marine-studio.webp",
+          "image": "img/products/vertkleen-alumibrite-v2-marine-studio.webp",
           "artwork_source": "docs/labels/marine/vertkleen-alumibrite-label.pdf"
         },
         {
