@@ -23,13 +23,15 @@ function rowMarkup(row) {
   const quote = row.quote_only
     ? `<a class="btn btn-secondary btn-sm" href="contact?type=quote&amp;sku=${encodeURIComponent(row.sku)}" aria-label="Request quote for ${label}">Request quote</a>`
     : `<a class="segment-buyable" href="${productPath(row)}" aria-label="Buy small pack of ${label}">Buy small pack</a>`;
+  const perGallon = row.quote_only ? '—' : money(row.price_per_gallon, row.currency);
+  const unitPrice = row.quote_only ? 'Quoted' : money(row.price_per_unit, row.currency);
   return `
     <tr data-segment-pricing-row>
       <th scope="row" data-label="Product"><b>${escapeHtml(row.product)}</b><span>${escapeHtml(row.sku)}</span></th>
       <td data-label="Application">${escapeHtml(row.application)}</td>
       <td data-label="Pack">${escapeHtml(row.pack)}</td>
-      <td data-label="Price / gal"><strong>${money(row.price_per_gallon, row.currency)}</strong><span>per gal</span></td>
-      <td data-label="Unit price"><strong>${money(row.price_per_unit, row.currency)}</strong><span>per unit</span></td>
+      <td data-label="Price / gal"><strong>${perGallon}</strong>${row.quote_only ? '' : '<span>per gal</span>'}</td>
+      <td data-label="Unit price"><strong>${unitPrice}</strong>${row.quote_only ? '<span>request pricing</span>' : '<span>per unit</span>'}</td>
       <td data-label="Action">${quote}</td>
     </tr>`;
 }
@@ -90,8 +92,9 @@ export async function initSegmentPricing(root = document) {
         ...segment,
         rows: (segment.rows || []).flatMap((row) => {
         const variant = liveBySku.get(row.sku);
+        if (row.quote_only) return [{ ...row, currency: pricing.currency || "usd" }];
         const price = variant?.tiers?.[tier];
-        if (price == null) return [];
+        if (variant?.active === false || price == null) return [];
         return [{
           ...row,
           currency: pricing.currency || "usd",
@@ -108,4 +111,4 @@ export async function initSegmentPricing(root = document) {
 }
 
 initSegmentPricing();
-import { loadPricingData } from "./pricing-data.js?v=20260824a";
+import { loadPricingData } from "./pricing-data.js?v=20260824b";

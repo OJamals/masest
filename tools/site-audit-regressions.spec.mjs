@@ -71,13 +71,13 @@ test("desktop header begins after tablet collapse without overlap", async ({ pag
 test("mobile catalog starts concise and expands without hiding search results", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/products.html#catalog`, { waitUntil: "domcontentloaded" });
-  await expect(page.locator("#shopGrid .shop-card")).toHaveCount(15);
+  await expect(page.locator("#shopGrid .shop-card")).toHaveCount(16);
   await expect(page.locator("#shopGrid .shop-card:visible")).toHaveCount(6);
   await expect(page.locator("#shopMore")).toBeVisible();
-  await expect(page.locator("#shopMore")).toContainText("9 more");
+  await expect(page.locator("#shopMore")).toContainText("10 more");
 
   await page.locator("#shopMore").click();
-  await expect(page.locator("#shopGrid .shop-card:visible")).toHaveCount(15);
+  await expect(page.locator("#shopGrid .shop-card:visible")).toHaveCount(16);
   await expect(page.locator("#shopMore")).toBeHidden();
 
   await page.locator("#shopSearch").fill("descaler");

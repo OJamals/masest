@@ -10,6 +10,7 @@ import { pathToFileURL } from "node:url";
 
 const REVIEW_URL = new URL("../data/update-bundle-review.json", import.meta.url);
 const CATALOG_URL = new URL("../data/catalog.seed.json", import.meta.url);
+const PRICING_PUBLICATION_URL = new URL("../data/vertkleen-website-publish-2026-v4.1.json", import.meta.url);
 const SAFE_PATH = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))(?!.*[\\\0])[\s\S]+$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const SOURCE_STATUS = "approved_commercial_source";
@@ -18,6 +19,8 @@ const COMMERCE_STATUS = "active_quote_offer";
 const SOURCE_PRICE_STATUS = "owner_approved_current_price";
 const CHECKOUT_MODE = "quote_required";
 const MAPPING_STATUS = "exact_catalog_product";
+const ACTIVE_PRICING_STATUS = "approved_current";
+const HELD_PRICING_STATUS = "held_for_repricing";
 const FORBIDDEN_COMMERCE_FIELDS = [
   "active",
   "public_visible",
@@ -87,6 +90,98 @@ const validateMoney = (value, field, conceptId) => {
   }
 };
 
+function validateHeldBundleReview(review, sourceIds) {
+  const control = review.review_control;
+  const publication = JSON.parse(readFileSync(PRICING_PUBLICATION_URL, "utf8"));
+  const superseding = control.superseding_pricing_source;
+  if (
+    superseding?.file !== publication.source?.file
+    || superseding?.version !== publication.source?.version
+    || superseding?.sha256 !== publication.source?.sha256
+  ) {
+    throw new Error("update_bundle:superseding_pricing_source_mismatch");
+  }
+  if (publication.policy?.online_promotion?.code !== "VK5" || publication.policy?.online_promotion?.percent_off !== 5) {
+    throw new Error("update_bundle:superseding_promotion_policy_mismatch");
+  }
+
+  const conceptIds = new Set();
+  const conceptSlugs = new Set();
+  const bundleSkus = new Set();
+  for (const [index, concept] of review.bundle_concepts.entries()) {
+    const conceptId = requiredText(concept?.concept_id, `bundle_concepts.${index}.concept_id`);
+    const slug = requiredText(concept.slug, `${conceptId}.slug`);
+    const bundleSku = requiredText(concept.bundle_sku, `${conceptId}.bundle_sku`);
+    if (!/^MAS-UPD-BUNDLE-\d{3}$/.test(conceptId) || conceptIds.has(conceptId)) {
+      throw new Error(`update_bundle:${conceptId}:concept_id_invalid_or_duplicate`);
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || conceptSlugs.has(slug)) {
+      throw new Error(`update_bundle:${conceptId}:slug_invalid_or_duplicate`);
+    }
+    if (!/^VK-BND-[A-Z0-9]+(?:-[A-Z0-9]+)*-4X1G$/.test(bundleSku) || bundleSkus.has(bundleSku)) {
+      throw new Error(`update_bundle:${conceptId}:bundle_sku_invalid_or_duplicate`);
+    }
+    requiredText(concept.name, `${conceptId}.name`);
+    requiredText(concept.public_summary, `${conceptId}.public_summary`);
+    if (concept.public_status !== HELD_PRICING_STATUS) {
+      throw new Error(`update_bundle:${conceptId}:held_public_status_invalid`);
+    }
+    if (concept.commerce_status !== "inactive") {
+      throw new Error(`update_bundle:${conceptId}:held_commerce_status_invalid`);
+    }
+    if (concept.checkout_mode !== CHECKOUT_MODE) {
+      throw new Error(`update_bundle:${conceptId}:checkout_mode_must_remain_quote_required`);
+    }
+    if (concept.source_price_status !== "superseded_by_v4.1_external") {
+      throw new Error(`update_bundle:${conceptId}:held_source_price_status_invalid`);
+    }
+    if (Object.hasOwn(concept, "approved_price_minor") || Object.hasOwn(concept, "current_approved_price_minor")) {
+      throw new Error(`update_bundle:${conceptId}:current_bundle_price_forbidden_while_held`);
+    }
+    validateMoney(concept.superseded_approved_price_minor, "superseded_approved_price_minor", conceptId);
+    validateMoney(concept.source_bundle_price_minor, "source_bundle_price_minor", conceptId);
+    validateMoney(concept.source_separate_price_minor, "source_separate_price_minor", conceptId);
+    validateMoney(concept.source_stated_savings_minor, "source_stated_savings_minor", conceptId);
+    if (concept.source_separate_price_minor - concept.source_bundle_price_minor !== concept.source_stated_savings_minor) {
+      throw new Error(`update_bundle:${conceptId}:source_price_math_mismatch`);
+    }
+    if (
+      concept.commercial_approval?.status !== "superseded"
+      || concept.commercial_approval?.approved_by_role !== "Owner"
+      || concept.commercial_approval?.superseded_on !== control.effective_date
+    ) {
+      throw new Error(`update_bundle:${conceptId}:superseded_approval_invalid`);
+    }
+    if (
+      !Array.isArray(concept.source_document_ids)
+      || concept.source_document_ids.length < 1
+      || concept.source_document_ids.some((sourceId) => !sourceIds.has(sourceId))
+    ) {
+      throw new Error(`update_bundle:${conceptId}:source_document_reference_invalid`);
+    }
+    if (
+      !Array.isArray(concept.component_variant_skus)
+      || concept.component_variant_skus.length !== 4
+      || new Set(concept.component_variant_skus).size !== 4
+      || !Array.isArray(concept.source_components)
+      || concept.source_components.length !== 4
+    ) {
+      throw new Error(`update_bundle:${conceptId}:historical_components_invalid`);
+    }
+    const sourceTotal = concept.source_components.reduce((sum, component) => {
+      validateMoney(component.source_unit_price_minor, "source_unit_price_minor", conceptId);
+      return sum + component.source_unit_price_minor;
+    }, 0);
+    if (sourceTotal !== concept.source_separate_price_minor) {
+      throw new Error(`update_bundle:${conceptId}:component_price_math_mismatch`);
+    }
+    conceptIds.add(conceptId);
+    conceptSlugs.add(slug);
+    bundleSkus.add(bundleSku);
+  }
+  return [];
+}
+
 export function validateUpdateBundleReview(review, { sourceRoot } = {}) {
   if (!review || typeof review !== "object" || Array.isArray(review)) {
     throw new Error("update_bundle:review_object_required");
@@ -134,6 +229,12 @@ export function validateUpdateBundleReview(review, { sourceRoot } = {}) {
 
   if (!Array.isArray(review.bundle_concepts) || review.bundle_concepts.length !== 5) {
     throw new Error("update_bundle:five_bundle_concepts_required");
+  }
+  if (control.pricing_status === HELD_PRICING_STATUS) {
+    return validateHeldBundleReview(review, sourceIds);
+  }
+  if (control.pricing_status !== ACTIVE_PRICING_STATUS) {
+    throw new Error("update_bundle:pricing_status_invalid");
   }
   const catalog = catalogRecords();
   const conceptIds = new Set();
@@ -276,6 +377,6 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
   const availableRoot = existsSync(sourceRoot) ? sourceRoot : undefined;
   const concepts = validateUpdateBundleReview(review, { sourceRoot: availableRoot });
   console.log(
-    `update-bundle-policy: ${concepts.length} priced bundle quote offers; ${availableRoot ? "source bytes verified" : "schema verified (source root unavailable)"}`,
+    `update-bundle-policy: ${concepts.length} current priced bundle quote offers; ${availableRoot ? "source bytes verified" : "schema verified (source root unavailable)"}`,
   );
 }

@@ -89,7 +89,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         <div class="product-admin-fields">
         <label>Name <input class="adm-input" name="product_name" autocomplete="off" value="${esc(p.name)}" data-field="name"></label>
         <label>Mode <select class="adm-select" name="product_mode" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></label>
-        <label>Price <output class="adm-managed-price" aria-label="Workbook-managed product price">${p.price == null ? 'Workbook managed' : esc(money(p.price, p.currency || 'usd'))}</output></label>
+        <label>Price <output class="adm-managed-price" aria-label="Pricing-workspace-managed product price">${p.price == null ? 'Pricing workspace' : esc(money(p.price, p.currency || 'usd'))}</output></label>
         <label>Stock <input class="adm-input" name="product_stock" type="number" min="0" step="1" value="${esc(p.stock ?? '')}" data-field="stock"></label>
         <label>HMIS <input class="adm-input" name="product_hmis" autocomplete="off" value="${esc(p.hmis || '')}" data-field="hmis" placeholder="H-F-R e.g. 2-0-1…"></label>
         <label>Group key <input class="adm-input" name="product_group_key" autocomplete="off" value="${esc(p.group_key || '')}" data-field="group_key" placeholder="Groups related SKUs…"></label>
@@ -210,15 +210,16 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     if (!variants.length) return '<span class="muted">No variants</span>';
     return `<div class="variant-stack">${variants.map((v) => `
     <div class="variant-row" data-variant="${esc(v.vsku)}">
+      <p class="variant-meta"><span class="badge">${esc(v.market || 'industrial')}</span> <span class="badge">${esc(v.package_kind || 'unit')}</span>${v.activation_blocker ? ' <span class="badge" data-s="pending">awaiting parcel profile</span>' : ''}</p>
       <label>Label <input class="adm-input" name="variant_label" autocomplete="off" value="${esc(v.label || '')}" data-vfield="label" aria-label="Variant label"></label>
       <label>Gallons <input class="adm-input" name="variant_gallons" type="number" min="0" step="0.01" value="${esc(v.gallons ?? '')}" data-vfield="gallons" aria-label="Gallons"></label>
-      <label>Price <output class="adm-managed-price" aria-label="Workbook-managed variant price">${v.price == null ? 'Workbook managed' : esc(money(v.price, v.currency || product.currency || 'usd'))}</output></label>
+      <label>Price <output class="adm-managed-price" aria-label="Pricing-workspace-managed variant price">${v.price == null ? 'Pricing workspace' : esc(money(v.price, v.currency || product.currency || 'usd'))}</output></label>
       <label>Stock <input class="adm-input" name="variant_stock" type="number" min="0" step="1" value="${esc(v.stock ?? '')}" data-vfield="stock" aria-label="Variant stock"></label>
       <label>Ship lb <input class="adm-input" name="variant_shipping_weight_lb" type="number" min="0.001" step="0.001" value="${esc(v.shipping_weight_lb ?? '')}" data-vfield="shipping_weight_lb" aria-label="Shipping weight pounds"></label>
       <label>Length in <input class="adm-input" name="variant_shipping_length_in" type="number" min="0.01" step="0.01" value="${esc(v.shipping_length_in ?? '')}" data-vfield="shipping_length_in" aria-label="Package length inches"></label>
       <label>Width in <input class="adm-input" name="variant_shipping_width_in" type="number" min="0.01" step="0.01" value="${esc(v.shipping_width_in ?? '')}" data-vfield="shipping_width_in" aria-label="Package width inches"></label>
       <label>Height in <input class="adm-input" name="variant_shipping_height_in" type="number" min="0.01" step="0.01" value="${esc(v.shipping_height_in ?? '')}" data-vfield="shipping_height_in" aria-label="Package height inches"></label>
-      <label class="variant-active"><input type="checkbox" name="variant_active" ${v.active !== false ? 'checked' : ''} data-vfield="active"> Active</label>
+      <label class="variant-active"><input type="checkbox" name="variant_active" ${v.active !== false ? 'checked' : ''} ${v.requires_quote ? 'disabled' : ''} data-vfield="active"> ${v.requires_quote ? 'Quote only' : 'Active'}</label>
       <button class="btn btn-primary btn-sm" data-save-variant="${esc(v.vsku)}" type="button">Save</button>
       <button class="btn btn-ghost btn-sm" data-remove-variant="${esc(v.vsku)}" type="button">Remove</button>
       <input type="hidden" name="variant_product_sku" value="${esc(v.product_sku || product.sku)}" data-vfield="product_sku">

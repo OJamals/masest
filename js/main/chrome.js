@@ -253,12 +253,17 @@ export function renderChrome({
         setLeadVisible(!entries[0]?.isIntersecting);
       });
       leadObserver.observe(leadSentinel);
-      const shopGrid = document.getElementById("shopGrid");
-      if (shopGrid) {
-        const shopObserver = new IntersectionObserver(entries => {
-          setLeadSuppressed(entries.some(entry => entry.isIntersecting));
+      const leadSuppressionTargets = document.querySelectorAll("#shopGrid, [data-marine-product-selector]");
+      if (leadSuppressionTargets.length) {
+        const visibleLeadSuppressionTargets = new Set();
+        const leadSuppressionObserver = new IntersectionObserver(entries => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) visibleLeadSuppressionTargets.add(entry.target);
+            else visibleLeadSuppressionTargets.delete(entry.target);
+          });
+          setLeadSuppressed(visibleLeadSuppressionTargets.size > 0);
         }, { rootMargin: "0px 0px -96px 0px", threshold: 0.01 });
-        shopObserver.observe(shopGrid);
+        leadSuppressionTargets.forEach((target) => leadSuppressionObserver.observe(target));
       }
     } else {
       setLeadVisible(true);

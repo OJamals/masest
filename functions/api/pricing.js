@@ -6,7 +6,7 @@ export async function onRequestGet({ env }) {
   const [variantsResult, tiersResult, servicesResult, programsResult] = await Promise.all([
     sb
       .from("product_variants")
-      .select("vsku,product_sku,label,gallons,active,products(name)")
+      .select("vsku,product_sku,label,gallons,active,market,package_kind,marketing_name,units_per_case,unit_vsku,requires_quote,pricing_source_version,products(name)")
       .order("product_sku", { ascending: true })
       .order("sort", { ascending: true }),
     sb

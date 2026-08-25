@@ -14,10 +14,13 @@ as $$
 declare
   v_tier text;
   v_price numeric(12,2);
+  v_floor numeric(12,2);
 begin
-  if not exists (
-    select 1 from public.product_variants where vsku = p_vsku
-  ) then
+  select minimum_checkout_price into v_floor
+  from public.product_variants
+  where vsku = p_vsku;
+
+  if not found then
     raise exception 'variant_not_found' using errcode = 'P0002';
   end if;
 
@@ -39,6 +42,9 @@ begin
     v_price := (p_tiers ->> v_tier)::numeric(12,2);
     if v_price < 0 then
       raise exception 'price_must_be_non_negative' using errcode = '22003';
+    end if;
+    if v_floor is not null and v_price < v_floor then
+      raise exception 'price_below_minimum_checkout' using errcode = '22003';
     end if;
 
     insert into public.price_tiers (vsku, tier, price, currency, updated_at)

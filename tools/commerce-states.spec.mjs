@@ -64,7 +64,7 @@ test("zero-result product search offers a contextual chemical-audit handoff", as
   await page.locator("#shopSearch").fill("acetone");
 
   await expect(page.locator("#shopEmpty")).toBeVisible();
-  await expect(page.locator("#shopCount")).toHaveText("Showing 0 of 15");
+  await expect(page.locator("#shopCount")).toHaveText("Showing 0 of 16");
 
   const handoff = page.locator("#shopEmptyContact");
   await expect(handoff).toBeVisible();

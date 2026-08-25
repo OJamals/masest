@@ -5,7 +5,7 @@ export async function loadPublicProductPricing(env, productSku) {
   const sb = adminClient(env);
   const variantsResult = await sb
     .from("product_variants")
-    .select("vsku,product_sku,label,gallons,active,stock,track_stock,allow_backorder,products(name,mode,active),price_tiers(tier,price)")
+    .select("vsku,product_sku,label,gallons,active,stock,track_stock,allow_backorder,market,package_kind,marketing_name,units_per_case,unit_vsku,requires_quote,pricing_source_version,products(name,mode,active),price_tiers(tier,price)")
     .eq("product_sku", productSku)
     .eq("active", true)
     .order("sort", { ascending: true });

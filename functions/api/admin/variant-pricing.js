@@ -17,7 +17,7 @@ export async function onRequest({ request, env }) {
   if (request.method === 'GET') {
     const { data: variants, error } = await sb
       .from('product_variants')
-      .select('vsku,product_sku,label,price,currency,active,sort,products(name,mode)')
+      .select('vsku,product_sku,label,price,currency,active,sort,market,package_kind,marketing_name,minimum_checkout_price,intended_active,activation_blocker,requires_quote,products(name,mode)')
       .order('product_sku', { ascending: true })
       .order('sort', { ascending: true });
     if (error) return json(500, { error: error.message });
@@ -41,9 +41,17 @@ export async function onRequest({ request, env }) {
     const rows = (variants || []).map((v) => ({
       vsku: v.vsku,
       product_sku: v.product_sku,
-      product_name: v.products?.name || v.product_sku,
+      product_name: v.marketing_name || v.products?.name || v.product_sku,
       mode: v.products?.mode || 'quote',
       label: v.label,
+      market: v.market || 'industrial',
+      package_kind: v.package_kind || 'unit',
+      minimum_checkout_price: v.minimum_checkout_price == null
+        ? null
+        : Number(v.minimum_checkout_price),
+      intended_active: v.intended_active !== false,
+      activation_blocker: v.activation_blocker || null,
+      requires_quote: v.requires_quote === true,
       base_price: v.price == null ? null : Number(v.price),
       currency: v.currency || 'usd',
       active: v.active,
@@ -83,6 +91,12 @@ export async function onRequest({ request, env }) {
         p_tiers: update.tiers,
       });
       if (error?.code === 'P0002') return json(404, { error: 'variant_not_found' });
+      if (error?.message?.includes('price_below_minimum_checkout')) {
+        return json(409, {
+          error: 'price_below_minimum_checkout',
+          message: 'Price cannot be lower than this SKU minimum checkout price.',
+        });
+      }
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true, resource: update.resource, vsku: update.vsku });
     }

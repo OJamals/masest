@@ -19,7 +19,7 @@ const BASE_COLUMNS = [
   'sort',
 ];
 const MEDIA_COLUMNS = ['image_url', 'photo_alt', 'gallery'];
-const VARIANT_SELECT = 'product_variants(id,vsku,product_sku,label,gallons,price,currency,stripe_price_id,stock,track_stock,active,sort,shipping_weight_lb,shipping_length_in,shipping_width_in,shipping_height_in)';
+const VARIANT_SELECT = 'product_variants(id,vsku,product_sku,label,gallons,price,currency,stripe_price_id,stock,track_stock,active,sort,shipping_weight_lb,shipping_length_in,shipping_width_in,shipping_height_in,market,package_kind,marketing_name,minimum_checkout_price,intended_active,activation_blocker,requires_quote,pricing_source_version)';
 const PRODUCT_WRITABLE = [
   'name',
   'mode',
@@ -190,6 +190,13 @@ export function normalizeVariant(input) {
   row.currency = String(row.currency || 'usd').toLowerCase();
   row.track_stock = row.track_stock === true || row.stock != null;
   if (row.active === undefined) row.active = true;
+  if (row.active === true) {
+    const completeProfile = row.shipping_weight_lb != null
+      && dimensionKeys.every((key) => row[key] != null);
+    if (!completeProfile) return { error: 'shipping_package_profile_required' };
+    row.intended_active = true;
+    row.activation_blocker = null;
+  }
   return { row };
 }
 

@@ -142,7 +142,7 @@ function checkoutOrderItems({ cart, variants }) {
     orderItems.push({
       sku: line.sku,
       product_sku: variant.product_sku,
-      name: `${product.name} - ${variant.label}`,
+      name: `${variant.marketing_name || product.name} - ${variant.label}`,
       qty: line.qty,
       unit_price: Number(variant.price) || 0,
     });

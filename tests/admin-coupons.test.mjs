@@ -6,6 +6,8 @@ import {
   checkoutPromotion,
   normalizePromotionId,
   promotionListParams,
+  storefrontPromotionCodesReady,
+  storefrontPromotionSetAllowed,
 } from "../functions/_lib/coupons.js";
 
 const API_SRC = readFileSync(new URL("../functions/api/admin/coupons.js", import.meta.url), "utf8");
@@ -123,6 +125,38 @@ test("promotion-code list exposes and consumes Stripe cursor pagination", () => 
   assert.match(API_SRC, /next_cursor/);
   assert.match(UI_SRC, /data-load-more-coupons/);
   assert.match(UI_SRC, /starting_after=\$\{encodeURIComponent\(couponCursor\)\}/);
+});
+
+test("storefront enables promotion entry only for the exact VK5-only Stripe state", async () => {
+  const vk5 = {
+    id: "promo_VK5",
+    code: "VK5",
+    active: true,
+    coupon: { percent_off: 5, amount_off: null, valid: true },
+  };
+  assert.equal(storefrontPromotionSetAllowed([vk5]), true);
+  assert.equal(storefrontPromotionSetAllowed([]), false);
+  assert.equal(storefrontPromotionSetAllowed([{ ...vk5, code: "VK10" }]), false);
+  assert.equal(storefrontPromotionSetAllowed([vk5, { ...vk5, id: "promo_other" }]), false);
+  assert.equal(storefrontPromotionSetAllowed([{ ...vk5, coupon: { percent_off: 10 } }]), false);
+  assert.equal(storefrontPromotionSetAllowed([{ ...vk5, active: undefined }]), false);
+  assert.equal(storefrontPromotionSetAllowed([{
+    ...vk5,
+    coupon: { percent_off: 5, amount_off: null },
+  }]), false);
+
+  assert.equal(await storefrontPromotionCodesReady({
+    promotionCodes: {
+      async list(params) {
+        assert.deepEqual(params, { active: true, limit: 100, expand: ["data.coupon"] });
+        return { data: [vk5], has_more: false };
+      },
+    },
+  }), true);
+  assert.equal(await storefrontPromotionCodesReady({
+    promotionCodes: { async list() { return { data: [vk5], has_more: true }; } },
+  }), false);
+  assert.equal(await storefrontPromotionCodesReady({}), false);
 });
 
 test("promotion form keeps field names visible after values replace placeholders", () => {

@@ -54,6 +54,8 @@ test('variant shipping profile normalizes weight and optional all-or-none dimens
     currency: 'usd',
     track_stock: false,
     active: true,
+    intended_active: true,
+    activation_blocker: null,
   });
   assert.equal(normalizeVariant({ ...baseVariant, shipping_weight_lb: '0' }).error, 'invalid_shipping_weight');
   assert.equal(normalizeVariant({ ...baseVariant, shipping_length_in: '14' }).error, 'incomplete_shipping_dimensions');

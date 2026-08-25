@@ -114,8 +114,8 @@ test('P3 keeps distinct industry routes and permanently redirects retired overla
   assert.deepEqual(
     marine.approved_product_names.map(({ name }) => name),
     [
-      'Scale Buster', 'SeaVap Coil Kleener', 'Sea Drain Kleener', 'MultiWash',
-      'Marine Degreaser', 'AlumiBrite', 'Marine Wash & Wax', 'Marine Antimicrobial',
+      'Scale Buster', 'SeaVap Coil Kleener', 'Sea Drain Kleener', 'MultiWash Marine',
+      'Marine Degreaser', 'AlumiBrite Marine', 'Marine Wash & Wax', 'Marine Antimicrobial',
     ],
   );
 

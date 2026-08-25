@@ -25,6 +25,7 @@ import {
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
+import { storefrontPromotionCodesReady } from '../_lib/coupons.js';
 import { stripeRuntimeError, stripeShippingRatesError } from '../_lib/stripe-runtime.js';
 import { expireQuoteOfferIfDue } from '../_lib/quote-offer.js';
 import { quoteBuyerActions, quoteBuyerOwns } from '../_lib/quote-lifecycle.js';
@@ -48,6 +49,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const STRIPE_MIN_CHECKOUT_WINDOW_MS = 31 * 60 * 1000;
 const STRIPE_MAX_CHECKOUT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const STORE_CREDIT_CHECKOUT_WINDOW_MS = 35 * 60 * 1000;
+const STOREFRONT_PROMOTION_PERCENT = 5;
 
 function quoteOrderCheckoutSnapshot(order) {
   return {
@@ -76,6 +78,23 @@ function variantIsStocked(variant, qty) {
   return !(variant.track_stock && variant.stock != null && Number(variant.stock) < qty);
 }
 
+export function checkoutPriceFloorViolations(lines = []) {
+  return lines
+    .filter((line) => line.minimum_checkout_price != null
+      && Number(line.price) < Number(line.minimum_checkout_price))
+    .map((line) => line.sku);
+}
+
+export function storefrontPromotionFloorSafe(lines = []) {
+  return lines.every((line) => {
+    if (line.minimum_checkout_price == null) return true;
+    const discountedMinor = Math.round(
+      Math.round(Number(line.price) * 100) * (1 - STOREFRONT_PROMOTION_PERCENT / 100),
+    );
+    return discountedMinor >= Math.round(Number(line.minimum_checkout_price) * 100);
+  });
+}
+
 export async function handleCheckout({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
   const getTierPriceMap = dependencies.tierPriceMap || tierPriceMap;
@@ -98,6 +117,8 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const reserveStoreCredit = dependencies.reserveCompanyStoreCredit || reserveCompanyStoreCredit;
   const attachStoreCredit = dependencies.attachCompanyStoreCreditReservation
     || attachCompanyStoreCreditReservation;
+  const promotionsReady = dependencies.storefrontPromotionCodesReady
+    || storefrontPromotionCodesReady;
 
   const rl = await checkRateLimit(env, 'checkout', clientIp(request), { limit: 20, windowSec: 60 });
   if (!rl.ok) {
@@ -274,7 +295,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
 
   const { data: variants, error } = await sb
     .from('product_variants')
-    .select('vsku,product_sku,label,price,currency,stripe_price_id,active,stock,track_stock,allow_backorder,products(name,mode,active,taxable)')
+    .select('vsku,product_sku,label,price,currency,stripe_price_id,active,stock,track_stock,allow_backorder,market,package_kind,marketing_name,minimum_checkout_price,products(name,mode,active,taxable)')
     .in('vsku', skus);
   if (error) return json(500, { error: 'server_error' });
 
@@ -301,8 +322,13 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     sellable.push({
       sku: v.vsku,
       product_sku: v.product_sku,
-      name: `${prod.name} - ${v.label}`,
+      name: `${v.marketing_name || prod.name} - ${v.label}`,
       price: v.price,
+      market: v.market || 'industrial',
+      package_kind: v.package_kind || 'unit',
+      minimum_checkout_price: v.minimum_checkout_price == null
+        ? null
+        : Number(v.minimum_checkout_price),
       currency: v.currency || 'usd',
       taxable: prod.taxable,
       stripe_price_id: v.stripe_price_id,
@@ -311,6 +337,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
       backordered: !inStock,
     });
   }
+
   if (rejected.length) {
     return json(409, {
       error: 'not_purchasable',
@@ -352,6 +379,17 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
           line.stripe_price_id = null;
         }
       }
+    }
+  }
+
+  if (!quoteContext) {
+    const floorViolations = checkoutPriceFloorViolations(sellable);
+    if (floorViolations.length) {
+      return json(409, {
+        error: 'checkout_price_below_floor',
+        skus: floorViolations,
+        message: 'A catalog price is below its approved checkout floor. Request pricing instead.',
+      });
     }
   }
 
@@ -491,6 +529,11 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     }
   }
 
+  let allowPromotionCodes = false;
+  if (!quoteContext && tier === 'retail' && storefrontPromotionFloorSafe(sellable)) {
+    allowPromotionCodes = await promotionsReady(stripe);
+  }
+
   const sessionParams = buildStripeCheckoutSessionParams({
     appUrl,
     email: buyerEmail.value,
@@ -505,7 +548,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
     purchaseOrderNumber,
     quoteId: quoteContext?.quoteId || null,
     quoteOrderId: quoteContext?.quoteOrderId || null,
-    allowPromotionCodes: !quoteContext,
+    allowPromotionCodes,
     storeCredit,
   });
   if (storeCredit) {

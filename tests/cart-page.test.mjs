@@ -17,15 +17,16 @@ async function withServer(fn) {
 function hcrProduct() {
   return {
     sku: "hcr",
+    name: "VertKleen CIP HCR",
     active: true,
     mode: "buy",
     image_url: "https://example.com/hcr.png",
     photo_alt: "VertKleen HCR pail",
     product_variants: [
-      { vsku: "hcr-1", label: "1 gal bottle", gallons: 1, price: 17.3, currency: "usd", active: true, sort: 1 },
-      { vsku: "hcr-2.5", label: "2.5 gal jug", gallons: 2.5, price: 43.26, currency: "usd", active: true, sort: 2 },
-      { vsku: "hcr-5", label: "5 gal pail", gallons: 5, price: 86.52, currency: "usd", active: true, sort: 3 },
-      { vsku: "hcr-55", label: "55 gal drum", gallons: 55, price: 740.36, currency: "usd", active: false, requires_quote: true, sort: 4 },
+      { vsku: "HCRCIP-1G", label: "1 gal", gallons: 1, price: 28.99, currency: "usd", active: true, market: "industrial", package_kind: "unit", marketing_name: "VertKleen CIP HCR", sort: 3 },
+      { vsku: "HCRCIP-25G", label: "2.5 gal", gallons: 2.5, price: 68.49, currency: "usd", active: true, market: "industrial", package_kind: "unit", marketing_name: "VertKleen CIP HCR", sort: 4 },
+      { vsku: "HCRCIP-55D", label: "55 gal drum", gallons: 55, price: null, currency: "usd", active: false, market: "industrial", package_kind: "bulk", marketing_name: "VertKleen CIP HCR", requires_quote: true, sort: 9 },
+      { vsku: "HCRCIP-275T", label: "275 gal tote", gallons: 275, price: null, currency: "usd", active: false, market: "industrial", package_kind: "bulk", marketing_name: "VertKleen CIP HCR", requires_quote: true, sort: 10 },
     ],
   };
 }
@@ -119,21 +120,20 @@ test("product catalog shows public list pricing and small-pack selectors", async
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
       const hcr = page.locator('.shop-card[data-id="hcr"]');
-      await hcr.getByText("$17.30").waitFor();
+      await hcr.locator(".price-main", { hasText: "$28.99" }).waitFor();
       const optionValues = await hcr.locator(".commerce-vol").evaluate(select =>
         Array.from(select.options).map(option => option.value)
       );
-      assert.ok(optionValues.includes("hcr-1"));
+      assert.deepEqual(optionValues, ["HCRCIP-1G", "HCRCIP-25G", "HCRCIP-55D", "HCRCIP-275T"]);
       await page.getByRole("link", { name: /Get product recommendation/i }).waitFor();
       await page.getByRole("link", { name: /Become a distributor/i }).waitFor();
 
       assert.equal(await hcr.locator(".shop-card-quote").count(), 0);
-      // Bulk drum is listed with its price, but selecting it swaps the cart
-      // button for a prefilled quote link (no direct bulk orders).
-      assert.equal(optionValues.includes("hcr-55"), true);
+      // Bulk is quote-only and never rendered as a $0 or stale numeric price.
+      assert.equal(optionValues.includes("HCRCIP-55D"), true);
 
-      await hcr.locator(".commerce-vol").selectOption("hcr-55");
-      await hcr.getByText("$740.36").waitFor();
+      await hcr.locator(".commerce-vol").selectOption("HCRCIP-55D");
+      await hcr.locator(".price-main", { hasText: "Quote-priced" }).waitFor();
       assert.equal(await hcr.locator("[data-cart-add]").isVisible(), false);
       const quoteSwap = hcr.locator(".commerce-quote-swap");
       assert.equal(await quoteSwap.isVisible(), true);
@@ -142,11 +142,11 @@ test("product catalog shows public list pricing and small-pack selectors", async
         /^\/contact\?type=quote&product=.+&message=.+freight\+quote|^\/contact\?type=quote&product=.+&message=/,
       );
 
-      await hcr.locator(".commerce-vol").selectOption("hcr-5");
-      await hcr.getByText("$86.52").waitFor();
+      await hcr.locator(".commerce-vol").selectOption("HCRCIP-25G");
+      await hcr.locator(".price-main", { hasText: "$68.49" }).waitFor();
       assert.equal(await hcr.locator("[data-cart-add]").isVisible(), true);
       assert.equal(await quoteSwap.isVisible(), false);
-      assert.equal(await hcr.locator("[data-cart-add]").getAttribute("data-cart-add"), "hcr-5");
+      assert.equal(await hcr.locator("[data-cart-add]").getAttribute("data-cart-add"), "HCRCIP-25G");
     } finally {
       await browser.close();
     }
@@ -162,9 +162,9 @@ test("priced products can be added to the cart", async () => {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
       await page.locator('.shop-card[data-id="hcr"] [data-cart-add]').click();
 
-      await page.waitForFunction(() => localStorage.getItem("masest_cart")?.includes("hcr-1"));
+      await page.waitForFunction(() => localStorage.getItem("masest_cart")?.includes("HCRCIP-1G"));
       const cart = await page.evaluate(() => JSON.parse(localStorage.getItem("masest_cart") || "{}"));
-      assert.equal(cart["hcr-1"], 1);
+      assert.equal(cart["HCRCIP-1G"], 1);
     } finally {
       await browser.close();
     }
@@ -178,7 +178,7 @@ test("cart routes purchasable SKUs to delivery checkout before provider validati
     try {
       await routeProducts(page);
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
-      await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ "hcr-1": 1 })));
+      await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ "HCRCIP-1G": 1 })));
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.locator("#checkoutContinue").click();
       await page.waitForURL(/\/checkout\.html$/);
@@ -196,12 +196,12 @@ test("cart uses a conventional order summary without catalog policy duplication"
     try {
       await routeProducts(page);
       await page.addInitScript(() => {
-        localStorage.setItem("masest_cart", JSON.stringify({ "hcr-1": 2 }));
+        localStorage.setItem("masest_cart", JSON.stringify({ "HCRCIP-1G": 2 }));
       });
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
 
       await page.getByText("2 items").waitFor();
-      await page.getByText("$34.60", { exact: true }).first().waitFor();
+      await page.getByText("$57.98", { exact: true }).first().waitFor();
       const productImage = page.locator('.cart-line-media img');
       assert.equal(await productImage.getAttribute('src'), 'https://example.com/hcr.png');
       assert.equal(await productImage.getAttribute('alt'), 'VertKleen HCR pail');
@@ -229,7 +229,7 @@ test("cart holds product lines until catalog names and pricing resolve", async (
     try {
       await page.addInitScript(() => {
         window.MASEST_ENABLE_LOCAL_API = true;
-        localStorage.setItem("masest_cart", JSON.stringify({ "hcr-1": 1 }));
+        localStorage.setItem("masest_cart", JSON.stringify({ "HCRCIP-1G": 1 }));
       });
       await page.route("**/api/products", async route => {
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -244,11 +244,11 @@ test("cart holds product lines until catalog names and pricing resolve", async (
       await page.getByText("Loading cart details…", { exact: true }).waitFor();
       assert.equal(await page.locator(".cart-line").count(), 0);
       assert.equal(await page.getByText("Pending review", { exact: true }).count(), 0);
-      assert.equal(await page.getByText("hcr-1", { exact: true }).count(), 0);
+      assert.equal(await page.getByText("HCRCIP-1G", { exact: true }).count(), 0);
 
       await page.locator(".cart-line").waitFor();
-      assert.notEqual((await page.locator(".cart-line h2").textContent()).trim(), "hcr-1");
-      assert.equal((await page.locator(".cart-line p").textContent()).trim(), "$17.30 each");
+      assert.notEqual((await page.locator(".cart-line h2").textContent()).trim(), "HCRCIP-1G");
+      assert.equal((await page.locator(".cart-line p").textContent()).trim(), "$28.99 each");
     } finally {
       await browser.close();
     }

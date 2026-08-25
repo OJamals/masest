@@ -148,5 +148,15 @@
     "hazmat": false,
     "taxable": true,
     "sort": 15
+  },
+  {
+    "sku": "cr60",
+    "name": "VertKleen CR60",
+    "group_key": "water",
+    "hmis": "0-0-0",
+    "mode": "buy",
+    "hazmat": false,
+    "taxable": true,
+    "sort": 16
   }
 ]

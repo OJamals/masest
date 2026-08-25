@@ -11,7 +11,7 @@ const SHIPPING_RATES_BODY_MAX_BYTES = 32 * 1024;
 async function defaultLoadVariants(env, skus) {
   const { data, error } = await adminClient(env)
     .from('product_variants')
-    .select('vsku,product_sku,label,price,currency,active,shipping_weight_lb,shipping_length_in,shipping_width_in,shipping_height_in,products(name,mode,active)')
+    .select('vsku,product_sku,label,price,currency,active,marketing_name,shipping_weight_lb,shipping_length_in,shipping_width_in,shipping_height_in,products(name,mode,active)')
     .in('vsku', skus);
   if (error) throw error;
   return data || [];

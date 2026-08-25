@@ -68,26 +68,10 @@ test("product quote handoff lands on the visible prefilled product", async ({ pa
   expect(formTop).toBeLessThan(900);
 });
 
-test("bundle order handoff preserves the stable SKU and buyer message", async ({ page }) => {
+test("superseded bundles publish no ordering handoff", async ({ page }) => {
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
-  const link = page.locator('[data-bundle-sku="VK-BND-KITCHEN-4X1G"]')
-    .getByRole("link", { name: "Order this kit" });
-  const href = await link.getAttribute("href");
-  expect(href).toMatch(/^contact\?type=quote&product=VK-BND-KITCHEN-4X1G&message=/);
-
-  await page.goto(`${BASE_URL}/${href.replace(/^contact\?/, "contact.html?")}`, {
-    waitUntil: "networkidle",
-  });
-
-  await expect(page.locator('[name="type"]')).toHaveValue("quote");
-  await expect(page.locator("#fProduct")).toHaveValue("VK-BND-KITCHEN-4X1G");
-  await expect(page.locator("#fMessage")).toHaveValue(
-    "I'd like to order the Kitchen & Interior bundle (VK-BND-KITCHEN-4X1G).",
-  );
-  await expect(page.locator("#quoteContextSummary")).toContainText(
-    "Quote request for VK-BND-KITCHEN-4X1G.",
-  );
-  await expect(page.locator(".quote-advanced-toggle")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("[data-bundle-sku]")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Order this kit" })).toHaveCount(0);
 });
 
 test("customer chat context stays visible, editable, and submits only its allowed source", async ({ page }) => {

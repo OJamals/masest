@@ -43,6 +43,7 @@ const renderMedia = (record, className) => record
 
 export function renderJobPlans(review, mediaReview = DEFAULT_MEDIA_REVIEW) {
   const plans = validateUpdateBundleReview(review);
+  if (plans.length === 0) return "";
   const media = publicMediaByPlacement(mediaReview);
   const cards = plans.map((plan) => {
     const quoteMessage = `I'd like to order the ${plan.name} bundle (${plan.bundle_sku}).`;
@@ -100,13 +101,14 @@ export function buildJobPlans(root = process.cwd()) {
   if (startAt === -1 || endAt === -1) {
     throw new Error("products.html: job-plan generation markers missing");
   }
-  const rendered = `${START}\n  ${renderJobPlans(review)}\n  ${END}`;
+  const body = renderJobPlans(review);
+  const rendered = body ? `${START}\n  ${body}\n  ${END}` : `${START}\n  ${END}`;
   const html = `${source.slice(0, startAt)}${rendered}${source.slice(endAt + END.length)}`;
   writeFileSync(productsPath, html);
-  return review.bundle_concepts.length;
+  return (rendered.match(/data-job-plan=/g) || []).length;
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const count = buildJobPlans();
-  console.log(`build-job-plans: rendered ${count} priced bundle quote offers`);
+  console.log(`build-job-plans: rendered ${count} current priced bundle quote offers`);
 }

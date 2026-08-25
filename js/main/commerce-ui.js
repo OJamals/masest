@@ -1,6 +1,6 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260824a";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260824b";
 import { smoothPref } from "./engagement.js";
 
 function imageDimsAttr(src) {
@@ -74,22 +74,12 @@ function fmtMoney(n, currency = "USD") {
   }).format(Number(n));
 }
 
-function variantRank(v) {
-  return /^VK-/i.test(String(v?.vsku || "")) ? 0 : 1;
-}
-
 function variantDedupeKey(v) {
-  const gallons = Number(v?.gallons);
-  return Number.isFinite(gallons) && gallons > 0
-    ? `gal:${gallons}`
-    : `sku:${String(v?.vsku || "").toLowerCase()}`;
+  return `sku:${String(v?.vsku || "").toLowerCase()}`;
 }
 
 function preferVariant(next, prev) {
   if (!prev) return next;
-  const rankDelta = variantRank(next) - variantRank(prev);
-  if (rankDelta < 0) return next;
-  if (rankDelta > 0) return prev;
   const sortDelta = Number(next?.sort ?? 0) - Number(prev?.sort ?? 0);
   if (sortDelta < 0) return next;
   if (sortDelta > 0) return prev;
@@ -104,7 +94,14 @@ function dedupeVariants(variants = []) {
     byKey.set(key, preferVariant(variant, byKey.get(key)));
   }
   return [...byKey.values()]
-    .sort((a, b) => (Number(a.gallons) || 0) - (Number(b.gallons) || 0) || (Number(a.sort) || 0) - (Number(b.sort) || 0));
+    .sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0)
+      || (Number(a.gallons) || 0) - (Number(b.gallons) || 0)
+      || String(a.vsku || "").localeCompare(String(b.vsku || "")));
+}
+
+function commerceMarket() {
+  const query = typeof location === "undefined" ? "" : location.search;
+  return new URLSearchParams(query).get("market") === "marine" ? "marine" : "industrial";
 }
 
 function normalizeCommerceRow(row) {
@@ -118,6 +115,12 @@ function normalizeCommerceRow(row) {
       price: row.price,
       currency: row.currency || parent?.currency,
       active: row.active,
+      market: row.market,
+      package_kind: row.package_kind,
+      marketing_name: row.marketing_name,
+      units_per_case: row.units_per_case,
+      unit_vsku: row.unit_vsku,
+      requires_quote: row.requires_quote,
       sort: row.sort || 0,
     }]
     : Array.isArray(row?.product_variants) && row.product_variants.length ? row.product_variants : [{
@@ -133,18 +136,26 @@ function normalizeCommerceRow(row) {
     vsku: v.vsku,
     label: v.label,
     gallons: Number(v.gallons) || 0,
-    price: Number(v.price),
+    price: v.price == null ? null : Number(v.price),
     currency: String(v.currency || parent?.currency || row?.currency || "usd").toUpperCase(),
+    market: String(v.market || "industrial").toLowerCase(),
+    package_kind: String(v.package_kind || "unit").toLowerCase(),
+    marketing_name: v.marketing_name || parent?.name || row?.name || "",
+    units_per_case: Number(v.units_per_case || 1),
+    unit_vsku: v.unit_vsku || null,
+    requires_quote: v.requires_quote === true,
     sort: Number(v.sort || 0),
   });
+  const market = commerceMarket();
   const variants = dedupeVariants(rawVariants
-    .filter(v => v && v.active !== false && v.price != null && Number(v.price) > 0)
+    .filter(v => v && String(v.market || "industrial").toLowerCase() === market
+      && v.active !== false && v.price != null && Number(v.price) > 0)
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     .map(shapeVariant));
-  // Bulk drums/totes (55/275 gal): priced and shown, but never sold direct —
-  // the server rejects inactive variants at checkout; the UI routes them to a quote.
+  // Bulk drums/totes (55/275 gal) are unpriced and never sold direct.
   const quoteVariants = dedupeVariants(rawVariants
-    .filter(v => v && v.active === false && Number(v.gallons) >= 55 && v.price != null && Number(v.price) > 0)
+    .filter(v => v && String(v.market || "industrial").toLowerCase() === market
+      && v.active === false && (v.requires_quote === true || Number(v.gallons) >= 55))
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     .map(shapeVariant));
   return {
@@ -229,6 +240,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
     // the same column mixing packs that keep their noun with packs that lost it. The full
     // label is still spelled out under the price, which is where the detail belongs.
     const optLabel = (v) => String(v.label || "Pack").replace(/\s+(bottle|jug|pail|drum|tote)$/i, "");
+    const displayName = row.variants[0]?.marketing_name || p?.name || id;
     const opts = row.variants
       .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${optLabel(v)}</option>`)
       .concat((row.quoteVariants || [])
@@ -240,11 +252,11 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
     // action the page exists to complete.
     const btnClass = variant === "button" ? "btn btn-primary btn-sm" : "shop-card-add";
     const first = row.variants[0].vsku;
-    const quoteHref = `/contact?type=quote&product=${encodeURIComponent(p?.name || id)}`;
+    const quoteHref = `/contact?type=quote&product=${encodeURIComponent(displayName)}`;
     return `<span class="commerce-buy" data-commerce-buy="${id}">`
-      + `<select class="commerce-vol" name="volume" aria-label="Volume for ${p?.name || id}">${opts}</select>`
-      + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${p?.name || id} to cart">Add to cart</button>`
-      + `<a class="${btnClass} commerce-quote-swap" hidden href="${quoteHref}#quoteForm" data-quote-base="${quoteHref}" aria-label="Request a bulk quote for ${p?.name || id}">Request quote</a>`
+      + `<select class="commerce-vol" name="volume" aria-label="Volume for ${displayName}">${opts}</select>`
+      + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${displayName} to cart">Add to cart</button>`
+      + `<a class="${btnClass} commerce-quote-swap" hidden href="${quoteHref}#quoteForm" data-quote-base="${quoteHref}" aria-label="Request a bulk quote for ${displayName}">Request quote</a>`
       + `</span>`;
   }
   // Loaded, but no buyable variant — the catalog fetch failed (loadCommerceCatalog's catch
@@ -293,11 +305,11 @@ function selectedVariantFor(id, vsku) {
     || row?.quoteVariants?.find(v => String(v.vsku) === String(vsku));
 }
 
-function bulkPerGallonText(id) {
+function bulkPerGallonText(id, selected = null) {
   const row = commerceRowFor(id);
-  const variant = row?.variants?.find(v => Number(v.gallons) === 55);
-  if (!variant || !Number.isFinite(Number(variant.price))) return "";
-  return `${fmtMoney(Number(variant.price) / 55, variant.currency)}/gal`;
+  const variant = selected || row?.variants?.[0];
+  if (!variant || !Number.isFinite(Number(variant.price)) || Number(variant.gallons) <= 0) return "";
+  return `${fmtMoney(Number(variant.price) / Number(variant.gallons), variant.currency)}/gal`;
 }
 
 function bulkPriceMarkup(id) {
@@ -502,9 +514,7 @@ export function initCartButtons() {
     const isQuote = selected?.dataset.quote === "1";
     const variant = selectedVariantFor(wrap?.dataset.commerceBuy, select.value);
     const label = variant?.label || selected?.textContent || "";
-    const price = variant ? fmtMoney(variant.price, variant.currency) : "";
-    // Bulk drum/tote options swap the buy control for a prefilled quote link —
-    // list price stays visible, but the order routes through freight review.
+    const price = variant?.price == null ? "" : fmtMoney(variant.price, variant.currency);
     if (button) {
       button.dataset.cartAdd = select.value;
       button.hidden = !!(isQuote && quoteLink);
@@ -516,11 +526,16 @@ export function initCartButtons() {
         quoteLink.setAttribute("href", `${base}&message=${encodeURIComponent(`Requesting a freight quote for the ${label.trim()}.`)}#quoteForm`);
       }
     }
-    if (!buybar || !price) return;
+    if (!buybar) return;
     const main = buybar.querySelector(".price-main");
     const note = buybar.querySelector(".price-note");
-    if (main) main.textContent = price.trim();
+    const perGallon = buybar.querySelector(".shop-card-bulk");
+    if (main) main.textContent = isQuote ? "Quote-priced" : price.trim();
     if (note) note.textContent = isQuote ? `${label.trim()} — freight quoted` : label.trim();
+    if (perGallon) {
+      perGallon.textContent = isQuote ? "" : bulkPerGallonText(wrap?.dataset.commerceBuy, variant);
+      perGallon.hidden = isQuote;
+    }
   });
 }
 

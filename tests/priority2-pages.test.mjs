@@ -45,19 +45,19 @@ const tab4IndustryPages = [
 ];
 
 const comparisonPages = [
-  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "VK-HCR-5G", "CLR PRO MAX", "A real HCR job shows heavy rust and mineral scale"],
-  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "VK-HCR-5G", "$34.00-$48.60/gal", "A real HVAC job shows HCR releasing heavy rust and scale"],
-  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Heavy Degreaser Comparison", "VK-CRHD-5G", "$13.20-$36.80/gal", "set up a fair side-by-side test"],
-  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "VK-LAM3-5G", "$34.00/gal", "Before-and-after photos show CR and LAM3"],
-  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "VK-CR-2.5G", "$38.85/gal", "Brewlando Brewing field and lab results"],
+  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "HCR-25G", "CLR PRO MAX", "A real HCR job shows heavy rust and mineral scale"],
+  ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "HCR-25G", "$34.00-$48.60/gal", "A real HVAC job shows HCR releasing heavy rust and scale"],
+  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Heavy Degreaser Comparison", "CRHD-25G", "$13.20-$36.80/gal", "set up a fair side-by-side test"],
+  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "LAM3-25G", "$34.00/gal", "Before-and-after photos show CR and LAM3"],
+  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "CRCIP-25G", "$38.85/gal", "Brewlando Brewing field and lab results"],
 ];
 
 const comparisonBlogPosts = [
-  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR PRO MAX for industrial descaling", "VK-HCR-5G", "2–3 hours", "280× less corrosion"],
-  ["blog/hcr-vs-rydlyme.html", "VertKleen HCR vs RYDLYME: compare the complete descaling job", "VK-HCR-5G", "2–4 hours", "280× less corrosion"],
-  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green for heavy industrial degreasing", "VK-CRHD-5G", "full strength to 1:10", "three Walmart facilities"],
-  ["blog/lam3-vs-wet-forget.html", "VertKleen LAM3 vs Wet & Forget: compare the finished area", "VK-LAM3-5G", "dilute its concentrate 1:5", "improvement after two weeks"],
-  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost: what a full CIP cycle really costs", "VK-CR-2.5G", "2–3% use concentration", "seven Florida breweries"],
+  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR PRO MAX for industrial descaling", "HCR-25G", "2–3 hours", "280× less corrosion"],
+  ["blog/hcr-vs-rydlyme.html", "VertKleen HCR vs RYDLYME: compare the complete descaling job", "HCR-25G", "2–4 hours", "280× less corrosion"],
+  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green for heavy industrial degreasing", "CRHD-25G", "full strength to 1:10", "three Walmart facilities"],
+  ["blog/lam3-vs-wet-forget.html", "VertKleen LAM3 vs Wet & Forget: compare the finished area", "LAM3-25G", "dilute its concentrate 1:5", "improvement after two weeks"],
+  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost: what a full CIP cycle really costs", "CRCIP-25G", "2–3% use concentration", "seven Florida breweries"],
 ];
 
 const industryLabelPages = [
@@ -223,8 +223,8 @@ test("priority 2 comparison landing pages include live price bindings, swap row,
   }
 
   const brewery = read("comparisons/beer-line-cleaner-cost-comparison.html");
-  assert.match(brewery, /data-price-vsku="VK-CR-2\.5G" data-price-tier="retail"/);
-  assert.match(brewery, /data-price-vsku="VK-HCR-2\.5G" data-price-tier="retail"/);
+  assert.match(brewery, /data-price-vsku="CRCIP-25G" data-price-tier="retail"/);
+  assert.match(brewery, /data-price-vsku="HCRCIP-25G" data-price-tier="retail"/);
 });
 
 test("comparison SEO pages are also generated as mechanism-first blog posts", () => {
@@ -251,8 +251,8 @@ test("CIP pricing route keeps canonical membership without static values", () =>
   const data = JSON.parse(read("data/segment-pricing.json"));
   const cip = data.segments.find((segment) => segment.slug === "cip-food-beverage");
   assert.ok(cip, "CIP pricing segment should exist");
-  assert.equal(cip.rows.length, 30);
-  assert.ok(cip.rows.some((row) => row.sku === "VK-CR-1G"));
-  assert.ok(cip.rows.some((row) => row.sku === "VK-HCR-2.5G"));
+  assert.equal(cip.rows.length, 60);
+  assert.ok(cip.rows.some((row) => row.sku === "CRCIP-1G"));
+  assert.ok(cip.rows.some((row) => row.sku === "HCRCIP-25G"));
   assert.ok(cip.rows.every((row) => !("price_per_unit" in row) && !("price_per_gallon" in row)));
 });

@@ -76,16 +76,19 @@ export function createPricingTab({ $, api, state, message, admSkeleton, admEmpty
     if (!rows.length) return '';
     return `<section class="adm-price-section" aria-labelledby="variantPricingHeading">
       <div class="adm-section-head"><div><p class="adm-eyebrow">Catalog</p><h3 id="variantPricingHeading">Product and tier prices</h3></div></div>
-      <div class="adm-table-wrap"><table class="adm"><thead><tr><th>Variant</th><th>VSKU</th>${tiers.map((tier) => `<th>${esc(tier)}</th>`).join('')}<th></th></tr></thead><tbody>${rows.map((row) => `
+      <div class="adm-table-wrap"><table class="adm"><thead><tr><th>Variant</th><th>VSKU</th><th>Minimum checkout</th>${tiers.map((tier) => `<th>${esc(tier)}</th>`).join('')}<th></th></tr></thead><tbody>${rows.map((row) => `
         <tr data-price-resource="variant" data-vsku="${esc(row.vsku)}" data-capability-scope="product.write">
-          <td>${esc(row.product_name)} - ${esc(row.label)}${row.mode === 'quote' ? ' <span class="badge" data-s="quote">quote</span>' : ''}</td>
+          <td>${esc(row.product_name)} - ${esc(row.label)} <span class="badge">${esc(row.market || 'industrial')}</span>${row.requires_quote ? ' <span class="badge" data-s="quote">quote only</span>' : ''}${row.activation_blocker ? ' <span class="badge" data-s="pending">awaiting parcel profile</span>' : ''}</td>
           <td><code>${esc(row.vsku)}</code></td>
-          ${tiers.map((tier) => `<td>${priceInput(
-            row.tiers?.[tier] ?? (tier === 'retail' ? row.base_price : null),
-            `data-price-tier="${esc(tier)}"`,
-            `${row.vsku} ${tier} price`,
-          )}</td>`).join('')}
-          <td><button class="btn btn-primary btn-sm" type="button" data-price-save="variant" aria-label="Save prices for ${esc(row.product_name)} ${esc(row.label)}">Save</button></td>
+          <td>${row.minimum_checkout_price == null ? '—' : esc(`$${Number(row.minimum_checkout_price).toFixed(2)}`)}</td>
+          ${tiers.map((tier) => row.requires_quote
+            ? '<td>—</td>'
+            : `<td>${priceInput(
+                row.tiers?.[tier] ?? (tier === 'retail' ? row.base_price : null),
+                `data-price-tier="${esc(tier)}"${row.minimum_checkout_price == null ? '' : ` min="${esc(row.minimum_checkout_price)}"`}`,
+                `${row.vsku} ${tier} price`,
+              )}</td>`).join('')}
+          <td>${row.requires_quote ? '' : `<button class="btn btn-primary btn-sm" type="button" data-price-save="variant" aria-label="Save prices for ${esc(row.product_name)} ${esc(row.label)}">Save</button>`}</td>
         </tr>
       `).join('')}</tbody></table></div>
     </section>`;

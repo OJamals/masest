@@ -120,13 +120,18 @@ test("public copy names VertKleen only and excludes non-toxic wording", () => {
 });
 
 test("product schema includes SKU identity without stale static offers", () => {
+  const catalog = JSON.parse(read("data/catalog.seed.json"));
+  const skuByPage = new Map(catalog.products.map((product) => [
+    product.slug === "cr-hd" ? "crhd" : product.slug,
+    product.sku_stem,
+  ]));
   for (const file of fs.readdirSync(path.join(root, "products")).filter((name) => name.endsWith(".html"))) {
     const html = read(`products/${file}`);
     const blocks = [...html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
       .map((match) => JSON.parse(match[1]));
     const nodes = blocks.flatMap((block) => block["@graph"] || [block]);
     const schema = nodes.find((node) => node["@type"] === "Product");
-    assert.match(schema?.sku || "", /^VK-/, `products/${file}: product sku`);
+    assert.equal(schema?.sku, skuByPage.get(file.replace(/\.html$/, "")), `products/${file}: product sku`);
     assert.equal(schema?.offers, undefined, `products/${file}: static offers`);
   }
 });

@@ -59,12 +59,23 @@ test("public pricing contract exposes public prices without wholesale account pr
   assert.deepEqual(PUBLIC_PRICE_TIERS, ["retail", "hvac"]);
   const payload = publicPricingPayload({
     variants: [
-      { vsku: "VK-HCR-1G", product_sku: "hcr", label: "1 gal jug", gallons: 1, price: 23.79 },
+      {
+        vsku: "HCRCIP-1G",
+        product_sku: "hcr",
+        label: "1 gal",
+        gallons: 1,
+        marketing_name: "VertKleen CIP HCR",
+        market: "industrial",
+        package_kind: "unit",
+        units_per_case: 1,
+        requires_quote: false,
+        pricing_source_version: "v4.1 EXTERNAL",
+      },
     ],
     tierCells: [
-      { vsku: "VK-HCR-1G", tier: "retail", price: 23.79 },
-      { vsku: "VK-HCR-1G", tier: "hvac", price: 27.19 },
-      { vsku: "VK-HCR-1G", tier: "wholesale", price: 18 },
+      { vsku: "HCRCIP-1G", tier: "retail", price: 28.99 },
+      { vsku: "HCRCIP-1G", tier: "hvac", price: 31.99 },
+      { vsku: "HCRCIP-1G", tier: "wholesale", price: 18 },
     ],
     services: [{ sku: "MS-A", name: "Audit", public_price: 100, active: true }],
     programs: [
@@ -78,17 +89,21 @@ test("public pricing contract exposes public prices without wholesale account pr
     ],
   });
 
-  assert.deepEqual(payload.variants[0].tiers, { retail: 23.79, hvac: 27.19 });
+  assert.deepEqual(payload.variants[0].tiers, { retail: 28.99, hvac: 31.99 });
+  assert.equal(payload.variants[0].product_name, "VertKleen CIP HCR");
+  assert.equal(payload.variants[0].market, "industrial");
+  assert.equal(payload.variants[0].package_kind, "unit");
+  assert.equal(payload.variants[0].pricing_source_version, "v4.1 EXTERNAL");
   assert.equal("wholesale" in payload.variants[0].tiers, false);
   assert.equal(payload.services[0].public_price, 100);
   assert.equal(payload.pricing_tiers[0].price, "$385-715");
 });
 
 test("CMS price tokens render safe runtime bindings without numeric fallbacks", () => {
-  const html = renderMarkdown("HCR lists at [[price:VK-HCR-2.5G|retail|per_gallon]].");
+  const html = renderMarkdown("CIP HCR lists at [[price:HCRCIP-25G|retail|per_gallon]].");
   assert.match(
     html,
-    /data-price-vsku="VK-HCR-2\.5G" data-price-tier="retail" data-price-field="per_gallon"/,
+    /data-price-vsku="HCRCIP-25G" data-price-tier="retail" data-price-field="per_gallon"/,
   );
   assert.doesNotMatch(html, /\$23\.79/);
 });
@@ -132,8 +147,10 @@ test("every current public pricing surface binds to CMS runtime prices", () => {
   const blog = JSON.parse(read("data/content/blog.json")).blog_posts
     .filter((post) => comparisons.includes(post.slug));
 
-  assert.match(resources, /data-variant-price-table[^>]*data-price-tier="hvac"/);
-  assert.match(resources, /data-variant-price-table[^>]*data-price-tier="retail"/);
+  const resourceTiers = [...resources.matchAll(
+    /data-variant-price-table[^>]*data-price-tier="([^"]+)"/g,
+  )].map((match) => match[1]);
+  assert.deepEqual(resourceTiers, ['retail', 'retail']);
   for (const slug of comparisons) {
     const comparison = read(`comparisons/${slug}.html`);
     const post = read(`blog/${slug}.html`);
@@ -173,16 +190,13 @@ test("tracked bootstrap and static pages contain no authoritative price values",
   assert.doesNotMatch(read("products/hcr.html"), /"@type":"Offer"/);
 });
 
-test("August 3 workbook prices preserve the across-the-board increase", () => {
-  const catalog = JSON.parse(read("data/catalog.seed.json"));
+test("August 3 migration remains an intact historical price record", () => {
   const migration = read("supabase/update-pricing-2026-08-03.sql");
   const rows = [...migration.matchAll(/\('([^']+)',\s*'(\{[^']+\})'::jsonb\)/g)]
     .map(([, vsku, tiers]) => ({ vsku, tiers: JSON.parse(tiers) }));
   const byVsku = new Map(rows.map((row) => [row.vsku, row.tiers]));
-  const catalogVskus = catalog.product_variants.map((variant) => variant.sku).sort();
 
   assert.equal(rows.length, 66);
-  assert.deepEqual([...byVsku.keys()].sort(), catalogVskus);
   assert.ok(rows.every((row) => Number.isFinite(row.tiers.retail)));
   assert.equal(rows.filter((row) => Number.isFinite(row.tiers.hvac)).length, 45);
   assert.deepEqual(byVsku.get("VK-CR-1G"), { retail: 21.2, hvac: 24.22 });
@@ -193,4 +207,9 @@ test("August 3 workbook prices preserve the across-the-board increase", () => {
   assert.match(migration, /10fd5121dce990fdc37803b62ed7c8e31f7b0403ba6cd275cb51d1e54aefa831/);
   assert.match(migration, /(?:^|\n)do \$\$[\s\S]+public\.set_variant_pricing[\s\S]+\$\$;\s*$/i);
   assert.doesNotMatch(migration, /update\s+public\.services|content_entries|public_price/i);
+
+  const current = read("supabase/update-pricing-2026-08-24.sql");
+  assert.match(current, /v4\.1 EXTERNAL/);
+  assert.match(current, /fc555e6ec410a20d945bc6e0635bdcda3ce1389bed47205f6696989fe8041d7e/);
+  assert.doesNotMatch(current, /10fd5121dce990fdc37803b62ed7c8e31f7b0403ba6cd275cb51d1e54aefa831/);
 });

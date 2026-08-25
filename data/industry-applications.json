@@ -1137,7 +1137,7 @@
           "artwork_source": "docs/labels/marine/vertkleen-sea-drain-kleener-label.pdf"
         },
         {
-          "name": "MultiWash",
+          "name": "MultiWash Marine",
           "base_product": "multiwash",
           "sku": "VK-MW",
           "job_focus": "Decks, vinyl, glass, and everyday marine grime",
@@ -1153,7 +1153,7 @@
           "artwork_source": "docs/labels/marine/vertkleen-marine-degreaser-label.pdf"
         },
         {
-          "name": "AlumiBrite",
+          "name": "AlumiBrite Marine",
           "base_product": "alumibrite",
           "sku": "VK-ALB",
           "job_focus": "Oxidized aluminum rails, pontoons, hardware, and trailers",

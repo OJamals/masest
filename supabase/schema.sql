@@ -279,6 +279,16 @@ create table if not exists public.product_variants (
   label           text not null,
   gallons         numeric(8,2) not null,
   price           numeric(12,2),
+  market          text not null default 'industrial',
+  package_kind    text not null default 'unit',
+  marketing_name  text,
+  units_per_case  integer not null default 1,
+  unit_vsku       text,
+  minimum_checkout_price numeric(12,2),
+  intended_active boolean not null default true,
+  activation_blocker text,
+  requires_quote  boolean not null default false,
+  pricing_source_version text,
   currency        text not null default 'usd',
   stripe_price_id text,
   shipping_weight_lb numeric(10,3) check (shipping_weight_lb is null or shipping_weight_lb > 0),
@@ -293,6 +303,16 @@ alter table public.product_variants add column if not exists shipping_weight_lb 
 alter table public.product_variants add column if not exists shipping_length_in numeric(8,2);
 alter table public.product_variants add column if not exists shipping_width_in numeric(8,2);
 alter table public.product_variants add column if not exists shipping_height_in numeric(8,2);
+alter table public.product_variants add column if not exists market text not null default 'industrial';
+alter table public.product_variants add column if not exists package_kind text not null default 'unit';
+alter table public.product_variants add column if not exists marketing_name text;
+alter table public.product_variants add column if not exists units_per_case integer not null default 1;
+alter table public.product_variants add column if not exists unit_vsku text;
+alter table public.product_variants add column if not exists minimum_checkout_price numeric(12,2);
+alter table public.product_variants add column if not exists intended_active boolean not null default true;
+alter table public.product_variants add column if not exists activation_blocker text;
+alter table public.product_variants add column if not exists requires_quote boolean not null default false;
+alter table public.product_variants add column if not exists pricing_source_version text;
 do $$ begin
   alter table public.product_variants add constraint product_variants_shipping_weight_positive
     check (shipping_weight_lb is null or shipping_weight_lb > 0);
@@ -304,6 +324,53 @@ do $$ begin
       (shipping_length_in is null and shipping_width_in is null and shipping_height_in is null)
       or (shipping_length_in > 0 and shipping_width_in > 0 and shipping_height_in > 0)
     );
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_market_check
+    check (market in ('industrial', 'marine'));
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_package_kind_check
+    check (package_kind in ('unit', 'case', 'bulk'));
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_units_per_case_positive
+    check (units_per_case > 0);
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_minimum_checkout_price_nonnegative
+    check (minimum_checkout_price is null or minimum_checkout_price >= 0);
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_price_not_below_checkout_floor
+    check (price is null or minimum_checkout_price is null or price >= minimum_checkout_price);
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_active_shipping_profile_complete
+    check (
+      not active or (
+        shipping_weight_lb > 0
+        and shipping_length_in > 0
+        and shipping_width_in > 0
+        and shipping_height_in > 0
+      )
+    );
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_active_unblocked
+    check (not active or activation_blocker is null);
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter table public.product_variants add constraint product_variants_bulk_quote_only
+    check (package_kind <> 'bulk' or (active = false and requires_quote = true and price is null));
 exception when duplicate_object then null;
 end $$;
 create index if not exists product_variants_sku_idx on public.product_variants(product_sku);

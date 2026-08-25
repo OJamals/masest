@@ -61,6 +61,31 @@ export function checkoutPromotion(session) {
   return null;
 }
 
+export function storefrontPromotionSetAllowed(promotions = []) {
+  if (!Array.isArray(promotions) || promotions.length !== 1) return false;
+  const [promotion] = promotions;
+  const coupon = promotion?.coupon || {};
+  return promotion?.active === true
+    && String(promotion?.code || '').trim().toUpperCase() === 'VK5'
+    && Number(coupon.percent_off) === 5
+    && coupon.amount_off == null
+    && coupon.valid === true;
+}
+
+export async function storefrontPromotionCodesReady(stripe) {
+  if (typeof stripe?.promotionCodes?.list !== 'function') return false;
+  try {
+    const result = await stripe.promotionCodes.list({
+      active: true,
+      limit: 100,
+      expand: ['data.coupon'],
+    });
+    return result?.has_more !== true && storefrontPromotionSetAllowed(result?.data || []);
+  } catch {
+    return false;
+  }
+}
+
 export function buildCouponParams(body, { nowSeconds = Math.floor(Date.now() / 1000) } = {}) {
   const b = body || {};
   const code = String(b.code || '').trim().toUpperCase();

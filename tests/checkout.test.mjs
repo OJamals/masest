@@ -3,13 +3,31 @@ import test from 'node:test';
 
 import { CommerceContextError } from '../functions/_lib/commerce-context.js';
 import { CheckoutFulfillmentError } from '../functions/_lib/checkout-fulfillment-contract.js';
-import { createCheckoutHandler } from '../functions/api/checkout.js';
+import {
+  checkoutPriceFloorViolations,
+  createCheckoutHandler,
+  storefrontPromotionFloorSafe,
+} from '../functions/api/checkout.js';
 import {
   ShippingRequestError,
   createShippingRequestCoordinator,
   fetchShippingJson,
   shippingRequestSnapshot,
 } from '../js/shipping-request.js';
+
+test('checkout price floors reject under-floor tiers and accept exact workbook VK5 rounding', () => {
+  assert.deepEqual(checkoutPriceFloorViolations([
+    { sku: 'HCR-1G', price: 23.48, minimum_checkout_price: 23.49 },
+    { sku: 'SB-1G', price: 44.99, minimum_checkout_price: 36.99 },
+  ]), ['HCR-1G']);
+  assert.equal(storefrontPromotionFloorSafe([
+    { sku: 'HCR-1G', price: 28.99, minimum_checkout_price: 23.49 },
+    { sku: 'HCR-1G-CS', price: 104.36, minimum_checkout_price: 93.96 },
+  ]), true);
+  assert.equal(storefrontPromotionFloorSafe([
+    { sku: 'X', price: 10, minimum_checkout_price: 9.51 },
+  ]), false);
+});
 
 test('Checkout stops on a typed commerce-context read failure before pricing or Stripe', async () => {
   const calls = [];

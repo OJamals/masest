@@ -15,7 +15,8 @@ values
 ('alumibrite','VertKleen AlumiBrite','marine','0-0-0','buy',false,true,12),
 ('torque','VertKleen Torque','marine','0-0-0','buy',false,true,13),
 ('sar','VertKleen SAR','specialty','0-0-0','buy',false,true,14),
-('watersafe60','Watersafe60','water','0-0-0','buy',false,true,15)
+('watersafe60','Watersafe60','water','0-0-0','buy',false,true,15),
+('cr60','VertKleen CR60','water','0-0-0','buy',false,true,16)
 on conflict (sku) do update set
   name = excluded.name,
   group_key = excluded.group_key,
@@ -25,4 +26,4 @@ on conflict (sku) do update set
   taxable = excluded.taxable,
   sort = excluded.sort;
 
-delete from public.products where sku not in ('cr','cr2','hcr','hcr-t16','descaler','cr-hd','cr-hd-low-foam','neutral','multiwash','lam3','purgo','alumibrite','torque','sar','watersafe60');
+delete from public.products where sku not in ('cr','cr2','hcr','hcr-t16','descaler','cr-hd','cr-hd-low-foam','neutral','multiwash','lam3','purgo','alumibrite','torque','sar','watersafe60','cr60');

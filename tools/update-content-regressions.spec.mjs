@@ -63,7 +63,7 @@ async function revealEach(locator, label) {
   }
 }
 
-test("priced bundle quote offers stay complete, responsive, and outside direct commerce", async ({ page }) => {
+test("superseded priced bundles stay absent from direct commerce", async ({ page }) => {
   const issues = captureRuntimeIssues(page);
 
   for (const viewport of [
@@ -73,52 +73,15 @@ test("priced bundle quote offers stay complete, responsive, and outside direct c
     await page.setViewportSize(viewport);
     await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
 
-    const section = page.locator(".job-plans");
-    await section.scrollIntoViewIfNeeded();
-    await expect(section).toBeVisible();
-    await expect(section.locator(".job-plan-card")).toHaveCount(5);
-    await expect(section.locator("[data-bundle-sku][data-bundle-price-minor]")).toHaveCount(5);
-    await expect(section.locator(".job-plan-component")).toHaveCount(20);
-    await expect(section.locator(".job-plan-component.is-unresolved")).toHaveCount(0);
-    await expect(section.locator(".job-plan-component small")).toHaveCount(20);
-    await expect(section.locator(".job-plan-component small").first()).toContainText(/VK-.+-1G · 1 gal jug/);
-    await expect(section.getByRole("link", { name: "Order this kit" })).toHaveCount(5);
-    await expect(section.locator("img")).toHaveCount(2);
-    await expect(section.locator("[data-add-cart], [data-buy], .add-to-cart")).toHaveCount(0);
-    await revealEach(section.locator(".job-plan-card"), `${viewport.width}px job plan`);
-
-    const state = await section.evaluate((node) => {
-      const links = [...node.querySelectorAll("a")].map((link) => link.getAttribute("href") || "");
-      const cards = [...node.querySelectorAll(".job-plan-card")].map((card) => {
-        const rect = card.getBoundingClientRect();
-        return { left: rect.left, right: rect.right, width: rect.width };
-      });
-      return {
-        viewport: document.documentElement.clientWidth,
-        pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        links,
-        cards,
-        text: node.textContent || "",
-      };
-    });
-
-    expect(state.pageOverflow, `${viewport.width}px page overflow`).toBeLessThanOrEqual(2);
-    expect(state.links).toHaveLength(5);
-    expect(state.links.every((href) => (
-      /^contact\?type=quote&product=VK-BND-[A-Z0-9-]+&message=.*#quoteForm$/.test(href)
-    ))).toBe(true);
-    expect(state.text).toMatch(/Bundle price[\s\S]*\$54\.00/);
-    expect(state.text).toMatch(/Save 1[45]%/);
-    expect(state.text).not.toMatch(/add to cart/i);
-    for (const card of state.cards) {
-      expect(card.left, `${viewport.width}px card left edge`).toBeGreaterThanOrEqual(0);
-      expect(card.right, `${viewport.width}px card right edge`).toBeLessThanOrEqual(state.viewport);
-    }
-    if (viewport.width === 1440) {
-      expect(state.cards[3].width).toBeGreaterThan(state.cards[0].width * 1.4);
-      expect(Math.abs(state.cards[3].left - state.cards[0].left)).toBeLessThanOrEqual(2);
-      expect(Math.abs(state.cards[4].right - state.cards[2].right)).toBeLessThanOrEqual(2);
-    }
+    await expect(page.locator(".job-plans, .job-plan-card, [data-bundle-sku]"))
+      .toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Order this kit" })).toHaveCount(0);
+    await expect(page.locator("main")).not.toContainText("Bundle price");
+    await expect(page.locator("main")).not.toContainText("VK-BND-");
+    const overflow = await page.evaluate(() => (
+      document.documentElement.scrollWidth - document.documentElement.clientWidth
+    ));
+    expect(overflow, `${viewport.width}px page overflow`).toBeLessThanOrEqual(2);
   }
 
   expect(issues).toEqual([]);

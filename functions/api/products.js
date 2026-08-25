@@ -8,8 +8,8 @@ import {
   tierPriceMap,
 } from '../_lib/supabase.js';
 
-const BASE_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,allow_backorder,sort)';
-const MEDIA_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,image_url,photo_alt,gallery,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,allow_backorder,sort)';
+const BASE_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,allow_backorder,sort,market,package_kind,marketing_name,units_per_case,unit_vsku,requires_quote,pricing_source_version)';
+const MEDIA_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,image_url,photo_alt,gallery,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,allow_backorder,sort,market,package_kind,marketing_name,units_per_case,unit_vsku,requires_quote,pricing_source_version)';
 
 function missingMediaColumn(error) {
   return /image_url|photo_alt|schema cache|column/i.test(error?.message || '');

@@ -24,9 +24,9 @@ const pages = [
     h1: "VertKleen HCR vs CLR: which fits your descaling job?",
     subhead: "Compare the buildup, equipment, cleaning time, rinsing, handling, and total cost—not the jug price alone.",
     product: "VertKleen HCR",
-    productHref: "../products/hcr",
+    productHref: "../products/hcr-t16",
     competitor: "CLR PRO MAX",
-    vkPrices: [{ vsku: "VK-HCR-5G", tier: "retail", gallons: 5 }],
+    vkPrices: [{ vsku: "HCR-25G", tier: "retail", gallons: 2.5 }],
     marketMath: "$1,600-$1,800 / 55 gal = $29.09-$32.73/gal",
     priceNote: "Jug price is only the start. Mix, cleaning time, labor, water, repeat passes, and downtime decide what the whole job costs.",
     swapCurrent: "CLR / Calci-Solve",
@@ -49,9 +49,9 @@ const pages = [
     h1: "VertKleen HCR vs RYDLYME on the same descaling job.",
     subhead: "Compare how much product, crew time, rinse water, and downtime each cleaner needs to deliver the result.",
     product: "VertKleen HCR",
-    productHref: "../products/hcr",
+    productHref: "../products/hcr-t16",
     competitor: "RYDLYME",
-    vkPrices: [{ vsku: "VK-HCR-5G", tier: "retail", gallons: 5 }],
+    vkPrices: [{ vsku: "HCR-25G", tier: "retail", gallons: 2.5 }],
     marketMath: "$170-$243 / 5 gal = $34.00-$48.60/gal",
     priceNote: "Current pack prices start the comparison; circulation dose, cycle, rinse, labor, wastewater, and shutdown finish it.",
     swapCurrent: "RYDLYME biodegradable descaler",
@@ -76,7 +76,7 @@ const pages = [
     product: "VertKleen CR HD",
     productHref: "../products/crhd",
     competitor: "Simple Green Industrial",
-    vkPrices: [{ vsku: "VK-CRHD-5G", tier: "retail", gallons: 5 }],
+    vkPrices: [{ vsku: "CRHD-25G", tier: "retail", gallons: 2.5 }],
     marketMath: "$66-$184 / 5 gal = $13.20-$36.80/gal",
     priceNote: "Pack price matters, but product use, repeat passes, water, labor, cleanup, and downtime decide the real cost.",
     swapCurrent: "Simple Green / Zep / butyl degreasers",
@@ -103,7 +103,7 @@ const pages = [
     product: "VertKleen LAM3",
     productHref: "../products/lam3",
     competitor: "Wet & Forget",
-    vkPrices: [{ vsku: "VK-LAM3-5G", tier: "retail", gallons: 5 }],
+    vkPrices: [{ vsku: "LAM3-25G", tier: "retail", gallons: 2.5 }],
     marketMath: "$34.00/gal",
     priceNote: "Compare pack price with coverage, application time, repeat visits, water, cleanup, and how long the result lasts.",
     swapCurrent: "Wet & Forget / bleach roof cleaners",
@@ -129,8 +129,8 @@ const pages = [
     productHref: "../pricing-cip-food-beverage",
     competitor: "Micro Matic beer-line cleaner",
     vkPrices: [
-      { label: "CR", vsku: "VK-CR-2.5G", tier: "retail", gallons: 2.5 },
-      { label: "HCR", vsku: "VK-HCR-2.5G", tier: "retail", gallons: 2.5 },
+      { label: "CR", vsku: "CRCIP-25G", tier: "retail", gallons: 2.5 },
+      { label: "HCR", vsku: "HCRCIP-25G", tier: "retail", gallons: 2.5 },
     ],
     marketMath: "$38.85/gal",
     priceNote: "Compare product used with cycle time, rinses, labor, water, wastewater, downtime, and return-to-production.",
@@ -328,7 +328,7 @@ function pageHtml(page) {
   </section>
 </main>
 
-<script type="module" src="../js/main.js?v=20260824a"></script>
+<script type="module" src="../js/main.js?v=20260824b"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

@@ -106,7 +106,7 @@ function productMeta(parent, variant) {
   const imageUrl = parent.image_url || variant.image_url || '';
   const dimensions = catalogImageDimensions(imageUrl);
   return {
-    name: `${parent.name || variant.name || variant.vsku} - ${variant.label || 'Each'}`,
+    name: `${variant.marketing_name || parent.name || variant.name || variant.vsku} - ${variant.label || 'Each'}`,
     price: Number(variant.price),
     currency: variant.currency || parent.currency || 'usd',
     imageUrl,

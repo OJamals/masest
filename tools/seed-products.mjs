@@ -32,6 +32,19 @@ const variants = catalog.product_variants.map((v) => ({
   product_sku: v.product_slug,
   label: v.label,
   gallons: v.size_gal,
+  market: v.market,
+  package_kind: v.package_kind,
+  marketing_name: v.marketing_name,
+  units_per_case: v.units_per_case,
+  unit_vsku: v.unit_sku || null,
+  intended_active: v.intended_active,
+  activation_blocker: v.activation_blocker || null,
+  requires_quote: v.requires_quote,
+  shipping_weight_lb: v.shipping_weight_lb ?? null,
+  shipping_length_in: v.shipping_length_in ?? null,
+  shipping_width_in: v.shipping_width_in ?? null,
+  shipping_height_in: v.shipping_height_in ?? null,
+  pricing_source_version: v.pricing_source_version,
   currency: 'usd',
   active: v.active,
   sort: v.sort,
@@ -99,5 +112,6 @@ try {
 }
 
 const active = variants.filter((variant) => variant.active).length;
-console.log(`Seeded ${products.length} products, ${variants.length} variants (${active} active), and ${services.length} services/packages without changing CMS prices.`);
+const blocked = variants.filter((variant) => variant.activation_blocker).length;
+console.log(`Seeded ${products.length} products, ${variants.length} variants (${active} checkout-ready; ${blocked} activation-blocked), and ${services.length} services/packages without changing CMS prices.`);
 console.log(`Cleaned stale rows: ${cleaned.product_variants} variants, ${cleaned.products} products, ${cleaned.services} services.`);

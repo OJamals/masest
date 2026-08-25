@@ -32,6 +32,19 @@ test("lead bar reveals at right scroll point via sentinel", () => {
   assert.match(css, /\.lead-action-bar\.is-visible\s*\{[^}]*opacity:\s*1;[^}]*visibility:\s*visible;/s, "is-visible must reveal bar");
 });
 
+test("lead bar yields while mobile shoppers use product-selection surfaces", () => {
+  assert.match(
+    leadBlock,
+    /querySelectorAll\("#shopGrid, \[data-marine-product-selector\]"\)/,
+    "lead bar suppression must include the marine product selector",
+  );
+  assert.match(
+    leadBlock,
+    /leadSuppressionTargets\.forEach\(\(target\) => leadSuppressionObserver\.observe\(target\)\)/,
+    "every product-selection surface must be observed",
+  );
+});
+
 test("lead bar still shows without IntersectionObserver support", () => {
   assert.match(leadBlock, /else\s*\{\s*setLeadVisible\(true\);?\s*\}/, "fallback must show bar when IntersectionObserver is unavailable");
 });

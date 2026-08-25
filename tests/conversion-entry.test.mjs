@@ -101,11 +101,11 @@ test("CIP pricing label stays consistent across entry, detail, and resource surf
   assert.equal(segment?.title, "CIP pricing");
   assert.match(
     segment?.rows.find((row) => row.product_slug === "cr")?.application || "",
-    /Cuts through fat, protein, yeast, and organic film/,
+    /Food-grade alkaline CIP - organics, proteins, fats, biofilm/,
   );
   assert.match(
     segment?.rows.find((row) => row.product_slug === "hcr")?.application || "",
-    /Breaks down beer stone, rust, calcium, and hard-water scale/,
+    /Food-grade acid CIP - beer stone, mineral scale, stainless passivation/,
   );
   assert.doesNotMatch(
     segment?.rows.find((row) => row.product_slug === "purgo")?.application || "",

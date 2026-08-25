@@ -21,6 +21,7 @@ const CATALOG_PRODUCTS = [
   "torque",
   "sar",
   "watersafe60",
+  "cr60",
 ];
 const SERVICE_NAMES = [
   "Raw Water - Standard Analysis",
@@ -68,58 +69,73 @@ const SERVICE_PACKAGE_NAMES = [
 
 test("canonical catalog carries product and variant metadata without prices", () => {
   const data = catalog();
-  assert.equal(data.products.length, 15);
-  assert.equal(data.product_variants.length, 66);
+  assert.equal(data.products.length, 16);
+  assert.equal(data.product_variants.length, 208);
   assert.deepEqual(data.products.map((product) => product.slug), CATALOG_PRODUCTS);
   assert.equal(data.products.find((product) => product.slug === "multiwash")?.name, "VertKleen MultiWash");
 
-  const hcrTrial = data.product_variants.find((v) => v.sku === "VK-HCR-1G");
+  const hcrTrial = data.product_variants.find((v) => v.sku === "HCRCIP-1G");
   assert.equal(hcrTrial.product_slug, "hcr");
   assert.equal(hcrTrial.active, true);
   assert.equal(hcrTrial.requires_quote, false);
 
-  const watersafeTrial = data.product_variants.find((v) => v.sku === "VK-WS60-1G");
+  const watersafeTrial = data.product_variants.find((v) => v.sku === "WS60-1G");
   assert.equal(watersafeTrial.active, true);
   assert.equal(watersafeTrial.requires_quote, false);
 
-  const hcrTote = data.product_variants.find((v) => v.sku === "VK-HCR-275G");
+  const hcrTote = data.product_variants.find((v) => v.sku === "HCRCIP-275T");
   assert.equal(hcrTote.active, false);
   assert.equal(hcrTote.requires_quote, true);
 
-  const hcrT16Jug = data.product_variants.find((v) => v.sku === "VK-HCR-T16-1G");
+  const hcrT16Jug = data.product_variants.find((v) => v.sku === "HCR-1G");
   assert.equal(hcrT16Jug.active, true);
   assert.equal(hcrT16Jug.requires_quote, false);
 
-  const descalerTrial = data.product_variants.find((v) => v.sku === "VK-DESC-1G");
+  const descalerTrial = data.product_variants.find((v) => v.sku === "DSC-1G");
   assert.equal(descalerTrial.active, true);
   assert.equal(descalerTrial.requires_quote, false);
-  const retiredFields = ["retail_price", "price_per_gallon", "currency", "notes", "source"];
+  const retiredFields = ["retail_price", "price_per_gallon", "minimum_checkout_price", "currency", "notes", "source"];
   assert.ok(data.product_variants.every((variant) => (
     retiredFields.every((field) => !(field in variant))
   )));
 });
 
-test("product catalog policy: confirmed small packs are buyable and drums/totes quote-routed", () => {
+test("product catalog policy: verified units are buyable and unverified parcels fail closed", () => {
   const data = catalog();
 
-  for (const product of data.products) {
-    const small = data.product_variants.filter((v) => (
-      v.product_slug === product.slug && [1, 2.5, 5].includes(Number(v.size_gal))
-    ));
-    const oneGal = small.find((v) => Number(v.size_gal) === 1);
-    assert.ok(oneGal, `${product.slug} should expose the NEW 1 gal jug size`);
-    assert.equal(oneGal.active, true, `${product.slug} 1 gal jug should be active`);
-    assert.equal(oneGal.requires_quote, false, `${product.slug} 1 gal jug should be buyable`);
-    assert.ok(small.length > 0, `${product.slug} should have small-pack variants`);
-    assert.equal(product.mode, "buy", `${product.slug} should be buyable in small packs`);
-    assert.ok(small.every((v) => v.active === true), `${product.slug} small packs should be active`);
-    assert.ok(small.every((v) => v.requires_quote === false), `${product.slug} small packs should not require quote`);
+  const unitGroups = Map.groupBy(
+    data.product_variants.filter((v) => v.package_kind === "unit"),
+    (v) => `${v.product_slug}|${v.market}|${v.marketing_name}`,
+  );
+  assert.equal(unitGroups.size, 24, "workbook has 24 product-market presentations");
+  for (const [presentation, units] of unitGroups) {
+    assert.deepEqual(units.map((v) => Number(v.size_gal)), [0.25, 0.5, 1, 2.5], `${presentation} sizes`);
+    const pending = units.filter((v) => [0.25, 0.5].includes(Number(v.size_gal)));
+    const ready = units.filter((v) => [1, 2.5].includes(Number(v.size_gal)));
+    assert.ok(pending.every((v) => v.active === false && v.intended_active === true));
+    assert.ok(pending.every((v) => v.activation_blocker === "shipping_package_profile_missing"));
+    assert.ok(ready.every((v) => v.active === true && v.requires_quote === false));
+    assert.ok(ready.every((v) => [
+      v.shipping_weight_lb,
+      v.shipping_length_in,
+      v.shipping_width_in,
+      v.shipping_height_in,
+    ].every((value) => Number(value) > 0)));
   }
 
-  const bulk = data.product_variants.filter((v) => Number(v.size_gal) >= 55);
-  assert.ok(bulk.length > 0, "bulk variants should remain in catalog");
+  const cases = data.product_variants.filter((v) => v.package_kind === "case");
+  assert.equal(cases.length, 64);
+  assert.ok(cases.every((v) => v.market === "industrial"));
+  assert.ok(cases.every((v) => v.active === false && v.intended_active === true));
+  assert.ok(cases.every((v) => v.activation_blocker === "shipping_package_profile_missing"));
+  assert.ok(cases.every((v) => v.unit_sku));
+
+  const bulk = data.product_variants.filter((v) => v.package_kind === "bulk");
+  assert.equal(bulk.length, 48);
   assert.ok(bulk.every((v) => v.active === false), "bulk variants should not be checkout-active");
   assert.ok(bulk.every((v) => v.requires_quote === true), "bulk variants should require quote");
+  assert.ok(bulk.every((v) => v.intended_active === false));
+  assert.ok(data.products.every((product) => product.mode === "buy"));
 });
 
 test("canonical catalog carries quote-confirmed services and unique SKUs", () => {
@@ -190,32 +206,37 @@ test("Supabase seed SQL imports metadata without changing CMS prices", () => {
   const seed = readSite("supabase/variants_seed.sql");
   assert.match(seed, /delete from public\.product_variants where vsku not in/, "variant seed should purge stale DB variants");
   assert.doesNotMatch(seed, /price_tiers|retail_price|public_price/);
-  assert.match(seed, /'VK-HCR-1G','hcr','1 gal jug',1,true,1/);
-  assert.match(seed, /'VK-WS60-1G','watersafe60','1 gal jug',1,true,1/);
-  assert.match(seed, /'VK-CR2-1G','cr2','1 gal jug',1,true,1/);
-  assert.match(seed, /'VK-SAR-1G','sar','1 gal jug',1,true,1/);
+  assert.match(seed, /'HCRCIP-1G','hcr','1 gal',1,'industrial','unit','VertKleen CIP HCR',1,null,true,true,null,false,10,6,6,12,'v4\.1 EXTERNAL',3/);
+  assert.match(seed, /'WS60-1G','watersafe60','1 gal',1,'industrial','unit','VertKleen WaterSafe60'/);
+  assert.match(seed, /'CR-1G','cr2','1 gal',1,'industrial','unit','VertKleen HVAC CR'/);
+  assert.match(seed, /'SAR-1G','sar','1 gal',1,'industrial','unit','VertKleen SAR'/);
   assert.doesNotMatch(seed, /VK-PG100|VK-EG5050/);
-  assert.match(seed, /'VK-HCR-275G','hcr','275 gal tote',275,false,5/);
+  assert.match(seed, /'HCRCIP-275T','hcr','275 gal tote',275,'industrial','bulk','VertKleen CIP HCR',1,null,false,false,null,true/);
 });
 
 test("segment pricing keeps membership and copy without static prices", () => {
   const data = JSON.parse(readSite("data/segment-pricing.json"));
   assert.equal(
     data.volume_discount,
-    "200+ jugs: 5% off · 1,000+ gallons (drums/totes): 5% off",
+    "Industrial cases are 10% below the same units bought singly. VK5 saves 5% on eligible online orders.",
   );
   assert.equal(
     data.footer_note,
-    "Prices exclude shipping and freight. FOB Ex Plant, Merritt Island, FL.",
+    "Recommended $75 minimum order. Prices exclude sales tax and freight. FOB Merritt Island, FL. Drums and totes are quote-only.",
   );
+  assert.equal(data.source.version, "v4.1 EXTERNAL");
+  assert.equal(data.source.sha256, "fc555e6ec410a20d945bc6e0635bdcda3ce1389bed47205f6696989fe8041d7e");
+  assert.ok(data.segments.every((segment) => segment.price_tier === "retail"));
 
   const hvac = data.segments.find((segment) => segment.slug === "hvac-facilities");
   const row = (sku) => hvac.rows.find((item) => item.sku === sku);
-  assert.equal(row("VK-HCR-2.5G").pack, "2.5 gal jug");
-  assert.equal(row("VK-CRHD-55G").quote_only, true);
+  assert.equal(row("HCR-25G").pack, "2.5 gal");
+  assert.equal(row("CRHD-55D").quote_only, true);
   assert.ok(data.segments.flatMap((segment) => segment.rows).every((item) => (
     !("price_per_unit" in item) && !("price_per_gallon" in item)
   )));
+  const catalogSkus = new Set(catalog().product_variants.map((variant) => variant.sku));
+  assert.ok(data.segments.flatMap((segment) => segment.rows).every((item) => catalogSkus.has(item.sku)));
   assert.equal(data.segments.flatMap((segment) => segment.rows).some((item) => item.sku === "VK-MW-1400G"), false);
 
   const resourcesHtml = readSite("resources.html");
@@ -259,7 +280,7 @@ test("raw tier-pricing table is not publicly readable", () => {
 test("public catalog excludes non-canonical program aliases", () => {
   const data = catalog();
   const slugs = data.products.map((product) => product.slug);
-  assert.equal(data.products.length, 15);
+  assert.equal(data.products.length, 16);
   assert.ok(!slugs.includes("crs"), "CRS needs owner confirmation before public ecommerce listing");
   assert.ok(!slugs.includes("dbnpa"), "discontinued DBNPA must stay out of the public catalog");
   assert.ok(!slugs.includes("pg100"), "PG/EG glycol products are not in the canonical catalog");
