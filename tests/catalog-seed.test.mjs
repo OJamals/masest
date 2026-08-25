@@ -67,6 +67,20 @@ const SERVICE_PACKAGE_NAMES = [
   "Yearly Recertification",
 ];
 
+test("public catalog counts match the canonical product order", () => {
+  const count = String(CATALOG_ORDER.length);
+  const products = readSite("products.html");
+  assert.match(
+    products,
+    new RegExp(`<span><b>${count}</b> products</span>`),
+  );
+  assert.match(products, new RegExp(`content="Shop ${count} VertKleen cleaners`));
+  assert.match(
+    readSite("index.html"),
+    new RegExp(`<div class="big">${count}</div><div class="lbl">Buyable VertKleen products</div>`),
+  );
+});
+
 test("canonical catalog carries product and variant metadata without prices", () => {
   const data = catalog();
   assert.equal(data.products.length, 16);
