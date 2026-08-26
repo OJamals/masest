@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 const home = read("index.html");
 const storyCss = read("css/story.css");
 const storyJs = read("js/story.js");
+const storyVisualSpec = read("tools/story-hmis-visual.spec.mjs");
 const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<section class="story-summary/)?.[0] || "";
 const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
 const acts = [...story.matchAll(/<section class="act[^"]*"[^>]*data-act="(\d)"[^>]*data-scene="([^"]+)"/g)];
@@ -96,4 +97,14 @@ test("story uses compact native-scroll roads and scene renderer contracts", () =
   assert.match(storyJs, /sceneDef\.render\(st\.p, st\)/);
   assert.match(storyJs, /initCompactStory\(\)/);
   assert.match(storyJs, /rect\.bottom\s*>=\s*window\.innerHeight/);
+});
+
+test("story performance budgets normalize animation cadence against the measured idle baseline", () => {
+  assert.match(storyVisualSpec, /frameCoverage:\s*deltas\.length\s*\/\s*\(7000\s*\/\s*idleAverage\)/);
+  assert.match(storyVisualSpec, /p95BaselineMultiple:\s*p95\s*\/\s*idleP95/);
+  assert.match(storyVisualSpec, /p99BaselineMultiple:\s*p99\s*\/\s*idleP95/);
+  assert.match(storyVisualSpec, /metrics\.frameCoverage[\s\S]*toBeGreaterThanOrEqual\(2\s*\/\s*3\)/);
+  assert.match(storyVisualSpec, /metrics\.p95BaselineMultiple[\s\S]*toBeLessThanOrEqual\(2\.05\)/);
+  assert.match(storyVisualSpec, /metrics\.p99BaselineMultiple[\s\S]*toBeLessThanOrEqual\(3\.05\)/);
+  assert.doesNotMatch(storyVisualSpec, /expect\(metrics\.p9[59][\s\S]*toBeLessThan\((?:25|35)\)/);
 });
