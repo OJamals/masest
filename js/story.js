@@ -11,6 +11,7 @@
 
   var acts = Array.prototype.slice.call(story.querySelectorAll(".act"));
   var railLinks = Array.prototype.slice.call(story.querySelectorAll(".rail-btn"));
+  var storyActions = story.querySelector(".story-actions");
   var objectStatus = story.querySelector(".story-object__status");
   var mediaQuery = window.matchMedia("(max-width: 760px)");
   var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -177,6 +178,31 @@
   }
 
   function initStoryPresence() {
+    var presenceFrame = 0;
+
+    function updateStoryExit() {
+      presenceFrame = 0;
+      if (!storyActions) return;
+      var storyBottom = story.getBoundingClientRect().bottom;
+      var navHeight = parseFloat(
+        window.getComputedStyle(story).getPropertyValue("--story-nav-h")
+      ) || 59;
+      var actionHeight = storyActions.offsetHeight || 0;
+      story.classList.toggle(
+        "story-exiting",
+        storyBottom <= navHeight + actionHeight * 2
+      );
+    }
+
+    function scheduleStoryExit() {
+      if (presenceFrame) return;
+      presenceFrame = window.requestAnimationFrame(updateStoryExit);
+    }
+
+    updateStoryExit();
+    window.addEventListener("scroll", scheduleStoryExit, { passive: true });
+    window.addEventListener("resize", scheduleStoryExit, { passive: true });
+
     if ("IntersectionObserver" in window) {
       var observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {

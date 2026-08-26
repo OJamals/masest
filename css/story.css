@@ -88,12 +88,26 @@
   gap: 8px;
   width: 100%;
   height: var(--story-actions-h);
-  margin-bottom: calc(-1 * var(--story-actions-h));
+  margin-bottom: 0;
   padding-inline:
     max(24px, calc((100vw - 1180px) / 2));
   border-bottom: 1px solid var(--story-line);
   background: rgba(11, 15, 17, .82);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .12);
+  transition:
+    opacity .12s var(--ease-out),
+    transform .12s var(--ease-out);
+}
+
+.story.story-exiting .story-actions {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+.story.story-exiting .story-rail {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .story-actions__match {
@@ -173,6 +187,7 @@
   width: 0;
   height: 0;
   pointer-events: none;
+  transition: opacity .1s var(--ease-out);
 }
 
 .rail-inner {
@@ -188,10 +203,10 @@
 .rail-btn {
   position: relative;
   display: grid;
-  grid-template-columns: 20px 1fr;
-  min-height: 28px;
+  grid-template-columns: 20px minmax(0, 62px);
+  min-height: 32px;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #7f898a;
   font-size: .64rem;
   line-height: 1.25;
@@ -205,26 +220,13 @@
 
 .rail-btn span {
   overflow: visible;
-  max-width: 0;
+  max-width: 62px;
+  padding-block: 2px;
   opacity: 0;
   font-weight: 700;
+  line-height: 1.4;
   white-space: nowrap;
-  transition:
-    max-width .35s var(--ease-out),
-    opacity .25s var(--ease-out);
-}
-
-.rail-btn::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 20px;
-  width: 7px;
-  height: 1px;
-  background: currentColor;
-  transform: translateY(-50%) scaleX(.35);
-  transform-origin: left;
-  transition: transform .35s var(--ease-out);
+  transition: opacity .2s var(--ease-out);
 }
 
 .rail-btn:hover,
@@ -234,13 +236,7 @@
 
 .rail-btn:hover span,
 .rail-btn[aria-current="step"] span {
-  max-width: 62px;
   opacity: 1;
-}
-
-.rail-btn:hover::before,
-.rail-btn[aria-current="step"]::before {
-  transform: translateY(-50%) scaleX(1);
 }
 
 /*
@@ -256,7 +252,7 @@
   gap: clamp(42px, 6vw, 92px);
   width: min(1180px, calc(100% - 56px));
   height: calc(100dvh - var(--story-nav-h));
-  margin: 0 auto calc(-1 * (100dvh - var(--story-nav-h)));
+  margin: calc(-1 * var(--story-actions-h)) auto calc(-1 * (100dvh - var(--story-nav-h)));
   align-items: center;
   pointer-events: none;
 }
@@ -1044,6 +1040,11 @@
   line-height: 1.55;
 }
 
+/* Landing-only trust strip has four proof points; shared site CSS supports five. */
+.trust-strip .trust-cols {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 @media (max-width: 1400px) {
   .story-rail {
     display: none;
@@ -1094,6 +1095,10 @@
  * into conventional-versus-VertKleen comparison cards with no horizontal pan.
  */
 @media (max-width: 760px) {
+  .trust-strip .trust-cols {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .story {
     --story-actions-h: 48px;
     background:

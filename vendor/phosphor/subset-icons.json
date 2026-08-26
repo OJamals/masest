@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 260,
-  "usedCount": 151,
+  "count": 259,
+  "usedCount": 150,
   "bufferCount": 109,
   "icons": [
     {
@@ -50,11 +50,6 @@
       "src": "used"
     },
     {
-      "name": "arrows-left-right",
-      "cp": "E0A0",
-      "src": "used"
-    },
-    {
       "name": "atom",
       "cp": "E5E4",
       "src": "used"
@@ -62,7 +57,7 @@
     {
       "name": "bank",
       "cp": "E0B4",
-      "src": "buffer"
+      "src": "used"
     },
     {
       "name": "barcode",
@@ -307,7 +302,7 @@
     {
       "name": "coins",
       "cp": "E78E",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "compass",

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "masest-www-redirect",
+  "main": "src/index.js",
+  "account_id": "8f32dd7b576dc450093fc4a62d9cab81",
+  "compatibility_date": "2026-08-26",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "www.masest.co/*",
+      "zone_name": "masest.co"
+    }
+  ]
+}

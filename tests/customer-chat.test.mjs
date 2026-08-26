@@ -167,6 +167,46 @@ test("logged-out visitors always see chat and get a sign-up/login link", async (
   });
 });
 
+test("customer chat close paths remove the hidden panel from layout", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const authenticatedAuth = `
+      export async function getToken() { return "test-token"; }
+      export async function me() { return { can_admin: false }; }
+      export async function api() { return { messages: [] }; }
+    `;
+    try {
+      const { context, page } = await chatPage(browser, authenticatedAuth);
+      const toggle = page.locator(".customer-chat__toggle");
+      const close = page.locator(".customer-chat__close");
+      const panel = page.locator(".customer-chat__panel");
+
+      const assertClosed = async () => {
+        assert.deepEqual(await panel.evaluate((element) => ({
+          hidden: element.hidden,
+          display: getComputedStyle(element).display,
+          width: element.getBoundingClientRect().width,
+          height: element.getBoundingClientRect().height,
+        })), { hidden: true, display: "none", width: 0, height: 0 });
+        assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+      };
+
+      await toggle.click();
+      assert.equal(await panel.isVisible(), true);
+      await close.click();
+      await assertClosed();
+
+      await toggle.click();
+      assert.equal(await panel.isVisible(), true);
+      await toggle.click();
+      await assertClosed();
+      await context.close();
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("guest and authenticated chat quote links carry bounded page and cart context", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });

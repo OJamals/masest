@@ -57,7 +57,7 @@ export async function initCustomerChat() {
       stylesheet.addEventListener("error", resolve, { once: true });
     });
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/customer-chat.css?v=20260719c`;
+    stylesheet.href = `${root}css/customer-chat.css?v=20260826b`;
     stylesheet.dataset.masestCustomerChat = "true";
     document.head.append(stylesheet);
   }

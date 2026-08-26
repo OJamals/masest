@@ -58,7 +58,7 @@
 }
 
 .customer-chat__panel[hidden] { display: none; }
-.customer-chat__panel:has(.customer-chat__thread:not([hidden])) {
+.customer-chat__panel:not([hidden]):has(.customer-chat__thread:not([hidden])) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   block-size: min(440px, calc(100dvh - 96px)) !important;
@@ -109,7 +109,7 @@
   .customer-chat:has(.customer-chat__panel:not([hidden])) .customer-chat__toggle {
     display: none;
   }
-  .customer-chat__panel:has(.customer-chat__thread:not([hidden])) {
+  .customer-chat__panel:not([hidden]):has(.customer-chat__thread:not([hidden])) {
     block-size: calc(100dvh - 24px) !important;
     max-block-size: calc(100dvh - 24px);
   }

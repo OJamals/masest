@@ -32,6 +32,11 @@ test("story has a visible escape, meaningful chapter navigation, and persistent 
   assert.match(story, /class="story-actions__trial" href="contact\?type=sample&amp;product=VertKleen%20HCR"/);
 });
 
+test("chapter rail avoids animated horizontal rules through labels", () => {
+  assert.doesNotMatch(storyCss, /\.rail-btn::before/);
+  assert.doesNotMatch(storyCss, /\.rail-btn\[aria-current="step"\]::before/);
+});
+
 test("full comparison remains a semantic table and becomes complete stacked cards on mobile", () => {
   assert.match(guide, /<table class="replacement-ledger"/);
   assert.equal((guide.match(/<th scope="col"/g) || []).length, 6);

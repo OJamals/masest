@@ -144,22 +144,21 @@ test("same story object remains pinned while scene state and chapter navigation 
   expect(samples[3].status).toBe("Result");
 });
 
-test("desktop chapter rail keeps connector lines clear of unclipped labels", async ({ page }) => {
+test("desktop chapter rail keeps unclipped labels clear of step numbers", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
 
   const geometry = await page.locator('.rail-btn[aria-current="step"]').evaluate((button) => {
+    const number = button.querySelector("b");
     const label = button.querySelector("span");
     const buttonStyle = getComputedStyle(button);
     const labelStyle = getComputedStyle(label);
     const connectorStyle = getComputedStyle(button, "::before");
-    const transform = new DOMMatrixReadOnly(connectorStyle.transform);
-    const connectorLeft = Number.parseFloat(connectorStyle.left) + transform.e;
-    const connectorRight = connectorLeft + Number.parseFloat(connectorStyle.width) * transform.a;
 
     return {
       buttonPosition: buttonStyle.position,
-      connectorRight,
+      connectorContent: connectorStyle.content,
+      numberRight: number.offsetLeft + number.offsetWidth,
       labelLeft: label.offsetLeft,
       labelOverflow: labelStyle.overflow,
       lineHeightRatio: Number.parseFloat(labelStyle.lineHeight) / Number.parseFloat(labelStyle.fontSize),
@@ -167,7 +166,8 @@ test("desktop chapter rail keeps connector lines clear of unclipped labels", asy
   });
 
   expect(geometry.buttonPosition, JSON.stringify(geometry)).toBe("relative");
-  expect(geometry.connectorRight, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.labelLeft - 3);
+  expect(geometry.connectorContent, JSON.stringify(geometry)).toBe("none");
+  expect(geometry.numberRight, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.labelLeft - 6);
   expect(geometry.labelOverflow, JSON.stringify(geometry)).toBe("visible");
   expect(geometry.lineHeightRatio, JSON.stringify(geometry)).toBeGreaterThanOrEqual(1.2);
 });
@@ -246,6 +246,44 @@ test("persistent product actions remain visible and correctly routed in every sc
     expect(action.visible).toBe("visible");
     expect(action.shop).toBe("products/hcr");
     expect(action.trial).toContain("product=VertKleen%20HCR");
+  }
+});
+
+test("story actions leave the sticky scene without being clipped", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  await page.locator("#storySummary").evaluate((summary) => summary.scrollIntoView({ block: "start" }));
+  await page.waitForTimeout(350);
+
+  const exit = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    const action = story.querySelector(".story-actions");
+    const rail = story.querySelector(".story-rail");
+    const nav = document.querySelector(".nav");
+    const storyBox = story.getBoundingClientRect();
+    const actionBox = action.getBoundingClientRect();
+    const navBox = nav.getBoundingClientRect();
+    const style = getComputedStyle(action);
+    const railStyle = getComputedStyle(rail);
+    const visible = style.display !== "none"
+      && style.visibility !== "hidden"
+      && Number(style.opacity) > .01
+      && actionBox.width > 0
+      && actionBox.height > 0;
+    return {
+      visible,
+      navBottom: navBox.bottom,
+      storyBottom: storyBox.bottom,
+      actionTop: actionBox.top,
+      actionBottom: actionBox.bottom,
+      railOpacity: Number(railStyle.opacity),
+    };
+  });
+
+  expect(exit.railOpacity, JSON.stringify(exit)).toBeLessThanOrEqual(.01);
+  if (exit.visible) {
+    expect(exit.actionTop, JSON.stringify(exit)).toBeGreaterThanOrEqual(exit.navBottom - 1);
+    expect(exit.actionBottom, JSON.stringify(exit)).toBeLessThanOrEqual(exit.storyBottom + 1);
   }
 });
 
