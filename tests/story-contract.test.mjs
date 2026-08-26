@@ -120,3 +120,16 @@ test("story performance budgets normalize animation cadence against the measured
   assert.match(storyVisualSpec, /metrics\.p99BaselineMultiple[\s\S]*toBeLessThanOrEqual\(3\.05\)/);
   assert.doesNotMatch(storyVisualSpec, /expect\(metrics\.p9[59][\s\S]*toBeLessThan\((?:25|35)\)/);
 });
+
+test("story long-task budget measures only the controlled-scroll interval", () => {
+  const idleBaselineEnd = storyVisualSpec.indexOf("requestAnimationFrame(idleFrame);\n    });");
+  const longTaskObserverStart = storyVisualSpec.indexOf('observer.observe({ type: "longtask" });');
+  const controlledScrollStart = storyVisualSpec.indexOf("function frame(now)");
+
+  assert.ok(idleBaselineEnd >= 0, "expected idle baseline before controlled scroll");
+  assert.ok(
+    longTaskObserverStart > idleBaselineEnd && longTaskObserverStart < controlledScrollStart,
+    "long-task observer must start after idle baseline and before controlled scroll",
+  );
+  assert.doesNotMatch(storyVisualSpec, /buffered:\s*true/);
+});

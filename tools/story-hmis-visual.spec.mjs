@@ -662,14 +662,6 @@ test("desktop story stays inside a controlled-scroll frame budget", async ({ pag
     const longTasks = [];
     let observer = null;
 
-    if ("PerformanceObserver" in window
-      && PerformanceObserver.supportedEntryTypes?.includes("longtask")) {
-      observer = new PerformanceObserver((list) => {
-        longTasks.push(...list.getEntries().map((entry) => entry.duration));
-      });
-      observer.observe({ type: "longtask", buffered: true });
-    }
-
     await new Promise((resolve) => {
       let startedAt = 0;
       let previous = 0;
@@ -686,6 +678,14 @@ test("desktop story stays inside a controlled-scroll frame budget", async ({ pag
       }
       requestAnimationFrame(idleFrame);
     });
+
+    if ("PerformanceObserver" in window
+      && PerformanceObserver.supportedEntryTypes?.includes("longtask")) {
+      observer = new PerformanceObserver((list) => {
+        longTasks.push(...list.getEntries().map((entry) => entry.duration));
+      });
+      observer.observe({ type: "longtask" });
+    }
 
     await new Promise((resolve) => {
       let startedAt = 0;
@@ -705,6 +705,8 @@ test("desktop story stays inside a controlled-scroll frame budget", async ({ pag
       }
       requestAnimationFrame(frame);
     });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    longTasks.push(...(observer?.takeRecords() || []).map((entry) => entry.duration));
     observer?.disconnect();
 
     const sorted = deltas.slice().sort((a, b) => a - b);
