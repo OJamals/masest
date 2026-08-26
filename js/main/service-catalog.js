@@ -433,4 +433,4 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { loadPricingData } from "./pricing-data.js?v=20260824b";
+import { loadPricingData } from "./pricing-data.js?v=20260826f";

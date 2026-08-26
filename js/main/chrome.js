@@ -432,7 +432,7 @@ export function renderChrome({
     const cfg = document.createElement("script");
     cfg.src = `${root}js/config.js?v=20260711b`;
     cfg.onload = () => {
-      ["integrations.js?v=20260711b", "customer-chat.js?v=20260822c"].forEach((src) => {
+      ["integrations.js?v=20260711b", "customer-chat.js?v=20260826c"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;
