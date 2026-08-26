@@ -15,6 +15,7 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/story-hmis-visual.spec.mjs",
     "tools/update-content-regressions.spec.mjs",
   ];
+  const storyPerformanceTitle = "desktop story stays inside a controlled-scroll frame budget";
 
   assert.match(scripts.check || "", /node tools\/check-js\.mjs/);
   assert.match(scripts.test || "", /node --test --test-concurrency=1 --test-timeout=\d+ tests\/\*\.test\.mjs/);
@@ -23,9 +24,17 @@ test("package exposes one-command build and verification scripts", () => {
   assert.match(scripts.verify || "", /npm run qa:commerce-smoke/);
   assert.equal(
     scripts["qa:ui-critical"],
-    `playwright test ${criticalUiSpecs.join(" ")} --reporter=line`,
+    "npm run qa:ui-critical:interaction && npm run qa:ui-critical:performance",
   );
-  assert.doesNotMatch(scripts["qa:ui-critical"], /tools\/\*\.spec/);
+  assert.equal(
+    scripts["qa:ui-critical:interaction"],
+    `playwright test ${criticalUiSpecs.join(" ")} --grep-invert="${storyPerformanceTitle}" --reporter=line`,
+  );
+  assert.equal(
+    scripts["qa:ui-critical:performance"],
+    `playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --reporter=line`,
+  );
+  assert.doesNotMatch(scripts["qa:ui-critical:interaction"], /tools\/\*\.spec/);
   assert.ok(
     scripts.verify.indexOf("npm run build")
       < scripts.verify.indexOf("npm run verify:site"),
