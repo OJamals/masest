@@ -358,7 +358,7 @@ test("scrolly close proves one field result around the persistent equipment obje
   assert.doesNotMatch(story, /prewarmSaviorProofImages|data-story-src/);
 });
 
-test("scrolly story is one field job told through four named scenes", () => {
+test("scrolly cleaner guide uses four named scenes", () => {
   const index = read("index.html");
 
   assert.match(index, /data-active-scene="diagnose"/);
@@ -376,7 +376,7 @@ test("scrolly chapter rail provides four direct chapter links", () => {
   const rail = index.match(/<nav class="story-rail"[\s\S]*?<\/nav>/)?.[0] || "";
 
   assert.ok(rail, "expected story rail markup");
-  assert.match(rail, /aria-label="Story chapters"/);
+  assert.match(rail, /aria-label="Cleaner selection steps"/);
   assert.match(rail, /href="#story-scene-1" aria-current="step"/);
   for (const scene of [1, 2, 3, 4]) assert.match(rail, new RegExp(`href="#story-scene-${scene}"`));
   assert.doesNotMatch(rail, /aria-hidden="true"/);
@@ -407,7 +407,7 @@ test("scrolly opener diagnoses the exact job and exposes immediate actions", () 
   assert.match(actOneCopy, /Show us the mess/);
   assert.match(actOneCopy, /rust and mineral buildup/);
   assert.match(actOne, /class="story-evidence"/);
-  assert.match(actOneCopy, /Real job, not a render/);
+  assert.match(actOneCopy, /Compare the same surface/);
   assert.match(actOne, /aria-label="Shop VertKleen HCR"/);
   assert.match(actOne, /aria-label="Try VertKleen HCR on my cleaning job"/);
   assert.match(storyCss, /\.story-evidence/);
@@ -445,8 +445,8 @@ test("scrolly act 3 makes one product switch and defers full comparison below", 
   assert.ok(actThree, "expected act three scrolly section");
   assert.ok(guide, "expected deferred full cleaner comparison");
   assert.match(actThree, /class="switch-card"/);
-  assert.match(actThree, /Previous attempt[\s\S]*<b>CLR<\/b>/);
-  assert.match(actThree, /Matched cleaner[\s\S]*<b>VertKleen HCR<\/b>/);
+  assert.match(actThree, /Instead of[\s\S]*<b>CLR<\/b>/);
+  assert.match(actThree, />Test<\/span>[\s\S]*<b>VertKleen HCR<\/b>/);
   assert.match(actThree, /href="#compareAllCleaners"/);
   assert.doesNotMatch(actThree, /class="ledger-row"/);
   assert.match(guide, /class="replacement-ledger"/);
@@ -523,11 +523,11 @@ test("scrolly Scene 2 uses a compact cause-and-cost burden chain", () => {
   const actTwo = home.match(/<section class="act" id="story-scene-2"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actTwo, /class="burden-chain"/);
-  assert.match(actTwo, /Thirty-six cleaning hours led to an incomplete result and another cleaning step/);
+  assert.match(actTwo, /Thirty-six cleaning hours, rust still present, and more work needed to finish/);
   assert.equal((actTwo.match(/ph-arrow-right/g) || []).length, 2);
   assert.doesNotMatch(actTwo, /<svg|<canvas|pipe-diagram/);
   assert.match(storyJs, /function renderBurden/);
-  assert.match(storyJs, /36-hour attempt · incomplete/);
+  assert.match(storyJs, /36 hours · rust still present/);
   assert.match(storyCss, /\.burden-chain/);
 });
 

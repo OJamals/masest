@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="css/style.css?v=20260823f">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
 <link rel="stylesheet" href="css/components.css?v=20260822d">
-<link rel="stylesheet" href="css/story.css?v=20260825a">
+<link rel="stylesheet" href="css/story.css?v=20260826a">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/">
 <meta property="og:url" content="https://masest.co/">
@@ -46,26 +46,26 @@
 
 <main id="main">
 <!-- ============================================================
-     STORY: one verified field job, four transformations.
+     GUIDE: choose a cleaner in four direct steps.
      GSAP ScrollTrigger on desktop; light in-flow reveals on mobile.
      Reduced motion, missing GSAP, and no-JS remain fully readable.
      ============================================================ -->
-<div class="story" id="story" data-active-scene="diagnose" role="region" aria-label="One VertKleen field job, from diagnosis to proof">
+<div class="story" id="story" data-active-scene="diagnose" role="region" aria-label="Choose a VertKleen cleaner in four steps">
 <script>/* Apply desktop pinning before first paint. story.js removes this
   class when motion is reduced or GSAP is unavailable. */
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches &&
       matchMedia('(min-width: 761px)').matches)
     document.getElementById('story').classList.add('story-ready');</script>
 
-  <a class="story-skip" href="#storySummary">Skip story <span>View four-step summary</span></a>
+  <a class="story-skip" href="#storySummary">Skip to summary <span>View the four steps</span></a>
 
   <nav class="story-actions" aria-label="VertKleen HCR actions">
-    <span class="story-actions__match"><small>Matched cleaner</small><b>VertKleen HCR</b></span>
+    <span class="story-actions__match"><small>For rust + scale</small><b>VertKleen HCR</b></span>
     <a class="story-actions__shop" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
     <a class="story-actions__trial" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it</a>
   </nav>
 
-  <nav class="story-rail" aria-label="Story chapters">
+  <nav class="story-rail" aria-label="Cleaner selection steps">
     <div class="rail-inner">
       <a class="rail-btn" href="#story-scene-1" aria-current="step"><b>01</b><span>Diagnose</span></a>
       <a class="rail-btn" href="#story-scene-2"><b>02</b><span>Burden</span></a>
@@ -85,16 +85,16 @@
         <span class="story-object__scan"></span>
         <span class="story-object__target story-object__target--rust"><i></i>Rust</span>
         <span class="story-object__target story-object__target--scale"><i></i>Mineral buildup</span>
-        <span class="story-object__status">Field condition</span>
+        <span class="story-object__status">Check the buildup</span>
       </div>
       <div class="story-object__footer">
         <div class="story-object__identity">
-          <small>Brevard County HVAC</small>
+          <small>Rust + mineral buildup</small>
           <b>20-year stainless base plate</b>
         </div>
         <div class="story-object__product">
           <img src="img/updates/vertkleen-hvac-hcr-5gal.webp" alt="" decoding="async" width="900" height="1200">
-          <span><small>Matched product</small><b>VertKleen HCR</b></span>
+          <span><small>Cleaner to test</small><b>VertKleen HCR</b></span>
         </div>
       </div>
     </div>
@@ -105,8 +105,8 @@
       <div class="act-content">
         <span class="kicker">01 &middot; Diagnose</span>
         <h1 class="act-h" id="storyAct1Title" data-at="0">Show us the mess. We&rsquo;ll match the cleaner.</h1>
-        <p class="act-p" data-at="0">This field job started with rust and mineral buildup on a 20-year stainless HVAC base plate and drain.</p>
-        <p class="story-evidence" data-at="0.35"><i class="ph ph-camera" aria-hidden="true"></i><span><b>Real job, not a render.</b> The same equipment stays in frame through diagnosis, product match, and result.</span></p>
+        <p class="act-p" data-at="0">Cleaning rust and mineral buildup from stainless HVAC equipment? Start by identifying the buildup, the surface, and the result you need.</p>
+        <p class="story-evidence" data-at="0.35"><i class="ph ph-camera" aria-hidden="true"></i><span><b>Compare the same surface.</b> Keep the equipment and camera angle consistent before and after cleaning.</span></p>
         <div class="story-ctas" data-at="0.55">
           <a class="btn btn-primary" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
           <a class="btn btn-ghost" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it on my job</a>
@@ -120,14 +120,14 @@
     <div class="stage">
       <div class="act-content">
         <span class="kicker">02 &middot; Measure the burden</span>
-        <h2 class="act-h" id="storyAct2Title" data-at="0">Time spent cleaning is part of the job cost.</h2>
-        <p class="act-p" data-at="0.25">Field notes say the previous cleaner had worked for 36 hours and the result was still incomplete. The rust remained, and the cleaning stayed unfinished.</p>
-        <div class="burden-chain" data-at="0.6" aria-label="Thirty-six cleaning hours led to an incomplete result and another cleaning step">
-          <span><b>36 hours</b><small>previous cleaning attempt</small></span>
+        <h2 class="act-h" id="storyAct2Title" data-at="0">Count cleaning time as part of the job cost.</h2>
+        <p class="act-p" data-at="0.25">If a cleaner runs for 36 hours and leaves rust behind, count those hours—and the repeat work needed to finish—as part of the job cost.</p>
+        <div class="burden-chain" data-at="0.6" aria-label="Thirty-six cleaning hours, rust still present, and more work needed to finish">
+          <span><b>36 hours</b><small>cleaning time</small></span>
           <i class="ph ph-arrow-right" aria-hidden="true"></i>
-          <span><b>Rust remained</b><small>result still incomplete</small></span>
+          <span><b>Rust remained</b><small>incomplete result</small></span>
           <i class="ph ph-arrow-right" aria-hidden="true"></i>
-          <span><b>More work</b><small>job still unfinished</small></span>
+          <span><b>More work</b><small>needed to finish</small></span>
         </div>
       </div>
     </div>
@@ -139,16 +139,16 @@
       <div class="act-content">
         <span class="kicker">03 &middot; Match the cleaner</span>
         <h2 class="act-h" id="storyAct3Title" data-at="0">Switch the cleaner. Finish the job.</h2>
-        <p class="act-p" data-at="0.2">For this rust-and-scale job, MASEST matched the equipment to VertKleen HCR and a short, observable field test.</p>
+        <p class="act-p" data-at="0.2">Test a small area first. Follow the HCR label for application and dwell time, then rinse and inspect before treating the full surface.</p>
         <div class="switch-card" data-at="0.45">
           <div class="switch-card__side switch-card__side--before">
-            <span>Previous attempt</span>
+            <span>Instead of</span>
             <b>CLR</b>
-            <small>36 hours; rust remained.</small>
+            <small>36 hours; rust still present.</small>
           </div>
           <i class="ph ph-arrow-right" aria-hidden="true"></i>
           <div class="switch-card__side switch-card__side--after">
-            <span>Matched cleaner</span>
+            <span>Test</span>
             <b>VertKleen HCR</b>
             <small><em aria-label="HMIS health 0, flammability 0, reactivity 0">HMIS 0&#8209;0&#8209;0</em> &middot; apply, dwell, rinse, inspect.</small>
           </div>
@@ -163,17 +163,17 @@
     <div class="stage">
       <div class="act-content">
         <span class="kicker">04 &middot; Prove the result</span>
-        <h2 class="act-h" id="storyAct4Title" data-at="0">Count the whole job. Then make the switch.</h2>
-        <p class="act-p" data-at="0.15">On this field job, HCR replaced the stalled attempt with 30 minutes of contact time and a garden-hose rinse. The job notes say no scrubbing.</p>
-        <div class="proof-stats" data-at="0.35" aria-label="Field result: 30 minutes of contact time, garden-hose rinse, no scrubbing in the job notes">
+        <h2 class="act-h" id="storyAct4Title" data-at="0">Compare the whole job. Then choose.</h2>
+        <p class="act-p" data-at="0.15">Compare the result: 30 minutes of HCR contact time, followed by a garden-hose rinse. This test needed no scrubbing.</p>
+        <div class="proof-stats" data-at="0.35" aria-label="Comparison result: 30 minutes of contact time, garden-hose rinse, no scrubbing needed">
           <span><b>30 minutes</b><small>contact time</small></span>
           <span><b>Garden hose</b><small>rinse method</small></span>
-          <span><b>No scrubbing</b><small>per job notes</small></span>
+          <span><b>No scrubbing</b><small>needed in this test</small></span>
         </div>
         <ul class="whole-job" data-at="0.55" aria-label="Six whole-job measures">
           <li>Cleaner</li><li>Dilution</li><li>Labor</li><li>Water</li><li>Downtime</li><li>Disposal</li>
         </ul>
-        <a class="story-source" href="blog/hcr-brevard-hvac-rust-case-study" data-at="0.6">Read the Brevard HVAC field notes <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        <a class="story-source" href="blog/hcr-brevard-hvac-rust-case-study" data-at="0.6">See the complete before-and-after <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
         <div class="story-ctas" data-at="0.7">
           <a class="btn btn-primary" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
           <a class="btn btn-ghost" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it on my job</a>
@@ -188,7 +188,7 @@
   <div class="wrap">
     <div class="story-summary__head">
       <span>Four-step summary</span>
-      <h2 id="storySummaryTitle">One job from diagnosis to proof.</h2>
+      <h2 id="storySummaryTitle">Choose your cleaner in four steps.</h2>
     </div>
     <ol>
       <li><b>Diagnose.</b> Name the mess, surface, and finish.</li>
@@ -485,7 +485,7 @@
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
 <script src="vendor/gsap/gsap.min.js" defer></script>
 <script src="vendor/gsap/ScrollTrigger.min.js" defer></script>
-<script src="js/story.js?v=20260825a" defer></script>
+<script src="js/story.js?v=20260826a" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {

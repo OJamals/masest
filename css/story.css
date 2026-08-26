@@ -1,6 +1,6 @@
 /*
  * MASEST landing story
- * One verified field job. Four chapters. One persistent visual object.
+ * Four direct cleaner-selection steps. One persistent visual object.
  * Desktop: scroll-scrubbed GSAP story.
  * Compact: sticky object + IntersectionObserver chapter reveals.
  * Reduced motion / no library / no JS: complete static document.
@@ -186,14 +186,15 @@
 }
 
 .rail-btn {
+  position: relative;
   display: grid;
   grid-template-columns: 20px 1fr;
   min-height: 28px;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
   color: #7f898a;
   font-size: .64rem;
-  line-height: 1;
+  line-height: 1.25;
   transition: color .25s var(--ease-out);
 }
 
@@ -203,7 +204,7 @@
 }
 
 .rail-btn span {
-  overflow: hidden;
+  overflow: visible;
   max-width: 0;
   opacity: 0;
   font-weight: 700;
@@ -216,11 +217,12 @@
 .rail-btn::before {
   content: "";
   position: absolute;
-  left: 17px;
-  width: 16px;
+  top: 50%;
+  left: 20px;
+  width: 7px;
   height: 1px;
   background: currentColor;
-  transform: translateX(10px) scaleX(.35);
+  transform: translateY(-50%) scaleX(.35);
   transform-origin: left;
   transition: transform .35s var(--ease-out);
 }
@@ -238,7 +240,7 @@
 
 .rail-btn:hover::before,
 .rail-btn[aria-current="step"]::before {
-  transform: translateX(10px) scaleX(1);
+  transform: translateY(-50%) scaleX(1);
 }
 
 /*

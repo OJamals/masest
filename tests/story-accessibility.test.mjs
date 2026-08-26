@@ -11,7 +11,7 @@ const summary = home.match(/<section class="story-summary"[^>]*id="storySummary"
 const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
 
 test("four scenes expose coherent headings and region structure", () => {
-  assert.match(story, /role="region" aria-label="One VertKleen field job, from diagnosis to proof"/);
+  assert.match(story, /role="region" aria-label="Choose a VertKleen cleaner in four steps"/);
   for (let act = 1; act <= 4; act += 1) {
     assert.match(story, new RegExp(`<section class="act[^"]*"[^>]*id="story-scene-${act}"[^>]*data-act="${act}"[^>]*aria-labelledby="storyAct${act}Title"`));
     assert.match(story, new RegExp(`id="storyAct${act}Title"`));
@@ -23,7 +23,7 @@ test("four scenes expose coherent headings and region structure", () => {
 test("story has a visible escape, meaningful chapter navigation, and persistent actions", () => {
   assert.match(story, /class="story-skip" href="#storySummary"/);
   assert.doesNotMatch(story, /story-skip[^>]*sr-only/);
-  assert.match(story, /<nav class="story-rail" aria-label="Story chapters">/);
+  assert.match(story, /<nav class="story-rail" aria-label="Cleaner selection steps">/);
   for (let act = 1; act <= 4; act += 1) {
     assert.match(story, new RegExp(`class="rail-btn" href="#story-scene-${act}"`));
   }

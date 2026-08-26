@@ -141,7 +141,35 @@ test("same story object remains pinned while scene state and chapter navigation 
   expect(samples[2].product).toBeGreaterThan(.5);
   expect(samples[3].reveal).toBeGreaterThan(85);
   expect(samples[3].product).toBe(1);
-  expect(samples[3].status).toBe("Field result");
+  expect(samples[3].status).toBe("Result");
+});
+
+test("desktop chapter rail keeps connector lines clear of unclipped labels", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const geometry = await page.locator('.rail-btn[aria-current="step"]').evaluate((button) => {
+    const label = button.querySelector("span");
+    const buttonStyle = getComputedStyle(button);
+    const labelStyle = getComputedStyle(label);
+    const connectorStyle = getComputedStyle(button, "::before");
+    const transform = new DOMMatrixReadOnly(connectorStyle.transform);
+    const connectorLeft = Number.parseFloat(connectorStyle.left) + transform.e;
+    const connectorRight = connectorLeft + Number.parseFloat(connectorStyle.width) * transform.a;
+
+    return {
+      buttonPosition: buttonStyle.position,
+      connectorRight,
+      labelLeft: label.offsetLeft,
+      labelOverflow: labelStyle.overflow,
+      lineHeightRatio: Number.parseFloat(labelStyle.lineHeight) / Number.parseFloat(labelStyle.fontSize),
+    };
+  });
+
+  expect(geometry.buttonPosition, JSON.stringify(geometry)).toBe("relative");
+  expect(geometry.connectorRight, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.labelLeft - 3);
+  expect(geometry.labelOverflow, JSON.stringify(geometry)).toBe("visible");
+  expect(geometry.lineHeightRatio, JSON.stringify(geometry)).toBeGreaterThanOrEqual(1.2);
 });
 
 test("desktop chapter rail clears the active copy column", async ({ page }) => {

@@ -11,7 +11,7 @@ const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<sectio
 const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
 const acts = [...story.matchAll(/<section class="act[^"]*"[^>]*data-act="(\d)"[^>]*data-scene="([^"]+)"/g)];
 
-test("homepage story is one job told through four named transformations", () => {
+test("homepage cleaner guide uses four named steps", () => {
   assert.ok(story, "expected homepage story");
   assert.deepEqual(acts.map((match) => [match[1], match[2]]), [
     ["1", "diagnose"],
@@ -23,40 +23,43 @@ test("homepage story is one job told through four named transformations", () => 
   assert.doesNotMatch(story, /data-act="5"/);
 });
 
-test("one persistent equipment object carries real job, product, and result evidence", () => {
+test("one persistent equipment object carries condition, product, and result evidence", () => {
   assert.equal((story.match(/class="story-object"/g) || []).length, 1);
   assert.match(story, /img\/blog\/cases\/hcr-brevard-before\.webp/);
   assert.match(story, /img\/blog\/cases\/hcr-brevard-after\.webp/);
   assert.match(story, /img\/updates\/vertkleen-hvac-hcr-5gal\.webp/);
-  assert.match(story, /Brevard County HVAC/);
+  assert.match(story, /Rust \+ mineral buildup/);
   assert.match(story, /VertKleen HCR/);
 });
 
-test("first scene diagnoses one job with one product action and one trial action", () => {
+test("first scene directly diagnoses the cleaning need and exposes two actions", () => {
   const actOne = story.match(/<section class="act[^"]*"[^>]*data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actOne, /Show us the mess\. We(?:&rsquo;|’)ll match the cleaner\./);
+  assert.match(actOne, /Cleaning rust and mineral buildup from stainless HVAC equipment\?/);
+  assert.match(actOne, /Compare the same surface\./);
   assert.match(actOne, /class="btn btn-primary" href="products\/hcr"[^>]*>Shop HCR<\/a>/);
   assert.match(actOne, /class="btn btn-ghost" href="contact\?type=sample&amp;product=VertKleen%20HCR"[^>]*>Try it on my job<\/a>/);
   assert.doesNotMatch(actOne, /story-shortcuts|reel-slide/);
 });
 
-test("second scene proves burden on the same field job without changing visual grammar", () => {
+test("second scene directly counts time and repeat work", () => {
   const actTwo = story.match(/<section class="act[^"]*"[^>]*data-act="2"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actTwo, /36 hours/);
-  assert.match(actTwo, /result was still incomplete/i);
+  assert.match(actTwo, /leaves rust behind/i);
+  assert.match(actTwo, /repeat work needed to finish/i);
   assert.match(actTwo, /class="burden-chain"/);
   assert.doesNotMatch(actTwo, /pipe-diagram|Scale narrows pipes|Legionella/);
 });
 
-test("third scene makes one matched switch and moves the full ledger below the story", () => {
+test("third scene tells the buyer what to test and defers the full ledger", () => {
   const actThree = story.match(/<section class="act[^"]*"[^>]*data-act="3"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.match(actThree, /Switch the cleaner\. Finish the job\./);
   assert.match(actThree, /class="switch-card"/);
-  assert.match(actThree, /Previous attempt/);
-  assert.match(actThree, /Matched cleaner/);
+  assert.match(actThree, /Instead of/);
+  assert.match(actThree, />Test</);
   assert.match(actThree, /VertKleen HCR/);
   assert.match(actThree, /0&#8209;0&#8209;0/);
   assert.doesNotMatch(actThree, /replacement-ledger|\$115,000|workplace injury/i);
@@ -68,16 +71,25 @@ test("third scene makes one matched switch and moves the full ledger below the s
   }
 });
 
-test("fourth scene resolves the exact field job with sourced proof and specific action", () => {
+test("fourth scene gives a direct comparison method with sourced proof", () => {
   const actFour = story.match(/<section class="act[^"]*"[^>]*data-act="4"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.match(actFour, /Count the whole job\. Then make the switch\./);
+  assert.match(actFour, /Compare the whole job\. Then choose\./);
   assert.match(actFour, /30 minutes/);
-  assert.match(actFour, /garden-hose rinse/i);
-  assert.match(actFour, /job notes say no scrubbing/i);
+  assert.match(actFour, /garden hose/i);
+  assert.match(actFour, /This test needed no scrubbing/i);
   assert.match(actFour, /href="blog\/hcr-brevard-hvac-rust-case-study"/);
   assert.match(actFour, /href="products\/hcr"/);
   assert.doesNotMatch(actFour, /Industrial muscle|\$115,000/);
+});
+
+test("homepage cleaner copy avoids third-person case-note narration", () => {
+  assert.doesNotMatch(
+    story,
+    /field notes say|job notes say|this field job|on this field job|MASEST matched|previous attempt|one job from diagnosis/i
+  );
+  assert.match(story, /If a cleaner runs for 36 hours and leaves rust behind/);
+  assert.match(story, /Compare the result: 30 minutes of HCR contact time/);
 });
 
 test("story uses compact native-scroll roads and scene renderer contracts", () => {

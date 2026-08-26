@@ -1,5 +1,5 @@
 /*
- * MASEST landing story
+ * MASEST landing cleaner guide
  * Native page scroll remains the input. GSAP only maps desktop scroll progress
  * to four small scene renderers. Compact screens use IntersectionObserver.
  */
@@ -32,26 +32,26 @@
 
   function renderDiagnose(progress) {
     setVisualState({
-      status: "Field condition"
+      status: "Check the buildup"
     });
   }
 
   function renderBurden(progress) {
     setVisualState({
-      status: "36-hour attempt · incomplete"
+      status: "36 hours · rust still present"
     });
   }
 
   function renderSwitch(progress) {
     setVisualState({
-      status: "Matched to VertKleen HCR"
+      status: "Test VertKleen HCR"
     });
   }
 
   function renderProve(progress) {
     var p = clamp(progress, 0, 1);
     setVisualState({
-      status: p > .84 ? "Field result" : "Result check"
+      status: p > .84 ? "Result" : "Inspect the result"
     });
   }
 
