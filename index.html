@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="css/style.css?v=20260823f">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
 <link rel="stylesheet" href="css/components.css?v=20260822d">
-<link rel="stylesheet" href="css/story.css?v=20260726a">
+<link rel="stylesheet" href="css/story.css?v=20260825a">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/">
 <meta property="og:url" content="https://masest.co/">
@@ -46,235 +46,137 @@
 
 <main id="main">
 <!-- ============================================================
-     STORY: four-act Replacement Ledger (GSAP ScrollTrigger, native
-     browser scroll). Frame scrub, particle physics, chapter rail.
-     Degrades to a stacked, fully-visible layout without JS.
+     STORY: one verified field job, four transformations.
+     GSAP ScrollTrigger on desktop; light in-flow reveals on mobile.
+     Reduced motion, missing GSAP, and no-JS remain fully readable.
      ============================================================ -->
-<div class="story" id="story" role="region" aria-label="The story of conventional chemicals versus VertKleen">
-<script>/* Apply the scrollytelling layout before first paint so the static
-  :not(.story-ready) fallback never flashes and reflows when story.js loads
-  (~0.17 CLS race). Skip under reduced-motion (that path keeps the fallback).
-  No-JS users skip this entirely. story.js re-adds it before GSAP setup, and
-  removes it again if GSAP fails to load — so a missing lib still degrades. */
+<div class="story" id="story" data-active-scene="diagnose" role="region" aria-label="One VertKleen field job, from diagnosis to proof">
+<script>/* Apply desktop pinning before first paint. story.js removes this
+  class when motion is reduced or GSAP is unavailable. */
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches &&
       matchMedia('(min-width: 761px)').matches)
     document.getElementById('story').classList.add('story-ready');</script>
 
-  <!-- Chapter rail (pins for the whole story) -->
-  <div class="story-rail" aria-hidden="true">
+  <a class="story-skip" href="#storySummary">Skip story <span>View four-step summary</span></a>
+
+  <nav class="story-actions" aria-label="VertKleen HCR actions">
+    <span class="story-actions__match"><small>Matched cleaner</small><b>VertKleen HCR</b></span>
+    <a class="story-actions__shop" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
+    <a class="story-actions__trial" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it</a>
+  </nav>
+
+  <nav class="story-rail" aria-label="Story chapters">
     <div class="rail-inner">
-      <span class="rail-btn"><b>1</b><span>The field</span></span>
-      <span class="rail-btn"><b>2</b><span>The buildup</span></span>
-      <span class="rail-btn"><b>3</b><span>The switch</span></span>
-      <span class="rail-btn"><b>4</b><span>The result</span></span>
+      <a class="rail-btn" href="#story-scene-1" aria-current="step"><b>01</b><span>Diagnose</span></a>
+      <a class="rail-btn" href="#story-scene-2"><b>02</b><span>Burden</span></a>
+      <a class="rail-btn" href="#story-scene-3"><b>03</b><span>Switch</span></a>
+      <a class="rail-btn" href="#story-scene-4"><b>04</b><span>Prove</span></a>
+    </div>
+  </nav>
+
+  <div class="story-object" aria-hidden="true">
+    <div class="story-object__card">
+      <div class="story-object__media">
+        <img class="story-object__before" src="img/blog/cases/hcr-brevard-before.webp" alt="" fetchpriority="high" decoding="async" width="580" height="559">
+        <div class="story-object__after">
+          <img src="img/blog/cases/hcr-brevard-after.webp" alt="" decoding="async" width="1417" height="714">
+        </div>
+        <span class="story-object__divider"></span>
+        <span class="story-object__scan"></span>
+        <span class="story-object__target story-object__target--rust"><i></i>Rust</span>
+        <span class="story-object__target story-object__target--scale"><i></i>Mineral buildup</span>
+        <span class="story-object__status">Field condition</span>
+      </div>
+      <div class="story-object__footer">
+        <div class="story-object__identity">
+          <small>Brevard County HVAC</small>
+          <b>20-year stainless base plate</b>
+        </div>
+        <div class="story-object__product">
+          <img src="img/updates/vertkleen-hvac-hcr-5gal.webp" alt="" decoding="async" width="900" height="1200">
+          <span><small>Matched product</small><b>VertKleen HCR</b></span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- ACT 1: THE ENEMY (curated reel of real field photos) -->
-  <section class="act" data-act="1" data-fx="fumes" aria-labelledby="storyAct1Title">
+  <section class="act" id="story-scene-1" data-act="1" data-scene="diagnose" aria-labelledby="storyAct1Title">
     <div class="stage">
-      <canvas class="fx-canvas" aria-hidden="true"></canvas>
-      <div class="reel" role="group" aria-label="Field photos of industrial scale, rust, grease, and grime">
-        <noscript><style>.reel-slide > img[data-reel-src] { display: none; }</style></noscript>
-        <figure class="reel-slide" data-slide="0">
-          <img src="img/story/scale.webp" alt="Pipe section nearly closed by calcium carbonate scale" fetchpriority="high" decoding="async" width="1200" height="1334">
-          <figcaption><b>Scale</b><span>Mineral buildup narrowing the passage.</span></figcaption>
-        </figure>
-        <figure class="reel-slide" data-slide="1">
-          <img data-reel-src="img/story/rust.webp" alt="Close-up of pitted, oxidized industrial steel" decoding="async" width="1200" height="1334">
-          <noscript><img src="img/story/rust.webp" alt="Close-up of pitted, oxidized industrial steel" width="1200" height="1334"></noscript>
-          <figcaption><b>Rust</b><span>Oxidation eating into exposed steel.</span></figcaption>
-        </figure>
-        <figure class="reel-slide" data-slide="2">
-          <img data-reel-src="img/story/grease.webp" alt="Greasy industrial machinery in a factory" decoding="async" width="1200" height="1334">
-          <noscript><img src="img/story/grease.webp" alt="Greasy industrial machinery in a factory" width="1200" height="1334"></noscript>
-          <figcaption><b>Grease</b><span>Industrial residue coating hard-working equipment.</span></figcaption>
-        </figure>
-        <figure class="reel-slide" data-slide="3">
-          <img data-reel-src="img/story/grime.webp" alt="Concrete surface stained with grime and water marks" decoding="async" width="1200" height="1334">
-          <noscript><img src="img/story/grime.webp" alt="Concrete surface stained with grime and water marks" width="1200" height="1334"></noscript>
-          <figcaption><b>Grime</b><span>Concrete stained by residue and water marks.</span></figcaption>
-        </figure>
-        <span class="reel-tag"><i class="ph ph-camera" aria-hidden="true"></i> Field photos</span>
-        <span class="reel-idx">Photo 1 of 4</span>
-      </div>
-      <div class="act-copy bl">
-        <h1 class="act-h" id="storyAct1Title" data-at="0">Clean the Hard Stuff Without Harsh Acids, Caustics, or Solvents.</h1>
-        <p class="story-promise" data-at="0">Tell us what is dirty and what it is made of. We’ll help you choose the right VertKleen product and try it on one real job.</p>
-        <p class="act-p" data-at="0">Used in 50+ countries, VertKleen gives crews a better way to replace conventional acids, caustics, and solvents without giving up the result.</p>
-        <div class="story-ctas" data-at="0">
-          <a class="btn btn-primary" href="products#catalog" aria-label="Shop VertKleen products">Shop cleaners</a>
-          <a class="btn btn-ghost" href="contact?type=sample" aria-label="Try VertKleen on my cleaning job">Try it on my job</a>
+      <div class="act-content">
+        <span class="kicker">01 &middot; Diagnose</span>
+        <h1 class="act-h" id="storyAct1Title" data-at="0">Show us the mess. We&rsquo;ll match the cleaner.</h1>
+        <p class="act-p" data-at="0">This field job started with rust and mineral buildup on a 20-year stainless HVAC base plate and drain.</p>
+        <p class="story-evidence" data-at="0.35"><i class="ph ph-camera" aria-hidden="true"></i><span><b>Real job, not a render.</b> The same equipment stays in frame through diagnosis, product match, and result.</span></p>
+        <div class="story-ctas" data-at="0.55">
+          <a class="btn btn-primary" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
+          <a class="btn btn-ghost" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it on my job</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ACT 2: THE BUILDUP (ambient debris accumulating inside a pipe) -->
-  <section class="act" data-act="2" aria-labelledby="storyAct2Title">
+  <!-- ACT 2 -->
+  <section class="act" id="story-scene-2" data-act="2" data-scene="burden" aria-labelledby="storyAct2Title">
     <div class="stage">
-      <svg class="pipe-diagram" viewBox="0 0 1200 650" role="img" aria-label="Industrial piping showing scale, rust, grease, and biofilm buildup restricting flow">
-        <defs>
-          <linearGradient id="pipeSteel" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stop-color="#5f6976"/>
-            <stop offset="42%" stop-color="#242b33"/>
-            <stop offset="100%" stop-color="#0b1016"/>
-          </linearGradient>
-          <linearGradient id="pipeFlow" x1="0" x2="1">
-            <stop offset="0%" stop-color="#77e3ff"/>
-            <stop offset="46%" stop-color="#dff7ff"/>
-            <stop offset="100%" stop-color="#70f0c2"/>
-          </linearGradient>
-        </defs>
-        <path class="pipe-shadow" d="M110 330 C235 248 315 246 424 302 S640 405 780 328 S980 209 1095 296"/>
-        <path class="pipe-shell" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
-        <path class="pipe-buildup pipe-scale" data-at="1" pathLength="1" d="M250 220 C306 196 370 212 438 254"/>
-        <path class="pipe-buildup pipe-rust" data-at="2" pathLength="1" d="M448 332 C520 380 610 416 704 378"/>
-        <path class="pipe-buildup pipe-grease" data-at="3" pathLength="1" d="M604 414 C674 426 754 378 812 326"/>
-        <path class="pipe-buildup pipe-bio" data-at="4" pathLength="1" d="M804 256 C908 170 1022 166 1100 236"/>
-        <path class="pipe-bore" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
-        <path class="pipe-flow pipe-flow-glow" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
-        <path class="pipe-flow pipe-flow-core" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
-        <path class="pipe-flow pipe-flow-pulse" d="M105 312 C232 230 318 230 430 286 S642 388 782 312 S984 194 1100 278"/>
-        <g class="pipe-callouts" aria-hidden="true">
-          <g class="pipe-callout callout-scale" data-at="1">
-            <line x1="340" y1="212" x2="263" y2="192"/>
-            <foreignObject x="146" y="148" width="146" height="58">
-              <div xmlns="http://www.w3.org/1999/xhtml" class="chip c-scale"><i></i>Scale</div>
-            </foreignObject>
-          </g>
-          <g class="pipe-callout callout-rust" data-at="2">
-            <line x1="568" y1="387" x2="446" y2="390"/>
-            <foreignObject x="388" y="390" width="132" height="58">
-              <div xmlns="http://www.w3.org/1999/xhtml" class="chip c-rust"><i></i>Rust</div>
-            </foreignObject>
-          </g>
-          <g class="pipe-callout callout-grease" data-at="3">
-            <line x1="712" y1="394" x2="764" y2="436"/>
-            <foreignObject x="764" y="436" width="154" height="58">
-              <div xmlns="http://www.w3.org/1999/xhtml" class="chip c-grease"><i></i>Grease</div>
-            </foreignObject>
-          </g>
-          <g class="pipe-callout callout-bio" data-at="4">
-            <line x1="962" y1="188" x2="1032" y2="184"/>
-            <foreignObject x="1012" y="126" width="160" height="58">
-              <div xmlns="http://www.w3.org/1999/xhtml" class="chip c-bio"><i></i>Biofilm</div>
-            </foreignObject>
-          </g>
-        </g>
-      </svg>
-      <div class="act-copy top onscrim" data-at="0">
-        <span class="kicker danger" data-at="0">What buildup costs</span>
-        <h2 class="act-h" id="storyAct2Title" data-at="0" aria-label="Buildup makes equipment work harder.">Buildup makes equipment work harder.</h2>
-        <p class="act-p" data-at="1">Scale narrows pipes and robs heat transfer. Rust eats away at equipment. Grease hardens into a film that takes longer to remove. Biofilm gives Legionella a place to grow. The result is lost efficiency, more downtime, and more hours spent cleaning.</p>
-      </div>
-      <div class="pipe-mobile-labels" aria-hidden="true">
-        <span><i></i>Scale</span>
-        <span><i></i>Rust</span>
-        <span><i></i>Grease</span>
-        <span><i></i>Biofilm</span>
-      </div>
-      <div class="pipe-cost-chain" data-at="4" aria-label="Buildup becomes operating cost">
-        <span><b>Buildup</b><small>Scale, rust, grease, biofilm</small></span>
-        <i class="ph ph-arrow-right" aria-hidden="true"></i>
-        <span><b>Crew time</b><small>Training and handling</small></span>
-        <i class="ph ph-arrow-right" aria-hidden="true"></i>
-        <span><b>Downtime</b><small>Capacity and crew time</small></span>
-        <i class="ph ph-arrow-right" aria-hidden="true"></i>
-        <span><b>Extra handling</b><small>Shipping and disposal</small></span>
+      <div class="act-content">
+        <span class="kicker">02 &middot; Measure the burden</span>
+        <h2 class="act-h" id="storyAct2Title" data-at="0">Time spent cleaning is part of the job cost.</h2>
+        <p class="act-p" data-at="0.25">Field notes say the previous cleaner had worked for 36 hours and the result was still incomplete. The rust remained, and the cleaning stayed unfinished.</p>
+        <div class="burden-chain" data-at="0.6" aria-label="Thirty-six cleaning hours led to an incomplete result and another cleaning step">
+          <span><b>36 hours</b><small>previous cleaning attempt</small></span>
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+          <span><b>Rust remained</b><small>result still incomplete</small></span>
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+          <span><b>More work</b><small>job still unfinished</small></span>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ACT 3: THE REPLACEMENT LEDGER (one operational comparison) -->
-  <section class="act act-ledger" id="hmis" data-act="3" aria-labelledby="storyAct3Title">
+  <!-- ACT 3 -->
+  <section class="act" id="story-scene-3" data-act="3" data-scene="switch" aria-labelledby="storyAct3Title">
     <div class="stage">
-      <div class="ledger-intro" data-at="0">
-        <span class="kicker danger">See the difference</span>
-        <h2 class="act-h" id="storyAct3Title">Replace harsh cleaners, not cleaning power.</h2>
-        <p class="act-p" data-at="1">See which VertKleen product can take the place of the acids, caustics, solvents, and odor treatments you use now.</p>
-        <div class="ledger-incident" data-at="3.2">
-          <span class="ledger-incident-label">+ one workplace injury</span>
-          <b class="cost-total"><span class="cost-cur">$</span><span class="cost-num" data-target="115000">115,000</span></b>
-          <small>one lost-time injury &mdash; average cost, direct + indirect</small>
-        </div>
-      </div>
-      <div class="replacement-ledger-shell">
-        <div class="replacement-ledger-scroll" tabindex="0" role="region" aria-label="Cleaner comparison, scroll horizontally on small screens">
-          <table class="replacement-ledger">
-            <caption class="sr-only">Conventional cleaners compared with VertKleen products made for each job</caption>
-            <thead>
-              <tr>
-                <th scope="col">Job</th>
-                <th scope="col">Conventional chemical</th>
-                <th scope="col">Typical HMIS H-F-R</th>
-                <th scope="col">VertKleen product</th>
-                <th scope="col">Typical HMIS H-F-R</th>
-                <th scope="col">How VertKleen gets it clean</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="ledger-row">
-                <th scope="row" data-ledger-step="1" data-at="1.2">Scale &amp; rust</th>
-                <td data-ledger-step="1" data-at="1.2"><strong>HCl / muriatic acid</strong><small>Corrosive &middot; rust and mineral-scale shortcut</small></td>
-                <td data-ledger-step="1" data-at="1.2"><span class="hmis-chip is-danger" aria-label="health 3, flammability 0, reactivity 1">3&#8209;0&#8209;1</span></td>
-                <td data-ledger-step="5" data-at="3.2"><a href="products/hcr"><strong>VertKleen HCR</strong></a><small>Scale and rust remover</small></td>
-                <td data-ledger-step="5" data-at="3.2"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
-                <td data-ledger-step="5" data-at="3.2"><strong>Break down and rinse away</strong><small>loosens scale and rust, carries minerals out, and restores clean flow</small></td>
-              </tr>
-              <tr class="ledger-row">
-                <th scope="row" data-ledger-step="2" data-at="1.7">Grease &amp; caustic cleanup</th>
-                <td data-ledger-step="2" data-at="1.7"><strong>Caustic soda / lye</strong><small>Corrosive &middot; grease, oils, and fats</small></td>
-                <td data-ledger-step="2" data-at="1.7"><span class="hmis-chip is-danger" aria-label="health 3, flammability 0, reactivity 1">3&#8209;0&#8209;1</span></td>
-                <td data-ledger-step="6" data-at="3.7"><a href="products/cr"><strong>VertKleen CR</strong></a><small>Caustic-replacement cleaner</small></td>
-                <td data-ledger-step="6" data-at="3.7"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
-                <td data-ledger-step="6" data-at="3.7"><strong>Loosen, lift, rinse</strong><small>breaks fat, protein, and organic film free for a cleaner rinse</small></td>
-              </tr>
-              <tr class="ledger-row">
-                <th scope="row" data-ledger-step="3" data-at="2.2">Water-system program</th>
-                <td data-ledger-step="3" data-at="2.2"><strong>Glutaraldehyde</strong><small>Toxic &middot; biocide for biofilm and water systems</small></td>
-                <td data-ledger-step="3" data-at="2.2"><span class="hmis-chip is-danger" aria-label="health 3, flammability 1, reactivity 0">3&#8209;1&#8209;0</span></td>
-                <td data-ledger-step="7" data-at="4.2"><a href="products/purgo"><strong>VertKleen Purgo</strong></a><small>Organic-buildup and odor control</small></td>
-                <td data-ledger-step="7" data-at="4.2"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
-                <td data-ledger-step="7" data-at="4.2"><strong>Treat the source</strong><small>works on odor-causing organic buildup instead of masking the smell</small></td>
-              </tr>
-              <tr class="ledger-row">
-                <th scope="row" data-ledger-step="4" data-at="2.7">Oil &amp; carbon degreasing</th>
-                <td data-ledger-step="4" data-at="2.7"><strong>Chlorinated solvents</strong><small>Toxic vapor &middot; oil, carbon, and adhesive stripping</small></td>
-                <td data-ledger-step="4" data-at="2.7"><span class="hmis-chip is-danger" aria-label="health 2, flammability 0, reactivity 0">2&#8209;0&#8209;0</span></td>
-                <td data-ledger-step="8" data-at="4.7"><a href="products/neutral"><strong>VertKleen Neutral</strong></a><small>Near-neutral oil and grime remover</small></td>
-                <td data-ledger-step="8" data-at="4.7"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
-                <td data-ledger-step="8" data-at="4.7"><strong>Lift and rinse</strong><small>removes oil and grime when aggressive pH is unnecessary</small></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="ledger-qualification" data-at="3.2">HMIS runs from 0 (lowest) to 4 (highest) for health, flammability, and physical hazard. The table uses common SDS ratings for conventional cleaners. Every VertKleen product we offer is HMIS 0&#8209;0&#8209;0.</p>
-        <p class="cost-sources" data-at="3.2">Sources for conventional burden and incident context: OSHA / NoCry &middot; MCF Environmental &middot; OSHA 2026 penalty schedule &middot; OSHA Safety Pays; Liberty Mutual 2025 Workplace Safety Index</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ACT 4: ASYMMETRIC PROOF + ACTION CLOSE -->
-  <section class="act act-savior act-proof-close" data-act="4" data-fx="motes" aria-labelledby="storyAct4Title">
-    <div class="stage">
-      <canvas class="fx-canvas" aria-hidden="true"></canvas>
-      <div class="proof-close">
-        <article class="proof-panel" data-at="0">
-          <span class="proof-label">Count the whole cleaning job</span>
-          <p class="proof-value" data-spacing-joined><span class="cost-num" data-target="6">6</span><span class="cost-per"> numbers that matter</span></p>
-          <p>Current cleaner, dilution, labor, water, downtime, and disposal show what the finished job really costs.</p>
-          <p class="proof-source">MASEST turns them into a product match and a clear side-by-side test.</p>
-        </article>
-        <div class="close-action">
-          <span class="savior-badge" data-at="0"><i class="ph ph-shield-check" aria-hidden="true"></i> Make the switch</span>
-          <h2 id="storyAct4Title" data-at="0">Industrial muscle. <span class="accent">A better way to clean.</span></h2>
-          <p class="lede" data-at="0.6">Tell us what needs to come off, what it is stuck to, and what you use now. We will match the VertKleen product and plan the first test.</p>
-          <div class="savior-ctas" data-at="1.1">
-            <a class="btn btn-primary" href="products#catalog" aria-label="Shop VertKleen products">Shop cleaners</a>
-            <a class="btn btn-ghost" href="contact?type=sample" aria-label="Try VertKleen on my cleaning job">Try it on my job</a>
+      <div class="act-content">
+        <span class="kicker">03 &middot; Match the cleaner</span>
+        <h2 class="act-h" id="storyAct3Title" data-at="0">Switch the cleaner. Finish the job.</h2>
+        <p class="act-p" data-at="0.2">For this rust-and-scale job, MASEST matched the equipment to VertKleen HCR and a short, observable field test.</p>
+        <div class="switch-card" data-at="0.45">
+          <div class="switch-card__side switch-card__side--before">
+            <span>Previous attempt</span>
+            <b>CLR</b>
+            <small>36 hours; rust remained.</small>
           </div>
-          <p class="close-qualification" data-at="1.1">Compare handling, rinse, downtime, and the finished result on the same side-by-side job.</p>
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+          <div class="switch-card__side switch-card__side--after">
+            <span>Matched cleaner</span>
+            <b>VertKleen HCR</b>
+            <small><em aria-label="HMIS health 0, flammability 0, reactivity 0">HMIS 0&#8209;0&#8209;0</em> &middot; apply, dwell, rinse, inspect.</small>
+          </div>
+        </div>
+        <a class="story-text-link" href="#compareAllCleaners" data-at="0.75">Compare all four cleaner matches <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACT 4 -->
+  <section class="act" id="story-scene-4" data-act="4" data-scene="prove" aria-labelledby="storyAct4Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">04 &middot; Prove the result</span>
+        <h2 class="act-h" id="storyAct4Title" data-at="0">Count the whole job. Then make the switch.</h2>
+        <p class="act-p" data-at="0.15">On this field job, HCR replaced the stalled attempt with 30 minutes of contact time and a garden-hose rinse. The job notes say no scrubbing.</p>
+        <div class="proof-stats" data-at="0.35" aria-label="Field result: 30 minutes of contact time, garden-hose rinse, no scrubbing in the job notes">
+          <span><b>30 minutes</b><small>contact time</small></span>
+          <span><b>Garden hose</b><small>rinse method</small></span>
+          <span><b>No scrubbing</b><small>per job notes</small></span>
+        </div>
+        <ul class="whole-job" data-at="0.55" aria-label="Six whole-job measures">
+          <li>Cleaner</li><li>Dilution</li><li>Labor</li><li>Water</li><li>Downtime</li><li>Disposal</li>
+        </ul>
+        <a class="story-source" href="blog/hcr-brevard-hvac-rust-case-study" data-at="0.6">Read the Brevard HVAC field notes <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        <div class="story-ctas" data-at="0.7">
+          <a class="btn btn-primary" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
+          <a class="btn btn-ghost" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it on my job</a>
         </div>
       </div>
     </div>
@@ -282,15 +184,79 @@
 
 </div>
 
-<section class="story-summary sr-only" aria-labelledby="storySummaryTitle">
+<section class="story-summary" id="storySummary" aria-labelledby="storySummaryTitle" tabindex="-1">
   <div class="wrap">
-    <h2 id="storySummaryTitle">The VertKleen replacement story</h2>
+    <div class="story-summary__head">
+      <span>Four-step summary</span>
+      <h2 id="storySummaryTitle">One job from diagnosis to proof.</h2>
+    </div>
     <ol>
-      <li><b>Start with the mess.</b> Scale, rust, grease, grime, and biofilm each need the right kind of cleaner.</li>
-      <li><b>Count the real cost.</b> Buildup wastes energy, slows equipment, adds downtime, and keeps crews cleaning longer.</li>
-      <li><b>Choose the right VertKleen product.</b> Find the cleaner made for your mess, surface, and equipment.</li>
-      <li><b>Try it side by side.</b> Compare the finished result, time, water, product, downtime, and total job cost.</li>
+      <li><b>Diagnose.</b> Name the mess, surface, and finish.</li>
+      <li><b>Measure the burden.</b> Count time, water, downtime, and repeat work.</li>
+      <li><b>Match the cleaner.</b> Choose the VertKleen product for that exact job.</li>
+      <li><b>Prove the result.</b> Run the same side-by-side test and inspect the finish.</li>
     </ol>
+  </div>
+</section>
+
+<section class="replacement-guide" id="compareAllCleaners" aria-labelledby="replacementGuideTitle">
+  <div class="wrap">
+    <details>
+      <summary>
+        <span><small>Optional detail</small><b id="replacementGuideTitle">Compare all four cleaner matches</b></span>
+        <i class="ph ph-plus" aria-hidden="true"></i>
+      </summary>
+      <div class="replacement-ledger-shell">
+        <table class="replacement-ledger">
+          <caption class="sr-only">Conventional cleaners compared with VertKleen products made for each job</caption>
+          <thead>
+            <tr>
+              <th scope="col">Job</th>
+              <th scope="col">Conventional chemical</th>
+              <th scope="col">Typical HMIS H-F-R</th>
+              <th scope="col">VertKleen product</th>
+              <th scope="col">HMIS H-F-R</th>
+              <th scope="col">Cleaning approach</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="ledger-row">
+              <th scope="row">Scale &amp; rust</th>
+              <td data-label="Conventional"><strong>HCl / muriatic acid</strong><small>Corrosive rust and mineral-scale shortcut</small></td>
+              <td data-label="Conventional HMIS"><span class="hmis-chip is-danger" aria-label="health 3, flammability 0, reactivity 1">3&#8209;0&#8209;1</span></td>
+              <td data-label="VertKleen"><a href="products/hcr"><strong>VertKleen HCR</strong></a><small>Scale and rust remover</small></td>
+              <td data-label="VertKleen HMIS"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
+              <td data-label="Approach"><strong>Break down and rinse away</strong><small>Loosen scale and rust, then carry released minerals out.</small></td>
+            </tr>
+            <tr class="ledger-row">
+              <th scope="row">Grease &amp; caustic cleanup</th>
+              <td data-label="Conventional"><strong>Caustic soda / lye</strong><small>Corrosive grease, oil, and fat cleaner</small></td>
+              <td data-label="Conventional HMIS"><span class="hmis-chip is-danger" aria-label="health 3, flammability 0, reactivity 1">3&#8209;0&#8209;1</span></td>
+              <td data-label="VertKleen"><a href="products/cr"><strong>VertKleen CR</strong></a><small>Caustic-replacement cleaner</small></td>
+              <td data-label="VertKleen HMIS"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
+              <td data-label="Approach"><strong>Loosen, lift, rinse</strong><small>Release fat, protein, and organic film for a cleaner rinse.</small></td>
+            </tr>
+            <tr class="ledger-row">
+              <th scope="row">Water-system program</th>
+              <td data-label="Conventional"><strong>Glutaraldehyde</strong><small>Biocide used for biofilm and water systems</small></td>
+              <td data-label="Conventional HMIS"><span class="hmis-chip is-danger" aria-label="health 3, flammability 1, reactivity 0">3&#8209;1&#8209;0</span></td>
+              <td data-label="VertKleen"><a href="products/purgo"><strong>VertKleen Purgo</strong></a><small>Organic-buildup and odor control</small></td>
+              <td data-label="VertKleen HMIS"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
+              <td data-label="Approach"><strong>Treat the source</strong><small>Work on odor-causing organic buildup instead of masking it.</small></td>
+            </tr>
+            <tr class="ledger-row">
+              <th scope="row">Oil &amp; grime</th>
+              <td data-label="Conventional"><strong>Chlorinated solvents</strong><small>Solvent route for oil, carbon, and adhesive residue</small></td>
+              <td data-label="Conventional HMIS"><span class="hmis-chip is-danger" aria-label="health 2, flammability 0, reactivity 0">2&#8209;0&#8209;0</span></td>
+              <td data-label="VertKleen"><a href="products/neutral"><strong>VertKleen Neutral</strong></a><small>Near-neutral oil and grime remover</small></td>
+              <td data-label="VertKleen HMIS"><span class="hmis-chip is-safe" aria-label="health 0, flammability 0, reactivity 0">0&#8209;0&#8209;0</span></td>
+              <td data-label="Approach"><strong>Lift and rinse</strong><small>Remove oil and grime when aggressive pH is unnecessary.</small></td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="ledger-qualification">HMIS runs from 0 (lowest) to 4 (highest) for health, flammability, and physical hazard. Conventional ratings vary by formulation and concentration; check the current SDS for the exact product. Every VertKleen product MASEST offers is HMIS 0&#8209;0&#8209;0 per its current product documents.</p>
+      </div>
+    </details>
   </div>
 </section>
 
@@ -519,7 +485,7 @@
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
 <script src="vendor/gsap/gsap.min.js" defer></script>
 <script src="vendor/gsap/ScrollTrigger.min.js" defer></script>
-<script src="js/story.js?v=20260726a" defer></script>
+<script src="js/story.js?v=20260825a" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {
@@ -528,58 +494,6 @@ document.addEventListener("DOMContentLoaded", () => {
       '<div class="feat-side">' + productCard("cr") + productCard("neutral") + "</div>";
     initReveal();
   });
-</script>
-<script id="debugProbe">
-/* QA-only instrumentation: inert unless the URL carries a debug hash
-   (#scenes, #wheel, #hold<n>, #y=<px>, #dbg). Safe to delete before launch. */
-(function(){
-  if(!/dbg|hold|scenes|wheel|y=/.test(location.hash))return;
-  var errs=[];
-  window.addEventListener('error',function(e){errs.push((e.message||'err')+' @'+String(e.filename||'').split('/').pop()+':'+e.lineno);report();});
-  var frames=0,t0=performance.now(),fps=0,minFps=999,scrolling=false,done=false;
-  function report(){
-    var s=document.getElementById('story');
-    document.title='DBG'+JSON.stringify({g:+!!window.gsap,st:+!!window.ScrollTrigger,l:+!!window.Lenis,
-      r:s&&s.classList.contains('story-ready')?1:0,fps:fps,min:minFps===999?-1:minFps,
-      y:Math.round(scrollY),H:document.body.scrollHeight,d:+done,e:errs.slice(0,4)})+(window.__sc?('SC'+JSON.stringify(window.__sc)):'');
-  }
-  function loop(){frames++;var n=performance.now();if(n-t0>=1000){fps=Math.round(frames*1000/(n-t0));if(scrolling&&fps<minFps)minFps=fps;frames=0;t0=n;report();}requestAnimationFrame(loop);}
-  requestAnimationFrame(loop);
-  function op(sel){var e=document.querySelector(sel);return e?Math.round(parseFloat(getComputedStyle(e).opacity)*100)/100:-1;}
-  function cvPix(act){
-    var cv=document.querySelector('.act[data-act="'+act+'"] .fx-canvas');
-    if(!cv)return -1;
-    try{var x=cv.getContext('2d').getImageData(0,0,cv.width,Math.max(1,cv.height)).data,n=0;
-      for(var i=3;i<x.length;i+=4000)if(x[i]>8)n++;return n;}catch(e){return -2;}
-  }
-  /* #hold<n>: park mid-act n for visual inspection (QA) */
-  var hold = location.hash.match(/hold(\d)/);
-  if (hold) {
-    var hActs = [].slice.call(document.querySelectorAll('.act'));
-    var hA = hActs[parseInt(hold[1], 10) - 1];
-    if (hA) setTimeout(function () {
-      window.scrollTo(0, hA.offsetTop + document.getElementById('story').offsetTop + (hA.offsetHeight - innerHeight) * 0.55);
-    }, 1200);
-  }
-  if (/scenes/.test(location.hash)) {
-    var acts=[].slice.call(document.querySelectorAll('.act'));
-    var mid=function(a){return a.offsetTop+document.getElementById('story').offsetTop+(a.offsetHeight-innerHeight)*0.55;};
-    var out={},step=0;
-    var checks=[
-      function(){out.a1={h:op('.act[data-act="1"] .act-h'),reel:document.querySelector('.reel-idx').textContent,slideVis:op('.reel-slide[data-slide="1"]'),fx:cvPix(1)};},
-      function(){out.a2={h:op('.act[data-act="2"] .act-h'),chip:op('.chip.c-rust'),fx:cvPix(2)};},
-      function(){out.a3={h:op('.act[data-act="3"] .act-h'),total:(document.querySelector('.act-ledger .cost-num')||{}).textContent||'',rows:document.querySelectorAll('.act-ledger .ledger-row').length};},
-      function(){out.a4={h:op('.act[data-act="4"] h2'),proof:(document.querySelector('.proof-panel .cost-num')||{}).textContent||'',cta:op('.act-proof-close .btn-primary'),fx:cvPix(4),rail:document.querySelectorAll('.rail-btn.is-on').length};}
-    ];
-    scrolling=true;
-    setTimeout(function nxt(){
-      if(step>0)checks[step-1]();
-      if(step>=acts.length){scrolling=false;done=true;window.__sc=out;report();return;}
-      window.scrollTo(0,mid(acts[step]));step++;
-      setTimeout(nxt,2600);
-    },2000);
-  }
-})();
 </script>
 </body>
 </html>

@@ -183,7 +183,7 @@ test("public marketing headings use the preferred Satoshi 700 face", () => {
   assert.match(style, /h1,[\s\S]*?h2,[\s\S]*?h3\s*\{[\s\S]*?font-weight:\s*var\(--heading-weight\)/);
   assert.match(style, /\.display\s*\{[\s\S]*?font-weight:\s*var\(--heading-weight\)/);
   assert.match(story, /\.story \.act-h\s*\{[\s\S]*?font-weight:\s*var\(--heading-weight\)/);
-  assert.match(story, /\.reel-slide figcaption b\s*\{[\s\S]*?font-weight:\s*var\(--heading-weight\)/);
+  assert.doesNotMatch(story, /\.reel-slide/);
   assert.doesNotMatch(style, /\.display\s*\{[^}]*font-weight:\s*900/);
   assert.doesNotMatch(story, /\.story \.act-h\s*\{[^}]*font-weight:\s*900/);
 });

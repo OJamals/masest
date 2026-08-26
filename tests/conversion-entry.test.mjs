@@ -77,11 +77,11 @@ test("animated homepage copy keeps stable accessible names", () => {
   // markup — inline typographic spans (e.g. .no-break) must not count as a copy change.
   const headline = home.match(/<h1 class="act-h" id="storyAct1Title"[^>]*>([\s\S]*?)<\/h1>/)?.[1];
   assert.equal(
-    String(headline).replace(/<[^>]+>/g, ""),
-    "Clean the Hard Stuff Without Harsh Acids, Caustics, or Solvents.",
+    String(headline).replace(/<[^>]+>/g, "").replace(/&rsquo;/g, "’"),
+    "Show us the mess. We’ll match the cleaner.",
   );
-  assert.match(home, /aria-label="Shop VertKleen products"/);
-  assert.match(home, /aria-label="Try VertKleen on my cleaning job"/);
+  assert.match(home, /aria-label="Shop VertKleen HCR"/);
+  assert.match(home, /aria-label="Try VertKleen HCR on my cleaning job"/);
   assert.doesNotMatch(home, /starting candidate|trial candidate|Candidate only after|path to approval/i);
   assert.match(home, /Break down and rinse away/);
   assert.match(home, /Whole-job cost/);

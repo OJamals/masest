@@ -7,77 +7,93 @@ const home = read("index.html");
 const storyCss = read("css/story.css");
 const storyJs = read("js/story.js");
 const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<section class="story-summary/)?.[0] || "";
-const acts = [...story.matchAll(/<section class="act[^"]*"[^>]*data-act="(\d)"/g)];
+const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
+const acts = [...story.matchAll(/<section class="act[^"]*"[^>]*data-act="(\d)"[^>]*data-scene="([^"]+)"/g)];
 
-test("homepage story is a four-act Replacement Ledger narrative", () => {
+test("homepage story is one job told through four named transformations", () => {
   assert.ok(story, "expected homepage story");
-  assert.deepEqual(acts.map((match) => match[1]), ["1", "2", "3", "4"]);
+  assert.deepEqual(acts.map((match) => [match[1], match[2]]), [
+    ["1", "diagnose"],
+    ["2", "burden"],
+    ["3", "switch"],
+    ["4", "prove"],
+  ]);
   assert.equal((story.match(/class="rail-btn"/g) || []).length, 4);
   assert.doesNotMatch(story, /data-act="5"/);
 });
 
-test("first act has one dominant guided replacement action and quieter trial", () => {
-  const actOne = story.match(/<section class="act"[^>]*data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
-  const primaryActions = actOne.match(/class="btn btn-primary"/g) || [];
-
-  assert.equal(primaryActions.length, 1);
-  assert.match(actOne, /class="btn btn-primary" href="products#catalog"[^>]*>Shop cleaners<\/a>/);
-  assert.match(actOne, /class="btn btn-ghost" href="contact\?type=sample"[^>]*>Try it on my job<\/a>/);
-  assert.doesNotMatch(actOne, /story-shortcuts/);
+test("one persistent equipment object carries real job, product, and result evidence", () => {
+  assert.equal((story.match(/class="story-object"/g) || []).length, 1);
+  assert.match(story, /img\/blog\/cases\/hcr-brevard-before\.webp/);
+  assert.match(story, /img\/blog\/cases\/hcr-brevard-after\.webp/);
+  assert.match(story, /img\/updates\/vertkleen-hvac-hcr-5gal\.webp/);
+  assert.match(story, /Brevard County HVAC/);
+  assert.match(story, /VertKleen HCR/);
 });
 
-test("second act carries buildup and operational cost through one pipe", () => {
-  const actTwo = story.match(/<section class="act"[^>]*data-act="2"[\s\S]*?<\/section>/)?.[0] || "";
+test("first scene diagnoses one job with one product action and one trial action", () => {
+  const actOne = story.match(/<section class="act[^"]*"[^>]*data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.equal((actTwo.match(/class="pipe-diagram"/g) || []).length, 1);
-  assert.match(actTwo, /class="pipe-cost-chain"/);
-  assert.match(actTwo, /Crew time/);
-  assert.match(actTwo, /Downtime/);
-  assert.match(actTwo, /Extra handling/);
+  assert.match(actOne, /Show us the mess\. We(?:&rsquo;|’)ll match the cleaner\./);
+  assert.match(actOne, /class="btn btn-primary" href="products\/hcr"[^>]*>Shop HCR<\/a>/);
+  assert.match(actOne, /class="btn btn-ghost" href="contact\?type=sample&amp;product=VertKleen%20HCR"[^>]*>Try it on my job<\/a>/);
+  assert.doesNotMatch(actOne, /story-shortcuts|reel-slide/);
 });
 
-test("third act is one operational ledger with task-matched chemistry", () => {
-  const actThree = story.match(/<section class="act act-ledger"[\s\S]*?<\/section>/)?.[0] || "";
+test("second scene proves burden on the same field job without changing visual grammar", () => {
+  const actTwo = story.match(/<section class="act[^"]*"[^>]*data-act="2"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.match(actThree, /class="replacement-ledger"/);
-  assert.equal((actThree.match(/class="ledger-row"/g) || []).length, 4);
-  const revealBeats = ["1.2", "1.7", "2.2", "2.7", "3.2", "3.7", "4.2", "4.7"];
-  revealBeats.forEach((beat, index) => {
-    const step = index + 1;
-    const cells = actThree.match(new RegExp(`data-ledger-step="${step}" data-at="${beat}"`, "g")) || [];
-    assert.equal(cells.length, 3, `ledger reveal step ${step} must own three cells at beat ${beat}`);
-  });
-  assert.doesNotMatch(actThree, /class="ledger-row" data-at=/);
-  assert.match(storyCss, /\.ledger-intro\s*\{[\s\S]*left: clamp\(36px, 2vw, 40px\)/);
+  assert.match(actTwo, /36 hours/);
+  assert.match(actTwo, /result was still incomplete/i);
+  assert.match(actTwo, /class="burden-chain"/);
+  assert.doesNotMatch(actTwo, /pipe-diagram|Scale narrows pipes|Legionella/);
+});
+
+test("third scene makes one matched switch and moves the full ledger below the story", () => {
+  const actThree = story.match(/<section class="act[^"]*"[^>]*data-act="3"[\s\S]*?<\/section>/)?.[0] || "";
+
+  assert.match(actThree, /Switch the cleaner\. Finish the job\./);
+  assert.match(actThree, /class="switch-card"/);
+  assert.match(actThree, /Previous attempt/);
+  assert.match(actThree, /Matched cleaner/);
+  assert.match(actThree, /VertKleen HCR/);
+  assert.match(actThree, /0&#8209;0&#8209;0/);
+  assert.doesNotMatch(actThree, /replacement-ledger|\$115,000|workplace injury/i);
+
+  assert.ok(guide, "expected full comparison guide below the story");
+  assert.equal((guide.match(/class="ledger-row"/g) || []).length, 4);
   for (const product of ["hcr", "cr", "purgo", "neutral"]) {
-    assert.match(actThree, new RegExp(`href="products/${product}"`));
+    assert.match(guide, new RegExp(`href="products/${product}"`));
   }
-  assert.equal((actThree.match(/class="hmis-chip is-safe"/g) || []).length, 4);
-  assert.match(actThree, /How VertKleen gets it clean/);
-  assert.doesNotMatch(actThree, /starting candidate|trial candidate|Candidate only after/i);
-  assert.match(actThree, /The table uses common SDS ratings for conventional cleaners/);
-  assert.match(actThree, /OSHA 2026 penalty schedule/);
-  assert.match(actThree, /Liberty Mutual 2025 Workplace Safety Index/);
-  assert.doesNotMatch(actThree, /DBNPA/);
 });
 
-test("fourth act is an asymmetric proof and action close", () => {
-  const actFour = story.match(/<section class="act act-savior act-proof-close"[\s\S]*?<\/section>/)?.[0] || "";
+test("fourth scene resolves the exact field job with sourced proof and specific action", () => {
+  const actFour = story.match(/<section class="act[^"]*"[^>]*data-act="4"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.match(actFour, /class="proof-close"/);
-  assert.match(actFour, /class="proof-panel"/);
-  assert.match(actFour, /class="close-action"/);
-  assert.match(actFour, /data-target="6">6<\/span><span class="cost-per"> numbers that matter/);
-  assert.match(actFour, /Current cleaner, dilution, labor, water, downtime, and disposal/);
-  assert.match(actFour, /href="products#catalog"/);
-  assert.doesNotMatch(actFour, /zero-axis|savior-zero-scale|grid-template-columns:\s*repeat\(3/);
+  assert.match(actFour, /Count the whole job\. Then make the switch\./);
+  assert.match(actFour, /30 minutes/);
+  assert.match(actFour, /garden-hose rinse/i);
+  assert.match(actFour, /job notes say no scrubbing/i);
+  assert.match(actFour, /href="blog\/hcr-brevard-hvac-rust-case-study"/);
+  assert.match(actFour, /href="products\/hcr"/);
+  assert.doesNotMatch(actFour, /Industrial muscle|\$115,000/);
 });
 
-test("story keeps native scroll, compact roads, and explicit light-content boundary", () => {
+test("story uses compact native-scroll roads and scene renderer contracts", () => {
   assert.doesNotMatch(storyJs, /new\s+Lenis|addEventListener\(["']wheel|preventDefault\(\).*wheel|scrollMultiplier/);
-  assert.match(storyCss, /\.story \.act\[data-act="1"\]\s*\{[^}]*height:\s*160vh/s);
-  assert.match(storyCss, /\.story \.act\[data-act="2"\]\s*\{[^}]*height:\s*170vh/s);
-  assert.match(storyCss, /\.story \.act\[data-act="3"\]\s*\{[^}]*height:\s*205vh/s);
-  assert.match(storyCss, /\.story \.act\[data-act="4"\]\s*\{[^}]*height:\s*125vh/s);
+
+  const heights = [...storyCss.matchAll(/\.story \.act\[data-act="\d"\]\s*\{[^}]*height:\s*(\d+)vh/gs)]
+    .map((match) => Number(match[1]));
+  assert.equal(heights.length, 4);
+  assert.ok(heights.every((height) => height >= 100), heights);
+  assert.ok(heights.reduce((sum, height) => sum + height, 0) >= 420, heights);
+  assert.ok(heights.reduce((sum, height) => sum + height, 0) <= 480, heights);
+
+  assert.match(storyJs, /var SCENE_DEFS = \[/);
+  for (const id of ["diagnose", "burden", "switch", "prove"]) {
+    assert.match(storyJs, new RegExp(`id: "${id}"`));
+  }
+  assert.match(storyJs, /sceneDef\.render\(st\.p, st\)/);
+  assert.match(storyJs, /initCompactStory\(\)/);
   assert.match(storyJs, /rect\.bottom\s*>=\s*window\.innerHeight/);
 });

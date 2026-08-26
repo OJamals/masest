@@ -60,8 +60,8 @@ test("homepage first fold prioritizes replacement and trial without duplicate sh
       });
 
       assert.equal(result.hasScrollCue, false, "first fold should not include a decorative scroll cue");
-      assert.ok(result.ctas.some((cta) => cta.text === "Shop cleaners"), "product CTA should be visible in the first fold");
-      assert.ok(result.ctas.some((cta) => cta.text === "Try it on my job"), "quote CTA should be visible in the first fold");
+      assert.ok(result.ctas.some((cta) => cta.text === "Shop HCR"), "matched product CTA should be visible in the first fold");
+      assert.ok(result.ctas.some((cta) => cta.text === "Try it"), "trial CTA should be visible in the first fold");
       assert.deepEqual(result.shortcuts, [], "first fold should not repeat replacement actions in a shortcut rail");
     } finally {
       await browser.close();
@@ -93,8 +93,8 @@ test("homepage keeps a primary action visible on short mobile", async () => {
             label === text;
         });
         return {
-          hasPrimary: visibleInFold("a, button", "Shop cleaners"),
-          hasTrial: visibleInFold("a, button", "Try it on my job"),
+          hasPrimary: visibleInFold(".story-actions a", "Shop HCR"),
+          hasTrial: visibleInFold(".story-actions a", "Try it"),
           visibleShortcuts: [...document.querySelectorAll(".story-shortcuts a")].filter((el) => {
             const rect = el.getBoundingClientRect();
             const style = getComputedStyle(el);
@@ -114,7 +114,7 @@ test("homepage keeps a primary action visible on short mobile", async () => {
   });
 });
 
-test("homepage first scene uses the compact stacked iPad fallback", async () => {
+test("homepage first scene keeps the persistent object clear of compact iPad copy", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({
@@ -126,12 +126,13 @@ test("homepage first scene uses the compact stacked iPad fallback", async () => 
 
     try {
       await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => {
-        const copy = document.querySelector('.story .act[data-act="1"] .act-copy');
-        const reel = document.querySelector('.story .act[data-act="1"] .reel');
-        return copy?.getBoundingClientRect().width > 0 && reel?.getBoundingClientRect().width > 0;
-      });
-      const result = await page.evaluate(() => {
+      await page.waitForFunction(() => (
+        document.getElementById("story")?.classList.contains("story-mobile-ready")
+      ));
+      const result = await page.evaluate(async () => {
+        const act = document.querySelector('.story .act[data-act="1"]');
+        act.scrollIntoView({ block: "center" });
+        await new Promise((resolve) => setTimeout(resolve, 350));
         const rect = (selector) => {
           const box = document.querySelector(selector).getBoundingClientRect();
           return {
@@ -142,21 +143,23 @@ test("homepage first scene uses the compact stacked iPad fallback", async () => 
             width: Math.round(box.width),
           };
         };
-        const copy = rect('.story .act[data-act="1"] .act-copy');
-        const reel = rect('.story .act[data-act="1"] .reel');
+        const copy = rect('.story .act[data-act="1"] .act-content');
+        const object = rect(".story-object__card");
         return {
           copy,
-          reel,
-          sceneEnvelope: Math.max(copy.right, reel.right) - Math.min(copy.left, reel.left),
+          object,
+          sceneEnvelope: Math.max(copy.right, object.right) - Math.min(copy.left, object.left),
+          mobileReady: document.getElementById("story").classList.contains("story-mobile-ready"),
           overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
         };
       });
 
+      assert.equal(result.mobileReady, true, JSON.stringify(result));
       assert.ok(result.sceneEnvelope >= 656 * 0.75, JSON.stringify(result));
-      assert.ok(result.reel.top >= result.copy.bottom + 16, JSON.stringify(result));
+      assert.ok(result.copy.top >= result.object.bottom + 16, JSON.stringify(result));
       assert.ok(result.copy.width >= 250, JSON.stringify(result));
-      assert.ok(result.reel.width >= 240, JSON.stringify(result));
-      assert.ok(result.reel.right <= 656, JSON.stringify(result));
+      assert.ok(result.object.width >= 560, JSON.stringify(result));
+      assert.ok(result.object.right <= 656, JSON.stringify(result));
       assert.equal(result.overflow, false, JSON.stringify(result));
     } finally {
       await browser.close();

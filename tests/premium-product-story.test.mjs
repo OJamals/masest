@@ -4,14 +4,19 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("home page opens directly into the original scrolly story", () => {
+test("home page opens directly into the verified field-job scrolly story", () => {
   const html = read("index.html");
   const css = read("css/style.css");
 
   assert.doesNotMatch(html, /premium-story-hero/, "home should not include the rejected premium intro scene");
   assert.doesNotMatch(html, /replacement-console/, "home should not include the rejected replacement console scene");
   assert.doesNotMatch(html, /home-quick-actions/, "home should not show the removed quick-action switcher");
-  assert.match(html, /<div class="story" id="story"/, "home should open directly into the original scrolly story");
+  assert.match(html, /<div class="story" id="story"/, "home should open directly into the field-job story");
+  assert.equal((html.match(/class="story-object"/g) || []).length, 1, "story should keep one persistent visual object");
+  assert.deepEqual(
+    [...html.matchAll(/data-scene="(diagnose|burden|switch|prove)"/g)].map((match) => match[1]),
+    ["diagnose", "burden", "switch", "prove"],
+  );
   assert.doesNotMatch(css, /\.premium-story-hero\b/, "removed intro scene should not leave active styling behind");
   assert.doesNotMatch(css, /\.replacement-console\b/, "removed replacement console should not leave active styling behind");
 });

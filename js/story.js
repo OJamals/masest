@@ -1,528 +1,416 @@
-/* ============================================================
-   MASEST / VertKleen - Four-act Replacement Ledger engine
-   NATIVE browser scroll. One GSAP timeline per act, driven by
-   ScrollTrigger scrub (the single smoothing layer - no Lenis,
-   no wheel multipliers, no custom damping). Wheel feel is the
-   browser's own; animations catch up over ~0.3s.
-   Act 1: field problem + guided route. Act 2: one continuous
-   buildup-cost pipe. Act 3: one operational comparison ledger.
-   Act 4: asymmetric proof + action close (canvas motes).
-   Mobile uses the shorter in-flow narrative. All acts degrade to
-   a fully visible layout without JS, when libs fail, or under
-   reduced motion.
-   ============================================================ */
+/*
+ * MASEST landing story
+ * Native page scroll remains the input. GSAP only maps desktop scroll progress
+ * to four small scene renderers. Compact screens use IntersectionObserver.
+ */
 (function () {
   "use strict";
+
   var story = document.getElementById("story");
   if (!story) return;
 
-  var deferredStoryImages = Array.prototype.slice.call(story.querySelectorAll("img[data-reel-src]"));
-  function loadStoryImage(img) {
-    if (!img || !img.dataset.reelSrc) return;
-    img.src = img.dataset.reelSrc;
-    delete img.dataset.reelSrc;
-  }
-  function loadAllStoryImages() {
-    deferredStoryImages.forEach(loadStoryImage);
-  }
+  var acts = Array.prototype.slice.call(story.querySelectorAll(".act"));
+  var railLinks = Array.prototype.slice.call(story.querySelectorAll(".rail-btn"));
+  var objectStatus = story.querySelector(".story-object__status");
+  var mediaQuery = window.matchMedia("(max-width: 760px)");
+  var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var reduce = motionQuery.matches;
+  var compact = mediaQuery.matches;
+  var activeState = null;
+  var scrollFrame = 0;
+  var teardownMode = function () {};
 
-  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var compact = window.matchMedia("(max-width: 760px)").matches;
-  if (reduce || compact || !window.gsap || !window.ScrollTrigger) {
-    /* index.html may have applied .story-ready pre-paint (CLS guard); undo it so
-       the CSS fallback layout shows when we're not driving the animation. */
-    story.classList.remove("story-ready");
-    loadAllStoryImages();
-    return;
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
   }
 
-  gsap.registerPlugin(ScrollTrigger);
-  /* Mobile URL-bar show/hide resizes the viewport vertically on scroll; without
-     this, every such resize refreshes ScrollTrigger and the triggers jump. */
-  ScrollTrigger.config({ ignoreMobileResize: true });
-  story.classList.add("story-ready");
-
-  var clamp = gsap.utils.clamp;
-  var smooth = function (t) { t = clamp(0, 1, t); return t * t * (3 - 2 * t); };
-  function stickyOffset() {
-    var nav = document.querySelector(".nav");
-    var h = nav ? nav.getBoundingClientRect().height : 0;
-    return Math.round(h || 67);
+  function setVisualState(config) {
+    if (objectStatus && objectStatus.textContent !== config.status) {
+      objectStatus.textContent = config.status;
+    }
   }
-  function storyStart() { return "top " + stickyOffset() + "px"; }
 
-  /* ============================================================
-     ACTS: each gets one timeline, scrubbed by its own scroll
-     road. Beats are timeline positions (1 beat = 1 time unit):
-     data-at="n" enters at beat n; data-out="m" exits at beat m.
-     A 1.2-unit hold keeps the finished composition on stage
-     until the act unpins and slides away naturally.
-     ============================================================ */
-var BEAT_IN = 0.64, BEAT_OUT = 0.26, HOLD = 1.35;
-  var acts = gsap.utils.toArray(story.querySelectorAll(".act"));
-  var firstAct = acts[0];
-
-  var states = acts.map(function (act, i) {
-    var maxAt = 0;
-    var els = Array.prototype.slice.call(act.querySelectorAll("[data-at]"));
-    var focusables = Array.prototype.slice.call(act.querySelectorAll("a[href], button, input, select, textarea, [tabindex]"));
-    els.forEach(function (el) {
-      el._at = parseFloat(el.getAttribute("data-at")) || 0;
-      el._out = el.hasAttribute("data-out") ? parseFloat(el.getAttribute("data-out")) : -1;
-      if (el._at > maxAt) maxAt = el._at;
-      if (el._out > maxAt) maxAt = el._out;
+  function renderDiagnose(progress) {
+    setVisualState({
+      status: "Field condition"
     });
-    focusables.forEach(function (el) {
-      el.dataset.storyTabindex = el.getAttribute("tabindex") || "";
+  }
+
+  function renderBurden(progress) {
+    setVisualState({
+      status: "36-hour attempt · incomplete"
     });
-    return { act: act, stage: act.querySelector(".stage"), i: i, p: 0, active: false, fx: null, maxAt: maxAt, els: els, focusables: focusables, focusVisible: null, T: maxAt + BEAT_IN + HOLD };
+  }
+
+  function renderSwitch(progress) {
+    setVisualState({
+      status: "Matched to VertKleen HCR"
+    });
+  }
+
+  function renderProve(progress) {
+    var p = clamp(progress, 0, 1);
+    setVisualState({
+      status: p > .84 ? "Field result" : "Result check"
+    });
+  }
+
+  var SCENE_DEFS = [
+    { id: "diagnose", label: "Diagnose", render: renderDiagnose },
+    { id: "burden", label: "Measure the burden", render: renderBurden },
+    { id: "switch", label: "Match the cleaner", render: renderSwitch },
+    { id: "prove", label: "Prove the result", render: renderProve }
+  ];
+
+  function sceneDefinition(id) {
+    for (var i = 0; i < SCENE_DEFS.length; i += 1) {
+      if (SCENE_DEFS[i].id === id) return SCENE_DEFS[i];
+    }
+    return SCENE_DEFS[0];
+  }
+
+  var states = acts.map(function (act, index) {
+    var focusables = Array.prototype.slice.call(
+      act.querySelectorAll("a[href], button, input, select, textarea, [tabindex]")
+    );
+    focusables.forEach(function (element) {
+      element.dataset.storyOriginalTabindex = element.getAttribute("tabindex") || "";
+      var reveal = element.closest("[data-at]");
+      var revealAt = reveal
+        ? clamp(parseFloat(reveal.getAttribute("data-at")) || 0, 0, .82)
+        : 0;
+      element.dataset.storyRevealAt = String(reveal ? Math.min(1, revealAt + .1) : 0);
+    });
+    return {
+      act: act,
+      index: index,
+      p: 0,
+      sceneDef: sceneDefinition(act.dataset.scene),
+      elements: Array.prototype.slice.call(act.querySelectorAll("[data-at]")),
+      focusables: focusables,
+      timeline: null
+    };
   });
-  function syncStoryFocus(currentIdx) {
-    var visibleIdx = typeof currentIdx === "number" ? currentIdx : currentActIdx();
+
+  function renderScene(st) {
+    var sceneDef = st.sceneDef;
+    sceneDef.render(st.p, st);
+  }
+
+  function restoreFocusable(element) {
+    if (element.dataset.storyOriginalTabindex) {
+      element.setAttribute("tabindex", element.dataset.storyOriginalTabindex);
+    } else {
+      element.removeAttribute("tabindex");
+    }
+  }
+
+  function syncDesktopAccessibility(current) {
     states.forEach(function (st) {
-      var visible = st.i === visibleIdx;
-      if (visible === st.focusVisible) return;
-      st.focusVisible = visible;
+      var visible = st === current;
       st.act.setAttribute("aria-hidden", visible ? "false" : "true");
-      st.focusables.forEach(function (el) {
-        if (visible) {
-          if (el.dataset.storyTabindex) el.setAttribute("tabindex", el.dataset.storyTabindex);
-          else el.removeAttribute("tabindex");
-        } else {
-          el.setAttribute("tabindex", "-1");
-        }
+      st.focusables.forEach(function (element) {
+        var revealed = st.p >= Number(element.dataset.storyRevealAt || 0);
+        if (visible && revealed) restoreFocusable(element);
+        else element.setAttribute("tabindex", "-1");
       });
     });
   }
 
-states.forEach(function (st) {
-  /* Dense table reveals must track the scrollbar 1:1; smoothing reads as lag. */
-  var directScrub = st.act.classList.contains("act-ledger");
-  var tl = gsap.timeline({
-    defaults: { ease: "power2.out" },
-    scrollTrigger: {
-      trigger: st.act,
-        /* One entry model for every act: the scrub begins as the stage pins
-           just under the nav, so each act's [data-at] beats reveal while it's
-           held on screen - not during the slide-up, where they're missed.
-           (The opener is already at the page top on load; same start applies.) */
-        start: storyStart,
-        end: "bottom bottom",
-        scrub: directScrub || 0.42,
-        invalidateOnRefresh: true,        /* re-record tween endpoints at the new size */
-        onToggle: function (self) {
-          st.active = self.isActive;
-          if (self.isActive) resizeFx(st);
-          var idx = reassertAlpha(true);
-          updateRail(idx);
-          syncStoryFocus(idx);
-        }
-      },
-      onUpdate: function () {
-        st.p = tl.totalProgress();
-        onActScrub(st);
-      }
+  function restoreStaticAccessibility() {
+    states.forEach(function (st) {
+      st.act.removeAttribute("aria-hidden");
+      st.focusables.forEach(restoreFocusable);
     });
-    st.tl = tl;
+  }
 
-    var ledgerGroups = {};
-    st.els.forEach(function (el) {
-      var ledgerStep = parseInt(el.getAttribute("data-ledger-step"), 10);
-      if (ledgerStep) {
-        if (!ledgerGroups[ledgerStep]) ledgerGroups[ledgerStep] = [];
-        ledgerGroups[ledgerStep].push(el);
-        return;
-      }
-      if (st.act === firstAct && el._at === 0) {      /* opening line: visible on load */
-        gsap.set(el, { autoAlpha: 1, y: 0, scale: 1 });
-      } else {
-        tl.fromTo(el,
-          { autoAlpha: 0, y: 30, scale: 0.985 },
-          { autoAlpha: 1, y: 0, scale: 1, duration: BEAT_IN },
-          el._at);
-      }
-      if (el._out >= 0) {
-        tl.to(el, { autoAlpha: 0, y: -16, duration: BEAT_OUT, ease: "power2.in" }, Math.max(0, el._out - BEAT_OUT));
-      }
-    });
-
-    /* Act 3 is one eight-beat comparison, not four table-row reveals.
-       Conventional cells land 1-4; replacement cells then enter 5-8
-       from the left so each side owns a distinct chapter of the ledger. */
-    Object.keys(ledgerGroups).sort(function (a, b) { return Number(a) - Number(b); }).forEach(function (stepKey) {
-      var cells = ledgerGroups[stepKey];
-      var fromReplacementSide = Number(stepKey) > 4;
-      tl.fromTo(cells,
-        { autoAlpha: 0, x: fromReplacementSide ? -32 : 0, y: fromReplacementSide ? 0 : 30, scale: 1 },
-        { autoAlpha: 1, x: 0, y: 0, scale: 1, duration: BEAT_IN, ease: "none" },
-        cells[0]._at);
-    });
-    tl.set({}, {}, st.T);                               /* endcap: hold before unpin */
-  });
-
-  /* Beat n as a fraction of the act's scrubbed progress */
-  function beatFrac(st, n) { return n / st.T; }
-  var INW = function (st) { return BEAT_IN / st.T; };
-
-  /* ============================================================
-     SCRUB-DRIVEN EXTRAS (run inside each act's timeline update)
-     ============================================================ */
-  function onActScrub(st) {
-    if (st.i === 0) {
-      updateReel(st);
+  function resetStoryPresentation() {
+    if (scrollFrame) {
+      window.cancelAnimationFrame(scrollFrame);
+      scrollFrame = 0;
     }
-    if (st.act === pipeAct) updateChips2(st);
-    if (st.act === ledgerAct) updateIncidentTotal(st);
-    if (st.act === closeAct) updateSavingTotal(st);
-  }
-
-  /* ---- ACT 2: caption chips ignite as their debris type accumulates ---- */
-  var pipeAct = story.querySelector('.act[data-act="2"]');
-  var pipeChips = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".chip")) : [];
-  var pipeFlowPaths = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".pipe-flow")) : [];
-  var pipeBuildupPaths = pipeAct ? gsap.utils.toArray(pipeAct.querySelectorAll(".pipe-buildup")) : [];
-  pipeChips.forEach(function (c) {
-    var callout = c.closest ? c.closest(".pipe-callout") : null;
-    c._callout = callout;
-    c._beat = parseInt(c.getAttribute("data-at") || (callout && callout.getAttribute("data-at")), 10) || 1;
-    c._burning = false;
-  });
-  pipeBuildupPaths.forEach(function (p) { p._beat = parseInt(p.getAttribute("data-at"), 10) || 1; });
-
-  function updateChips2(st) {
-    if (!pipeChips.length) return;
-    var win = INW(st) * 1.6;                              /* ramp the ignite over ~1.6 beats */
-    for (var k = 0; k < pipeChips.length; k++) {
-      var c = pipeChips[k];
-      var b = smooth((st.p - beatFrac(st, c._beat)) / win);
-      c.style.setProperty("--burn", b.toFixed(3));
-      if (c._callout) c._callout.style.setProperty("--burn", b.toFixed(3));
-      var on = b > 0.5;
-      if (on !== c._burning) { c._burning = on; c.classList.toggle("is-burning", on); }
-    }
-    updatePipeDiagram(st, win);
-  }
-
-  function updatePipeDiagram(st, win) {
-    if (!pipeAct) return;
-    /* Flow streaks slide as the act is scrubbed - cheap dashoffset writes with no
-       SVG filter behind them (the glow is now layered strokes, not a feGaussianBlur),
-       so this no longer re-rasterizes a blur region every frame. */
-    var travel = -240 - st.p * 420;
-    for (var f = 0; f < pipeFlowPaths.length; f++) {
-      pipeFlowPaths[f].style.strokeDashoffset = (travel - f * 62).toFixed(1);
-    }
-    for (var i = 0; i < pipeBuildupPaths.length; i++) {
-      var path = pipeBuildupPaths[i];
-      var b = smooth((st.p - beatFrac(st, path._beat)) / win);
-      path.style.setProperty("--build", b.toFixed(3));
-    }
-  }
-
-  /* ---- ACT 1: field-photo reel crossfade ---- */
-  var reel = story.querySelector(".reel");
-  var reelSlides = reel ? gsap.utils.toArray(reel.querySelectorAll(".reel-slide")) : [];
-  var reelIdx = reel ? reel.querySelector(".reel-idx") : null;
-  var reelCur = -1;
-  var REEL_A = 0.10, REEL_B = 0.94;
-
-  function loadReelSlide(index) {
-    loadStoryImage(reelSlides[index]?.querySelector("img[data-reel-src]"));
-  }
-
-  function updateReel(st) {
-    if (!reelSlides.length) return;
-    var n = reelSlides.length;
-    var seg = (REEL_B - REEL_A) / n;
-    var fade = seg * 0.24;
-    var current = 0, best = -1;
-    for (var i = 0; i < n; i++) {
-      var s0 = REEL_A + i * seg, s1 = s0 + seg;
-      var inT = (i === 0) ? 1 : smooth((st.p - s0) / fade);
-      var outT = (i === n - 1) ? 0 : smooth((st.p - (s1 - fade * 0.4)) / fade);
-      var o = inT * (1 - outT);
-      var el = reelSlides[i];
-      el.style.opacity = o;
-      el.style.transform = "translateY(" + ((1 - inT) * 26 - outT * 20) + "px) scale(" + (0.965 + inT * 0.035) + ")";
-      el.style.zIndex = Math.round(o * 10);
-      if (o > best) { best = o; current = i; }          /* most-visible slide wins */
-    }
-    loadReelSlide(current);
-    var currentEnd = REEL_A + (current + 1) * seg;
-    if (st.p > currentEnd - fade * 2) loadReelSlide(current + 1);
-    if (reelIdx && current !== reelCur) { reelCur = current; reelIdx.textContent = "Photo " + (current + 1) + " of " + n; }
-  }
-
-  /* ---- ACT 3/4: count the existing sourced incident and savings figures
-     only when their proof blocks land. Static modes keep full values. */
-  var ledgerAct = story.querySelector(".act-ledger");
-  var incidentNum = ledgerAct ? ledgerAct.querySelector(".cost-num") : null;
-  var INCIDENT_TARGET = incidentNum ? (parseInt(incidentNum.getAttribute("data-target"), 10) || 0) : 0;
-  function setTxt(el, v) { if (el && el.textContent !== v) el.textContent = v; }
-  function fmtCost(n) { return Math.round(n).toLocaleString("en-US"); }
-  function updateIncidentTotal(st) {
-    if (!incidentNum) return;
-    var a = beatFrac(st, 2.8), b = beatFrac(st, 3.2);
-    var ramp = smooth(clamp(0, 1, (st.p - a) / (b - a)));
-    setTxt(incidentNum, fmtCost(INCIDENT_TARGET * ramp));
-  }
-
-  var closeAct = story.querySelector(".act-proof-close");
-  var saveNum = closeAct ? closeAct.querySelector(".cost-num") : null;
-  var SAVE_TARGET = saveNum ? (parseInt(saveNum.getAttribute("data-target"), 10) || 0) : 0;
-  function updateSavingTotal(st) {
-    if (saveNum) {
-      var a = beatFrac(st, 0.2), c = beatFrac(st, 0.9);
-      var ramp = smooth(clamp(0, 1, (st.p - a) / (c - a)));
-      setTxt(saveNum, fmtCost(SAVE_TARGET * ramp));
-    }
-  }
-
-  /* ============================================================
-     CANVAS SYSTEMS (ambient physics on gsap.ticker; scroll only
-     sets intensity via st.p - never blocks or smooths input)
-     ============================================================ */
-  function makeSprite(r, rgb) {
-    var cv = document.createElement("canvas");
-    cv.width = cv.height = r * 2;
-    var x = cv.getContext("2d");
-    var g = x.createRadialGradient(r, r, 0, r, r, r);
-    g.addColorStop(0, "rgba(" + rgb + ",1)");
-    g.addColorStop(1, "rgba(" + rgb + ",0)");
-    x.fillStyle = g; x.fillRect(0, 0, r * 2, r * 2);
-    return cv;
-  }
-  var SPR_FUME = makeSprite(48, "255,106,69");
-  var SPR_MOTE = makeSprite(8, "52,224,200");
-
-  function setupCanvas(cv) {
-    var ctx = cv.getContext("2d");
-    var lastW = 0, lastH = 0;
-    function resize() {
-      var dpr = Math.min(window.devicePixelRatio || 1, window.innerWidth < 760 ? 1.25 : 1.5);
-      var r = cv.getBoundingClientRect();
-      var w = Math.max(1, Math.round(r.width * dpr));
-      var h = Math.max(1, Math.round(r.height * dpr));
-      if (w === lastW && h === lastH) return false;
-      lastW = w; lastH = h;
-      cv.width = w;
-      cv.height = h;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return true;
-    }
-    resize();
-    return { ctx: ctx, resize: resize, w: function () { return cv.clientWidth; }, h: function () { return cv.clientHeight; } };
-  }
-  function rnd(a, b) { return a + Math.random() * (b - a); }
-  function flowAngle(x, y, t) {
-    return Math.sin(x * 0.0028 + t * 0.45) + Math.cos(y * 0.0035 - t * 0.3) + Math.sin((x + y) * 0.0012 + t * 0.2);
-  }
-
-  /* --- ACT 1: faint fumes drifting behind the reel --- */
-  function fxFumes(st, c, dt, time) {
-    var ctx = c.ctx, w = c.w(), h = c.h();
-    ctx.clearRect(0, 0, w, h);
-    if (!st.parts) {
-      st.parts = [];
-      for (var i = 0; i < 30; i++) st.parts.push({
-        x: rnd(0, w), y: rnd(h * 0.3, h * 1.1),
-        vx: 0, vy: rnd(-0.35, -0.08), r: rnd(24, 60), a: rnd(0.03, 0.08), spin: rnd(0, 6.28)
+    states.forEach(function (st) {
+      st.p = 0;
+      st.act.classList.remove("is-mobile-visible");
+      st.elements.forEach(function (element) {
+        element.style.removeProperty("opacity");
+        element.style.removeProperty("visibility");
+        element.style.removeProperty("transform");
       });
-    }
-    for (var j = 0; j < st.parts.length; j++) {
-      var p = st.parts[j];
-      var ang = flowAngle(p.x, p.y, time) * 1.7 + p.spin;
-      p.vx += Math.cos(ang) * 0.01;
-      p.vy += Math.sin(ang) * 0.007 - 0.012;
-      p.vx *= 0.985; p.vy *= 0.985;
-      p.x += p.vx * dt * 60; p.y += p.vy * dt * 60;
-      if (p.y < -p.r || p.x < -p.r || p.x > w + p.r) { p.x = rnd(0, w); p.y = h + p.r; p.vx = 0; p.vy = rnd(-0.35, -0.08); }
-      ctx.globalAlpha = Math.max(0, p.a * (1.2 - p.y / h * 0.6));
-      ctx.drawImage(SPR_FUME, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
-    }
-    ctx.globalAlpha = 1;
+    });
+    restoreStaticAccessibility();
   }
 
-  /* --- ACT 4: clean teal motes drifting up --- */
-  function fxMotes(st, c, dt, time) {
-    var ctx = c.ctx, w = c.w(), h = c.h();
-    ctx.clearRect(0, 0, w, h);
-    if (!st.motes) {
-      st.motes = [];
-      for (var i = 0; i < 36; i++) st.motes.push({ x: rnd(0, w), y: rnd(0, h), v: rnd(0.12, 0.4), r: rnd(2, 6), ph: rnd(0, 6.28) });
-    }
-    for (var j = 0; j < st.motes.length; j++) {
-      var m = st.motes[j];
-      m.y -= m.v * dt * 60;
-      m.x += Math.sin(time * 0.7 + m.ph) * 0.18;
-      if (m.y < -10) { m.y = h + 10; m.x = rnd(0, w); }
-      ctx.globalAlpha = Math.max(0, (0.25 + 0.2 * Math.sin(time + m.ph)) * smooth(st.p * 3));
-      ctx.drawImage(SPR_MOTE, m.x - m.r, m.y - m.r, m.r * 2, m.r * 2);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  var FX = { fumes: fxFumes, motes: fxMotes };
-  states.forEach(function (st) {
-    var type = st.act.getAttribute("data-fx");
-    var cv = st.act.querySelector(".fx-canvas");
-    if (type && cv && FX[type]) st.fx = { draw: FX[type], c: setupCanvas(cv) };
-  });
-  function resizeFx(st) {
-    if (!st.fx) return;
-    if (st.fx.c.resize()) {                            /* geometry changed */
-      st.parts = null; st.motes = null; st.deb = null; /* rebuild for new geometry */
-    }
-  }
-  var visibleActIndex = 0;
-  var alphaIdx = -1;
-
-  /* Ambient canvas loop: draws only the act on stage */
-  gsap.ticker.add(function (time, deltaMS) {
-    var dt = Math.min(deltaMS / 1000, 0.05);
-    for (var i = 0; i < states.length; i++) {
-      var st = states[i];
-      if (st.fx && (st.active || Math.abs(st.i - visibleActIndex) <= 1)) st.fx.draw(st, st.fx.c, dt, time);
-    }
-  });
-
-  /* ============================================================
-     CHAPTER RAIL
-     ============================================================ */
-  var railBtns = Array.prototype.slice.call(story.querySelectorAll(".rail-btn"));
-  var railCurrent = -1;
-  var railTicking = false;
-  function syncStoryPageState() {
-    var rect = story.getBoundingClientRect();
-    /* Light content begins exactly at story.bottom. Release rail/nav/chat state
-       before any light content enters the viewport, in either direction. */
-    var inView = rect.bottom >= window.innerHeight && rect.top < window.innerHeight;
-    document.body.classList.toggle("story-in-view", inView);
-  }
-  function nearestRailIndex() {
-    var anchor = window.scrollY + Math.max(stickyOffset() + 2, window.innerHeight * 0.2);
-    var firstTop = states.length ? states[0].act.getBoundingClientRect().top + window.scrollY : 0;
-    var current = 0;
-    for (var i = 0; i < states.length; i++) {
-      var top = states[i].act.getBoundingClientRect().top + window.scrollY;
-      var bottom = top + states[i].act.offsetHeight;
-      if (anchor >= top && anchor < bottom) return i;
-      if (anchor >= top) current = i;
-    }
-    return anchor < firstTop ? 0 : current;
-  }
-  function updateRailProgress(current) {
-    for (var j = 0; j < railBtns.length; j++) {
-      var progress = j < current ? 1 : j === current ? states[j].p : 0;
-      var next = progress.toFixed(3);
-      if (railBtns[j]._storyProgress === next) continue;
-      railBtns[j]._storyProgress = next;
-      railBtns[j].style.setProperty("--p", next);
-    }
-  }
   function updateRail(current) {
-    if (!railBtns.length) return;
-    if (typeof current !== "number") current = currentActIdx();
-    updateRailProgress(current);
-    if (current === railCurrent) return;
-    railCurrent = current;
-    for (var j = 0; j < railBtns.length; j++) {
-      railBtns[j].classList.toggle("is-on", j === current);
-      railBtns[j].classList.toggle("safe", current === states.length - 1);
-    }
-  }
-  /* ============================================================
-     AUTHORITATIVE VISIBILITY - derived from scroll geometry, not
-     from directional-callback history. Exactly one act's sticky
-     stage owns the viewport; it shows, the rest hide. Because this
-     is a pure function of position, a resize / window-move / the
-     browser's scrollY-clamp on a now-shorter page cannot strand a
-     stage at visibility:hidden - the next frame (or refresh) snaps
-     it back to the truth. The onEnter/onLeave alpha sets above are
-     now just hints; this is the source of truth.
-     ============================================================ */
-  function currentActIdx() {
-    return nearestRailIndex();
-  }
-  /* autoAlpha = opacity + visibility, both compositor-only (no reflow). Cache
-     the visible index during ordinary scroll, force a full reassert after
-     trigger toggles/refreshes. */
-  function reassertAlpha(force) {
-    var idx = currentActIdx();
-    visibleActIndex = idx;
-    if (!force && idx === alphaIdx) return idx;
-    alphaIdx = idx;
-    for (var k = 0; k < states.length; k++) {
-      /* Neighbors stay visible so act boundaries hand off by geometry (the
-         incoming opaque stage slides over the outgoing one) instead of a
-         hard cut into a black gap between scenes. */
-      if (states[k].stage) gsap.set(states[k].stage, { autoAlpha: Math.abs(k - idx) <= 1 ? 1 : 0 });
-    }
-    return idx;
-  }
-  /* Full re-assert after a geometry change: fix alpha, then repaint the on-stage
-     act's canvas + scrub-driven extras at the new size. */
-  function reassertVisibility() {
-    syncStoryPageState();
-    var on = states[reassertAlpha(true)];
-    if (on) { resizeFx(on); onActScrub(on); }
-  }
-  ScrollTrigger.addEventListener("refresh", reassertVisibility);
-
-  function scheduleRailUpdate() {
-    if (railTicking) return;
-    railTicking = true;
-    requestAnimationFrame(function () {
-      railTicking = false;
-      var idx = reassertAlpha();
-      updateRail(idx);
-      syncStoryFocus(idx);
-      syncStoryPageState();
+    railLinks.forEach(function (link, index) {
+      if (index === current.index) link.setAttribute("aria-current", "step");
+      else link.removeAttribute("aria-current");
     });
   }
-  window.addEventListener("scroll", scheduleRailUpdate, { passive: true });
-  updateRail();
-  syncStoryFocus();
-  syncStoryPageState();
 
-  /* Paint the opening act at rest so the first field photo and the
-     parallax backdrop are visible on load, before any scroll - without
-     this the reel sits at its CSS opacity:0 until the first scroll. */
-  if (states[0]) { states[0].p = 0; onActScrub(states[0]); }
-  reassertVisibility();
-
-  /* Let GSAP own refresh timing: debounce resize into a single refresh (which
-     invalidates tween endpoints AND fires reassertVisibility) instead of racing
-     a separate canvas-only timer against GSAP's own un-debounced auto-refresh. */
-  var resizeTimer = null;
-  window.addEventListener("resize", function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(function () { ScrollTrigger.refresh(); }, 150);
-  });
-
-  /* Window dragged between displays of different pixel density: refresh so the
-     canvas re-rasterizes at the new DPR (its backing size folds devicePixelRatio)
-     and visibility re-asserts. Re-arms after each change - the query is DPR-specific. */
-  function watchDpr() {
-    var mq = window.matchMedia("(resolution: " + (window.devicePixelRatio || 1) + "dppx)");
-    var onChange = function () { mq.removeEventListener("change", onChange); ScrollTrigger.refresh(); watchDpr(); };
-    mq.addEventListener("change", onChange);
+  function activateState(st, desktop) {
+    if (!st) return;
+    activeState = st;
+    story.dataset.activeScene = st.sceneDef.id;
+    updateRail(st);
+    if (desktop) syncDesktopAccessibility(st);
+    renderScene(st);
   }
-  watchDpr();
 
-  /* Late layout shifts move the document under the story: #featuredProducts
-     injects on DOMContentLoaded, web fonts swap after first paint. Refresh so
-     each trigger's start/end track the final geometry. */
-  function refreshAfterLayout() {
-    requestAnimationFrame(function () { ScrollTrigger.refresh(); });
+  function stateAtViewport() {
+    var marker = window.innerHeight * .42;
+    var found = states[0];
+    states.some(function (st) {
+      var rect = st.act.getBoundingClientRect();
+      if (rect.top <= marker && rect.bottom >= marker) {
+        found = st;
+        return true;
+      }
+      return false;
+    });
+    return found;
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", refreshAfterLayout, { once: true });
+
+  function storyFillsViewport() {
+    var rect = story.getBoundingClientRect();
+    return rect.top <= 0 && rect.bottom >= window.innerHeight;
+  }
+
+  function initStoryPresence() {
+    if ("IntersectionObserver" in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          document.body.classList.toggle("story-in-view", entry.isIntersecting);
+        });
+      }, { threshold: 0 });
+      observer.observe(story);
+      return;
+    }
+
+    function updateFallbackPresence() {
+      document.body.classList.toggle("story-in-view", storyFillsViewport());
+    }
+    updateFallbackPresence();
+    window.addEventListener("scroll", updateFallbackPresence, { passive: true });
+    window.addEventListener("resize", updateFallbackPresence, { passive: true });
+  }
+
+  function renderStaticStory() {
+    story.classList.remove("story-ready", "story-mobile-ready");
+    resetStoryPresentation();
+    states.forEach(function (st) {
+      st.act.classList.add("is-mobile-visible");
+    });
+    activeState = states[states.length - 1];
+    story.dataset.activeScene = "prove";
+    renderProve(1);
+  }
+
+  function initCompactStory() {
+    story.classList.remove("story-ready");
+    story.classList.add("story-mobile-ready");
+    resetStoryPresentation();
+    states[0].act.classList.add("is-mobile-visible");
+    states[0].p = 0;
+    activateState(states[0], false);
+
+    var disposed = false;
+    var observer = null;
+    if ("IntersectionObserver" in window) {
+      observer = new IntersectionObserver(function (entries) {
+        if (disposed) return;
+        var candidate = null;
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-mobile-visible");
+          var st = states[Number(entry.target.dataset.act) - 1];
+          if (!candidate || entry.intersectionRatio > candidate.ratio) {
+            candidate = { state: st, ratio: entry.intersectionRatio };
+          }
+        });
+        if (candidate) activateState(candidate.state, false);
+      }, {
+        root: null,
+        rootMargin: "-32% 0px -46% 0px",
+        threshold: [0, .08, .3, .65]
+      });
+
+      states.forEach(function (st) {
+        observer.observe(st.act);
+      });
+    } else {
+      states.forEach(function (st) {
+        st.act.classList.add("is-mobile-visible");
+      });
+    }
+
+    function updateCompactProgress() {
+      if (disposed) return;
+      scrollFrame = 0;
+      var current = stateAtViewport();
+      var rect = current.act.getBoundingClientRect();
+      var travel = window.innerHeight + rect.height;
+      current.p = clamp((window.innerHeight - rect.top) / travel, 0, 1);
+      current.act.classList.add("is-mobile-visible");
+      if (current !== activeState) activateState(current, false);
+      else renderScene(current);
+    }
+
+    function onCompactScroll() {
+      if (disposed || scrollFrame) return;
+      scrollFrame = window.requestAnimationFrame(updateCompactProgress);
+    }
+
+    window.addEventListener("scroll", onCompactScroll, { passive: true });
+    window.addEventListener("resize", onCompactScroll, { passive: true });
+    updateCompactProgress();
+
+    return function () {
+      disposed = true;
+      observer?.takeRecords();
+      observer?.disconnect();
+      window.removeEventListener("scroll", onCompactScroll);
+      window.removeEventListener("resize", onCompactScroll);
+      story.classList.remove("story-mobile-ready");
+      resetStoryPresentation();
+    };
+  }
+
+  function initDesktopStory() {
+    var disposed = false;
+    var refreshFrame = 0;
+    window.gsap.registerPlugin(window.ScrollTrigger);
+    window.ScrollTrigger.config({ ignoreMobileResize: true });
+    story.classList.remove("story-mobile-ready");
+    story.classList.add("story-ready");
+
+    states.forEach(function (st) {
+      var timeline = window.gsap.timeline({
+        defaults: { ease: "power2.out" },
+        scrollTrigger: {
+          trigger: st.act,
+          start: "top top+=59",
+          end: "bottom bottom",
+          scrub: .24,
+          invalidateOnRefresh: true,
+          onEnter: function () { if (!disposed) activateState(st, true); },
+          onEnterBack: function () { if (!disposed) activateState(st, true); }
+        },
+        onUpdate: function () {
+          if (disposed) return;
+          st.p = timeline.totalProgress();
+          if (activeState === st) {
+            syncDesktopAccessibility(st);
+            renderScene(st);
+          }
+        }
+      });
+
+      st.elements.forEach(function (element) {
+        var at = clamp(parseFloat(element.getAttribute("data-at")) || 0, 0, .82);
+        if (st.index === 0 && at === 0) {
+          window.gsap.set(element, { autoAlpha: 1, y: 0 });
+          return;
+        }
+        timeline.fromTo(
+          element,
+          { autoAlpha: 0, y: 18 },
+          { autoAlpha: 1, y: 0, duration: .18 },
+          at
+        );
+      });
+
+      timeline.to({}, { duration: .001 }, 1);
+      st.timeline = timeline;
+    });
+
+    activateState(stateAtViewport(), true);
+
+    var resizeTimer = 0;
+    function onDesktopResize() {
+      if (disposed) return;
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(function () {
+        if (disposed) return;
+        window.ScrollTrigger.refresh();
+        activateState(stateAtViewport(), true);
+      }, 120);
+    }
+    window.addEventListener("resize", onDesktopResize, { passive: true });
+
+    function refreshAfterLayout() {
+      if (disposed) return;
+      refreshFrame = window.requestAnimationFrame(function () {
+        refreshFrame = 0;
+        if (disposed) return;
+        window.ScrollTrigger.refresh();
+        activateState(stateAtViewport(), true);
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", refreshAfterLayout, { once: true });
+    } else {
+      refreshAfterLayout();
+    }
+    window.addEventListener("load", refreshAfterLayout, { once: true });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(refreshAfterLayout);
+    }
+
+    return function () {
+      disposed = true;
+      window.clearTimeout(resizeTimer);
+      if (refreshFrame) window.cancelAnimationFrame(refreshFrame);
+      document.removeEventListener("DOMContentLoaded", refreshAfterLayout);
+      window.removeEventListener("load", refreshAfterLayout);
+      window.removeEventListener("resize", onDesktopResize);
+      states.forEach(function (st) {
+        if (!st.timeline) return;
+        st.timeline.scrollTrigger?.kill();
+        st.timeline.kill();
+        st.timeline = null;
+      });
+      story.classList.remove("story-ready");
+      resetStoryPresentation();
+    };
+  }
+
+  function startStoryMode() {
+    teardownMode();
+    teardownMode = function () {};
+    compact = mediaQuery.matches;
+    reduce = motionQuery.matches;
+
+    if (reduce || !window.gsap || !window.ScrollTrigger) {
+      renderStaticStory();
+      return;
+    }
+
+    if (compact) {
+      teardownMode = initCompactStory();
+      return;
+    }
+
+    teardownMode = initDesktopStory();
+  }
+
+  window.__MASESTStory = {
+    scenes: SCENE_DEFS.map(function (scene) { return scene.id; }),
+    active: function () { return activeState ? activeState.sceneDef.id : null; },
+    render: function (sceneId, progress) {
+      sceneDefinition(sceneId).render(clamp(progress, 0, 1));
+    }
+  };
+
+  initStoryPresence();
+
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener("change", startStoryMode);
+    motionQuery.addEventListener("change", startStoryMode);
   } else {
-    refreshAfterLayout();
+    mediaQuery.addListener(startStoryMode);
+    motionQuery.addListener(startStoryMode);
   }
-  window.addEventListener("load", function () { ScrollTrigger.refresh(); });
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(function () { ScrollTrigger.refresh(); });
-  }
+  startStoryMode();
 })();

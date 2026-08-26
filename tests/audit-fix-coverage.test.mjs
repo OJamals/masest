@@ -56,7 +56,7 @@ test('checkout keeps address rationale and mobile escape/trust cues', () => {
   assert.match(mobile, /\.checkout-secure\s*\{[^}]*font-size:/);
 });
 
-test('homepage keeps the customer headline intact', () => {
-  assert.match(home, /Clean the Hard Stuff Without Harsh Acids, Caustics, or Solvents\./);
-  assert.doesNotMatch(home, /Clean the Hard Stuff[\s\S]{0,80}<br/);
+test('homepage keeps the field-job headline intact', () => {
+  assert.match(home, /<h1 class="act-h" id="storyAct1Title"[^>]*>Show us the mess\. We&rsquo;ll match the cleaner\.<\/h1>/);
+  assert.doesNotMatch(home, /Show us the mess[\s\S]{0,80}<br/);
 });

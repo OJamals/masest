@@ -7,53 +7,64 @@ const home = read("index.html");
 const storyCss = read("css/story.css");
 const storyJs = read("js/story.js");
 const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<section class="story-summary/)?.[0] || "";
-const summary = home.match(/<section class="story-summary sr-only"[\s\S]*?<\/section>/)?.[0] || "";
+const summary = home.match(/<section class="story-summary"[^>]*id="storySummary"[\s\S]*?<\/section>/)?.[0] || "";
+const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
 
-test("four visual acts expose a coherent heading and region structure", () => {
-  assert.match(story, /role="region" aria-label="The story of conventional chemicals versus VertKleen"/);
+test("four scenes expose coherent headings and region structure", () => {
+  assert.match(story, /role="region" aria-label="One VertKleen field job, from diagnosis to proof"/);
   for (let act = 1; act <= 4; act += 1) {
-    assert.match(story, new RegExp(`<section class="act[^"]*"[^>]*data-act="${act}"[^>]*aria-labelledby="storyAct${act}Title"`));
+    assert.match(story, new RegExp(`<section class="act[^"]*"[^>]*id="story-scene-${act}"[^>]*data-act="${act}"[^>]*aria-labelledby="storyAct${act}Title"`));
     assert.match(story, new RegExp(`id="storyAct${act}Title"`));
   }
   assert.match(story, /<h1 class="act-h"[^>]*id="storyAct1Title"/);
   assert.equal((story.match(/<h1\b/g) || []).length, 1);
 });
 
-test("replacement ledger has table semantics and keyboard-scrollable mobile overflow", () => {
-  assert.match(story, /class="replacement-ledger-scroll" tabindex="0" role="region"/);
-  assert.match(story, /<table class="replacement-ledger"/);
-  assert.equal((story.match(/<th scope="col"/g) || []).length, 6);
-  assert.equal((story.match(/<th scope="row"/g) || []).length, 4);
-  assert.match(storyCss, /\.replacement-ledger-scroll:focus-visible/);
-  assert.match(storyCss, /overflow-x:\s*auto/);
+test("story has a visible escape, meaningful chapter navigation, and persistent actions", () => {
+  assert.match(story, /class="story-skip" href="#storySummary"/);
+  assert.doesNotMatch(story, /story-skip[^>]*sr-only/);
+  assert.match(story, /<nav class="story-rail" aria-label="Story chapters">/);
+  for (let act = 1; act <= 4; act += 1) {
+    assert.match(story, new RegExp(`class="rail-btn" href="#story-scene-${act}"`));
+  }
+  assert.match(story, /<nav class="story-actions" aria-label="VertKleen HCR actions">/);
+  assert.match(story, /class="story-actions__shop" href="products\/hcr"/);
+  assert.match(story, /class="story-actions__trial" href="contact\?type=sample&amp;product=VertKleen%20HCR"/);
 });
 
-test("static summary matches four visual acts", () => {
-  assert.ok(summary, "expected accessible story summary");
+test("full comparison remains a semantic table and becomes complete stacked cards on mobile", () => {
+  assert.match(guide, /<table class="replacement-ledger"/);
+  assert.equal((guide.match(/<th scope="col"/g) || []).length, 6);
+  assert.equal((guide.match(/<th scope="row"/g) || []).length, 4);
+  assert.equal((guide.match(/data-label="Conventional"/g) || []).length, 4);
+  assert.equal((guide.match(/data-label="VertKleen"/g) || []).length, 4);
+  assert.match(storyCss, /@media \(max-width: 760px\)[\s\S]*\.replacement-ledger tbody[\s\S]*display:\s*grid/s);
+  assert.match(storyCss, /\.replacement-ledger td\[data-label\]::before/);
+  assert.doesNotMatch(storyCss, /\.replacement-ledger\s*\{[^}]*min-width:\s*7\d\dpx/s);
+});
+
+test("visible summary matches the four visual scenes", () => {
+  assert.ok(summary, "expected visible story summary");
   assert.equal((summary.match(/<li>/g) || []).length, 4);
-  for (const phrase of [
-    "Start with the mess",
-    "Count the real cost",
-    "Choose the right VertKleen product",
-    "Try it side by side",
-  ]) {
+  for (const phrase of ["Diagnose", "Measure the burden", "Match the cleaner", "Prove the result"]) {
     assert.match(summary, new RegExp(phrase));
   }
 });
 
-test("reduced-motion, missing-library, no-JS, and mobile modes expose complete content", () => {
-  assert.match(storyJs, /reduce \|\| compact \|\| !window\.gsap \|\| !window\.ScrollTrigger/);
-  assert.match(storyJs, /classList\.remove\("story-ready"\)/);
-  assert.match(storyCss, /\.story:not\(\.story-ready\) \.act\s*\{\s*height:\s*auto/);
+test("reduced-motion, missing-library, no-JS, and ordinary mobile expose complete content", () => {
+  assert.match(storyJs, /if \(reduce \|\| !window\.gsap \|\| !window\.ScrollTrigger\)/);
+  assert.match(storyJs, /if \(compact\)\s*\{[\s\S]*initCompactStory\(\)/);
+  assert.match(storyJs, /IntersectionObserver/);
+  assert.match(storyCss, /\.story:not\(\.story-ready\) \.act\s*\{[^}]*height:\s*auto/s);
   assert.match(storyCss, /\.story:not\(\.story-ready\) \[data-at\]\s*\{[^}]*opacity:\s*1/s);
+  assert.match(storyCss, /\.story-mobile-ready \.act-content/);
   assert.match(storyCss, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.doesNotMatch(storyCss, /@media \(max-width: 760px\)[\s\S]*\.story \.act-p,[\s\S]*display:\s*none !important/);
 });
 
-test("story actions, proof, and visual media retain accessible names", () => {
-  assert.match(story, /aria-label="Shop VertKleen products"/);
-  assert.match(story, /aria-label="Try VertKleen on my cleaning job"/);
-  assert.equal((story.match(/<canvas class="fx-canvas" aria-hidden="true">/g) || []).length, 2);
-  assert.match(story, /<svg class="pipe-diagram"[^>]*role="img" aria-label="[^"]+"/);
+test("actions, field proof, and media retain accessible names", () => {
+  assert.match(story, /aria-label="Shop VertKleen HCR"/);
+  assert.match(story, /aria-label="Try VertKleen HCR on my cleaning job"/);
+  assert.match(story, /class="story-object" aria-hidden="true"/);
+  assert.doesNotMatch(story, /<canvas\b/);
   assert.doesNotMatch(story, /<img(?![^>]*\salt=")[^>]*>/);
 });
