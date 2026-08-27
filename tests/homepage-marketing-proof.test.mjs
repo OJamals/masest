@@ -20,8 +20,14 @@ test("homepage grounds specific performance claims in a direct evidence path", (
     home,
     /up to 280&times; less corrosion[\s\S]{0,240}href="blog\/descaling-without-acid"[^>]*>Read the corrosion test summary<\/a>/,
   );
-  assert.doesNotMatch(home, /Used in 50\+ countries/);
-  assert.match(home, /href="about"[^>]*>US \+ international support/);
+});
+
+test("homepage retains owner-confirmed global reach in the trust strip", () => {
+  const trustStrip = home.match(/<div class="trust-strip">[\s\S]*?<\/div>\s*<\/div>/)?.[0];
+
+  assert.ok(trustStrip, "expected trust strip");
+  assert.match(trustStrip, /href="about"[^>]*>Used in 50\+ countries<\/a>/);
+  assert.match(trustStrip, /domestic \+ international support/);
 });
 
 test("homepage does not repeat the story's matching and trial process below the fold", () => {
