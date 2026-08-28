@@ -176,6 +176,39 @@ test("canonical catalog carries quote-confirmed services and unique SKUs", () =>
   assert.ok(allServices.every((service) => !("public_price" in service)));
 });
 
+test("canonical service categories carry buyer decision and SEO fields", () => {
+  const data = catalog();
+  assert.equal(data.service_categories.length, 8);
+  assert.equal(new Set(data.service_categories.map((category) => category.key)).size, 8);
+  assert.equal(new Set(data.service_categories.map((category) => category.slug)).size, 8);
+
+  for (const category of data.service_categories) {
+    for (const field of [
+      "key",
+      "slug",
+      "title",
+      "note",
+      "description",
+      "icon",
+      "cta",
+      "what_you_send",
+      "what_you_receive",
+      "timing",
+      "seo_title",
+      "seo_description",
+    ]) {
+      assert.match(category[field] || "", /\S/, `${category.key} needs ${field}`);
+    }
+  }
+
+  const water = data.service_categories.find((category) => category.key === "Lab Testing - Water Analysis");
+  const biological = data.service_categories.find((category) => category.key === "Lab Testing - Biological");
+  const materials = data.service_categories.find((category) => category.key === "Testing - Materials");
+  assert.match(water.timing, /5\u201310 business days/);
+  assert.match(biological.timing, /5\u201310 business days/);
+  assert.doesNotMatch(materials.timing, /5\u201310 business days/);
+});
+
 test("Water Management Plan services carry one explicit lifecycle sequence", () => {
   const data = catalog();
   const lifecycle = [...data.services, ...data.service_packages]
@@ -214,6 +247,7 @@ test("public service data preserves canonical deliverables and lifecycle metadat
       lifecycle_stage,
     })),
   );
+  assert.deepEqual(published.service_categories, source.service_categories);
 });
 
 test("Supabase seed SQL imports metadata without changing CMS prices", () => {

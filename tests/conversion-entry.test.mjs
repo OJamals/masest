@@ -124,8 +124,10 @@ test("support routes use task-first science copy without changing destinations",
     hvacPricing: read("pricing-hvac-facilities.html"),
     cipPricing: read("pricing-cip-food-beverage.html"),
     serviceCatalog: read("js/main/service-catalog.js"),
+    serviceCategories: JSON.parse(read("data/catalog.seed.json")).service_categories,
     catalogData: read("js/main/catalog-data.js"),
   };
+  const serviceCategorySource = JSON.stringify(pages.serviceCategories);
 
   assert.match(pages.about, />Request a service quote<\/a>/);
   assert.match(pages.services, />Test the switch before you roll it out\.<\/h1>/);
@@ -139,11 +141,12 @@ test("support routes use task-first science copy without changing destinations",
     "Request a WMP review",
     "Request a package",
   ]) {
-    assert.match(pages.serviceCatalog, new RegExp(label));
+    assert.match(serviceCategorySource, new RegExp(label));
   }
   assert.doesNotMatch(pages.serviceCatalog, /Request a deposit test|Request a wash benchmark|Request a cycle review/);
-  assert.match(pages.serviceCatalog, /See what is in your water and get a clearer next step/);
-  assert.match(pages.serviceCatalog, /Build a practical water plan around your facility, systems, team, and day-to-day work/);
+  assert.match(pages.serviceCatalog, /const cta = copy\.cta/);
+  assert.match(serviceCategorySource, /See what is in your water and get a clearer next step/);
+  assert.match(serviceCategorySource, /Build a practical water plan around your facility, systems, team, and day-to-day work/);
   assert.match(pages.programs, />Price my water-treatment program<\/a>/);
   assert.match(pages.resources, />Get my cleaning plan<\/a>/);
   assert.match(pages.newsletter, />Useful cleaning ideas, once a month\.<\/h1>/);

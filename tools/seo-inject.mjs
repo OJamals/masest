@@ -94,6 +94,41 @@ const END = "<!-- /seo:auto -->";
 
 const PRODUCT_IDS = CATALOG_ORDER.filter((id) => PRODUCTS[id]);
 
+// Merchandising links from exact product routes to existing, reviewed comparison
+// guides. Keep CIP and HVAC formulations separate: hcr-t16 owns facility
+// descaling comparisons; cr/hcr own the two-step brewery cycle guide.
+const PRODUCT_COMPARISONS = new Map([
+  ["cr", [{
+    slug: "beer-line-cleaner-cost-comparison",
+    title: "Beer-line cleaner cost guide",
+    summary: "Product, cycle time, rinses, labor, and downtime",
+  }]],
+  ["hcr", [{
+    slug: "beer-line-cleaner-cost-comparison",
+    title: "Beer-line cleaner cost guide",
+    summary: "Product, cycle time, rinses, labor, and downtime",
+  }]],
+  ["hcr-t16", [{
+    slug: "vertkleen-hcr-vs-clr",
+    title: "HCR vs CLR",
+    summary: "Rust, scale, labor, and total job cost",
+  }, {
+    slug: "hcr-vs-rydlyme",
+    title: "HCR vs RYDLYME",
+    summary: "Product use, rinse water, and downtime",
+  }]],
+  ["crhd", [{
+    slug: "cr-hd-vs-simple-green",
+    title: "CR HD vs Simple Green",
+    summary: "Heavy grease, repeat passes, water, and labor",
+  }]],
+  ["lam3", [{
+    slug: "lam3-vs-wet-forget",
+    title: "LAM3 vs Wet & Forget",
+    summary: "Finished area, labor, and maintenance cycle",
+  }]],
+]);
+
 // Editorial catalog id -> commerce/reviews sku. Reviews and order items key on
 // the commerce sku, not the editorial id. Keep this aligned with commerce-ui.
 const COMMERCE_SKU_ALIAS = { crhd: "cr-hd" };
@@ -102,6 +137,17 @@ const commerceSku = (id) => COMMERCE_SKU_ALIAS[id] || id;
 const CATALOG_PRODUCTS_BY_SLUG = new Map(
   CATALOG_SEED.products.map((product) => [product.slug, product]),
 );
+const SERVICE_CATEGORIES = CATALOG_SEED.service_categories || [];
+const SERVICE_ROWS = [...(CATALOG_SEED.services || []), ...(CATALOG_SEED.service_packages || [])]
+  .filter((item) => item?.active !== false);
+
+function serviceCategoryKey(value) {
+  return value === "Lab Testing - Materials" ? "Testing - Materials" : value;
+}
+
+function serviceCategoryItems(category) {
+  return SERVICE_ROWS.filter((item) => serviceCategoryKey(item.category) === category.key);
+}
 
 const ORG = organizationJsonLd();
 
@@ -328,6 +374,36 @@ function injectProofRecords(html) {
   return `${html.slice(0, from)}${start}\n${proofRecordsHtml(PROOF_RECORDS)}\n    ${html.slice(to)}`;
 }
 
+function serviceCategoryDirectory() {
+  const links = SERVICE_CATEGORIES.map((category) => `
+          <a class="service-guide-directory-card" href="services/${attr(category.slug)}">
+            <i class="ph ${attr(category.icon)}" aria-hidden="true"></i>
+            <span><b>${text(category.title)}</b><small>${text(category.note)}</small></span>
+            <i class="ph ph-arrow-right" aria-hidden="true"></i>
+          </a>`).join("");
+
+  return `<section class="service-guide-directory section-slim" aria-labelledby="serviceGuideDirectoryTitle">
+      <div class="container">
+        <div class="service-guide-directory-head">
+          <span class="eyebrow">Service guides</span>
+          <h2 id="serviceGuideDirectoryTitle" class="headline">Compare service categories before you request a quote.</h2>
+          <p>See what to send, what each category covers, what you receive, and how work starts.</p>
+        </div>
+        <nav class="service-guide-directory-grid" aria-label="Service category guides">${links}
+        </nav>
+      </div>
+    </section>`;
+}
+
+function injectServiceCategoryDirectory(html) {
+  const start = "<!-- service-category-directory:auto -->";
+  const end = "<!-- /service-category-directory:auto -->";
+  const from = html.indexOf(start);
+  const to = html.indexOf(end, from);
+  if (from === -1 || to === -1) throw new Error("services.html: service category directory markers missing");
+  return `${html.slice(0, from)}${start}\n    ${serviceCategoryDirectory()}\n    ${html.slice(to)}`;
+}
+
 const pick = (html, re) => html.match(re)?.[1]?.trim() || "";
 
 function loadContentPageMeta() {
@@ -537,6 +613,7 @@ async function processPage(file, meta, isPrivate = false) {
   html = stripOld(html);
   if (file === "resources.html") html = injectDocumentLibrary(html);
   if (file === "proof.html") html = injectProofRecords(html);
+  if (file === "services.html") html = injectServiceCategoryDirectory(html);
   if (isPrivate) {
     if (!/name="robots"/.test(html)) {
       html = html.replace(/(<meta name="viewport"[^>]*>)/i, '$1\n<meta name="robots" content="noindex">');
@@ -598,6 +675,26 @@ function productMetaDescription(id, product) {
   const sentence = productDescription(id, product);
   if (sentence.length <= 155) return sentence;
   return `${sentence.slice(0, 152).replace(/\s+\S*$/, "")}…`;
+}
+
+function productComparisonPanel(id) {
+  const comparisons = PRODUCT_COMPARISONS.get(id) || [];
+  if (!comparisons.length) return "";
+  const links = comparisons.map((comparison) => `
+          <a class="product-comparison-link" href="../comparisons/${attr(comparison.slug)}" data-product-comparison="${attr(comparison.slug)}">
+            <span><b>${text(comparison.title)}</b><small>${text(comparison.summary)}</small></span>
+            <i class="ph ph-arrow-right" aria-hidden="true"></i>
+          </a>`).join("");
+
+  return `<article class="product-static-panel product-comparison-panel" aria-labelledby="product-comparisons-${attr(id)}">
+        <div>
+          <span class="eyebrow">Cleaner comparison</span>
+          <h2 id="product-comparisons-${attr(id)}">Compare before you switch.</h2>
+          <p>See product use, labor, rinse water, downtime, and finished-result tradeoffs for the cleaner you use now.</p>
+        </div>
+        <nav class="product-comparison-links" aria-label="Product comparisons">${links}
+        </nav>
+      </article>`;
 }
 
 function productSchema(id, product, reviewsSnapshot) {
@@ -731,6 +828,7 @@ function productPage(id, product, reviewsSnapshot) {
   const supply = QUOTE_ONLY_IDS.has(id) ? "Quoted to fit" : "Small packs in stock";
   const eyebrow = id === "dbnpa" ? "Program component" : "VertKleen product";
   const quoteButtonClass = QUOTE_ONLY_IDS.has(id) ? "btn-primary" : "btn-secondary";
+  const comparisonPanel = productComparisonPanel(id);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -811,7 +909,8 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         <h2>Why crews choose it.</h2>
         <ul class="spec-list">${specs}</ul>${backingSections ? `
         ${backingSections}` : ""}
-      </article>
+      </article>${comparisonPanel ? `
+      ${comparisonPanel}` : ""}
     </div>
   </section>
   <section class="section-slim product-handling-section" aria-labelledby="product-handling-${id}">
@@ -839,7 +938,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   </section>
   ${contentPageMount(`products/${id}`)}
 </main>
-<script type="module" src="../js/main.js?v=20260826f"></script>
+<script type="module" src="../js/main.js?v=20260827a"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>
@@ -856,6 +955,231 @@ async function writeProductPages(reviewsSnapshot) {
     const before = existsSync(file) ? await readFile(file, "utf8") : "";
     if (before !== html) {
       await mkdir(dirname(file), { recursive: true });
+      await writeFile(file, html);
+      changed++;
+      console.log("updated", file);
+    }
+  }
+  return changed;
+}
+
+function serviceDisplayName(value) {
+  return String(value || "")
+    .replace(/\bStd\b/g, "Standard")
+    .replace(/\bBio\b/g, "Biological")
+    .replace(/\bSpecie ID\b/g, "Species ID");
+}
+
+function serviceCategorySchema(category, items) {
+  const url = `${BASE}/services/${category.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      ORG,
+      {
+        "@type": "CollectionPage",
+        name: category.title,
+        description: category.seo_description,
+        url,
+        isPartOf: { "@type": "WebSite", name: "MASEST VertKleen", url: `${BASE}/` },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${BASE}/` },
+          { "@type": "ListItem", position: 2, name: "Services", item: `${BASE}/services` },
+          { "@type": "ListItem", position: 3, name: category.title, item: url },
+        ],
+      },
+      {
+        "@type": "Service",
+        name: `${category.title} services`,
+        description: category.description,
+        serviceType: category.key,
+        url,
+        areaServed: "United States",
+        provider: { "@type": "Organization", name: ORG.name, url: ORG.url },
+        hasOfferCatalog: {
+          "@type": "OfferCatalog",
+          name: `${category.title} catalog`,
+          itemListElement: items.map((item) => ({
+            "@type": "Offer",
+            itemOffered: {
+              "@type": "Service",
+              name: serviceDisplayName(item.name),
+              description: item.summary,
+              sku: item.sku,
+              serviceType: category.key,
+            },
+          })),
+        },
+      },
+    ],
+  };
+}
+
+function serviceCategoryCard(item) {
+  const name = serviceDisplayName(item.name);
+  const note = encodeURIComponent(`Service request: ${name} (${item.sku}).`);
+  const unit = String(item.unit || "per service").replace(/^per\s+/i, "per ");
+  return `<article class="service-guide-card" data-service-sku="${attr(item.sku)}">
+          <div>
+            <h3>${text(name)}</h3>
+            <p>${text(item.summary)}</p>
+          </div>
+          <div class="service-guide-card-foot">
+            <span><small>Billing unit</small><b>${text(unit)}</b></span>
+            <a class="btn btn-secondary btn-sm" href="../contact?type=services&amp;message=${note}" aria-label="Request ${attr(name)}">Request this service</a>
+          </div>
+        </article>`;
+}
+
+function serviceCategoryPage(category) {
+  const items = serviceCategoryItems(category);
+  if (!items.length) throw new Error(`Service category has no items: ${category.key}`);
+  const countLabel = category.key === "Service Packages"
+    ? `${items.length} service packages`
+    : `${items.length} services`;
+  const requestNote = encodeURIComponent(`Service category request: ${category.title}.`);
+  const imagePath = category.representative_image || "";
+  const image = imagePath ? SITE_IMAGE_DIMENSIONS.get(imagePath) : null;
+  if (imagePath && !image) throw new Error(`Missing CMS image metadata for ${imagePath}`);
+  const heroAside = image
+    ? `<figure class="service-guide-hero-media">
+        <img src="..${attr(imagePath)}" alt="${attr(image.alt)}" width="${image.width}" height="${image.height}" fetchpriority="high" decoding="async">
+      </figure>`
+    : `<aside class="service-guide-summary" aria-label="Category summary">
+        <i class="ph ${attr(category.icon)}" aria-hidden="true"></i>
+        <span>${text(countLabel)}</span>
+        <b>${text(category.note)}</b>
+        <p>${text(category.timing)}</p>
+      </aside>`;
+  const otherLinks = SERVICE_CATEGORIES
+    .filter((candidate) => candidate.slug !== category.slug)
+    .map((candidate) => `<a href="../services/${attr(candidate.slug)}" data-service-category-link>${text(candidate.title)}</a>`)
+    .join("\n          ");
+  const ogImage = imagePath ? `${BASE}${imagePath}` : OG_IMAGE;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#fafbfc">
+<title>${text(category.seo_title)}</title>
+<meta name="description" content="${attr(category.seo_description)}">
+<link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
+<meta property="og:title" content="${attr(category.seo_title)}">
+<meta property="og:description" content="${attr(category.seo_description)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MASEST VertKleen">
+<meta property="og:url" content="${BASE}/services/${attr(category.slug)}">
+<meta property="og:image" content="${attr(ogImage)}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${BASE}/services/${attr(category.slug)}">
+<link rel="stylesheet" href="../vendor/phosphor/style.css">
+<link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
+<link rel="stylesheet" href="../css/navigation.css?v=${NAVIGATION_VERSION}">
+<link rel="stylesheet" href="../css/components.css?v=${COMPONENT_VERSION}">
+${jsonLd(serviceCategorySchema(category, items))}
+</head>
+<body class="site-soft-bg services-page service-category-page">
+<a class="skip-link" href="#main">Skip to content</a>
+<noscript>
+<nav class="nojs-nav" aria-label="Site">
+  <a href="../"><b>MASEST</b></a>
+  <a href="../products">Products</a>
+  <a href="../services">Services</a>
+  <a href="../industries">Industries</a>
+  <a href="../proof">Results</a>
+  <a href="../resources">SDS &amp; Resources</a>
+</nav>
+</noscript>
+<main id="main">
+  <section class="hero service-guide-hero">
+    <div class="container service-guide-hero-grid">
+      <div class="service-guide-hero-copy hero-anim">
+        <a class="service-guide-back" href="../services">Services <span aria-hidden="true">/</span> ${text(category.title)}</a>
+        <span class="eyebrow">Technical service guide</span>
+        <h1 class="display">${text(category.title)}</h1>
+        <p class="subhead">${text(category.description)}</p>
+        <div class="service-guide-hero-facts" aria-label="Category facts">
+          <span><b>${items.length}</b>${category.key === "Service Packages" ? "packages" : "services"}</span>
+          <span><b>Quote first</b>Scope confirmed before work</span>
+        </div>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="../contact?type=services&amp;message=${requestNote}">Request ${text(category.title.toLocaleLowerCase())}</a>
+          <a class="btn btn-secondary" href="../services#service-${attr(category.key.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""))}">See catalog pricing</a>
+        </div>
+      </div>
+      ${heroAside}
+    </div>
+  </section>
+
+  <section class="section-slim service-guide-decision" aria-labelledby="serviceGuideDecisionTitle">
+    <div class="container">
+      <div class="service-guide-section-head">
+        <span class="eyebrow">Before work starts</span>
+        <h2 id="serviceGuideDecisionTitle" class="headline">Know what moves between your team and MASEST.</h2>
+      </div>
+      <div class="service-guide-decision-grid">
+        <article><span>01</span><h3>What you send</h3><p>${text(category.what_you_send)}</p></article>
+        <article><span>02</span><h3>What MASEST does</h3><p>${text(category.description)}</p></article>
+        <article><span>03</span><h3>What you receive</h3><p>${text(category.what_you_receive)}</p></article>
+        <article><span>04</span><h3>Timing &amp; preparation</h3><p>${text(category.timing)}</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section service-guide-catalog" aria-labelledby="serviceGuideCatalogTitle">
+    <div class="container">
+      <div class="service-guide-section-head">
+        <span class="eyebrow">${text(countLabel)}</span>
+        <h2 id="serviceGuideCatalogTitle" class="headline">Choose the result you need.</h2>
+        <p>${text(category.note)}</p>
+      </div>
+      <div class="service-guide-list">
+        ${items.map(serviceCategoryCard).join("\n        ")}
+      </div>
+    </div>
+  </section>
+
+  <section class="section-slim service-guide-related" aria-labelledby="relatedServiceGuidesTitle">
+    <div class="container">
+      <div class="service-guide-related-panel">
+        <div>
+          <span class="eyebrow">More service guides</span>
+          <h2 id="relatedServiceGuidesTitle" class="headline">Explore another category.</h2>
+        </div>
+        <nav class="service-guide-related-links" aria-label="Other service category guides">
+          ${otherLinks}
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-slim service-guide-final">
+    <div class="container services-final-panel">
+      <div><h2 class="headline">Need help choosing the exact service?</h2><p>Send the system, sample, site, and result your team needs.</p></div>
+      <a class="btn btn-primary" href="../contact?type=services&amp;message=${requestNote}">Plan this service</a>
+    </div>
+  </section>
+</main>
+<script type="module" src="../js/main.js?v=20260827a"></script>
+<script src="../js/track.js" defer></script>
+</body>
+</html>
+`;
+}
+
+async function writeServiceCategoryPages() {
+  let changed = 0;
+  await mkdir("services", { recursive: true });
+  for (const category of SERVICE_CATEGORIES) {
+    const file = `services/${category.slug}.html`;
+    const html = serviceCategoryPage(category);
+    const before = existsSync(file) ? await readFile(file, "utf8") : "";
+    if (before !== html) {
       await writeFile(file, html);
       changed++;
       console.log("updated", file);
@@ -899,6 +1223,12 @@ async function writeSitemap() {
       priority: "0.7",
       changefreq: "monthly",
       lastmod: fileLastModified(`products/${id}.html`),
+    })),
+    ...SERVICE_CATEGORIES.map((category) => ({
+      loc: `/services/${category.slug}`,
+      priority: "0.7",
+      changefreq: "monthly",
+      lastmod: fileLastModified(`services/${category.slug}.html`),
     })),
     ...BLOG_POST_SLUGS.map((slug) => ({
       loc: `/blog/${slug}`,
@@ -959,8 +1289,8 @@ async function writeProofSeed() {
 let changed = 0;
 const contentPageMeta = loadContentPageMeta();
 const reviewsSnapshot = loadReviewsSnapshot();
-// services.html hosts all SKUs on one page (no per-service static page exists,
-// unlike products/<id>.html) — bake reviewed services in as extra @graph nodes.
+// services.html hosts all SKUs on one page; category pages are static intent
+// guides. Bake reviewed services into the hub as extra @graph nodes.
 PUBLIC["services.html"].reviewJsonld = serviceReviewNodes(reviewsSnapshot);
 for (const [file, meta] of Object.entries(PUBLIC)) {
   changed += await processPage(file, applyContentPageMeta(meta.loc, meta, contentPageMeta), false);
@@ -968,6 +1298,7 @@ for (const [file, meta] of Object.entries(PUBLIC)) {
 for (const file of PRIVATE) changed += await processPage(file, null, true);
 for (const file of RELEASE_ONLY) changed += await processReleaseOnlyPage(file);
 changed += await writeProductPages(reviewsSnapshot);
+changed += await writeServiceCategoryPages();
 changed += await writeProofSeed();
 changed += await writeSitemap();
 

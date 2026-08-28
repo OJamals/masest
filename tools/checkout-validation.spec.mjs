@@ -88,6 +88,22 @@ function shippingQuote(postalCode, amountMinor) {
   };
 }
 
+test("empty checkout hides delivery controls and shows one recovery heading", async ({ page }) => {
+  await page.goto(`${BASE_URL}/checkout.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.removeItem("masest_cart"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+
+  await expect(page.locator("#checkoutEmpty")).toBeVisible();
+  await expect(page.locator("#checkoutShell")).toBeHidden();
+  await expect(page.locator("#checkoutDetails")).toBeHidden();
+  await expect(page.locator("h1:visible")).toHaveCount(1);
+  await expect(page.locator("h1:visible")).toHaveText("Your cart is empty.");
+  const progress = page.getByRole("navigation", { name: "Checkout progress" });
+  await expect(progress.getByRole("link", { name: "Cart" })).toHaveAttribute("aria-current", "step");
+  await expect(progress.locator(":scope > b")).not.toHaveAttribute("aria-current");
+  await expect(page.getByRole("link", { name: "Browse products" })).toBeVisible();
+});
+
 test("blank checkout submit reports every required field, not just the address", async ({ page }) => {
   let ratesCalled = false;
   await page.route("**/api/shipping-rates", (route) => {

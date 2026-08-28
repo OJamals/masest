@@ -121,9 +121,9 @@ export function renderChrome({
   initCmpTableLabels();
   document.querySelector(".nojs-nav")?.setAttribute("hidden", "");
   const page = pageName();
-  // Pages under /industries/ sit one level deep; prefix chrome links with the
-  // right root so the shared nav/footer resolve from any directory depth.
-  const root = /\/(?:industries|products|comparisons|blog)\//.test(location.pathname) ? "../" : "";
+  // Generated detail pages sit one level deep; prefix chrome links with the
+  // right root so shared nav/footer assets resolve from every nested section.
+  const root = /\/(?:industries|products|services|comparisons|blog)\//.test(location.pathname) ? "../" : "";
   const homeHref = root || "./";
   const isProductDetail = /\/products\/[^/]+(?:\.html)?$/.test(location.pathname);
   const links = [
@@ -194,8 +194,6 @@ export function renderChrome({
  const leadBarPages = new Set([
  "products",
  "products.html",
- "services",
- "services.html",
  "programs",
  "programs.html",
  "proof",
@@ -432,7 +430,7 @@ export function renderChrome({
     const cfg = document.createElement("script");
     cfg.src = `${root}js/config.js?v=20260711b`;
     cfg.onload = () => {
-      ["integrations.js?v=20260711b", "customer-chat.js?v=20260826c"].forEach((src) => {
+      ["integrations.js?v=20260711b", "customer-chat.js?v=20260826d"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;

@@ -103,6 +103,206 @@ test("mobile catalog filters stay inside the page width", async ({ page }) => {
   expect(layout.right).toBeLessThanOrEqual(layout.viewport);
 });
 
+test("mobile product and service category rails use one-row horizontal browsing", async ({ page }) => {
+  const cases = [
+    { path: "products.html#catalog", selector: ".shop-chips", item: ".shop-chip" },
+    { path: "services.html#serviceCatalog", selector: ".service-tabs", item: ".service-tab" },
+  ];
+
+  for (const width of [320, 390, 720]) {
+    for (const { path, selector, item } of cases) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`${BASE_URL}/${path}`, { waitUntil: "domcontentloaded" });
+      await page.locator(item).first().waitFor();
+
+      const layout = await page.locator(selector).evaluate((node) => {
+        const style = getComputedStyle(node);
+        return {
+          clientWidth: node.clientWidth,
+          scrollWidth: node.scrollWidth,
+          clientHeight: node.clientHeight,
+          flexWrap: style.flexWrap,
+          overflowX: style.overflowX,
+          scrollSnapType: style.scrollSnapType,
+        };
+      });
+
+      expect(layout.flexWrap, `${width}px ${path} rail should stay on one row`).toBe("nowrap");
+      expect(layout.overflowX, `${width}px ${path} rail should scroll horizontally`).toBe("auto");
+      expect(layout.scrollWidth, `${width}px ${path} rail should expose additional categories`).toBeGreaterThan(layout.clientWidth);
+      expect(layout.clientHeight, `${width}px ${path} rail should not consume the catalog viewport`).toBeLessThanOrEqual(80);
+      expect(layout.scrollSnapType, `${width}px ${path} rail should settle categories predictably`).toContain("x");
+    }
+  }
+});
+
+test("mobile service category rail keeps a visible leading inset", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/services.html#serviceCatalog`, { waitUntil: "domcontentloaded" });
+
+  const rail = page.locator(".service-tabs");
+  const firstTab = rail.locator(".service-tab").first();
+  await firstTab.waitFor();
+  await rail.evaluate((node) => { node.scrollLeft = 0; });
+
+  const layout = await rail.evaluate((node) => {
+    const first = node.querySelector(".service-tab");
+    const railBox = node.getBoundingClientRect();
+    const firstBox = first.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    return {
+      firstInset: firstBox.left - railBox.left,
+      paddingInlineStart: Number.parseFloat(style.paddingInlineStart),
+      scrollPaddingInlineStart: Number.parseFloat(style.scrollPaddingInlineStart),
+    };
+  });
+
+  expect(layout.firstInset).toBeGreaterThanOrEqual(16);
+  expect(layout.paddingInlineStart).toBeGreaterThanOrEqual(16);
+  expect(layout.scrollPaddingInlineStart).toBeGreaterThanOrEqual(16);
+});
+
+test("service search finds offerings across categories and restores selected category", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/services.html#service-consulting-services`, { waitUntil: "domcontentloaded" });
+
+  const catalog = page.locator("[data-service-catalog]");
+  const search = catalog.getByRole("searchbox", { name: "Search services" });
+  const status = catalog.locator("[data-service-search-status]");
+  await search.waitFor();
+  await expect(catalog.locator('[data-service-panel="Consulting Services"]')).toBeVisible();
+  await expect(status).toContainText("39 services and packages");
+
+  await search.fill("Legionella");
+  await expect(catalog.locator(".service-tabs")).toBeHidden();
+  await expect(catalog.locator("[data-service-search-results] .service-card")).toHaveCount(2);
+  await expect(catalog.locator("[data-service-search-results]")).toContainText("Legionella - Full Culture + Species ID");
+  await expect(catalog.locator("[data-service-search-results]")).toContainText("Legionella - PCR Pos/Neg");
+  await expect(status).toContainText("2 results");
+  await expect(catalog.getByRole("button", { name: "Clear service search" })).toBeVisible();
+
+  await search.fill("service-name-that-does-not-exist");
+  await expect(catalog.locator("[data-service-search-empty]")).toContainText("No services match");
+  await expect(catalog.locator("[data-service-search-empty]").getByRole("link", { name: "Ask MASEST" })).toBeVisible();
+  await expect(status).toHaveText("0 results for “service-name-that-does-not-exist”");
+
+  await catalog.getByRole("button", { name: "Clear service search" }).click();
+  await expect(search).toHaveValue("");
+  await expect(catalog.locator('[data-service-panel="Consulting Services"]')).toBeVisible();
+  await expect(status).toContainText("39 services and packages");
+});
+
+test("broad service search progressively reveals every result", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/services.html#serviceCatalog`, { waitUntil: "domcontentloaded" });
+
+  const catalog = page.locator("[data-service-catalog]");
+  const search = catalog.getByRole("searchbox", { name: "Search services" });
+  const results = catalog.locator("[data-service-search-results]");
+  const status = catalog.locator("[data-service-search-status]");
+
+  await search.fill("water");
+  await expect(results.locator(".service-card")).toHaveCount(23);
+  await expect(results.locator(".service-card:visible")).toHaveCount(8);
+  await expect(status).toContainText("Showing 8 of 23 results");
+
+  const more = results.locator("[data-service-search-more]");
+  const firstNewResultAction = results.locator(".service-card").nth(8).getByRole("link");
+  await expect(more).toHaveAccessibleName("Show 15 more services");
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  const moreBox = await more.boundingBox();
+  expect(moreBox?.height, "service result disclosure target height").toBeGreaterThanOrEqual(44);
+
+  await more.click();
+  await expect(results.locator(".service-card:visible")).toHaveCount(23);
+  await expect(firstNewResultAction).toBeFocused();
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(firstNewResultAction).toBeInViewport();
+  const focusedPosition = await firstNewResultAction.evaluate((node) => {
+    const box = node.getBoundingClientRect();
+    return { top: box.top, bottom: box.bottom, viewportHeight: window.innerHeight };
+  });
+  expect(focusedPosition.top).toBeGreaterThanOrEqual(0);
+  expect(focusedPosition.bottom).toBeLessThanOrEqual(focusedPosition.viewportHeight);
+  await expect(more).toHaveAttribute("aria-expanded", "true");
+  await expect(more).toHaveText("Show fewer");
+  await expect(status).toContainText("Showing all 23 results");
+
+  await more.click();
+  await expect(results.locator(".service-card:visible")).toHaveCount(8);
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(more).toBeFocused();
+  await expect(more).toBeInViewport();
+
+  await search.fill("Legionella");
+  await expect(results.locator(".service-card:visible")).toHaveCount(2);
+  await expect(results.locator("[data-service-search-more]")).toHaveCount(0);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE_URL}/services.html#serviceCatalog`, { waitUntil: "domcontentloaded" });
+  await search.fill("water");
+  await expect(results.locator(".service-card:visible")).toHaveCount(8);
+  const desktopLayout = await results.evaluate((node) => {
+    const button = node.querySelector("[data-service-search-more]");
+    const grid = node.querySelector(".service-card-grid");
+    const buttonBox = button.getBoundingClientRect();
+    return {
+      buttonWidth: buttonBox.width,
+      columns: getComputedStyle(grid).gridTemplateColumns.split(" ").length,
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  expect(desktopLayout.buttonWidth).toBeLessThanOrEqual(320);
+  expect(desktopLayout.buttonWidth).toBeGreaterThanOrEqual(240);
+  expect(desktopLayout.columns).toBe(2);
+  expect(desktopLayout.pageOverflow).toBeLessThanOrEqual(2);
+});
+
+test("service cards disclose source-backed request, scope, deliverable, and timing details", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/services.html#serviceCatalog`, { waitUntil: "domcontentloaded" });
+
+  const card = page.locator('.service-panel:not([hidden]) .service-card').first();
+  const details = card.locator(".service-card-details");
+  const summary = details.locator("summary");
+  await details.waitFor();
+  await expect(details.getByText("What to expect", { exact: true })).toBeVisible();
+  const summaryBox = await summary.boundingBox();
+  expect(summaryBox?.height, "service disclosure target height").toBeGreaterThanOrEqual(44);
+  await summary.click();
+  await expect(details).toContainText("What you send");
+  await expect(details).toContainText("What MASEST does");
+  await expect(details).toContainText("What you receive");
+  await expect(details).toContainText("Timing & preparation");
+  await expect(details).toContainText("5–10 business days");
+});
+
+test("mobile service-category guide reaches decision content without redundant hero media", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const configResponses = [];
+  page.on("response", (response) => {
+    if (new URL(response.url()).pathname.endsWith("/js/config.js")) {
+      configResponses.push({ url: response.url(), status: response.status() });
+    }
+  });
+  await page.goto(`${BASE_URL}/services/water-analysis.html`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.locator(".service-guide-summary")).toBeHidden();
+  const layout = await page.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    bodyWidth: document.body.scrollWidth,
+    decisionTop: document.querySelector(".service-guide-decision").getBoundingClientRect().top,
+  }));
+  expect(layout.bodyWidth).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.decisionTop).toBeLessThanOrEqual(790);
+  await expect.poll(() => configResponses).toContainEqual({
+    url: `${BASE_URL}/js/config.js?v=20260711b`,
+    status: 200,
+  });
+  await expect(page.getByRole("link", { name: "Request water analysis" })).toHaveAttribute("href", /contact\?type=services/);
+});
+
 test("shared chrome keeps one skip link after hydration", async ({ page }) => {
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
@@ -302,7 +502,7 @@ test("quote request starts as a short lead form and reveals product details prog
 
 test("mobile non-catalog pages expose persistent quote and chemical-map actions", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/about.html`, { waitUntil: "domcontentloaded" });
 
   const bar = page.locator(".lead-action-bar");
   await expect(bar).toBeHidden();
@@ -314,6 +514,27 @@ test("mobile non-catalog pages expose persistent quote and chemical-map actions"
   const quoteBox = await bar.getByRole("link", { name: /get a quote/i }).boundingBox();
   expect(quoteBox?.y, "quote action top edge").toBeGreaterThanOrEqual(0);
   expect((quoteBox?.y || 0) + (quoteBox?.height || 0), "quote action bottom edge").toBeLessThanOrEqual(844);
+});
+
+test("mobile services omit generic product lead actions", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/services.html#serviceCatalog`, { waitUntil: "domcontentloaded" });
+
+  const catalog = page.locator("[data-service-catalog]");
+  const bar = page.locator(".lead-action-bar");
+  await catalog.locator(".service-card").first().waitFor();
+  await catalog.scrollIntoViewIfNeeded();
+
+  await expect(bar).toHaveCount(0);
+});
+
+test("mobile services keep both task-specific hero actions", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
+
+  const hero = page.locator(".services-hero");
+  await expect(hero.getByRole("link", { name: "Browse service pricing" })).toBeVisible();
+  await expect(hero.getByRole("link", { name: "Plan a test or service" })).toBeVisible();
 });
 
 test("mobile customer chat follows registered lead-bar obstruction state", async ({ page }) => {
@@ -761,17 +982,26 @@ test("scroll reveal sections become visible on long buyer pages", async ({ page 
   }
 });
 
-test("cart and product static preview avoid unavailable commerce API", async ({ page }) => {
+test("cart and product previews request commerce data and fail safely when unavailable", async ({ page }) => {
   const apiRequests = [];
+  await page.route("**/api/products", (route) => route.fulfill({
+    status: 503,
+    contentType: "application/json",
+    body: JSON.stringify({ error: "catalog_unavailable" }),
+  }));
   page.on("request", (request) => {
     if (request.url().includes("/api/products")) apiRequests.push(request.url());
   });
 
-  for (const pagePath of ["cart.html", "products/hcr.html"]) {
-    await page.goto(`${BASE_URL}/${pagePath}`, { waitUntil: "networkidle" });
-  }
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "networkidle" });
+  await expect(page.getByRole("heading", { name: "Your cart is empty" })).toBeVisible();
 
-  expect(apiRequests).toEqual([]);
+  await page.goto(`${BASE_URL}/products/hcr.html`, { waitUntil: "networkidle" });
+  await expect(page.getByRole("heading", { name: "VertKleen CIP HCR", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Try a free CIP HCR sample" })).toBeVisible();
+  await expect(page.locator(".product-hero-buy [data-cart-add]")).toHaveCount(0);
+
+  expect(apiRequests).toHaveLength(2);
 });
 
 test("comparison pages keep price tables inside their cards on tablet", async ({ page }) => {

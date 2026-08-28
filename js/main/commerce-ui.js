@@ -1,7 +1,8 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260826f";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260827a";
 import { smoothPref } from "./engagement.js";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260827a";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -55,23 +56,73 @@ function commerceRowFor(id) {
   return commerceState.products.get(key) || commerceState.products.get(COMMERCE_SKU_ALIASES[key]);
 }
 
-function isLocalStaticPreview() {
-  const localHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
-  return localHost && !window.MASEST_ENABLE_LOCAL_API;
-}
-
-export function isLocalStaticCommerceSuppressed() {
-  const localHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname);
-  const accountPath = /(^|\/)account\.html$/.test(location.pathname);
-  return isLocalStaticPreview() || (localHost && accountPath && !window.MASEST_ENABLE_LOCAL_API);
-}
-
 function fmtMoney(n, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: String(currency || "USD").toUpperCase(),
     maximumFractionDigits: Number(n) % 1 === 0 ? 0 : 2
   }).format(Number(n));
+}
+
+function htmlEscape(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
+}
+
+export function caseSavingsFor(row, selected) {
+  if (!row || !selected) return null;
+  const selectedIsCase = selected.package_kind === "case";
+  const availableCases = [
+    ...(row.variants || []).filter(v => v.package_kind === "case"),
+    ...(row.caseVariants || []),
+  ];
+  const caseVariant = selectedIsCase
+    ? selected
+    : availableCases.find(v => String(v.unit_vsku) === String(selected.vsku));
+  if (!caseVariant || (caseVariant.active === false && caseVariant.case_contact_available !== true)) return null;
+
+  const unitVariant = row.variants?.find(v => String(v.vsku) === String(caseVariant.unit_vsku));
+  const units = Number(caseVariant.units_per_case);
+  const unitPriceMinor = Math.round(Number(unitVariant?.price) * 100);
+  const casePriceMinor = Math.round(Number(caseVariant.price) * 100);
+  const unitCurrency = String(unitVariant?.currency || "").toUpperCase();
+  const caseCurrency = String(caseVariant.currency || "").toUpperCase();
+  if (
+    !unitVariant
+    || !Number.isInteger(units)
+    || units < 2
+    || !Number.isFinite(unitPriceMinor)
+    || unitPriceMinor <= 0
+    || !Number.isFinite(casePriceMinor)
+    || casePriceMinor <= 0
+    || !unitCurrency
+    || unitCurrency !== caseCurrency
+  ) return null;
+
+  const regularPriceMinor = unitPriceMinor * units;
+  const savingsMinor = regularPriceMinor - casePriceMinor;
+  if (savingsMinor <= 0) return null;
+
+  return {
+    caseVariant,
+    unitVariant,
+    units,
+    regularPrice: regularPriceMinor / 100,
+    casePrice: casePriceMinor / 100,
+    savings: savingsMinor / 100,
+    percent: Math.round((savingsMinor / regularPriceMinor) * 100),
+  };
+}
+
+export function caseSavingsText(row, selected) {
+  const detail = caseSavingsFor(row, selected);
+  if (!detail) return "";
+  return `Case of ${detail.units} saves ${fmtMoney(detail.savings, detail.caseVariant.currency)} (${detail.percent}%)`;
 }
 
 function variantDedupeKey(v) {
@@ -120,6 +171,7 @@ function normalizeCommerceRow(row) {
       marketing_name: row.marketing_name,
       units_per_case: row.units_per_case,
       unit_vsku: row.unit_vsku,
+      case_contact_available: row.case_contact_available,
       requires_quote: row.requires_quote,
       sort: row.sort || 0,
     }]
@@ -138,11 +190,13 @@ function normalizeCommerceRow(row) {
     gallons: Number(v.gallons) || 0,
     price: v.price == null ? null : Number(v.price),
     currency: String(v.currency || parent?.currency || row?.currency || "usd").toUpperCase(),
+    active: v.active !== false,
     market: String(v.market || "industrial").toLowerCase(),
     package_kind: String(v.package_kind || "unit").toLowerCase(),
     marketing_name: v.marketing_name || parent?.name || row?.name || "",
     units_per_case: Number(v.units_per_case || 1),
     unit_vsku: v.unit_vsku || null,
+    case_contact_available: v.case_contact_available === true,
     requires_quote: v.requires_quote === true,
     sort: Number(v.sort || 0),
   });
@@ -152,6 +206,19 @@ function normalizeCommerceRow(row) {
       && v.active !== false && v.price != null && Number(v.price) > 0)
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     .map(shapeVariant));
+  const activeUnitSkus = new Set(variants
+    .filter(v => v.package_kind !== "case")
+    .map(v => String(v.vsku)));
+  const caseVariants = dedupeVariants(rawVariants
+    .filter(v => v && String(v.market || "industrial").toLowerCase() === market
+      && v.active === false
+      && v.case_contact_available === true
+      && String(v.package_kind || "").toLowerCase() === "case"
+      && v.price != null
+      && Number(v.price) > 0)
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map(shapeVariant))
+    .filter(v => activeUnitSkus.has(String(v.unit_vsku)));
   // Bulk drums/totes (55/275 gal) are unpriced and never sold direct.
   const quoteVariants = dedupeVariants(rawVariants
     .filter(v => v && String(v.market || "industrial").toLowerCase() === market
@@ -165,6 +232,7 @@ function normalizeCommerceRow(row) {
     image_url: parent?.image_url || row?.image_url || "",
     photo_alt: parent?.photo_alt || row?.photo_alt || "",
     variants,
+    caseVariants,
     quoteVariants,
     purchasable: !!(sku && parent?.active !== false && row?.active !== false && (parent?.mode || row?.mode) === "buy" && variants.length)
   };
@@ -192,6 +260,7 @@ export async function loadCommerceCatalog() {
           existing.active = existing.active && row.active;
       existing.mode = existing.mode || row.mode;
       existing.variants = dedupeVariants(existing.variants.concat(row.variants));
+      existing.caseVariants = dedupeVariants((existing.caseVariants || []).concat(row.caseVariants || []));
       existing.quoteVariants = dedupeVariants((existing.quoteVariants || []).concat(row.quoteVariants || []));
       if (!existing.image_url && row.image_url) existing.image_url = row.image_url;
       if (!existing.photo_alt && row.photo_alt) existing.photo_alt = row.photo_alt;
@@ -217,17 +286,24 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
   const p = PRODUCTS[id];
   // Quote-first SKUs never expose a buy control here (catalogCard renders quoteActionHTML).
   if (QUOTE_FIRST_IDS.includes(String(id || "").toLowerCase())) return "";
-  // Static-only hosting suppresses commerce; the card's "View details" link is the path.
-  if (isLocalStaticCommerceSuppressed()) return "";
   // Staff manage inventory and customer orders in the admin console. Sending them
   // into the buyer cart creates a dead end because that route correctly rejects staff.
   if (document.documentElement.dataset.accountKind === "staff") {
+    if (variant === "quick") {
+      return `<a class="shop-card-quick-add" href="${htmlEscape(adminCatalogHref(id))}" aria-label="Manage ${htmlEscape(p?.name || id)} in the catalog" title="Manage catalog">`
+        + `<span class="shop-card-quick-add-copy" aria-hidden="true">Manage catalog</span>`
+        + `<i class="ph ph-package" aria-hidden="true"></i>`
+        + `</a>`;
+    }
     const staffClass = variant === "button" ? "btn btn-secondary btn-sm" : "shop-card-quote";
-    return `<a class="${staffClass} commerce-staff-admin" href="${adminCatalogHref(id)}"><i class="ph ph-package" aria-hidden="true"></i>Manage catalog</a>`;
+    return `<a class="${staffClass} commerce-staff-admin" href="${htmlEscape(adminCatalogHref(id))}"><i class="ph ph-package" aria-hidden="true"></i>Manage catalog</a>`;
   }
   // Catalog still in flight → sized skeleton so the buy area isn't blank (and to avoid CLS
   // when the real control swaps in). refreshCommerceActions re-renders once the load settles.
   if (!commerceState.loaded) {
+    if (variant === "quick") {
+      return `<span class="shop-card-quick-add shop-card-quick-add-loading skeleton" aria-hidden="true"></span>`;
+    }
     return `<span class="commerce-buy commerce-buy-loading" aria-hidden="true"><span class="skeleton commerce-skeleton"></span></span>`;
   }
   const row = commerceRowFor(id);
@@ -239,24 +315,57 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
     // "jug" was missing, so one dropdown read "1 gal jug / 2.5 gal jug / 5 gal / 55 gal" —
     // the same column mixing packs that keep their noun with packs that lost it. The full
     // label is still spelled out under the price, which is where the detail belongs.
-    const optLabel = (v) => String(v.label || "Pack").replace(/\s+(bottle|jug|pail|drum|tote)$/i, "");
+    const optLabel = (v) => {
+      const label = String(v.label || "Pack").replace(/\s+(bottle|jug|pail|drum|tote)$/i, "");
+      return v.package_kind === "case" ? label.replace(/^case of\s+(.+)$/i, "$1 case") : label;
+    };
     const displayName = row.variants[0]?.marketing_name || p?.name || id;
-    const opts = row.variants
-      .map((v, i) => `<option value="${v.vsku}"${i === 0 ? " selected" : ""}>${optLabel(v)}</option>`)
-      .concat((row.quoteVariants || [])
-        .map((v) => `<option value="${v.vsku}" data-quote="1">${optLabel(v)} — quoted</option>`))
+    const unitOpts = row.variants
+      .map((v, i) => {
+        const savings = caseSavingsFor(row, v);
+        const priceLabel = Number.isFinite(Number(v.price)) && Number(v.price) > 0
+          ? ` — ${fmtMoney(v.price, v.currency)}`
+          : "";
+        const savingsLabel = savings && v.package_kind === "case" ? ` · ${savings.percent}% off` : "";
+        return `<option value="${htmlEscape(v.vsku)}"${i === 0 ? " selected" : ""}>${htmlEscape(optLabel(v))}${htmlEscape(priceLabel)}${htmlEscape(savingsLabel)}</option>`;
+      })
       .join("");
+    const caseOpts = (row.caseVariants || [])
+      .map((v) => {
+        const savings = caseSavingsFor(row, v);
+        return savings
+          ? `<option value="${htmlEscape(v.vsku)}" data-quote="1" data-case-contact="1">${htmlEscape(optLabel(v))} — ${htmlEscape(fmtMoney(v.price, v.currency))} · ${savings.percent}% off</option>`
+          : "";
+      })
+      .join("");
+    const quoteOpts = (row.quoteVariants || [])
+      .map((v) => `<option value="${htmlEscape(v.vsku)}" data-quote="1">${htmlEscape(optLabel(v))} — quoted</option>`)
+      .join("");
+    const opts = `${unitOpts}${caseOpts}${quoteOpts}`;
+    const firstVariant = row.variants[0];
+    const first = firstVariant.vsku;
+    if (variant === "quick") {
+      const packLabel = optLabel(firstVariant);
+      const readyLabel = `Add ${displayName}, ${packLabel}, to cart`;
+      return `<span class="commerce-buy" data-commerce-buy="${htmlEscape(id)}">`
+        + `<button class="shop-card-quick-add" type="button" data-cart-add="${htmlEscape(first)}" data-cart-quick-add="${htmlEscape(id)}" data-cart-state="ready" data-cart-ready-label="${htmlEscape(readyLabel)}" data-cart-product-name="${htmlEscape(displayName)}" data-account-path="${htmlEscape(accountPath)}" aria-label="${htmlEscape(readyLabel)}" title="Quick add ${htmlEscape(packLabel)}">`
+        + `<span class="shop-card-quick-add-copy" aria-hidden="true">Quick add ${htmlEscape(packLabel)}</span>`
+        + `<i class="ph ph-shopping-cart-simple" aria-hidden="true"></i>`
+        + `<span class="sr-only" data-cart-status aria-live="polite"></span>`
+        + `</button>`
+        + `</span>`;
+    }
     // The "button" variant only mounts on /products/<id>, the highest-intent surface on the
     // site. Rendering the buy control as btn-secondary left it visually subordinate to the
     // quote and sample CTAs directly beneath it — primary is the correct weight for the
     // action the page exists to complete.
     const btnClass = variant === "button" ? "btn btn-primary btn-sm" : "shop-card-add";
-    const first = row.variants[0].vsku;
     const quoteHref = `/contact?type=quote&product=${encodeURIComponent(displayName)}`;
-    return `<span class="commerce-buy" data-commerce-buy="${id}">`
-      + `<select class="commerce-vol" name="volume" aria-label="Volume for ${displayName}">${opts}</select>`
-      + `<button class="${btnClass}" type="button" data-cart-add="${first}" data-account-path="${accountPath}" aria-label="Add ${displayName} to cart">Add to cart</button>`
-      + `<a class="${btnClass} commerce-quote-swap" hidden href="${quoteHref}#quoteForm" data-quote-base="${quoteHref}" aria-label="Request a bulk quote for ${displayName}">Request quote</a>`
+    const firstPackLabel = optLabel(firstVariant);
+    return `<span class="commerce-buy" data-commerce-buy="${htmlEscape(id)}">`
+      + `<select class="commerce-vol" name="volume" aria-label="Volume for ${htmlEscape(displayName)}">${opts}</select>`
+      + `<button class="${btnClass}" type="button" data-cart-add="${htmlEscape(first)}" data-cart-product-name="${htmlEscape(displayName)}" data-account-path="${htmlEscape(accountPath)}" aria-label="Add ${htmlEscape(displayName)}, ${htmlEscape(firstPackLabel)}, to cart">Add to cart</button>`
+      + `<a class="${btnClass} commerce-quote-swap" hidden href="${htmlEscape(`${quoteHref}#quoteForm`)}" data-quote-base="${htmlEscape(quoteHref)}" aria-label="Request a bulk quote for ${htmlEscape(displayName)}">Request quote</a>`
       + `</span>`;
   }
   // Loaded, but no buyable variant — the catalog fetch failed (loadCommerceCatalog's catch
@@ -264,6 +373,13 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
   // quote instead of leaving a dead, blank buy area (PRODUCT: route forward from every state).
   // Mounts that already sit next to a static quote CTA opt out via data-quote-fallback="off".
   if (quoteFallback === "off") return "";
+  if (variant === "quick") {
+    const name = p?.name || id;
+    return `<a class="shop-card-quick-add" href="${htmlEscape(`/contact?type=quote&product=${encodeURIComponent(name)}#quoteForm`)}" aria-label="Request pricing for ${htmlEscape(name)}" title="Request pricing">`
+      + `<span class="shop-card-quick-add-copy" aria-hidden="true">Request pricing</span>`
+      + `<i class="ph ph-tag" aria-hidden="true"></i>`
+      + `</a>`;
+  }
   return `<a class="btn btn-secondary btn-sm commerce-quote-fallback" href="/contact?type=quote&product=${encodeURIComponent(p?.name || id)}#quoteForm">Request pricing</a>`;
 }
 
@@ -302,6 +418,7 @@ function bulkPriceNote(id) {
 function selectedVariantFor(id, vsku) {
   const row = commerceRowFor(id);
   return row?.variants?.find(v => String(v.vsku) === String(vsku))
+    || row?.caseVariants?.find(v => String(v.vsku) === String(vsku))
     || row?.quoteVariants?.find(v => String(v.vsku) === String(vsku));
 }
 
@@ -313,12 +430,16 @@ function bulkPerGallonText(id, selected = null) {
 }
 
 function bulkPriceMarkup(id) {
+  const row = commerceRowFor(id);
+  const selected = row?.variants?.[0];
   const text = bulkPriceText(id);
   const note = bulkPriceNote(id);
   const perGallon = bulkPerGallonText(id);
-  return `<strong class="price-main">${text}</strong>`
-    + `<span class="price-note">${note}</span>`
-    + (perGallon ? `<span class="shop-card-bulk">${perGallon}</span>` : "");
+  const savings = caseSavingsText(row, selected);
+  return `<strong class="price-main">${htmlEscape(text)}</strong>`
+    + `<span class="price-note">${htmlEscape(note)}</span>`
+    + `<span class="shop-card-savings" aria-live="polite"${savings ? "" : " hidden"}>${htmlEscape(savings)}</span>`
+    + (perGallon ? `<span class="shop-card-bulk">${htmlEscape(perGallon)}</span>` : "");
 }
 
 function bulkPriceHTML(id) {
@@ -400,17 +521,52 @@ async function addToCartFromButton(button) {
   const select = wrap && wrap.querySelector(".commerce-vol");
   const vsku = (select && select.value) || button.dataset.cartAdd;
   if (!vsku) return;
+  const isQuickAdd = button.hasAttribute("data-cart-quick-add");
   const label = button.textContent;
+  const readyLabel = button.dataset.cartReadyLabel || button.getAttribute("aria-label") || label;
+  const productName = button.dataset.cartProductName || "product";
+  const quickCopy = button.querySelector(".shop-card-quick-add-copy");
+  const readyCopy = quickCopy?.textContent || "Quick add";
+  const quickIcon = button.querySelector("i");
+  const quickStatus = button.querySelector("[data-cart-status]");
+  const setQuickState = (state, copy, ariaLabel, iconClass, announcement = "") => {
+    if (!isQuickAdd) return;
+    button.dataset.cartState = state;
+    button.setAttribute("aria-label", ariaLabel);
+    if (quickCopy) quickCopy.textContent = copy;
+    if (quickIcon) quickIcon.className = iconClass;
+    if (quickStatus) quickStatus.textContent = announcement;
+  };
   button.disabled = true;
-  button.textContent = "Adding…";
+  if (isQuickAdd) {
+    setQuickState("adding", "Adding…", `Adding ${productName} to cart`, "ph ph-shopping-cart-simple");
+  } else {
+    button.textContent = "Adding…";
+  }
   try {
     const cart = await import("../cart.js");
     cart.add(vsku, 1, productMarketContext());
-    button.textContent = "Added";
-    setTimeout(() => { button.textContent = label; button.disabled = false; }, 900);
+    if (isQuickAdd) {
+      setQuickState("added", "Added", `Added ${productName} to cart`, "ph ph-check", `${productName} added to cart.`);
+    } else {
+      button.textContent = "Added";
+    }
+    setTimeout(() => {
+      if (isQuickAdd) setQuickState("ready", readyCopy, readyLabel, "ph ph-shopping-cart-simple");
+      else button.textContent = label;
+      button.disabled = false;
+    }, 900);
   } catch (err) {
-    button.textContent = "Try again";
-    setTimeout(() => { button.textContent = label; button.disabled = false; }, 1200);
+    if (isQuickAdd) {
+      setQuickState("error", "Try again", `Could not add ${productName}; try again`, "ph ph-warning-circle", `Could not add ${productName}. Try again.`);
+    } else {
+      button.textContent = "Try again";
+    }
+    setTimeout(() => {
+      if (isQuickAdd) setQuickState("ready", readyCopy, readyLabel, "ph ph-shopping-cart-simple");
+      else button.textContent = label;
+      button.disabled = false;
+    }, 1200);
   }
 }
 
@@ -463,19 +619,25 @@ export function catalogCard(id, eager = false) {
   const mediaInfo = commerceMediaFor(id);
   const group = CATALOG_GROUPS.find((g) => g.ids.includes(id));
   const media = mediaInfo.src
-    ? `<img src="${mediaInfo.src}" alt="${mediaInfo.alt}" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} ${imageDimsAttr(mediaInfo.src)}>`
+    ? `<img src="${htmlEscape(mediaInfo.src)}" alt="${htmlEscape(mediaInfo.alt)}" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} ${imageDimsAttr(mediaInfo.src)}>`
     : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
   const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial cleaner");
   const quoteFirst = QUOTE_FIRST_IDS.includes(id);
   const buybar = quoteFirst
     ? quoteActionHTML(id)
-    : `${bulkPriceHTML(id)}<span class="shop-card-commerce" data-commerce-action="${id}"></span>`;
+    : bulkPriceHTML(id);
+  const quickCommerce = quoteFirst
+    ? ""
+    : `<span class="shop-card-quick-commerce" data-commerce-action="${id}" data-commerce-size="quick"></span>`;
   const decision = CATALOG_ORDER.includes(id) ? catalogDecisionHTML(id, copy) : "";
   return `
     <article class="shop-card" data-id="${id}">
       <div class="shop-card-core">
-      <a class="shop-card-link" href="products/${id}" aria-label="See how ${p.name} works">
-        <span class="shop-card-media">${media}${badge}</span>
+        <span class="shop-card-media-wrap">
+          <a class="shop-card-media" href="products/${id}" aria-label="View ${p.name} details">${media}${badge}</a>
+          ${quickCommerce}
+        </span>
+        <a class="shop-card-link" href="products/${id}" aria-label="See how ${p.name} works">
         <span class="shop-card-body">
           <span class="shop-card-type">${type}</span>
           <b class="shop-card-name">${p.name}</b>
@@ -512,31 +674,52 @@ export function initCartButtons() {
     const quoteLink = wrap?.querySelector(".commerce-quote-swap");
     const selected = select.selectedOptions?.[0];
     const isQuote = selected?.dataset.quote === "1";
+    const isCaseContact = selected?.dataset.caseContact === "1";
     const variant = selectedVariantFor(wrap?.dataset.commerceBuy, select.value);
     const label = variant?.label || selected?.textContent || "";
     const price = variant?.price == null ? "" : fmtMoney(variant.price, variant.currency);
     if (button) {
       button.dataset.cartAdd = select.value;
       button.hidden = !!(isQuote && quoteLink);
+      const productName = button.dataset.cartProductName || "product";
+      button.setAttribute("aria-label", `Add ${productName}, ${label.trim()}, to cart`);
     }
     if (quoteLink) {
       quoteLink.hidden = !isQuote;
+      quoteLink.textContent = isCaseContact ? "Request case order" : "Request quote";
+      quoteLink.setAttribute("aria-label", isCaseContact
+        ? `Request a case order for ${label.trim()}`
+        : `Request a bulk quote for ${label.trim()}`);
       if (isQuote && label) {
         const base = quoteLink.dataset.quoteBase || quoteLink.getAttribute("href");
-        quoteLink.setAttribute("href", `${base}&message=${encodeURIComponent(`Requesting a freight quote for the ${label.trim()}.`)}#quoteForm`);
+        const message = isCaseContact
+          ? `Requesting the published case pack: ${label.trim()}. Please confirm freight.`
+          : `Requesting a freight quote for the ${label.trim()}.`;
+        quoteLink.setAttribute("href", `${base}&message=${encodeURIComponent(message)}#quoteForm`);
       }
     }
     if (!buybar) return;
     const main = buybar.querySelector(".price-main");
     const note = buybar.querySelector(".price-note");
+    const savings = buybar.querySelector(".shop-card-savings");
     const perGallon = buybar.querySelector(".shop-card-bulk");
-    if (main) main.textContent = isQuote ? "Quote-priced" : price.trim();
-    if (note) note.textContent = isQuote ? `${label.trim()} — freight quoted` : label.trim();
+    if (main) main.textContent = isQuote && !isCaseContact ? "Quote-priced" : price.trim();
+    if (note) note.textContent = isQuote
+      ? `${label.trim()} — freight ${isCaseContact ? "confirmed before order" : "quoted"}`
+      : label.trim();
+    if (savings) {
+      savings.textContent = caseSavingsText(commerceRowFor(wrap?.dataset.commerceBuy), variant);
+      savings.hidden = !savings.textContent;
+    }
     if (perGallon) {
-      perGallon.textContent = isQuote ? "" : bulkPerGallonText(wrap?.dataset.commerceBuy, variant);
-      perGallon.hidden = isQuote;
+      perGallon.textContent = isQuote && !isCaseContact ? "" : bulkPerGallonText(wrap?.dataset.commerceBuy, variant);
+      perGallon.hidden = isQuote && !isCaseContact;
     }
   });
+
+  if (document.querySelector("[data-commerce-action], [data-commerce-price]")) {
+    loadCommerceCatalog().then(() => refreshCommerceActions(document));
+  }
 }
 
 export function initShop() {
@@ -548,6 +731,8 @@ export function initShop() {
   const emptyEl = document.getElementById("shopEmpty");
   const emptyContact = document.getElementById("shopEmptyContact");
   const searchEl = document.getElementById("shopSearch");
+  const searchClear = document.getElementById("shopSearchClear");
+  const clearAll = document.getElementById("shopClearAll");
   const moreButton = document.getElementById("shopMore");
   const moreCount = moreButton?.querySelector("[data-shop-more-count]");
   grid.addEventListener("click", e => {
@@ -566,7 +751,8 @@ export function initShop() {
   const state = {
     group: initialGroup === "all" || CATALOG_GROUPS.some((g) => g.key === initialGroup) ? initialGroup : "all",
     sort: ["featured", "az"].includes(initialSort) ? initialSort : "featured",
-    search: initialSearch.toLowerCase(),
+    search: normalizeProductSearch(initialSearch),
+    query: initialSearch,
     expanded: false,
   };
   if (searchEl) searchEl.value = initialSearch;
@@ -591,23 +777,9 @@ export function initShop() {
       : [...CATALOG_ORDER];
     if (state.group !== "all") ids = ids.filter((id) => groupOf(id) === state.group);
     if (state.search) {
-      const q = state.search;
-      ids = ids.filter((id) => {
-        const p = PRODUCTS[id];
-        const copy = PRODUCT_CATALOG_COPY[id];
-        return [
-          p.name,
-          p.replaces,
-          id,
-          copy.job,
-          copy.platform,
-          copy.summary,
-          copy.mechanism,
-          copy.operator_advantage,
-          copy.fits,
-          copy.proof,
-        ].flat().filter(Boolean).join(" ").toLowerCase().includes(q);
-      });
+      const matches = rankProductIds(ids, state.search, commerceRowFor);
+      const matchIds = new Set(matches);
+      ids = state.sort === "featured" ? matches : ids.filter((id) => matchIds.has(id));
     }
     return ids;
   };
@@ -619,7 +791,7 @@ export function initShop() {
     if (state.sort === "featured") params.delete("sort");
     else params.set("sort", state.sort);
     if (!state.search) params.delete("q");
-    else params.set("q", state.search);
+    else params.set("q", state.query);
     const query = params.toString();
     history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
   };
@@ -633,12 +805,32 @@ export function initShop() {
     grid.classList.toggle("is-collapsed", collapsed);
     if (moreButton) moreButton.hidden = !collapsed;
     if (moreCount) moreCount.textContent = String(Math.max(0, ids.length - 6));
+    if (searchClear) searchClear.hidden = !state.query;
+    if (clearAll) clearAll.hidden = state.group === "all" && !state.query && state.sort === "featured";
     refreshCommerceActions(grid);
     if (countEl) {
       const shown = collapsed && matchMedia("(max-width: 560px)").matches ? 6 : ids.length;
-      countEl.textContent = `Showing ${shown} of ${CATALOG_ORDER.length}`;
+      const groupLabel = CATALOG_GROUPS.find((group) => group.key === state.group)?.label;
+      if (state.search) {
+        const noun = ids.length === 1 ? "result" : "results";
+        countEl.textContent = ids.length
+          ? `${ids.length} ${noun} for “${state.query}”${groupLabel ? ` in ${groupLabel}` : ""}`
+          : `No results for “${state.query}”${groupLabel ? ` in ${groupLabel}` : ""}`;
+      } else if (groupLabel) {
+        countEl.textContent = `${ids.length} products in ${groupLabel}`;
+      } else if (shown < ids.length) {
+        countEl.textContent = `Showing ${shown} of ${ids.length} products`;
+      } else {
+        countEl.textContent = `${ids.length} products`;
+      }
     }
-    if (emptyEl) emptyEl.hidden = ids.length > 0;
+    if (emptyEl) {
+      const nextHidden = ids.length > 0;
+      if (emptyEl.hidden !== nextHidden) {
+        emptyEl.hidden = nextHidden;
+        emptyEl.dispatchEvent(new CustomEvent("masest:customer-chat-obstruction-change", { bubbles: true }));
+      }
+    }
     if (emptyContact) {
       const query = searchEl?.value.trim() || "";
       const message = query
@@ -651,11 +843,23 @@ export function initShop() {
   const reset = () => {
     state.group = "all";
     state.search = "";
+    state.query = "";
     if (searchEl) searchEl.value = "";
     state.sort = "featured";
     state.expanded = false;
     if (sortSel) sortSel.value = "featured";
     syncChips();
+    apply();
+  };
+
+  const clearSearch = () => {
+    state.search = "";
+    state.query = "";
+    state.expanded = false;
+    if (searchEl) {
+      searchEl.value = "";
+      searchEl.focus();
+    }
     apply();
   };
 
@@ -675,10 +879,18 @@ export function initShop() {
   });
 
   searchEl?.addEventListener("input", () => {
-    state.search = searchEl.value.trim().toLowerCase();
+    state.query = searchEl.value.trim();
+    state.search = normalizeProductSearch(state.query);
     state.expanded = false;
     apply();
   });
+
+  searchEl?.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && state.search) clearSearch();
+  });
+
+  searchClear?.addEventListener("click", clearSearch);
+  clearAll?.addEventListener("click", reset);
 
   moreButton?.addEventListener("click", () => {
     state.expanded = true;
@@ -698,7 +910,24 @@ export function initShop() {
   }
 
   emptyEl?.addEventListener("click", (e) => {
-    if (e.target.tagName === "BUTTON") reset();
+    const suggestion = e.target.closest?.("[data-shop-search-suggestion]");
+    if (suggestion) {
+      const query = suggestion.dataset.shopSearchSuggestion?.trim() || "";
+      if (!query) return;
+      state.group = "all";
+      state.query = query;
+      state.search = normalizeProductSearch(query);
+      state.expanded = false;
+      if (searchEl) searchEl.value = query;
+      syncChips();
+      apply();
+      searchEl?.focus();
+      return;
+    }
+    if (e.target.closest?.("[data-shop-reset]")) {
+      reset();
+      searchEl?.focus();
+    }
   });
 
   // Deep link: products.html#cat-water preselects a category (footer + home cards).
@@ -709,9 +938,7 @@ export function initShop() {
 
   syncChips();
   apply();
-  if (!isLocalStaticCommerceSuppressed()) {
-    loadCommerceCatalog().then(apply);
-  }
+  loadCommerceCatalog().then(apply);
 
   if (catHash) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
 }

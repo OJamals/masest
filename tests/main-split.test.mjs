@@ -31,6 +31,7 @@ test("commerce UI imports catalog data from a split module", () => {
 test("changed public module graph shares one cache release", () => {
   const main = read("js/main.js");
   const commerce = read("js/main/commerce-ui.js");
+  const productSearch = read("js/main/product-search.js");
   const contentSnapshots = read("js/main/content-snapshots.js");
   const media = read("js/main/media.js");
   const proofRecords = read("js/proof-records.js");
@@ -43,6 +44,8 @@ test("changed public module graph shares one cache release", () => {
   assert.match(main, new RegExp(`media\\.js\\?v=${release}`));
   assert.match(main, new RegExp(`service-catalog\\.js\\?v=${release}`));
   assert.match(commerce, new RegExp(`catalog-data\\.js\\?v=${release}`));
+  assert.match(commerce, new RegExp(`product-search\\.js\\?v=${release}`));
+  assert.match(productSearch, new RegExp(`catalog-data\\.js\\?v=${release}`));
   assert.match(contentSnapshots, new RegExp(`proof-records\\.js\\?v=${release}`));
   assert.match(media, new RegExp(`catalog-data\\.js\\?v=${release}`));
   assert.match(media, new RegExp(`commerce-ui\\.js\\?v=${release}`));
@@ -92,11 +95,13 @@ test("main entrypoint imports product commerce UI from a split module", () => {
   assert.doesNotMatch(main, /function initShop\s*\(/);
 
   const commerce = read("js/main/commerce-ui.js");
-  for (const name of ["productCard", "catalogCard", "initCartButtons", "initShop", "loadCommerceCatalog", "refreshCommerceActions", "isLocalStaticCommerceSuppressed"]) {
+  for (const name of ["productCard", "catalogCard", "initCartButtons", "initShop", "loadCommerceCatalog", "refreshCommerceActions"]) {
     assert.match(commerce, new RegExp(`export (?:async )?function ${name}\\b`), `${name} must be exported`);
   }
   assert.match(commerce, /commerceState/);
   assert.match(commerce, /data-cart-add/);
+  assert.doesNotMatch(commerce, /function boundedDamerauLevenshtein\s*\(/);
+  assert.match(read("js/main/product-search.js"), /export function rankProductIds\s*\(/);
 });
 
 test("main entrypoint imports engagement interactions from a split module", () => {

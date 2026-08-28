@@ -17,6 +17,11 @@ test.beforeAll(async () => {
 });
 
 test.beforeEach(async ({ page }) => {
+  await page.route("**/api/products", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ products: [] }),
+  }));
   await page.route("**/api/pricing", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",

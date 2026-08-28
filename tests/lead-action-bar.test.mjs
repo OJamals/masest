@@ -56,8 +56,8 @@ test("lead bar links target root-relative quote chemical-audit intents", () => {
 
 test("detail pages prefix chrome links one level up", () => {
   assert.ok(
-    chrome.includes('const root = /\\/(?:industries|products|comparisons|blog)\\//.test(location.pathname) ? "../" : "";'),
-    "root must resolve to ../ for pages under /industries/, /products/, /comparisons/, and /blog/"
+    chrome.includes('const root = /\\/(?:industries|products|services|comparisons|blog)\\//.test(location.pathname) ? "../" : "";'),
+    "root must resolve to ../ for pages under /industries/, /products/, /services/, /comparisons/, and /blog/"
   );
 });
 

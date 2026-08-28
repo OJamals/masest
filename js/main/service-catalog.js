@@ -9,67 +9,7 @@ const CATEGORY_ORDER = [
   "Service Packages"
 ];
 
-const CATEGORY_COPY = {
-  "Lab Testing - Water Analysis": {
-    icon: "ph-drop",
-    title: "Water analysis",
-    note: "Raw, tower, chilled, closed-loop, boiler, pretreatment, polisher, and condensate testing.",
-    description: "See what is in your water and get a clearer next step for the treatment program.",
-    cta: "Request water analysis"
-  },
-  "Lab Testing - Biological": {
-    icon: "ph-test-tube",
-    title: "Biological testing",
-    note: "Biological counts, Legionella culture, Legionella PCR, and biological identification.",
-    description: "Measure biological activity and identify what may be growing in the system.",
-    cta: "Request biological testing"
-  },
-  "Testing - Materials": {
-    icon: "ph-magnifying-glass",
-    title: "Materials testing",
-    note: "Corrosion samples, pipe sections, buildup, and material checks.",
-    description: "Learn what buildup, pipe, or a corrosion sample says about the equipment problem.",
-    representative_image: "/img/representative/applications/deposit-analysis-service-v1.webp",
-    cta: "Request materials analysis"
-  },
-  "Consulting Services": {
-    icon: "ph-compass-tool",
-    title: "Consulting",
-    note: "Equipment inspections, ultrasonic and borescope testing, sprinkler testing, and particle work.",
-    description: "Get experienced eyes, useful measurements, and a clear path forward for an equipment problem.",
-    cta: "Ask an expert"
-  },
-  "Bid Support": {
-    icon: "ph-file-text",
-    title: "Bid support",
-    note: "Specification writing, review, and help during vendor interviews.",
-    description: "Write a stronger bid, ask sharper questions, and compare vendors on what matters to your operation.",
-    representative_image: "/img/representative/applications/bid-wmp-review-desk-v1.webp",
-    cta: "Request bid support"
-  },
-  "Field Services": {
-    icon: "ph-hard-hat",
-    title: "Field services",
-    note: "On-site sample collection and standard sampling visits.",
-    description: "Have MASEST collect and deliver samples so your test starts with reliable field work.",
-    cta: "Request site sampling"
-  },
-  "Water Management Plan": {
-    icon: "ph-clipboard-text",
-    title: "Water management",
-    note: "ASHRAE 188 assessment, plan writing, renewal, and dashboard access.",
-    description: "Build a practical water plan around your facility, systems, team, and day-to-day work.",
-    representative_image: "/img/representative/applications/bid-wmp-review-desk-v1.webp",
-    cta: "Request a WMP review"
-  },
-  "Service Packages": {
-    icon: "ph-package",
-    title: "Packages",
-    note: "Bundled initial sampling, annual setup, quarterly audit, and yearly recertification.",
-    description: "Bundle sampling, planning, audits, and annual support into one easier engagement.",
-    cta: "Request a package"
-  }
-};
+const SERVICE_SEARCH_INITIAL_COUNT = 8;
 
 function normalizeText(value) {
   return String(value || "")
@@ -97,6 +37,22 @@ function displayServiceName(value) {
     .replace(/\bBio\b/g, "Biological")
     .replace(/\bSpecie ID\b/g, "Species ID")
     .replace(/\s+\+\s+/g, " + ");
+}
+
+function categoryCopy(categories, value) {
+  const key = categoryKey(value);
+  return categories.get(key) || {
+    key,
+    slug: slugify(key),
+    icon: "ph-briefcase",
+    title: displayCategory(key),
+    note: "Practical help for a specific facility need.",
+    description: "Tell us what you need to learn or fix, and MASEST will help choose the right service.",
+    cta: "Request service",
+    what_you_send: "The system, sample, or facility question and the result you need.",
+    what_you_receive: "The result listed by the selected service.",
+    timing: "Scope, schedule, and final price are confirmed before work starts.",
+  };
 }
 
 function htmlEscape(value) {
@@ -171,7 +127,7 @@ function renderCategoryMedia(copy) {
   `;
 }
 
-function renderServiceCard(item) {
+function renderServiceCard(item, { showCategory = false, categories = new Map(), hidden = false } = {}) {
   const name = displayServiceName(item.name);
   // Keep the "per" — a bare "sample" next to a dollar figure reads as
   // "sample price", not the billing unit.
@@ -183,26 +139,94 @@ function renderServiceCard(item) {
   // line item into the notes field so it actually reaches the request.
   const note = `Service request: ${name}${sku ? ` (${sku})` : ""}.`;
   const href = `contact?type=services&message=${encodeURIComponent(note)}`;
-  const copy = CATEGORY_COPY[categoryKey(item.category)] || {};
+  const copy = categoryCopy(categories, item.category);
   const description = normalizeText(item.summary)
     || copy.description
     || "Tell us what you need to learn or fix, and we will help you choose the right service.";
   const cta = copy.cta || "Request service";
 
   return `
-    <article class="service-card" data-service-sku="${htmlEscape(sku)}">
+    <article${hidden ? " hidden" : ""} class="service-card" data-service-sku="${htmlEscape(sku)}">
       <div class="service-card-main">
+        ${showCategory ? `<span class="service-card-category">${htmlEscape(displayCategory(item.category))}</span>` : ""}
         <h3>${htmlEscape(name)}</h3>
         <p>${htmlEscape(description)}</p>
+        <details class="service-card-details">
+          <summary>What to expect</summary>
+          <dl>
+            <div><dt>What you send</dt><dd>${htmlEscape(copy.what_you_send)}</dd></div>
+            <div><dt>What MASEST does</dt><dd>${htmlEscape(description)}</dd></div>
+            <div><dt>What you receive</dt><dd>${htmlEscape(copy.what_you_receive)}</dd></div>
+            <div><dt>Timing &amp; preparation</dt><dd>${htmlEscape(copy.timing)}</dd></div>
+          </dl>
+        </details>
         <div class="rv-compact" data-reviews data-compact data-sku="${htmlEscape(sku)}" data-kind="service" hidden></div>
       </div>
       <div class="service-card-meta">
         <span>${htmlEscape(unit)}</span>
         <b>${htmlEscape(price)}</b>
       </div>
-      <a class="btn btn-secondary btn-sm" href="${href}" aria-label="${cta}: ${htmlEscape(name)}">${cta}</a>
+      <a class="btn btn-secondary btn-sm" href="${href}" aria-label="${htmlEscape(cta)}: ${htmlEscape(name)}">${htmlEscape(cta)}</a>
     </article>
   `;
+}
+
+function serviceSearchText(item) {
+  return [
+    item.sku,
+    displayServiceName(item.name),
+    displayCategory(item.category),
+    item.summary,
+    item.lifecycle_stage,
+  ]
+    .map((value) => normalizeText(value).toLocaleLowerCase())
+    .join(" ");
+}
+
+function renderSearchResults(items, query, categories) {
+  if (!items.length) {
+    const note = `Service search: ${query}. No catalog match found.`;
+    return `
+      <div class="service-search-empty" data-service-search-empty>
+        <b>No services match “${htmlEscape(query)}”.</b>
+        <p>Send the question, sample, system, or result you need. MASEST can route it directly.</p>
+        <a class="btn btn-secondary btn-sm" href="contact?type=services&message=${encodeURIComponent(note)}">Ask MASEST</a>
+      </div>
+    `;
+  }
+
+  const visibleCount = Math.min(SERVICE_SEARCH_INITIAL_COUNT, items.length);
+  const remainingCount = items.length - visibleCount;
+
+  return `
+    <div class="service-search-results-head">
+      <b>Matching services</b>
+      <span data-service-search-visible-count>Showing ${visibleCount} of ${items.length}</span>
+    </div>
+    <div class="service-card-grid" id="service-search-grid">
+      ${items.map((item, index) => renderServiceCard(item, {
+        showCategory: true,
+        categories,
+        hidden: index >= visibleCount,
+      })).join("")}
+    </div>
+    ${remainingCount > 0 ? `
+      <button
+        class="btn btn-secondary btn-sm service-search-more"
+        type="button"
+        aria-controls="service-search-grid"
+        aria-expanded="false"
+        data-service-search-more
+      >Show ${remainingCount} more services</button>
+    ` : ""}
+  `;
+}
+
+function serviceSearchStatus(total, visible, query) {
+  const count = total === 1 ? "result" : "results";
+  if (total === 0) return `0 ${count} for “${query}”`;
+  const shown = visible === total ? `Showing all ${total}` : `Showing ${visible} of ${total}`;
+  return `${shown} ${count} for “${query}”`;
 }
 
 function renderTabs(groups) {
@@ -229,7 +253,7 @@ function renderTabs(groups) {
     .join("");
 }
 
-function renderPanels(groups) {
+function renderPanels(groups, categories) {
   const lifecycle = [...groups.values()]
     .flat()
     .filter((item) => item.lifecycle_stage && Number.isFinite(Number(item.sort_order)))
@@ -239,7 +263,7 @@ function renderPanels(groups) {
     .filter((category) => groups.has(category))
     .map((category, index) => {
       const items = groups.get(category).slice().sort(serviceSort);
-      const copy = CATEGORY_COPY[category] || { icon: "ph-briefcase", title: displayCategory(category), note: "Practical help for a specific facility need." };
+      const copy = categoryCopy(categories, category);
       const prices = items.map((item) => Number(item.public_price)).filter(Number.isFinite);
       const low = prices.length ? Math.min(...prices) : null;
       const high = prices.length ? Math.max(...prices) : null;
@@ -257,9 +281,10 @@ function renderPanels(groups) {
         >
           <div class="service-category-head">
             <div>
-              <i class="ph ${copy.icon}" aria-hidden="true"></i>
+              <i class="ph ${htmlEscape(copy.icon)}" aria-hidden="true"></i>
               <h3>${htmlEscape(copy.title)}</h3>
               <p>${htmlEscape(copy.note)}${category === "Water Management Plan" ? renderLifecycle(lifecycle) : ""}</p>
+              <a class="service-category-guide-link" href="services/${htmlEscape(copy.slug)}">View ${htmlEscape(copy.title)} guide</a>
             </div>
             <div class="service-category-price">
               <span>${htmlEscape(countLabel(items.length, category))}</span>
@@ -268,7 +293,7 @@ function renderPanels(groups) {
           </div>
           ${renderCategoryMedia(copy)}
           <div class="service-card-grid">
-            ${items.map(renderServiceCard).join("")}
+            ${items.map((item) => renderServiceCard(item, { categories })).join("")}
           </div>
         </section>
       `;
@@ -334,11 +359,97 @@ function bindTabs(root) {
   });
 }
 
+function bindSearch(root, items, categories) {
+  const input = root.querySelector("[data-service-search]");
+  const clear = root.querySelector("[data-service-search-clear]");
+  const status = root.querySelector("[data-service-search-status]");
+  const tabs = root.querySelector(".service-tabs");
+  const panels = root.querySelector(".service-panels");
+  const results = root.querySelector("[data-service-search-results]");
+  const total = items.length;
+
+  const update = () => {
+    const query = normalizeText(input.value);
+    const needle = query.toLocaleLowerCase();
+    const searching = Boolean(needle);
+    const matches = searching
+      ? items.filter((item) => serviceSearchText(item).includes(needle))
+      : [];
+
+    clear.hidden = !searching;
+    tabs.hidden = searching;
+    panels.hidden = searching;
+    results.hidden = !searching;
+
+    if (!searching) {
+      results.replaceChildren();
+      status.textContent = `${total} services and packages`;
+      return;
+    }
+
+    results.innerHTML = renderSearchResults(matches, query, categories);
+    status.textContent = serviceSearchStatus(
+      matches.length,
+      Math.min(SERVICE_SEARCH_INITIAL_COUNT, matches.length),
+      query,
+    );
+  };
+
+  results.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-service-search-more]");
+    if (!button || !results.contains(button)) return;
+
+    const cards = [...results.querySelectorAll(".service-card")];
+    const expanded = button.getAttribute("aria-expanded") !== "true";
+    const visibleCount = expanded ? cards.length : Math.min(SERVICE_SEARCH_INITIAL_COUNT, cards.length);
+    const firstNewResultAction = expanded
+      ? cards[SERVICE_SEARCH_INITIAL_COUNT]?.querySelector("a")
+      : null;
+    const focusTarget = firstNewResultAction || button;
+
+    cards.forEach((card, index) => {
+      card.hidden = !expanded && index >= SERVICE_SEARCH_INITIAL_COUNT;
+    });
+    button.setAttribute("aria-expanded", String(expanded));
+    button.textContent = expanded
+      ? "Show fewer"
+      : `Show ${cards.length - visibleCount} more services`;
+    results.querySelector("[data-service-search-visible-count]").textContent = expanded
+      ? `Showing all ${cards.length}`
+      : `Showing ${visibleCount} of ${cards.length}`;
+    status.textContent = serviceSearchStatus(cards.length, visibleCount, normalizeText(input.value));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!focusTarget.isConnected) return;
+      focusTarget.focus({ preventScroll: true });
+      focusTarget.scrollIntoView({ block: "center" });
+    }));
+  });
+
+  input.addEventListener("input", update);
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !input.value) return;
+    event.preventDefault();
+    input.value = "";
+    update();
+  });
+  clear.addEventListener("click", () => {
+    input.value = "";
+    update();
+    input.focus();
+  });
+  update();
+}
+
 function renderCatalog(root, catalog) {
   const items = [
     ...(Array.isArray(catalog?.services) ? catalog.services : []),
     ...(Array.isArray(catalog?.service_packages) ? catalog.service_packages : [])
   ].filter((item) => item && item.active !== false);
+  const categories = new Map(
+    (Array.isArray(catalog?.service_categories) ? catalog.service_categories : [])
+      .filter((category) => category?.key)
+      .map((category) => [categoryKey(category.key), category]),
+  );
 
   updateSummary(catalog, items);
 
@@ -355,14 +466,26 @@ function renderCatalog(root, catalog) {
   }
 
   root.innerHTML = `
+    <div class="service-search-toolbar" role="search">
+      <label class="service-search-label">
+        <span>Search services</span>
+        <span class="service-search-field">
+          <input type="search" autocomplete="off" placeholder="Try water, Legionella, field support…" data-service-search>
+          <button type="button" data-service-search-clear aria-label="Clear service search" hidden>Clear</button>
+        </span>
+      </label>
+      <p class="service-search-status" data-service-search-status role="status" aria-live="polite"></p>
+    </div>
     <div class="service-tabs" role="tablist" aria-label="Service categories">
       ${renderTabs(groups)}
     </div>
+    <section class="service-search-results" data-service-search-results aria-label="Service search results" hidden></section>
     <div class="service-panels">
-      ${renderPanels(groups)}
+      ${renderPanels(groups, categories)}
     </div>
   `;
   bindTabs(root);
+  bindSearch(root, items, categories);
   let requestedHash = location.hash;
   try { requestedHash = decodeURIComponent(requestedHash); } catch { /* ignore malformed external fragments */ }
   const requestedTab = [...root.querySelectorAll("[data-service-tab]")]
@@ -390,10 +513,22 @@ async function fetchServicesCatalog() {
     try {
       const response = await fetch(path, { cache: "no-store" });
       if (!response.ok) throw new Error(`${path}: ${response.status}`);
-      const catalog = await response.json();
+      let catalog = await response.json();
       if (path === "/data/content/services.json" && !hasServicesCatalog(catalog)) {
         lastError = new Error("content_services_empty");
         continue;
+      }
+      if (
+        path !== "/data/services.json"
+        && (!Array.isArray(catalog.service_categories) || !catalog.service_categories.length)
+      ) {
+        try {
+          const staticResponse = await fetch("/data/services.json", { cache: "no-store" });
+          if (staticResponse.ok) {
+            const staticCatalog = await staticResponse.json();
+            catalog = { ...catalog, service_categories: staticCatalog.service_categories || [] };
+          }
+        } catch { /* generic category copy remains available */ }
       }
       try {
         const pricing = await loadPricingData();
@@ -433,4 +568,4 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { loadPricingData } from "./pricing-data.js?v=20260826f";
+import { loadPricingData } from "./pricing-data.js?v=20260827a";

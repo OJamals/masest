@@ -1,3 +1,3 @@
-export const STYLE_VERSION = "20260823f";
+export const STYLE_VERSION = "20260827a";
 export const COMPONENT_VERSION = "20260822d";
 export const NAVIGATION_VERSION = "20260822b";

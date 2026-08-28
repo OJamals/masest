@@ -153,7 +153,7 @@ test("service catalog preserves customer-facing compound words", async () => {
   });
 });
 
-test("product cards expose price, volume, and add-to-cart as one buying block", async () => {
+test("product cards expose price and compact quick add without a second control row", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -179,17 +179,16 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
         price: card.querySelector(".price-main")?.textContent.trim(),
         subprice: card.querySelector(".price-note")?.textContent.trim(),
         variantCount: card.querySelectorAll(".commerce-vol option").length,
-        optionValues: Array.from(card.querySelectorAll(".commerce-vol option")).map((option) => option.value),
-        addLabel: card.querySelector("[data-cart-add]")?.textContent.trim(),
+        addSku: card.querySelector("[data-cart-quick-add]")?.dataset.cartAdd,
+        addLabel: card.querySelector("[data-cart-quick-add]")?.getAttribute("aria-label"),
         href: card.querySelector(".shop-card-link")?.getAttribute("href")
       }));
 
       assert.equal(first.price, "$30", "card should show API pricing");
       assert.equal(first.subprice, "1 gal", "card should show the selected pack size");
-      assert.equal(first.variantCount, 4, "card should keep verified units plus quoted drum and tote choices");
-      assert.equal(new Set(first.optionValues).size, first.optionValues.length, "volume options should not duplicate SKUs");
-      assert.deepEqual(first.optionValues, ["CRCIP-1G", "CRCIP-25G", "CRCIP-55D", "CRCIP-275T"]);
-      assert.equal(first.addLabel, "Add to cart");
+      assert.equal(first.variantCount, 0, "card should keep size selection on the detail page");
+      assert.equal(first.addSku, "CRCIP-1G");
+      assert.match(first.addLabel, /Add VertKleen CIP CR, 1 gal, to cart/i);
       assert.equal(first.href, "products/cr");
 
       const cardStates = await page.locator(".shop-card").evaluateAll((cards) => cards.map((card) => ({
@@ -197,14 +196,14 @@ test("product cards expose price, volume, and add-to-cart as one buying block", 
         price: card.querySelector(".price-main")?.textContent.trim() || "",
         buybar: !!card.querySelector(".shop-card-buybar"),
         select: !!card.querySelector(".commerce-vol"),
-        add: !!card.querySelector("[data-cart-add]"),
-        hasOneGal: [...card.querySelectorAll(".commerce-vol option")].some((option) => /1 gal/i.test(option.textContent || "")),
+        add: !!card.querySelector("[data-cart-quick-add]"),
+        hasOneGal: /1 gal/i.test(card.querySelector("[data-cart-quick-add]")?.getAttribute("aria-label") || ""),
       })));
       assert.ok(cardStates.length > 0);
       assert.deepEqual(
-        cardStates.filter((card) => !card.price || !card.buybar || !card.select || !card.add),
+        cardStates.filter((card) => !card.price || !card.buybar || card.select || !card.add),
         [],
-        "confirmed public product cards should expose price and buy controls"
+        "confirmed public product cards should expose price plus one overlay quick-add control"
       );
       assert.deepEqual(
         cardStates.filter((card) => !card.hasOneGal).map((card) => card.id),
@@ -346,7 +345,7 @@ test("resources page declares CMS-driven public pricing tables only", () => {
   assert.match(resources, /Sales tax and freight excluded — FOB Merritt Island, FL\./);
 });
 
-test("descaler card defaults to the first live API variant price", async () => {
+test("descaler card defaults price and quick add to the first live API variant", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -363,19 +362,17 @@ test("descaler card defaults to the first live API variant price", async () => {
       const descaler = page.locator('.shop-card[data-id="descaler"]');
       await descaler.locator(".price-main", { hasText: "$30" }).waitFor();
       assert.equal(await descaler.locator(".price-note").textContent(), "1 gal");
-      const options = await descaler.locator(".commerce-vol").evaluate((select) =>
-        Array.from(select.options).map((option) => option.textContent.trim())
-      );
-      // Options are a ladder of volumes with the container noun stripped ("1 gal", not
-      // "1 gal jug"); the full pack wording is asserted on .price-note just above.
-      assert.ok(options.some((label) => label === "1 gal"), `expected a "1 gal" option, got ${options.join(" | ")}`);
+      const quickAdd = descaler.locator('[data-cart-quick-add="descaler"]');
+      assert.equal(await quickAdd.getAttribute("data-cart-add"), "DSC-1G");
+      assert.match(await quickAdd.getAttribute("aria-label"), /1 gal/i);
+      assert.equal(await descaler.locator(".commerce-vol").count(), 0);
     } finally {
       await browser.close();
     }
   });
 });
 
-test("changing a card volume updates the visible price and cart SKU", async () => {
+test("changing product-detail volume updates the visible price and cart SKU", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -388,8 +385,8 @@ test("changing a card volume updates the visible price and cart SKU", async () =
     await routePricing(page);
 
     try {
-      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
-      const first = page.locator(".shop-card").first();
+      await page.goto(`${BASE_URL}/products/cr.html`, { waitUntil: "domcontentloaded" });
+      const first = page.locator(".product-hero-buy");
       await first.locator(".commerce-vol").selectOption("CRCIP-25G");
       await assert.doesNotReject(() => first.locator(".price-main", { hasText: "$40" }).waitFor());
       assert.equal(await first.locator(".price-note").textContent(), "2.5 gal");

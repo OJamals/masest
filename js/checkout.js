@@ -290,7 +290,13 @@ async function boot() {
   let cart = items();
   const empty = document.getElementById('checkoutEmpty');
   const shell = document.getElementById('checkoutShell');
-  if (!cart.length) { empty.hidden = false; return; }
+  if (!cart.length) {
+    empty.hidden = false;
+    const progress = document.querySelector('.checkout-steps');
+    progress?.querySelector('[aria-current="step"]')?.removeAttribute('aria-current');
+    progress?.querySelector('a[href="cart.html"]')?.setAttribute('aria-current', 'step');
+    return;
+  }
   shell.hidden = false;
 
   // Staff do not buy through the storefront — they raise orders in the admin

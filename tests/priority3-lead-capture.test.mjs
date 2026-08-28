@@ -339,6 +339,6 @@ async function expectPoll(fn, { timeout = 2000 } = {}) {
   assert.fail("condition did not become true before timeout");
 }
 
-test("shared chrome resolves one-level-deep comparison pages", () => {
-  assert.match(chrome, /\(\?:industries\|products\|comparisons\|blog\)/);
+test("shared chrome resolves all one-level-deep generated pages", () => {
+  assert.match(chrome, /\(\?:industries\|products\|services\|comparisons\|blog\)/);
 });

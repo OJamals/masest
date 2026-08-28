@@ -71,6 +71,7 @@ test("generated product routes own the complete public detail surface", () => {
   for (const id of CATALOG_ORDER) {
     const html = readProject(`products/${id}.html`);
     assert.match(html, new RegExp(`data-commerce-media="${id}"`));
+    assert.match(html, new RegExp(`data-commerce-price="${id}"`));
     assert.match(html, new RegExp(`data-commerce-action="${id}"`));
     assert.match(html, /data-reviews data-sku="[^"]+" data-kind="product"/);
     assert.match(html, new RegExp(`data-cms-content="page_sections" data-cms-page="products/${id}"`));

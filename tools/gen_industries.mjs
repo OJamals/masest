@@ -668,7 +668,7 @@ ${recommendedProductsBlock(ind)}${industryLabelVariantsBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js?v=20260826f"></script>
+<script type="module" src="../js/main.js?v=20260827a"></script>
 </body>
 </html>
 `;

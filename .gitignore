@@ -10,6 +10,11 @@ backups/
 audits/
 audit-*/
 design-qa.md
+
+# Local landing-page design/research working docs — never publish.
+/docs/landing-page-scrollybook-*.md
+/docs/research/2026-08-25-*-figma-*.md
+
 # Internal advisor/improve handoff docs — must NOT ship: cf-build publishes tracked
 # files, so committing these would expose them at masest.co/plans/.
 plans/

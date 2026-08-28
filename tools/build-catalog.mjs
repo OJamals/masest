@@ -248,6 +248,21 @@ function variantsSql(variants) {
 // Public services catalog fetched by js/main/service-catalog.js (services.html + about.html).
 // Only client-safe fields — internal `source` / `payment_capture` notes are dropped.
 function servicesJson(catalog) {
+  const categoryPub = (category) => ({
+    key: category.key,
+    slug: category.slug,
+    title: category.title,
+    note: category.note,
+    description: category.description,
+    icon: category.icon,
+    cta: category.cta,
+    ...(category.representative_image ? { representative_image: category.representative_image } : {}),
+    what_you_send: category.what_you_send,
+    what_you_receive: category.what_you_receive,
+    timing: category.timing,
+    seo_title: category.seo_title,
+    seo_description: category.seo_description,
+  });
   const pub = (item) => ({
     sku: item.sku,
     name: item.name,
@@ -259,6 +274,7 @@ function servicesJson(catalog) {
     ...(item.lifecycle_stage ? { lifecycle_stage: item.lifecycle_stage } : {}),
   });
   return JSON.stringify({
+    service_categories: (catalog.service_categories || []).map(categoryPub),
     services: (catalog.services || []).map(pub),
     service_packages: (catalog.service_packages || []).map(pub),
   }, null, 2) + '\n';

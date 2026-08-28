@@ -12,7 +12,7 @@
   <meta property="og:description" content="Shop VertKleen industrial cleaners by job, with small-pack checkout and bulk quotes.">
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260823f">
+<link rel="stylesheet" href="css/style.css?v=20260827a">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
 <link rel="stylesheet" href="css/components.css?v=20260822d">
 <!-- seo:auto -->
@@ -90,18 +90,31 @@
       </div>
 
       <div class="shop-toolbar reveal">
-        <label class="search-field" for="shopSearch">
-          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
-          <input type="search" id="shopSearch" name="product_search" placeholder="Search product or current chemical…" aria-label="Search by product or current chemical" autocomplete="off">
-        </label>
-        <div class="shop-chips" id="shopChips" role="group" aria-label="Filter by category"></div>
-        <div class="shop-sort">
-          <label for="shopSort">Sort</label>
-          <select id="shopSort" name="product_sort" class="shop-select">
-            <option value="featured">Featured</option>
-            <option value="az">Name A-Z</option>
-          </select>
-          <span class="shop-count" id="shopCount" aria-live="polite"></span>
+        <div class="shop-search-control">
+          <label class="shop-control-label" for="shopSearch">Search products</label>
+          <span class="search-field shop-search-field">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" id="shopSearch" name="product_search" placeholder="Try scale, grease, HVAC, or a current chemical…" aria-describedby="shopSearchHint" autocomplete="off">
+            <button type="button" class="shop-search-clear" id="shopSearchClear" aria-label="Clear product search" hidden>Clear</button>
+          </span>
+          <span class="sr-only" id="shopSearchHint">Search by product name, SKU, cleaning job, surface, or chemical being replaced.</span>
+        </div>
+        <div class="shop-filter-control">
+          <span class="shop-control-label" id="shopBrowseLabel">Browse by job</span>
+          <div class="shop-chips" id="shopChips" role="group" aria-labelledby="shopBrowseLabel"></div>
+        </div>
+        <div class="shop-toolbar-footer">
+          <div class="shop-sort">
+            <label for="shopSort">Sort</label>
+            <select id="shopSort" name="product_sort" class="shop-select">
+              <option value="featured">Recommended</option>
+              <option value="az">Name A-Z</option>
+            </select>
+          </div>
+          <div class="shop-results-context">
+            <span class="shop-count" id="shopCount" aria-live="polite"></span>
+            <button type="button" class="shop-clear-all" id="shopClearAll" hidden>Clear all</button>
+          </div>
         </div>
       </div>
 
@@ -113,9 +126,20 @@
       <div class="empty-state shop-empty" id="shopEmpty" hidden>
         <i class="ph ph-package empty-icon" aria-hidden="true"></i>
         <p class="empty-title">No products match</p>
-        <p class="empty-body">Clear the filters to see every product, or tell us what you need to clean and we will point you in the right direction.</p>
-        <a class="btn btn-secondary btn-sm" id="shopEmptyContact" href="contact?type=audit#quoteForm">Tell us what you're replacing</a>
-        <button type="button" class="btn btn-ghost btn-sm">Reset filters</button>
+        <p class="empty-body">Choose a job below, reset your search, or tell us what you're replacing for a product recommendation.</p>
+        <div class="shop-empty-recovery">
+          <p class="shop-empty-recovery-label" id="shopEmptyRecoveryLabel">Common jobs</p>
+          <div class="shop-empty-suggestions" role="group" aria-labelledby="shopEmptyRecoveryLabel">
+            <button type="button" class="shop-empty-suggestion" data-shop-search-suggestion="scale">Scale &amp; rust</button>
+            <button type="button" class="shop-empty-suggestion" data-shop-search-suggestion="grease">Grease</button>
+            <button type="button" class="shop-empty-suggestion" data-shop-search-suggestion="hvac">HVAC</button>
+            <button type="button" class="shop-empty-suggestion" data-shop-search-suggestion="water">Water systems</button>
+          </div>
+        </div>
+        <div class="shop-empty-actions">
+          <a class="btn btn-secondary btn-sm" id="shopEmptyContact" data-customer-chat-obstruction href="contact?type=audit#quoteForm">Tell us what you're replacing</a>
+          <button type="button" class="shop-empty-reset" id="shopEmptyReset" data-shop-reset data-customer-chat-obstruction>Reset search and filters</button>
+        </div>
       </div>
     </div>
   </section>
@@ -152,7 +176,7 @@
   </section>
 </main>
 
-<script type="module" src="js/main.js?v=20260826f"></script>
+<script type="module" src="js/main.js?v=20260827a"></script>
 <script src="js/track.js" defer></script>
 </body>
 </html>

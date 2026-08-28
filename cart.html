@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260823f">
+  <link rel="stylesheet" href="css/style.css?v=20260827a">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
   <link rel="stylesheet" href="css/components.css?v=20260822d">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260826f"></script>
+  <script type="module" src="js/main.js?v=20260827a"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -126,11 +126,7 @@
     crhd: "VertKleen CR HD",
     hcr: "VertKleen HCR",
   };
-  function isLocalStaticPreview() {
-    return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname) && !window.MASEST_ENABLE_LOCAL_API;
-  }
   async function loadCatalog() {
-  if (isLocalStaticPreview()) return;
   try {
     const token = await getToken().catch(() => null);
     const r = await fetch("/api/products", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
@@ -342,9 +338,9 @@
     if (!cartItems.length) return;
     const canEstimate = pricedLines === cartItems.length && currencies.size === 1;
     // Only offer the ZIP estimate once every line is a priced, buyable variant — a cart that
-    // still needs review has no rateable parcel behind it. Static preview has no API.
+    // still needs review has no rateable parcel behind it.
     if (shipEstimateForm) {
-      shipEstimateForm.hidden = !canEstimate || isLocalStaticPreview();
+      shipEstimateForm.hidden = !canEstimate;
     }
     const subtotalText = canEstimate
       ? priceMoney(subtotal, [...currencies][0])
@@ -551,9 +547,9 @@
     box.hidden = false;
   }
 
-  catalogReady = isLocalStaticPreview();
+  catalogReady = false;
   render();
-  if (!catalogReady) loadCatalog().finally(() => { catalogReady = true; render(); });
+  loadCatalog().finally(() => { catalogReady = true; render(); });
   // One me() for both jobs. Staff run the store rather than shop it — the nav already
   // hides their cart, and the page has to agree or typing /cart walks straight back
   // into checkout. Deliberately not awaited before the first render: a signed-in

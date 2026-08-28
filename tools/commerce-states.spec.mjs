@@ -30,12 +30,6 @@ test.afterAll(async () => {
   await Promise.race([once(server, "exit"), new Promise((r) => setTimeout(r, 1500))]).catch(() => {});
 });
 
-test.beforeEach(async ({ page }) => {
-  // The test host is 127.0.0.1, where commerce is auto-suppressed; opt back in so the
-  // buy controls (and their loading/failure states) actually render.
-  await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
-});
-
 test("products grid shows a skeleton while loading, then a quote fallback on catalog failure", async ({ page }) => {
   // Delay the catalog response so the loading state is observable, then fail it.
   await page.route("**/api/products", async (route) => {
@@ -46,16 +40,16 @@ test("products grid shows a skeleton while loading, then a quote fallback on cat
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
   // While the catalog request is in flight, purchasable cards show a sized skeleton.
-  await expect(page.locator(".shop-card .commerce-skeleton").first()).toBeVisible();
+  await expect(page.locator(".shop-card .shop-card-quick-add-loading").first()).toBeVisible();
 
   // After the failed load settles, the buy area routes to a quote instead of staying blank.
-  const fallback = page.locator(".shop-card .commerce-quote-fallback");
+  const fallback = page.locator('.shop-card a.shop-card-quick-add[aria-label^="Request pricing"]');
   await expect(fallback.first()).toBeVisible({ timeout: 5000 });
   await expect(fallback.first()).toHaveAttribute("href", /contact\?type=quote.*#quoteForm$/);
   // No real add-to-cart control rendered when the catalog is unavailable.
   await expect(page.locator(".shop-card [data-commerce-buy]")).toHaveCount(0);
   // The skeletons are gone once the state resolves.
-  await expect(page.locator(".shop-card .commerce-skeleton")).toHaveCount(0);
+  await expect(page.locator(".shop-card .shop-card-quick-add-loading")).toHaveCount(0);
 });
 
 test("zero-result product search offers a contextual chemical-audit handoff", async ({ page }) => {
@@ -64,7 +58,7 @@ test("zero-result product search offers a contextual chemical-audit handoff", as
   await page.locator("#shopSearch").fill("acetone");
 
   await expect(page.locator("#shopEmpty")).toBeVisible();
-  await expect(page.locator("#shopCount")).toHaveText("Showing 0 of 16");
+  await expect(page.locator("#shopCount")).toHaveText("No results for “acetone”");
 
   const handoff = page.locator("#shopEmptyContact");
   await expect(handoff).toBeVisible();
@@ -74,13 +68,58 @@ test("zero-result product search offers a contextual chemical-audit handoff", as
     /contact\?type=audit&message=.*acetone.*#quoteForm$/,
   );
 
-  const reset = page.locator("#shopEmpty button");
+  const reset = page.locator("#shopEmptyReset");
   await expect(reset).toBeVisible();
   await expect(page.locator("#shopEmpty")).toHaveCSS("flex-direction", "column");
   expect(await handoff.evaluate((node) => Boolean(
-    node.compareDocumentPosition(document.querySelector("#shopEmpty button"))
+    node.compareDocumentPosition(document.querySelector("#shopEmptyReset"))
       & Node.DOCUMENT_POSITION_FOLLOWING
   ))).toBe(true);
+
+  const recovery = page.getByRole("button", { name: "Scale & rust" });
+  await expect(recovery).toBeVisible();
+  await recovery.click();
+
+  const search = page.locator("#shopSearch");
+  await expect(search).toHaveValue("scale");
+  await expect(search).toBeFocused();
+  await expect(page.locator("#shopEmpty")).toBeHidden();
+  await expect(page.locator("#shopGrid .shop-card").first()).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("q")).toBe("scale");
+  expect(new URL(page.url()).searchParams.has("category")).toBe(false);
+});
+
+test("narrow mobile zero-result actions stay clear of customer chat", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.goto(`${BASE_URL}/products.html?q=acetone#catalog`, { waitUntil: "domcontentloaded" });
+  await page.waitForLoadState("load");
+
+  const reset = page.locator("#shopEmptyReset");
+  const contact = page.locator("#shopEmptyContact");
+  const chat = page.locator("#customerChat .customer-chat__toggle");
+  await expect(reset).toBeVisible();
+  await expect(contact).toBeVisible();
+  await expect(chat).toBeVisible();
+
+  await page.evaluate(() => {
+    const resetBox = document.querySelector("#shopEmptyReset").getBoundingClientRect();
+    const chatBox = document.querySelector("#customerChat .customer-chat__toggle").getBoundingClientRect();
+    document.documentElement.style.scrollBehavior = "auto";
+    window.scrollBy({ top: resetBox.top - chatBox.top - 8, behavior: "instant" });
+  });
+
+  const overlapsChat = async (action) => {
+    const actionBox = await action.boundingBox();
+    const chatBox = await chat.boundingBox();
+    if (!actionBox || !chatBox) return true;
+    return actionBox.x < chatBox.x + chatBox.width
+      && actionBox.x + actionBox.width > chatBox.x
+      && actionBox.y < chatBox.y + chatBox.height
+      && actionBox.y + actionBox.height > chatBox.y;
+  };
+
+  await expect.poll(() => overlapsChat(reset)).toBe(false);
+  await expect.poll(() => overlapsChat(contact)).toBe(false);
 });
 
 // The success path (real add-to-cart controls when /api/products returns a purchasable

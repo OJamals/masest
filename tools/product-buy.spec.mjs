@@ -90,13 +90,14 @@ test("product selector routes bulk freight to the shared quote flow", async ({ p
   await selector.selectOption("VK-CRHD-55");
   await expect(buy).toBeHidden();
   await expect(quote).toBeVisible();
+  await expect(page.locator(".product-hero-buy .shop-card-bulk")).toBeHidden();
   await expect(quote).toHaveAttribute("href", /contact\?type=quote&product=.*message=.*#quoteForm/);
 });
 
 // The size list is a ladder of volumes, so every option has to drop its container noun or
 // none do. "jug" was missing from the strip, which rendered one dropdown as
 // "1 gal jug / 2.5 gal jug / 5 gal / 55 gal" — the same column mixing both conventions.
-test("size options drop the container noun consistently", async ({ page }) => {
+test("size options pair normalized container nouns with visible prices", async ({ page }) => {
   await page.route("**/api/products", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -116,7 +117,13 @@ test("size options drop the container noun consistently", async ({ page }) => {
 
   await page.goto(`${BASE_URL}/products/crhd.html`, { waitUntil: "networkidle" });
   const options = await page.locator(".product-hero-buy .commerce-vol option").allInnerTexts();
-  expect(options).toEqual(["1 gal", "2.5 gal", "5 gal", "55 gal — quoted", "275 gal — quoted"]);
+  expect(options).toEqual([
+    "1 gal — $11.67",
+    "2.5 gal — $29.16",
+    "5 gal — $58.33",
+    "55 gal — quoted",
+    "275 gal — quoted",
+  ]);
   // The full pack wording still belongs somewhere; it stays spelled out under the price.
   await expect(page.locator(".product-hero-buy .price-note")).toContainText("1 gal jug");
 });

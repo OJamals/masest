@@ -221,7 +221,7 @@ test("audited shop, proof, and service choices deep-link through the URL", () =>
   assert.match(shop, /new URLSearchParams\(location\.search\)/);
   assert.match(shop, /params\.set\("category", state\.group\)/);
   assert.match(shop, /params\.set\("sort", state\.sort\)/);
-  assert.match(shop, /params\.set\("q", state\.search\)/);
+  assert.match(shop, /params\.set\("q", state\.query\)/);
 
   const proof = read("js/main/engagement.js");
   assert.match(proof, /params\.set\("proof", kind\)/);

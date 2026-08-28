@@ -90,7 +90,7 @@ test("static catalog does not show cart controls without commerce metadata", asy
   });
 });
 
-test("confirmed catalog products hydrate buy controls instead of quote-first CTAs", async () => {
+test("confirmed catalog products hydrate compact quick-add controls instead of quote-first CTAs", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
@@ -100,9 +100,9 @@ test("confirmed catalog products hydrate buy controls instead of quote-first CTA
 
       for (const id of ["watersafe60", "cr2", "sar"]) {
         const card = page.locator(`.shop-card[data-id="${id}"]`);
-        await card.locator("[data-cart-add]").waitFor();
+        await card.locator(`[data-cart-quick-add="${id}"]`).waitFor();
         assert.equal(await card.locator(".shop-card-quote").count(), 0);
-        assert.equal(await card.locator(".commerce-vol").count(), 1);
+        assert.equal(await card.locator(".commerce-vol").count(), 0);
       }
       assert.equal(await page.locator('.shop-card[data-id="eg5050"]').count(), 0);
     } finally {
@@ -111,7 +111,7 @@ test("confirmed catalog products hydrate buy controls instead of quote-first CTA
   });
 });
 
-test("product catalog shows public list pricing and small-pack selectors", async () => {
+test("product catalog shows public list pricing and compact default-pack quick add", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
@@ -121,32 +121,37 @@ test("product catalog shows public list pricing and small-pack selectors", async
 
       const hcr = page.locator('.shop-card[data-id="hcr"]');
       await hcr.locator(".price-main", { hasText: "$28.99" }).waitFor();
-      const optionValues = await hcr.locator(".commerce-vol").evaluate(select =>
-        Array.from(select.options).map(option => option.value)
-      );
-      assert.deepEqual(optionValues, ["HCRCIP-1G", "HCRCIP-25G", "HCRCIP-55D", "HCRCIP-275T"]);
+      const quickAdd = hcr.locator('[data-cart-quick-add="hcr"]');
+      assert.equal(await quickAdd.getAttribute("data-cart-add"), "HCRCIP-1G");
+      assert.match(await quickAdd.getAttribute("aria-label"), /1 gal/i);
+      assert.equal(await hcr.locator(".commerce-vol").count(), 0);
       await page.getByRole("link", { name: /Get product recommendation/i }).waitFor();
       await page.getByRole("link", { name: /Become a distributor/i }).waitFor();
 
       assert.equal(await hcr.locator(".shop-card-quote").count(), 0);
-      // Bulk is quote-only and never rendered as a $0 or stale numeric price.
-      assert.equal(optionValues.includes("HCRCIP-55D"), true);
+      assert.doesNotMatch(await hcr.textContent(), /\$0(?:\.00)?\b/, "bulk must never render as a zero-price card option");
 
-      await hcr.locator(".commerce-vol").selectOption("HCRCIP-55D");
-      await hcr.locator(".price-main", { hasText: "Quote-priced" }).waitFor();
-      assert.equal(await hcr.locator("[data-cart-add]").isVisible(), false);
-      const quoteSwap = hcr.locator(".commerce-quote-swap");
+      await page.goto(`${BASE_URL}/products/hcr.html`, { waitUntil: "domcontentloaded" });
+      const detailBuy = page.locator(".product-hero-buy");
+      const detailSelect = detailBuy.locator(".commerce-vol");
+      await detailSelect.waitFor();
+      const optionValues = await detailSelect.evaluate(select => Array.from(select.options).map(option => option.value));
+      assert.deepEqual(optionValues, ["HCRCIP-1G", "HCRCIP-25G", "HCRCIP-55D", "HCRCIP-275T"]);
+      await detailSelect.selectOption("HCRCIP-55D");
+      await detailBuy.locator(".price-main", { hasText: "Quote-priced" }).waitFor();
+      assert.equal(await detailBuy.locator("[data-cart-add]").isVisible(), false);
+      const quoteSwap = detailBuy.locator(".commerce-quote-swap");
       assert.equal(await quoteSwap.isVisible(), true);
       assert.match(
         await quoteSwap.getAttribute("href"),
         /^\/contact\?type=quote&product=.+&message=.+freight\+quote|^\/contact\?type=quote&product=.+&message=/,
       );
 
-      await hcr.locator(".commerce-vol").selectOption("HCRCIP-25G");
-      await hcr.locator(".price-main", { hasText: "$68.49" }).waitFor();
-      assert.equal(await hcr.locator("[data-cart-add]").isVisible(), true);
+      await detailSelect.selectOption("HCRCIP-25G");
+      await detailBuy.locator(".price-main", { hasText: "$68.49" }).waitFor();
+      assert.equal(await detailBuy.locator("[data-cart-add]").isVisible(), true);
       assert.equal(await quoteSwap.isVisible(), false);
-      assert.equal(await hcr.locator("[data-cart-add]").getAttribute("data-cart-add"), "HCRCIP-25G");
+      assert.equal(await detailBuy.locator("[data-cart-add]").getAttribute("data-cart-add"), "HCRCIP-25G");
     } finally {
       await browser.close();
     }
