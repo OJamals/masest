@@ -1,4 +1,5 @@
 import { buildProductOffers, injectProductOffers } from "../_lib/product-offer-jsonld.js";
+import { productIsPublished } from "../_lib/product-publication.generated.js";
 import { loadPublicProductPricing } from "../_lib/public-product-pricing.js";
 
 const PRODUCT_SKU_ALIASES = new Map([["crhd", "cr-hd"]]);
@@ -10,8 +11,33 @@ function productSkuFromUrl(url) {
   return PRODUCT_SKU_ALIASES.get(routeSku) || routeSku;
 }
 
+async function heldProductNotFoundResponse(context) {
+  const headers = new Headers({
+    "cache-control": "no-store",
+    "content-type": "text/plain; charset=utf-8",
+    "x-robots-tag": "noindex",
+  });
+
+  try {
+    const notFoundUrl = new URL("/404", context.request.url);
+    const asset = await context.next(new Request(notFoundUrl, context.request));
+    for (const [name, value] of asset.headers) headers.set(name, value);
+    headers.delete("content-length");
+    headers.delete("etag");
+    headers.delete("last-modified");
+    headers.set("cache-control", "no-store");
+    headers.set("x-robots-tag", "noindex");
+    return new Response(asset.body, { status: 404, statusText: "Not Found", headers });
+  } catch {
+    return new Response("Not Found", { status: 404, statusText: "Not Found", headers });
+  }
+}
+
 export async function handleProductPage(context, { loadPricing = loadPublicProductPricing } = {}) {
   const productSku = productSkuFromUrl(context.request.url);
+  if (productSku && !productIsPublished(productSku)) {
+    return heldProductNotFoundResponse(context);
+  }
   const response = await context.next();
   if (!productSku || !response.ok || !/\btext\/html\b/i.test(response.headers.get("content-type") || "")) {
     return response;

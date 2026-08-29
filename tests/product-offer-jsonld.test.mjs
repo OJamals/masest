@@ -182,6 +182,32 @@ test("product middleware returns CMS Offer JSON-LD in the initial HTML response"
   assert.equal(response.headers.has("etag"), false);
 });
 
+test("product middleware returns the branded 404 before a held product asset can be served", async () => {
+  let requestedAssetPath = "";
+  const response = await handleProductPage({
+    request: new Request("https://masest.co/products/cr60"),
+    env: {},
+    next: async (request) => {
+      requestedAssetPath = request ? new URL(request.url).pathname : "/products/cr60";
+      return new Response("<!doctype html><title>Page Not Found | MASEST VertKleen</title>", {
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          etag: "404-static-asset-etag",
+        },
+      });
+    },
+  });
+  const html = await response.text();
+
+  assert.equal(response.status, 404);
+  assert.equal(requestedAssetPath, "/404");
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("x-robots-tag"), "noindex");
+  assert.equal(response.headers.has("etag"), false);
+  assert.match(html, /Page Not Found/);
+  assert.doesNotMatch(html, /CR60/);
+});
+
 test("product middleware maps the editorial crhd route to the CMS cr-hd SKU", async () => {
   let loadedSku = "";
   await handleProductPage({
