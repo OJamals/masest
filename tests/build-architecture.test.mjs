@@ -98,6 +98,11 @@ test("Cloudflare build excludes internal research and audit artifacts", () => {
   assert.match(build, /\^audits\?\\\/\//, "generic audit capture folders must not publish");
   assert.match(build, /\^masest\\\.co-audit\\\//, "downloaded site audit captures must not publish");
   assert.match(build, /\^docs\\\/research\\\//, "research sources and generated candidates must not publish");
+  assert.match(
+    build,
+    /vertkleen-website-publish-2026-v4\\\.1\\\.json/,
+    "authoritative pricing source must remain build-time only",
+  );
 });
 
 test("HTML pages link shared stylesheet with a cache-buster", () => {

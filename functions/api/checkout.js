@@ -25,6 +25,7 @@ import {
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
+import { productIsPublished } from '../_lib/product-publication.generated.js';
 import { storefrontPromotionCodesReady } from '../_lib/coupons.js';
 import { stripeRuntimeError, stripeShippingRatesError } from '../_lib/stripe-runtime.js';
 import { expireQuoteOfferIfDue } from '../_lib/quote-offer.js';
@@ -308,7 +309,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   for (const vsku of skus) {
     const v = variantBySku.get(vsku);
     const prod = v?.products;
-    if (!v || v.active === false || v.price == null || !Number.isFinite(Number(v.price)) || !prod || prod.active === false || prod.mode !== 'buy') {
+    if (!v || !productIsPublished(v.product_sku) || v.active === false || v.price == null || !Number.isFinite(Number(v.price)) || !prod || prod.active === false || prod.mode !== 'buy') {
       rejected.push(vsku);
       continue;
     }

@@ -1,5 +1,6 @@
 import { adminClient, json } from "../_lib/supabase.js";
 import { PUBLIC_PRICE_TIERS, publicPricingPayload } from "../_lib/pricing.js";
+import { productIsPublished } from "../_lib/product-publication.generated.js";
 
 export async function onRequestGet({ env }) {
   const sb = adminClient(env);
@@ -30,12 +31,17 @@ export async function onRequestGet({ env }) {
     || servicesResult.error
     || programsResult.error;
   if (error) return json(500, { error: "pricing_unavailable" });
+  const variants = (variantsResult.data || [])
+    .filter((variant) => productIsPublished(variant.product_sku));
+  const publishedVskus = new Set(variants.map((variant) => variant.vsku));
+  const tierCells = (tiersResult.data || [])
+    .filter((cell) => publishedVskus.has(cell.vsku));
 
   return json(
     200,
     publicPricingPayload({
-      variants: variantsResult.data,
-      tierCells: tiersResult.data,
+      variants,
+      tierCells,
       services: servicesResult.data,
       programs: programsResult.data,
     }),

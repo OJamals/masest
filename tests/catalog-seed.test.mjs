@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
-import { CATALOG_ORDER } from "../js/main/catalog-data.js";
+import { CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS } from "../js/main/catalog-data.js";
 
 const readSite = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const catalog = () => JSON.parse(readSite("data/catalog.seed.json"));
@@ -78,6 +78,37 @@ test("public catalog counts match the canonical product order", () => {
   assert.match(
     readSite("index.html"),
     new RegExp(`<div class="big">${count}</div><div class="lbl">Buyable VertKleen products</div>`),
+  );
+});
+
+test("CR60 publication hold removes public commerce while retaining authoritative pricing", () => {
+  const data = catalog();
+  const product = data.products.find((row) => row.slug === "cr60");
+  const variants = data.product_variants.filter((row) => row.product_slug === "cr60");
+  const publication = JSON.parse(readSite("data/vertkleen-website-publish-2026-v4.1.json"));
+  const pricedVariant = publication.unit_variants.find((row) => row.sku === "CR60-1G");
+
+  assert.equal(CATALOG_ORDER.includes("cr60"), false);
+  assert.equal(PRODUCTS.cr60, undefined);
+  assert.equal(PRODUCT_CATALOG_COPY.cr60, undefined);
+  assert.equal(product?.public_visible, false);
+  assert.equal(variants.length, 10);
+  assert.ok(variants.every((row) => row.public_visible === false));
+  assert.equal(pricedVariant?.online_price, 20.49);
+  assert.equal(existsSync(new URL("../products/cr60.html", import.meta.url)), false);
+  assert.doesNotMatch(readSite("sitemap.xml"), /\/products\/cr60(?:<|\/)/);
+  assert.match(
+    readSite("supabase/seed.sql"),
+    /\('cr60','VertKleen CR60','water','0-0-0','buy',false,true,false,16\)/,
+  );
+  assert.match(
+    readSite("supabase/variants_seed.sql"),
+    /\('CR60-1G','cr60','1 gal',1,'industrial','unit','VertKleen CR60',1,null,false,true,null,false,/,
+  );
+  assert.equal(
+    existsSync(new URL("../functions/_lib/product-publication.generated.js", import.meta.url)),
+    true,
+    "runtime publication policy must be generated from the catalog hold",
   );
 });
 

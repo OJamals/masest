@@ -131,22 +131,6 @@ export const PRODUCTS = {
       { label: "Titration / Sigma Test Data", file: "docs/sds/watersafe60-titration-test.pdf" }
     ]
   },
-  cr60: {
-    name: "VertKleen CR60",
-    cat: "water",
-    replaces: "Cleaning for potable-water systems",
-    hmis: "0-0-0",
-    icon: "ph-drop",
-    image: "",
-    application_image: "img/representative/applications/watersafe60-water-program-v1.webp",
-    uses: [
-      "Potable-water system cleaning",
-      "Documented site cleaning procedures",
-      "Controlled rinse and return-to-service work",
-      "Water-system maintenance programs"
-    ],
-    docs: []
-  },
   purgo: {
     name: "Purgo",
     cat: "water",
@@ -412,7 +396,7 @@ pg100: {
 export const CATALOG_ORDER = [
   "cr", "cr2", "hcr", "hcr-t16", "descaler", "crhd", "cr-hd-low-foam",
   "neutral", "multiwash", "lam3", "purgo", "alumibrite", "torque", "sar",
-  "watersafe60", "cr60"
+  "watersafe60"
 ];
 
 // Catalog UI groupings (curated, not the raw `cat` field) - drive the category
@@ -420,7 +404,7 @@ export const CATALOG_ORDER = [
 export const CATALOG_GROUPS = [
   { key: "descale", label: "Descaling & Rust", ids: ["hcr", "hcr-t16", "descaler", "sar"] },
   { key: "degrease", label: "Degreasers", ids: ["cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash"] },
-  { key: "water", label: "Water Treatment", ids: ["cr2", "purgo", "watersafe60", "cr60"] },
+  { key: "water", label: "Water Treatment", ids: ["cr2", "purgo", "watersafe60"] },
   { key: "exterior", label: "Exterior & Marine", ids: ["lam3", "alumibrite", "torque"] }
 ];
 
@@ -524,17 +508,6 @@ export const PRODUCT_CATALOG_COPY = {
     fits: ["cooling towers", "closed loops", "campuses", "hospitals"],
     proof: "NSF/ANSI/CAN 60 certification, listed uses, and titration data",
     sample_cta: "Try a free WaterSafe60 sample"
-  },
-  cr60: {
-    job: "Potable-water system cleaning",
-    platform: "NSF 60 VertKleen cleaner",
-    summary: "Clean potable-water systems with an NSF 60 certified VertKleen product.",
-    mechanism: "CR60 is selected as the cleaner inside a documented potable-water-system cleaning step.",
-    operator_advantage: "Keep product selection, dilution, contact time, rinse, and return-to-service criteria inside one documented, site-specific procedure.",
-    quote_cta: "Plan my potable-water cleaning job",
-    sample_cta: "Ask about a CR60 trial size",
-    fits: ["potable-water systems", "documented cleaning", "site-reviewed use", "controlled return to service"],
-    proof: "Workbook-listed NSF 60 status; request the current product documents before use"
   },
   purgo: {
     job: "Organic buildup and recurring odor",

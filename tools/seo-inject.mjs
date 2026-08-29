@@ -11,7 +11,7 @@
  * tracked snapshot to bake static AggregateRating JSON-LD for product/service
  * pages, same as it already reads data/content/page-meta.json for CMS overrides.
  */
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname } from "node:path";
@@ -40,6 +40,9 @@ import { organizationJsonLd } from "./company-identity.mjs";
 import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
+const GENERATED_PRODUCT_FILES = new Set(
+  CATALOG_SEED.products.map((product) => `${product.slug}.html`),
+);
 const SPECIALIZED_CONTENT = specializedContentDeliveries();
 const BLOG_DELIVERY = SPECIALIZED_CONTENT.find(({ generator }) => generator === "blog_pages");
 const PAGE_META_DELIVERY = SPECIALIZED_CONTENT.find(({ generator }) => generator === "page_metadata");
@@ -949,6 +952,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
 async function writeProductPages(reviewsSnapshot) {
   let changed = 0;
   await mkdir("products", { recursive: true });
+  const publicFiles = new Set(PRODUCT_IDS.map((id) => `${id}.html`));
   for (const id of PRODUCT_IDS) {
     const file = `products/${id}.html`;
     const html = productPage(id, PRODUCTS[id], reviewsSnapshot);
@@ -959,6 +963,14 @@ async function writeProductPages(reviewsSnapshot) {
       changed++;
       console.log("updated", file);
     }
+  }
+  for (const entry of await readdir("products", { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".html") || publicFiles.has(entry.name)) continue;
+    if (!GENERATED_PRODUCT_FILES.has(entry.name)) continue;
+    const file = `products/${entry.name}`;
+    await unlink(file);
+    changed++;
+    console.log("removed", file);
   }
   return changed;
 }

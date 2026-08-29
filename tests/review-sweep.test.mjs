@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { isReminderDue } from "../functions/_lib/reviews.js";
-import { onRequestPost } from "../functions/api/admin/review-reminders.js";
+import { onRequestPost, reviewableItems } from "../functions/api/admin/review-reminders.js";
 
 const NOW = Date.parse("2026-07-08T00:00:00Z");
 const daysAgo = (d) => new Date(NOW - d * 86400000).toISOString();
@@ -53,4 +53,16 @@ test("review reminder endpoint requires the cron shared secret", async () => {
   });
   assert.equal(wrong.status, 401);
   assert.deepEqual(await wrong.json(), { error: "unauthorized" });
+});
+
+test("review reminders omit held products and deduplicate published products", () => {
+  assert.deepEqual(reviewableItems([
+    { sku: "CR60-1G", product_sku: "cr60", name: "CR60" },
+    { sku: "CR60-25G", name: "CR60 legacy line" },
+    { sku: "VK-CRHD-1G", product_sku: "cr-hd", name: "CR-HD" },
+    { sku: "VK-CRHD-5G", product_sku: "cr-hd", name: "CR-HD 5 gal" },
+    { sku: "", product_sku: "", name: "Invalid" },
+  ]), [
+    { sku: "cr-hd", name: "CR-HD" },
+  ]);
 });

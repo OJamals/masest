@@ -3,6 +3,7 @@ import { adminClient, json } from '../_lib/supabase.js';
 import { CheckoutFulfillmentError } from '../_lib/checkout-fulfillment-contract.js';
 import { quoteCheckoutRates } from '../_lib/checkout-shipping.js';
 import { normalizeCartQuantities } from '../_lib/order-shape.js';
+import { productIsPublished } from '../_lib/product-publication.generated.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 
@@ -14,7 +15,7 @@ async function defaultLoadVariants(env, skus) {
     .select('vsku,product_sku,label,price,currency,active,marketing_name,shipping_weight_lb,shipping_length_in,shipping_width_in,shipping_height_in,products(name,mode,active)')
     .in('vsku', skus);
   if (error) throw error;
-  return data || [];
+  return (data || []).filter((variant) => productIsPublished(variant.product_sku));
 }
 
 export async function handleShippingRates({ request, env }, dependencies = {}) {

@@ -50,8 +50,9 @@ const DENY = [
   /^data\/industry-applications\.json$/,
   /^img\/clients\//,
   /^img\/proof\/carib-brewery-table\.webp$/i,
-  // Internal catalog bootstrap sources — never public client assets.
+  // Internal catalog and pricing sources — never public client assets.
   /^data\/(catalog|products)\.seed\.json$/,
+  /^data\/vertkleen-website-publish-2026-v4\.1\.json$/,
 ];
 
 rmSync(OUT, { recursive: true, force: true });

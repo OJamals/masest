@@ -195,6 +195,43 @@ test('paid checkout executes Request/env handler and creates Stripe session', as
   assert.deepEqual(calls, ['variants.read', 'shipping.read', 'stripe.session.create']);
 });
 
+test('publication-held product is rejected even when a stale DB row remains active', async () => {
+  const calls = [];
+  const db = checkoutDb(calls);
+  const baseFrom = db.from.bind(db);
+  db.from = (table) => {
+    if (table !== 'product_variants') return baseFrom(table);
+    return {
+      select() { return this; },
+      async in() {
+        calls.push('variants.read');
+        return {
+          data: [{ ...variant, vsku: 'CR60-1G', product_sku: 'cr60' }],
+          error: null,
+        };
+      },
+    };
+  };
+  const handler = createCheckoutHandler({
+    adminClient: () => db,
+    tierForRequest: async () => ({ tier: 'retail' }),
+    userFromRequest: async () => ({ user: null }),
+    createStripe: () => { throw new Error('Stripe must not run'); },
+  });
+
+  const result = await responseJson(await handler({
+    request: jsonRequest('https://masest.test/api/checkout', {
+      cart: [{ sku: 'CR60-1G', qty: 1 }],
+    }),
+    env: { STRIPE_SECRET_KEY: 'sk_test', STRIPE_SHIPPING_RATE_IDS: 'shr_ground', APP_URL: 'https://masest.test' },
+  }));
+
+  assert.equal(result.status, 409);
+  assert.equal(result.body.error, 'not_purchasable');
+  assert.deepEqual(result.body.skus, ['CR60-1G']);
+  assert.deepEqual(calls, ['variants.read']);
+});
+
 test('paid checkout verifies a signed carrier selection and bypasses legacy fixed rates', async () => {
   const calls = [];
   let sessionParams;

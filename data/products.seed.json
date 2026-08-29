@@ -7,6 +7,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 1
   },
   {
@@ -17,6 +18,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 2
   },
   {
@@ -27,6 +29,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 3
   },
   {
@@ -37,6 +40,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 4
   },
   {
@@ -47,6 +51,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 5
   },
   {
@@ -57,6 +62,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 6
   },
   {
@@ -67,6 +73,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 7
   },
   {
@@ -77,6 +84,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 8
   },
   {
@@ -87,6 +95,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 9
   },
   {
@@ -97,6 +106,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 10
   },
   {
@@ -107,6 +117,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 11
   },
   {
@@ -117,6 +128,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 12
   },
   {
@@ -127,6 +139,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 13
   },
   {
@@ -137,6 +150,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 14
   },
   {
@@ -147,6 +161,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": true,
     "sort": 15
   },
   {
@@ -157,6 +172,7 @@
     "mode": "buy",
     "hazmat": false,
     "taxable": true,
+    "active": false,
     "sort": 16
   }
 ]

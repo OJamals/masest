@@ -1,7 +1,9 @@
 import { publicPricingPayload } from "./pricing.js";
+import { productIsPublished } from "./product-publication.generated.js";
 import { adminClient } from "./supabase.js";
 
 export async function loadPublicProductPricing(env, productSku) {
+  if (!productIsPublished(productSku)) return { data: null, error: { code: "product_unpublished" } };
   const sb = adminClient(env);
   const variantsResult = await sb
     .from("product_variants")

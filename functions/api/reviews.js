@@ -2,6 +2,7 @@
 import { adminClient, userFromRequest, json, readBody } from '../_lib/supabase.js';
 import { rateLimit, clientIp } from '../_lib/ratelimit.js';
 import { klaviyoTrack } from '../_lib/klaviyo.js';
+import { productIsPublished } from '../_lib/product-publication.generated.js';
 import {
   validateReviewInput, aggregateStats, findVerifiedOrderId, verifyReviewToken,
 } from '../_lib/reviews.js';
@@ -23,6 +24,7 @@ export async function onRequestGet({ request, env }) {
   const kind = url.searchParams.get('kind') === 'service' ? 'service' : 'product';
   const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
   if (!sku) return json(400, { error: 'missing_sku' });
+  if (kind === 'product' && !productIsPublished(sku)) return json(404, { error: 'not_found' });
 
   const sb = adminClient(env);
   // All approved rows for the aggregate (low volume); page the returned list.
@@ -53,6 +55,7 @@ export async function onRequestPost({ request, env }) {
   const v = validateReviewInput(body || {});
   if (!v.ok) return json(400, { error: v.error });
   const { rating, sku, kind, title, body: text } = v.value;
+  if (kind === 'product' && !productIsPublished(sku)) return json(404, { error: 'not_found' });
 
   const sb = adminClient(env);
   let orderId = null;

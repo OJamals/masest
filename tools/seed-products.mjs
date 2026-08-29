@@ -12,6 +12,9 @@ if (!url || !key) {
 
 const catalog = JSON.parse(await readFile(new URL('../data/catalog.seed.json', import.meta.url), 'utf8'));
 const now = new Date().toISOString();
+const publishedProducts = new Map(
+  catalog.products.map((product) => [product.slug, product.public_visible !== false]),
+);
 
 const products = catalog.products.map((p) => ({
   sku: p.slug,
@@ -22,7 +25,7 @@ const products = catalog.products.map((p) => ({
   hazmat: p.hazmat,
   taxable: p.taxable,
   currency: 'usd',
-  active: p.active,
+  active: Boolean(p.active) && publishedProducts.get(p.slug) !== false,
   sort: p.sort,
   updated_at: now,
 }));
@@ -46,7 +49,9 @@ const variants = catalog.product_variants.map((v) => ({
   shipping_height_in: v.shipping_height_in ?? null,
   pricing_source_version: v.pricing_source_version,
   currency: 'usd',
-  active: v.active,
+  active: Boolean(v.active)
+    && v.public_visible !== false
+    && publishedProducts.get(v.product_slug) !== false,
   sort: v.sort,
 }));
 

@@ -118,7 +118,6 @@ test("product pages show job scenes outside proof", () => {
     sar: "sar-application-engineering-v1.webp",
     torque: "torque-contained-fleet-wash-v1.webp",
     watersafe60: "watersafe60-water-program-v1.webp",
-    cr60: "watersafe60-water-program-v1.webp",
   };
 
   assert.deepEqual(Object.keys(applicationImages).sort(), [...CATALOG_ORDER].sort());
@@ -207,7 +206,7 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
         };
       });
 
-      assert.equal(layout.total, 16, "expected all 16 workbook-listed product cards in the grid");
+      assert.equal(layout.total, CATALOG_ORDER.length, "expected every published product card in the grid");
       assert.ok(layout.perRow >= 4 && layout.perRow <= 5, `expected 4-5 cards/row, got ${layout.perRow}`);
       assert.ok(layout.allLink, "every card should be a clickable product link");
       assert.equal(layout.nestedInteractive, false, "cart buttons should not be nested inside links");
@@ -341,7 +340,6 @@ test("all public products route quote actions by buyer job", () => {
     lam3: "Test LAM3 on my exterior",
     alumibrite: "Test AlumiBrite on my aluminum",
     torque: "Try Torque on my vehicle or boat",
-    cr60: "Plan my potable-water cleaning job",
   };
   assert.deepEqual(Object.keys(expected).sort(), [...CATALOG_ORDER].sort());
   for (const [id, label] of Object.entries(expected)) {
@@ -400,7 +398,7 @@ test("catalog category controls filter the product grid", async () => {
 
       await page.click('.shop-chip[data-group="water"]');
       const water = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
-      assert.deepEqual(water, ["cr2", "purgo", "watersafe60", "cr60"], "category chip should filter the grid");
+      assert.deepEqual(water, ["cr2", "purgo", "watersafe60"], "category chip should filter the grid");
 
       const glycolChip = await page.$('.shop-chip[data-group="glycol"]');
       assert.equal(glycolChip, null, "glycol chip should be removed from the confirmed price-list catalog");

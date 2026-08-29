@@ -4,6 +4,7 @@ import { adminClient, json, readBody, sendEmail } from '../../_lib/supabase.js';
 import { reviewToken, REMINDER_DELAY_DAYS } from '../../_lib/reviews.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
+import { productIsPublished } from '../../_lib/product-publication.generated.js';
 
 const reviewSecret = (env) => env.REVIEW_TOKEN_SECRET || env.EMAIL_UNSUB_SECRET || '';
 const enc = encodeURIComponent;
@@ -14,6 +15,18 @@ function reminderHtml(links) {
 <p>A quick rating helps other buyers — it takes under a minute:</p>
 <ul>${rows}</ul>
 <p style="color:#667">You're receiving this because you purchased from MASEST. This is the only reminder we'll send.</p>`;
+}
+
+export function reviewableItems(items) {
+  const seen = new Set();
+  const result = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    const sku = String(item?.product_sku || item?.sku || '').trim().toLowerCase();
+    if (!sku || seen.has(sku) || !productIsPublished(sku)) continue;
+    seen.add(sku);
+    result.push({ sku, name: item.name || sku });
+  }
+  return result;
 }
 
 export async function onRequestPost({ request, env }) {
@@ -42,20 +55,15 @@ export async function onRequestPost({ request, env }) {
     const secret = reviewSecret(env);
     for (const o of orders || []) {
       const email = String(o.customer_email || '').toLowerCase();
-      const items = Array.isArray(o.order_items) ? o.order_items : [];
-      const seen = new Set();
       const links = [];
-      for (const it of items) {
+      for (const item of reviewableItems(o.order_items)) {
         // Reviews key on the base product sku; order_items.sku is the variant sku for a
         // normal checkout. Token + link + dedupe must all use product_sku so the link
         // the buyer clicks matches what /api/reviews verifies.
-        const psku = it?.product_sku || it?.sku;
-        if (!psku || seen.has(psku)) continue;
-        seen.add(psku);
-        const tok = await reviewToken({ orderId: o.id, sku: psku, email }, secret);
+        const tok = await reviewToken({ orderId: o.id, sku: item.sku, email }, secret);
         links.push({
-          name: it.name || psku,
-          url: `${appUrl}/review.html?order=${enc(o.id)}&sku=${enc(psku)}&email=${enc(email)}&token=${tok}`,
+          name: item.name,
+          url: `${appUrl}/review.html?order=${enc(o.id)}&sku=${enc(item.sku)}&email=${enc(email)}&token=${tok}`,
         });
       }
       // Stamp first so a send failure or suppression never re-queues this order.
