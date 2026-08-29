@@ -216,6 +216,37 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
   });
 });
 
+test("single product search result keeps a catalog-width card on desktop", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
+    try {
+      await gotoDomReady(page, "products.html", "#shopSearch");
+      await page.locator("#shopSearch").fill("descaler");
+      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 1);
+
+      const layout = await page.evaluate(() => {
+        const grid = document.querySelector(".shop-grid");
+        const card = grid?.querySelector(".shop-card");
+        return {
+          cardWidth: card?.getBoundingClientRect().width || 0,
+          gridWidth: grid?.getBoundingClientRect().width || 0,
+          columns: getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length,
+        };
+      });
+
+      assert.ok(layout.gridWidth >= 1000, `expected desktop shelf, got ${layout.gridWidth}px`);
+      assert.ok(layout.columns >= 4, `expected preserved shelf tracks, got ${layout.columns}`);
+      assert.ok(
+        layout.cardWidth >= 210 && layout.cardWidth <= 320,
+        `expected catalog-width card, got ${layout.cardWidth}px`,
+      );
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("products page thumbnails use the blue media stage", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });

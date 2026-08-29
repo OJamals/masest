@@ -5539,7 +5539,7 @@ body .page-hero .product-shot {
 }
 
 .shop-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 246px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 246px), 1fr));
   gap: 22px;
   align-items: stretch;
 }
