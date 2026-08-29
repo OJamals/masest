@@ -568,4 +568,4 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { loadPricingData } from "./pricing-data.js?v=20260827a";
+import { loadPricingData } from "./pricing-data.js?v=20260829b";

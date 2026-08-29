@@ -1,8 +1,8 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260827a";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260829b";
 import { smoothPref } from "./engagement.js";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260827a";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260829b";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -628,7 +628,7 @@ export function catalogCard(id, eager = false) {
     : bulkPriceHTML(id);
   const quickCommerce = quoteFirst
     ? ""
-    : `<span class="shop-card-quick-commerce" data-commerce-action="${id}" data-commerce-size="quick"></span>`;
+    : `<span class="shop-card-quick-commerce" data-commerce-action="${id}" data-commerce-size="quick" data-customer-chat-obstruction></span>`;
   const decision = CATALOG_ORDER.includes(id) ? catalogDecisionHTML(id, copy) : "";
   return `
     <article class="shop-card" data-id="${id}">

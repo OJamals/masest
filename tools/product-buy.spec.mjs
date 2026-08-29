@@ -213,3 +213,48 @@ test("catalog decision cues stay compact and actionable at 390px", async ({ page
   expect(layout.decisionInsideCard).toBe(true);
   expect(layout.actionBeforeDecision).toBe(true);
 });
+
+test("mobile catalog quick add stays clear of customer chat", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("**/api/products", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [{
+        sku: "hcr",
+        name: "VertKleen CIP HCR",
+        mode: "buy",
+        active: true,
+        product_variants: [
+          { vsku: "hcr-1", label: "1 gal bottle", gallons: 1, price: 17.3, currency: "usd", active: true, sort: 1 },
+        ],
+      }],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/products.html?q=hcr#catalog`, { waitUntil: "networkidle" });
+  const quickAdd = page.locator('[data-cart-quick-add="hcr"]');
+  const obstruction = quickAdd.locator("xpath=ancestor::*[contains(@class, 'shop-card-quick-commerce')]");
+  const chat = page.locator("#customerChat .customer-chat__toggle");
+  await expect(quickAdd).toBeVisible();
+  await expect(chat).toBeVisible();
+
+  await page.evaluate(() => {
+    const quick = document.querySelector('[data-cart-quick-add="hcr"]').getBoundingClientRect();
+    const launcher = document.querySelector("#customerChat .customer-chat__toggle").getBoundingClientRect();
+    document.documentElement.style.scrollBehavior = "auto";
+    window.scrollBy({ top: quick.top - launcher.top, behavior: "instant" });
+  });
+
+  const overlapsChat = async () => {
+    const [quickBox, chatBox] = await Promise.all([quickAdd.boundingBox(), chat.boundingBox()]);
+    if (!quickBox || !chatBox) return true;
+    return quickBox.x < chatBox.x + chatBox.width
+      && quickBox.x + quickBox.width > chatBox.x
+      && quickBox.y < chatBox.y + chatBox.height
+      && quickBox.y + quickBox.height > chatBox.y;
+  };
+
+  await expect.poll(overlapsChat).toBe(false);
+  await expect(obstruction).toHaveAttribute("data-customer-chat-obstruction", "");
+});
