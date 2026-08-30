@@ -8,6 +8,7 @@ import {
   messagePage,
   recordSupportMessage,
   SUPPORT_PAGE_SIZE,
+  supportThreadListStatus,
   supportThreadPatch,
 } from '../../_lib/support-messages.js';
 
@@ -58,10 +59,15 @@ export async function onRequest({ request, env }) {
       if (unansweredResult.error) return internalServerError('admin.messages.summary_unanswered', unansweredResult.error);
       return json(200, { summary: { open: openResult.count || 0, unanswered: unansweredResult.count || 0 } });
     }
-    const { data, error } = await sb.from('companies')
+    const listStatus = supportThreadListStatus(params.get('status'));
+    if (!listStatus) return json(400, { error: 'invalid_status' });
+    let query = sb.from('companies')
       .select('id,name,support_thread_status,support_thread_completed_at,support_last_message_at,support_last_message_body,support_last_sender_role')
-      .not('support_last_message_at', 'is', null)
-      .neq('support_thread_status', 'complete')
+      .not('support_last_message_at', 'is', null);
+    query = listStatus === 'complete'
+      ? query.eq('support_thread_status', 'complete')
+      : query.neq('support_thread_status', 'complete');
+    const { data, error } = await query
       .order('support_last_message_at', { ascending: false })
       .limit(500);
     if (error) return internalServerError('admin.messages.thread_list', error);
@@ -72,11 +78,13 @@ export async function onRequest({ request, env }) {
       last_at: company.support_last_message_at,
       status: company.support_thread_status || 'open',
       completed_at: company.support_thread_completed_at || null,
-      unanswered: company.support_last_sender_role === 'buyer',
+      unanswered: listStatus !== 'complete' && company.support_last_sender_role === 'buyer',
     }));
     return json(200, {
       threads,
-      summary: { open: threads.length, unanswered: threads.filter((thread) => thread.unanswered).length },
+      summary: listStatus === 'complete'
+        ? { resolved: threads.length }
+        : { open: threads.length, unanswered: threads.filter((thread) => thread.unanswered).length },
     });
   }
 

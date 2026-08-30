@@ -100,7 +100,7 @@ const SUPPORT_PREFS = [
     "Email me when a buyer follows up while my support drawer is closed or inactive."],
 ];
 
-export function initAdminSupport({ auth, root = "", staff = null } = {}) {
+export function initAdminSupport({ auth, root = "", staff = null, openContext = null } = {}) {
   // One console per document. admin.html used to ship its own static drawer +
   // launcher and this bailed there; both surfaces now mount this same console.
   if (document.getElementById("adminSupportConsole") || !auth?.api) return null;
@@ -108,7 +108,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/admin-support.css?v=20260830e`;
+    stylesheet.href = `${root}css/admin-support.css?v=20260830f`;
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }
@@ -127,6 +127,10 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
             <button type="button" data-support-settings-toggle aria-label="Customer support settings" title="Customer support settings" aria-expanded="false" aria-controls="siteSupportSettings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg></button>
           </div>
         </header>
+        <div class="site-support__filters" role="group" aria-label="Conversation status">
+          <button type="button" data-support-filter="open" aria-pressed="true">Open</button>
+          <button type="button" data-support-filter="complete" aria-pressed="false">Resolved</button>
+        </div>
         <div class="site-support__search">
           <label for="siteSupportSearch">Search customer chats</label>
           <input id="siteSupportSearch" name="support_search" type="search" autocomplete="off" placeholder="Customer or recent message…" aria-controls="siteSupportThreads" data-support-search>
@@ -164,6 +168,8 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   const close = shell.querySelector("[data-support-close]");
   const launcherIcon = launcher.querySelector("i");
   const list = shell.querySelector(".site-support__threads");
+  const listTitle = shell.querySelector("#siteSupportTitle");
+  const filters = shell.querySelector(".site-support__filters");
   const search = shell.querySelector("[data-support-search]");
   const searchResults = shell.querySelector("[data-support-results]");
   const view = shell.querySelector(".site-support__conversation-body");
@@ -175,8 +181,10 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   const back = shell.querySelector("[data-support-back]");
   const viewLabel = shell.querySelector("[data-support-view-label]");
   let prefsLoaded = false;
+  let threadFilter = "open";
   let threads = [];
   let threadsLoaded = false;
+  const drafts = new Map();
   let selected = null;
   let messages = [];
   let page = { has_more: false, next_before: null };
@@ -286,30 +294,57 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   };
 
   const renderThreads = () => {
+    const resolvedView = threadFilter === "complete";
     const ordered = [...threads].sort((a, b) => Number(b.unanswered) - Number(a.unanswered) || String(b.last_at).localeCompare(String(a.last_at)));
     const visible = filterSupportThreads(ordered, search.value);
     const unanswered = ordered.filter((thread) => thread.unanswered).length;
-    renderSummary({ open: ordered.length, unanswered });
+    listTitle.textContent = resolvedView ? "Resolved chats" : "Open chats";
+    list.setAttribute("aria-label", resolvedView ? "Resolved customer chats" : "Open customer chats");
+    if (resolvedView) summary.textContent = `${ordered.length} resolved ${ordered.length === 1 ? "chat" : "chats"}`;
+    else renderSummary({ open: ordered.length, unanswered });
     if (!ordered.length) {
-      searchResults.textContent = "No open chats";
+      searchResults.textContent = resolvedView ? "No resolved chats" : "No open chats";
       selected = null;
       drawer.dataset.threadSelected = "false";
       view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
-      list.innerHTML = '<div class="site-support__empty"><i class="ph ph-lifebuoy" aria-hidden="true"></i><div><strong>Inbox clear</strong><p>No open customer conversations.</p></div></div>';
+      list.innerHTML = resolvedView
+        ? '<div class="site-support__empty"><i class="ph ph-check-circle" aria-hidden="true"></i><div><strong>No resolved chats</strong><p>Resolved conversations appear here for later review.</p></div></div>'
+        : '<div class="site-support__empty"><i class="ph ph-lifebuoy" aria-hidden="true"></i><div><strong>Inbox clear</strong><p>No open customer conversations.</p></div></div>';
       return;
     }
     const hasQuery = search.value.trim().length > 0;
     searchResults.textContent = hasQuery
       ? (visible.length ? `${visible.length} of ${ordered.length} chats shown` : "No chats match your search")
-      : `${ordered.length} open ${ordered.length === 1 ? "chat" : "chats"}`;
+      : `${ordered.length} ${resolvedView ? "resolved" : "open"} ${ordered.length === 1 ? "chat" : "chats"}`;
     if (!visible.length) {
       list.innerHTML = '<div class="site-support__empty"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><div><strong>No matching chats</strong><p>Try a customer name or words from the latest message.</p></div></div>';
       return;
     }
     list.innerHTML = visible.map((thread) => {
-      const badges = `${thread.status === "escalated" ? "<em>Escalated</em>" : ""}${thread.unanswered ? "<b>Needs reply</b>" : ""}`;
-      return `<button type="button" class="site-support__thread${thread.unanswered ? " is-unanswered" : ""}${thread.company_id === selected?.company_id ? " is-selected" : ""}" data-company-id="${escapeHtml(thread.company_id)}" aria-pressed="${thread.company_id === selected?.company_id}"><span><strong>${escapeHtml(thread.company_name || "Customer")}</strong><small>${escapeHtml((thread.last_body || "").slice(0, 90))}</small></span>${badges ? `<span class="site-support__meta">${badges}</span>` : ""}</button>`;
+      const hasDraft = Boolean(drafts.get(String(thread.company_id))?.trim());
+      const badges = `${thread.status === "escalated" ? "<em>Escalated</em>" : ""}${hasDraft ? "<em>Draft</em>" : ""}${thread.unanswered ? "<b>Needs reply</b>" : ""}`;
+      return `<button type="button" class="site-support__thread${thread.unanswered ? " is-unanswered" : ""}${thread.company_id === selected?.company_id ? " is-selected" : ""}" data-company-id="${escapeHtml(thread.company_id)}" aria-pressed="${thread.company_id === selected?.company_id}"><span><strong>${escapeHtml(thread.company_name || "Customer")}</strong><small>${escapeHtml((thread.last_body || "").slice(0, 90))}</small></span><span class="site-support__meta"><time datetime="${escapeHtml(thread.last_at)}">${escapeHtml(date(thread.last_at))}</time>${badges}</span></button>`;
     }).join("");
+  };
+
+  const setThreadFilter = async (next) => {
+    if (!['open', 'complete'].includes(next) || next === threadFilter) return;
+    threadRequestId += 1;
+    threadsRequestId += 1;
+    threadFilter = next;
+    threads = [];
+    threadsLoaded = false;
+    selected = null;
+    messages = [];
+    page = { has_more: false, next_before: null };
+    search.value = "";
+    drawer.dataset.threadSelected = "false";
+    filters.querySelectorAll("[data-support-filter]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.supportFilter === threadFilter));
+    });
+    listTitle.textContent = threadFilter === "complete" ? "Resolved chats" : "Open chats";
+    view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
+    await loadThreads();
   };
 
   const clearThreadSelection = () => {
@@ -326,22 +361,74 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
 
   const renderConversation = () => {
     if (!selected) return;
+    const companyId = String(selected.company_id);
     const resolved = selected.status === "complete";
     const escalated = selected.status === "escalated";
-    view.innerHTML = `<header class="site-support__conversation-head"><div><p>${resolved ? "Resolved" : escalated ? "Escalated" : "Open"} conversation</p><h3>${escapeHtml(selected.company_name || "Customer")}</h3></div>${canWrite ? `<div class="site-support__controls">${resolved ? '<button type="button" data-status="open">Reopen</button>' : `<button type="button" data-status="complete">Mark resolved</button><button type="button" data-status="${escalated ? "open" : "escalated"}">${escalated ? "Return to open" : "Escalate"}</button>`}</div>` : ""}</header>${page.has_more ? '<button class="site-support__older" type="button">Load earlier messages</button>' : ""}<div class="site-support__messages">${messages.map((message) => `<article data-role="${escapeHtml(message.sender_role)}"><p>${escapeHtml(message.body)}</p><time datetime="${escapeHtml(message.created_at)}">${message.sender_role === "staff" ? "Team" : "Customer"} · ${escapeHtml(date(message.created_at))}</time></article>`).join("")}</div>${canWrite && !resolved ? '<form class="site-support__reply"><label for="siteSupportReply">Reply</label><textarea id="siteSupportReply" name="support_message" autocomplete="off" maxlength="4000" required></textarea><div><span role="status" aria-live="polite"></span><button type="submit">Send reply</button></div></form>' : '<p class="site-support__notice">' + (resolved ? "Reopen this conversation before replying." : "Your staff role has read-only access.") + "</p>"}`;
+    const linkedOrderId = [...messages].reverse().find((message) => message.order_id)?.order_id || null;
+    const contextLinks = `<nav class="site-support__context" aria-label="Customer context">
+      <a href="${escapeHtml(`${root}admin.html#companies`)}" data-support-context="company" data-context-id="${escapeHtml(companyId)}"><i class="ph ph-buildings" aria-hidden="true"></i>View account</a>
+      ${linkedOrderId ? `<a href="${escapeHtml(`${root}admin.html#orders`)}" data-support-context="order" data-context-id="${escapeHtml(linkedOrderId)}"><i class="ph ph-package" aria-hidden="true"></i>View linked order</a>` : ""}
+    </nav>`;
+    const controls = canWrite
+      ? `<div class="site-support__controls">${resolved
+        ? '<button type="button" data-status="open">Reopen</button>'
+        : `<button type="button" data-status="complete">Mark resolved</button><button type="button" data-status="${escalated ? "open" : "escalated"}">${escalated ? "Return to open" : "Escalate"}</button>`}</div>`
+      : "";
+    const messageList = messages.map((message) => `<article data-role="${escapeHtml(message.sender_role)}"><p>${escapeHtml(message.body)}</p><time datetime="${escapeHtml(message.created_at)}">${message.sender_role === "staff" ? "Team" : "Customer"} · ${escapeHtml(date(message.created_at))}</time></article>`).join("");
+    const reply = canWrite && !resolved
+      ? '<form class="site-support__reply"><label for="siteSupportReply">Reply <small id="siteSupportReplyHint">⌘/Ctrl + Enter sends</small></label><textarea id="siteSupportReply" name="support_message" autocomplete="off" maxlength="4000" aria-describedby="siteSupportReplyHint" required></textarea><div><span role="status" aria-live="polite"></span><button type="submit">Send reply</button></div></form>'
+      : '<p class="site-support__notice">' + (resolved ? "Reopen this conversation before replying." : "Your staff role has read-only access.") + "</p>";
+    view.innerHTML = `<header class="site-support__conversation-head"><div><p>${resolved ? "Resolved" : escalated ? "Escalated" : "Open"} conversation</p><h3>${escapeHtml(selected.company_name || "Customer")}</h3></div>${controls}</header>${contextLinks}${page.has_more ? '<button class="site-support__older" type="button">Load earlier messages</button>' : ""}<div class="site-support__messages">${messageList}</div>${reply}`;
+
+    view.querySelectorAll("[data-support-context]").forEach((link) => link.addEventListener("click", async (event) => {
+      if (typeof openContext !== "function") return;
+      event.preventDefault();
+      setOpen(false, { restoreFocus: false });
+      try {
+        const result = await openContext({ type: link.dataset.supportContext, id: link.dataset.contextId });
+        if (result?.cancelled) setOpen(true);
+      } catch { setOpen(true); }
+    }));
     view.querySelectorAll("[data-status]").forEach((button) => button.addEventListener("click", async () => {
       button.disabled = true;
+      const actionRequestId = threadRequestId;
       try {
-        await auth.api("/api/admin/messages", { method: "PATCH", body: { company_id: selected.company_id, status: button.dataset.status } });
-        await openThread(selected.company_id);
+        const nextStatus = button.dataset.status;
+        await auth.api("/api/admin/messages", { method: "PATCH", body: { company_id: companyId, status: nextStatus } });
+        if (actionRequestId !== threadRequestId || String(selected?.company_id) !== companyId) return;
+        if (nextStatus === "open" && threadFilter === "complete") {
+          await setThreadFilter("open");
+          await openThread(companyId);
+          return;
+        }
+        if (nextStatus === "complete" && threadFilter === "open") {
+          await loadThreads();
+          if (actionRequestId === threadRequestId && String(selected?.company_id) === companyId) clearThreadSelection();
+          return;
+        }
+        await openThread(companyId);
         await loadThreads();
       } catch { button.disabled = false; }
     }));
     view.querySelector(".site-support__older")?.addEventListener("click", (event) => {
       event.currentTarget.disabled = true;
-      void openThread(selected.company_id, { before: page.next_before, older: true });
+      void openThread(companyId, { before: page.next_before, older: true });
     });
-    view.querySelector(".site-support__reply")?.addEventListener("submit", async (event) => {
+    const replyForm = view.querySelector(".site-support__reply");
+    const replyTextarea = replyForm?.querySelector("textarea");
+    if (replyTextarea) {
+      replyTextarea.value = drafts.get(companyId) || "";
+      replyTextarea.addEventListener("input", () => {
+        if (replyTextarea.value) drafts.set(companyId, replyTextarea.value);
+        else drafts.delete(companyId);
+      });
+      replyTextarea.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return;
+        event.preventDefault();
+        replyForm.requestSubmit();
+      });
+    }
+    replyForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const textarea = event.currentTarget.querySelector("textarea");
       const status = event.currentTarget.querySelector('[role="status"]');
@@ -350,9 +437,11 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
       if (!body || send.disabled) return;
       send.disabled = true;
       status.textContent = "Sending…";
+      const actionRequestId = threadRequestId;
       try {
-        await auth.api("/api/admin/messages", { method: "POST", body: { company_id: selected.company_id, body } });
-        await openThread(selected.company_id);
+        await auth.api("/api/admin/messages", { method: "POST", body: { company_id: companyId, body } });
+        drafts.delete(companyId);
+        if (actionRequestId === threadRequestId && String(selected?.company_id) === companyId) await openThread(companyId);
         await loadThreads();
       } catch (error) {
         status.textContent = error?.data?.message || "Could not send reply.";
@@ -387,7 +476,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     const requestId = ++threadsRequestId;
     if (!threadsLoaded) list.innerHTML = '<div class="site-support__skeleton" aria-label="Loading customer conversations"><div class="skeleton skeleton-block"></div><div class="skeleton skeleton-block"></div><div class="skeleton skeleton-block"></div></div>';
     try {
-      const result = await auth.api("/api/admin/messages");
+      const result = await auth.api(threadFilter === "complete" ? "/api/admin/messages?status=complete" : "/api/admin/messages");
       if (requestId !== threadsRequestId) return;
       threads = result.threads || [];
       threadsLoaded = true;
@@ -396,7 +485,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     } catch {
       if (requestId !== threadsRequestId) return;
       threadsLoaded = true;
-      list.innerHTML = '<p class="site-support__error">Could not load support.</p>';
+      list.innerHTML = '<div class="site-support__error" role="alert"><p>Could not load support.</p><button type="button" data-support-retry aria-label="Retry loading support">Retry</button></div>';
       return false;
     }
   };
@@ -414,10 +503,21 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   };
 
   list.addEventListener("click", (event) => {
+    const retry = event.target.closest("[data-support-retry]");
+    if (retry) {
+      retry.disabled = true;
+      threadsLoaded = false;
+      void loadThreads();
+      return;
+    }
     const button = event.target.closest("[data-company-id]");
     if (!button) return;
     setView("inbox");
     void openThread(button.dataset.companyId);
+  });
+  filters.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-support-filter]");
+    if (button) void setThreadFilter(button.dataset.supportFilter);
   });
   search.addEventListener("input", renderThreads);
   launcher.addEventListener("click", () => setOpen(drawer.hidden));

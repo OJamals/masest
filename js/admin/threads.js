@@ -12,17 +12,18 @@
  * had just navigated to — so this module no longer loads or saves them.
  */
 
-export function createThreadsTab({ api, state }) {
+export function createThreadsTab({ api, state, openContext }) {
   let consolePromise = null;
 
   // One console per document, lazily mounted. initAdminSupport() returns null if
   // one is already present, so a second call cannot produce a second inbox.
   function ensureConsole() {
-    consolePromise ||= import('../admin-support.js?v=20260830e')
+    consolePromise ||= import('../admin-support.js?v=20260830f')
       .then(({ initAdminSupport }) => initAdminSupport({
         auth: { api },
         root: '/',
         staff: state.staff,
+        openContext,
       }))
       .catch(() => null);
     return consolePromise;

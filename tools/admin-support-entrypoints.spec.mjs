@@ -378,3 +378,212 @@ test("closed support fetches only counts, open support fetches threads, and hidd
   await expect.poll(() => requests.length).toBeGreaterThan(hiddenRequestCount);
   expect(requests.at(-1)).toBe("threads");
 });
+
+test("resolved chats remain recoverable and reopening returns them to Open", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/messages**");
+
+  const statuses = new Map([["c1", "open"], ["c2", "complete"], ["c3", "open"]]);
+  const requestedViews = [];
+  const thread = (companyId) => ({
+    company_id: companyId,
+    company_name: companyId === "c1" ? "Acme HVAC" : "Northbay Foods",
+    last_body: companyId === "c1" ? "Need help today." : "Resolved yesterday.",
+    last_at: companyId === "c1" ? "2026-08-30T14:30:00Z" : "2026-08-29T14:30:00Z",
+    unanswered: companyId === "c1",
+    status: statuses.get(companyId),
+  });
+
+  await page.route("**/api/admin/messages**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const companyId = url.searchParams.get("company_id");
+    if (request.method() === "PATCH") {
+      const body = request.postDataJSON();
+      statuses.set(body.company_id, body.status);
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: body.status }) });
+      return;
+    }
+    if (companyId) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          thread: thread(companyId),
+          messages: [{ id: `m-${companyId}`, sender_role: "buyer", body: "Customer message", created_at: "2026-08-29T14:30:00Z" }],
+        }),
+      });
+      return;
+    }
+    if (url.searchParams.get("summary") === "1") {
+      const open = [...statuses.values()].filter((status) => status !== "complete").length;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: { open, unanswered: open } }) });
+      return;
+    }
+    const view = url.searchParams.get("status") || "open";
+    requestedViews.push(view);
+    const threads = [...statuses.keys()]
+      .filter((companyId) => view === "complete" ? statuses.get(companyId) === "complete" : statuses.get(companyId) !== "complete")
+      .map(thread);
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ threads }) });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#support`);
+  await expect(page.locator('[data-company-id="c1"]')).toBeVisible();
+  await expect(page.locator('[data-company-id="c1"] time')).toHaveAttribute("datetime", "2026-08-30T14:30:00Z");
+
+  await page.locator('[data-company-id="c1"]').click();
+  await page.getByRole("button", { name: "Mark resolved" }).click();
+  await expect(page.locator('[data-company-id="c1"]')).toHaveCount(0);
+  await expect(page.locator(".site-support__conversation-empty h3")).toHaveText("No conversation selected");
+
+  await page.getByRole("button", { name: "Resolved", exact: true }).click();
+  await expect(page.locator("#siteSupportTitle")).toHaveText("Resolved chats");
+  await expect(page.locator('[data-company-id="c2"]')).toBeVisible();
+  expect(requestedViews).toContain("complete");
+
+  await page.locator('[data-company-id="c2"]').click();
+  await page.getByRole("button", { name: "Reopen" }).click();
+  await expect(page.getByRole("button", { name: "Open", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-company-id="c2"]')).toBeVisible();
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Northbay Foods");
+});
+
+test("reply drafts survive thread switches and context jumps use canonical admin workspaces", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/messages**");
+  await page.unroute("**/api/admin/orders**");
+
+  const orderId = "11111111-1111-4111-8111-111111111111";
+  const sent = [];
+  const detailRequests = [];
+  const threads = [
+    { company_id: "c1", company_name: "Acme HVAC", last_body: "Order question", last_at: "2026-08-30T14:30:00Z", unanswered: true, status: "open" },
+    { company_id: "c2", company_name: "Northbay Foods", last_body: "Second chat", last_at: "2026-08-29T14:30:00Z", unanswered: false, status: "open" },
+  ];
+
+  await page.route("**/api/admin/orders**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("id")) {
+      detailRequests.push(url.searchParams.get("id"));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          order: {
+            id: orderId,
+            order_number: "SO-42",
+            company_id: "c1",
+            companies: { name: "Acme HVAC" },
+            customer_email: "buyer@example.test",
+            status: "cancelled",
+            tracking_status: "processing",
+            payment_method: "stripe",
+            created_at: "2026-08-30T14:00:00Z",
+            subtotal: 120,
+            total: 120,
+            currency: "usd",
+            order_items: [],
+            shipment_events: [],
+            order_provider_links: [],
+            order_shipments: [],
+            order_financial_entries: [],
+          },
+          timeline: [],
+          integration_timeline: [],
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ orders: [{
+        id: orderId,
+        order_number: "SO-42",
+        company_id: "c1",
+        companies: { name: "Acme HVAC" },
+        status: "cancelled",
+        tracking_status: "processing",
+        payment_method: "stripe",
+        created_at: "2026-08-30T14:00:00Z",
+        subtotal: 120,
+        total: 120,
+        currency: "usd",
+        order_items: [],
+      }], total: 1, has_more: false }),
+    });
+  });
+  await page.route("**/api/admin/messages**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const companyId = url.searchParams.get("company_id");
+    if (request.method() === "POST") {
+      sent.push(request.postDataJSON());
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ id: "m-new", created_at: "2026-08-30T15:00:00Z" }) });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(companyId ? {
+        thread: threads.find((item) => item.company_id === companyId),
+        messages: [{
+          id: `m-${companyId}`,
+          sender_role: "buyer",
+          body: `${companyId} message`,
+          order_id: companyId === "c1" ? orderId : null,
+          created_at: "2026-08-30T14:30:00Z",
+        }],
+      } : { threads }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#support`);
+  await page.locator('[data-company-id="c1"]').click();
+  const reply = page.locator("#siteSupportReply");
+  await reply.fill("Saved Acme draft");
+  await page.locator('[data-company-id="c2"]').click();
+  await page.locator('[data-company-id="c1"]').click();
+  await expect(reply).toHaveValue("Saved Acme draft");
+  await reply.press("Control+Enter");
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toEqual({ company_id: "c1", body: "Saved Acme draft" });
+  await expect(reply).toHaveValue("");
+
+  await page.getByRole("link", { name: "View account" }).click();
+  await expect(page.locator('[data-panel="companies"]')).toHaveAttribute("data-active", "true");
+  await expect(page.locator(".site-support__drawer")).toBeHidden();
+
+  await page.locator(".site-support__launcher").click();
+  await page.locator('[data-company-id="c1"]').click();
+  await page.getByRole("link", { name: "View linked order" }).click();
+  await expect(page.locator('[data-panel="orders"]')).toHaveAttribute("data-active", "true");
+  await expect(page.locator("#ordSearch")).toHaveValue(orderId);
+  await expect.poll(() => detailRequests).toContain(orderId);
+});
+
+test("support list load failures offer an in-place retry", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/messages**");
+  let available = false;
+  await page.route("**/api/admin/messages**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("summary") === "1") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: { open: 0, unanswered: 0 } }) });
+    }
+    if (!available) return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "temporarily_unavailable" }) });
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ threads: [{ company_id: "c1", company_name: "Acme HVAC", last_body: "Need help", last_at: "2026-08-30T14:30:00Z", unanswered: true, status: "open" }] }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#support`);
+  const retry = page.getByRole("button", { name: "Retry loading support" });
+  await expect(retry).toBeVisible();
+  available = true;
+  await retry.click();
+  await expect(page.locator('[data-company-id="c1"]')).toBeVisible();
+});

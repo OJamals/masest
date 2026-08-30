@@ -36,6 +36,11 @@ export function presenceIsFresh(value, now = Date.now(), ttlMs = SUPPORT_PRESENC
   return Number.isFinite(seenAt) && now - seenAt >= 0 && now - seenAt < ttlMs;
 }
 
+export function supportThreadListStatus(value) {
+  const status = String(value || 'open').trim();
+  return ['open', 'complete'].includes(status) ? status : null;
+}
+
 export function supportThreadPatch(status, userId, now = new Date().toISOString()) {
   if (!['open', 'escalated', 'complete'].includes(status)) return null;
   if (status === 'complete') {

@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   messagePage,
   presenceIsFresh,
+  supportThreadListStatus,
   supportThreadPatch,
 } from '../functions/_lib/support-messages.js';
 import { createSupportPoller, filterSupportThreads } from '../js/admin-support.js';
@@ -31,6 +32,14 @@ test('support lifecycle persists escalation and completion metadata', () => {
   });
   assert.equal(supportThreadPatch('complete', 'staff-1', '2026-07-11T04:00:00.000Z').support_thread_completed_by, 'staff-1');
   assert.equal(supportThreadPatch('bogus', 'staff-1'), null);
+});
+
+test('support thread lists fail closed to open or complete lifecycle views', () => {
+  assert.equal(supportThreadListStatus(null), 'open');
+  assert.equal(supportThreadListStatus('open'), 'open');
+  assert.equal(supportThreadListStatus('complete'), 'complete');
+  assert.equal(supportThreadListStatus('escalated'), null);
+  assert.equal(supportThreadListStatus('complete,open'), null);
 });
 
 test('presence expires when a close/unload signal is lost', () => {
