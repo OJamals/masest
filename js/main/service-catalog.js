@@ -359,6 +359,20 @@ function bindTabs(root) {
   });
 }
 
+function serviceQueryFromUrl() {
+  return (new URLSearchParams(location.search).get("q") || "").trim();
+}
+
+function syncServiceQueryUrl(query) {
+  const params = new URLSearchParams(location.search);
+  if (query) params.set("q", query);
+  else params.delete("q");
+  const search = params.toString();
+  const next = `${location.pathname}${search ? `?${search}` : ""}${location.hash}`;
+  const current = `${location.pathname}${location.search}${location.hash}`;
+  if (next !== current) history.replaceState(null, "", next);
+}
+
 function bindSearch(root, items, categories) {
   const input = root.querySelector("[data-service-search]");
   const clear = root.querySelector("[data-service-search-clear]");
@@ -368,13 +382,16 @@ function bindSearch(root, items, categories) {
   const results = root.querySelector("[data-service-search-results]");
   const total = items.length;
 
-  const update = () => {
-    const query = normalizeText(input.value);
+  const update = ({ syncUrl = true } = {}) => {
+    const rawQuery = input.value.trim();
+    const query = normalizeText(rawQuery);
     const needle = query.toLocaleLowerCase();
     const searching = Boolean(needle);
     const matches = searching
       ? items.filter((item) => searchTextMatchesQuery(serviceSearchText(item), needle))
       : [];
+
+    if (syncUrl) syncServiceQueryUrl(rawQuery);
 
     clear.hidden = !searching;
     tabs.hidden = searching;
@@ -437,7 +454,12 @@ function bindSearch(root, items, categories) {
     update();
     input.focus();
   });
-  update();
+  const restoreFromUrl = () => {
+    input.value = serviceQueryFromUrl();
+    update({ syncUrl: false });
+  };
+  window.addEventListener("popstate", restoreFromUrl);
+  restoreFromUrl();
 }
 
 function renderCatalog(root, catalog) {
@@ -568,5 +590,5 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { searchTextMatchesQuery } from "./fuzzy-search.js?v=20260829c";
-import { loadPricingData } from "./pricing-data.js?v=20260829c";
+import { searchTextMatchesQuery } from "./fuzzy-search.js?v=20260829d";
+import { loadPricingData } from "./pricing-data.js?v=20260829d";

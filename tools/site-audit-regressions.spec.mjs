@@ -163,6 +163,27 @@ test("mobile service category rail keeps a visible leading inset", async ({ page
   expect(layout.scrollPaddingInlineStart).toBeGreaterThanOrEqual(16);
 });
 
+test("service catalog deep link clears the sticky navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`${BASE_URL}/services.html?q=legionela#serviceCatalog`, { waitUntil: "domcontentloaded" });
+
+  const catalog = page.locator("[data-service-catalog]");
+  await catalog.getByRole("searchbox", { name: "Search services" }).waitFor();
+  await page.locator("#serviceCatalog").evaluate((node) => {
+    document.documentElement.style.scrollBehavior = "auto";
+    node.scrollIntoView();
+  });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+  const navBox = await page.locator(".nav").boundingBox();
+  const eyebrowBox = await page.locator("#serviceCatalog .service-catalog-intro .eyebrow").boundingBox();
+
+  expect(navBox).not.toBeNull();
+  expect(eyebrowBox).not.toBeNull();
+  expect(eyebrowBox?.y, "service catalog eyebrow top edge").toBeGreaterThanOrEqual(
+    (navBox?.y || 0) + (navBox?.height || 0) + 12,
+  );
+});
+
 test("service search finds offerings across categories and restores selected category", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/services.html#service-consulting-services`, { waitUntil: "domcontentloaded" });
@@ -197,6 +218,53 @@ test("service search finds offerings across categories and restores selected cat
   await expect(search).toHaveValue("");
   await expect(catalog.locator('[data-service-panel="Consulting Services"]')).toBeVisible();
   await expect(status).toContainText("39 services and packages");
+});
+
+test("service search hydrates and restores shareable URL state", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    `${BASE_URL}/services.html?qa=regression&q=legionela#service-consulting-services`,
+    { waitUntil: "domcontentloaded" },
+  );
+
+  const catalog = page.locator("[data-service-catalog]");
+  const search = catalog.getByRole("searchbox", { name: "Search services" });
+  const results = catalog.locator("[data-service-search-results]");
+  await search.waitFor();
+
+  await expect(search).toHaveValue("legionela");
+  await expect(results.locator(".service-card")).toHaveCount(2);
+
+  await search.fill("water");
+  await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe("water");
+  expect(new URL(page.url()).searchParams.get("qa")).toBe("regression");
+  expect(new URL(page.url()).hash).toBe("#service-consulting-services");
+
+  await catalog.getByRole("button", { name: "Clear service search" }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBeNull();
+  expect(new URL(page.url()).searchParams.get("qa")).toBe("regression");
+  expect(new URL(page.url()).hash).toBe("#service-consulting-services");
+  await expect(catalog.locator('[data-service-panel="Consulting Services"]')).toBeVisible();
+
+  await page.evaluate(() => {
+    history.pushState(null, "", `${location.pathname}${location.search}&q=legionela${location.hash}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(search).toHaveValue("legionela");
+  await expect(results.locator(".service-card")).toHaveCount(2);
+
+  await page.evaluate(() => {
+    const params = new URLSearchParams(location.search);
+    params.set("q", "water");
+    history.pushState(null, "", `${location.pathname}?${params}${location.hash}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(search).toHaveValue("water");
+  await expect(results.locator(".service-card")).toHaveCount(23);
+
+  await page.evaluate(() => history.back());
+  await expect(search).toHaveValue("legionela");
+  await expect(results.locator(".service-card")).toHaveCount(2);
 });
 
 test("broad service search progressively reveals every result", async ({ page }) => {

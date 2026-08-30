@@ -5127,7 +5127,8 @@ body .page-hero .product-shot {
 }
 
 /* Product catalog polish: make the shelf read like a buying surface. */
-#catalog {
+#catalog,
+#serviceCatalog {
   scroll-margin-top: 86px;
 }
 
@@ -5711,7 +5712,8 @@ body .page-hero .product-shot {
 }
 
 @media (max-width: 760px) {
-  #catalog {
+  #catalog,
+  #serviceCatalog {
     scroll-margin-top: 72px;
   }
 

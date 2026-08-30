@@ -1,5 +1,5 @@
-import { CATALOG_GROUPS, PRODUCT_CATALOG_COPY, PRODUCTS } from "./catalog-data.js?v=20260829c";
-import { normalizeSearchText, searchValueTokenQuality } from "./fuzzy-search.js?v=20260829c";
+import { CATALOG_GROUPS, PRODUCT_CATALOG_COPY, PRODUCTS } from "./catalog-data.js?v=20260829d";
+import { normalizeSearchText, searchValueTokenQuality } from "./fuzzy-search.js?v=20260829d";
 
 export const normalizeProductSearch = normalizeSearchText;
 
