@@ -1,5 +1,23 @@
 export const SUPPORT_PAGE_SIZE = 200;
 export const SUPPORT_PRESENCE_TTL_MS = 45_000;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function resolveSupportOrderId(sb, { orderId, companyId } = {}) {
+  const id = String(orderId || '').trim();
+  if (!id) return { ok: true, orderId: null };
+  if (!UUID.test(id) || !companyId) {
+    return { ok: false, status: 404, error: 'order_not_found' };
+  }
+
+  const { data, error } = await sb.from('orders')
+    .select('id')
+    .eq('id', id)
+    .eq('company_id', companyId)
+    .maybeSingle();
+  if (error) return { ok: false, status: 500, error: 'server_error' };
+  if (!data) return { ok: false, status: 404, error: 'order_not_found' };
+  return { ok: true, orderId: data.id };
+}
 
 export function messagePage(rows, limit = SUPPORT_PAGE_SIZE) {
   const pageSize = Math.max(1, Math.min(Number(limit) || SUPPORT_PAGE_SIZE, SUPPORT_PAGE_SIZE));

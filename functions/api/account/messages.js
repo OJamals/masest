@@ -4,7 +4,12 @@
 import { requireCompany, json, readBody, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 import { adminMessageAlertKind, adminMessageRecipients } from '../../_lib/admin-message-notifications.js';
-import { messagePage, recordSupportMessage, SUPPORT_PAGE_SIZE } from '../../_lib/support-messages.js';
+import {
+  messagePage,
+  recordSupportMessage,
+  resolveSupportOrderId,
+  SUPPORT_PAGE_SIZE,
+} from '../../_lib/support-messages.js';
 
 export async function onRequest({ request, env }) {
   const ctx = await requireCompany(request, env);
@@ -52,13 +57,18 @@ export async function onRequest({ request, env }) {
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
     const source = body.source === 'customer_chat' ? 'customer_chat' : 'dashboard';
+    const orderContext = await resolveSupportOrderId(sb, {
+      orderId: body.order_id,
+      companyId,
+    });
+    if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
     const [{ data: previousMessage }, { data: company }] = await Promise.all([
       sb.from('messages').select('sender_role').eq('company_id', companyId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       sb.from('companies').select('name,support_thread_status').eq('id', companyId).maybeSingle(),
     ]);
     const { data, error } = await sb.from('messages').insert({
       company_id: companyId, user_id: user.id, sender_role: 'buyer', body: text,
-      order_id: body.order_id || null, source, read_by_user: true, read_by_staff: false,
+      order_id: orderContext.orderId, source, read_by_user: true, read_by_staff: false,
     }).select('id,created_at').single();
     if (error) return json(500, { error: 'server_error' });
 
