@@ -1,5 +1,12 @@
 // /api/admin/content-assets - metadata library for CMS-owned public content assets.
-import { adminClient, requireStaff, json, readBody } from "../../_lib/supabase.js";
+import {
+  adminClient,
+  internalServerError,
+  json,
+  readBody,
+  reportInternalError,
+  requireStaff,
+} from "../../_lib/supabase.js";
 import { staffCan } from "../../_lib/authz.js";
 import { recordAudit } from "../../_lib/audit.js";
 import { createContentRepository } from "../../_lib/content.js";
@@ -210,9 +217,11 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
     body: optimized.body,
   });
   if (!upload.ok) {
+    const detail = await upload.text().catch(() => "");
+    reportInternalError("admin.content_assets.upload", detail || `HTTP ${upload.status}`);
     return {
       status: 502,
-      body: { error: "upload_failed", detail: await upload.text().catch(() => "") },
+      body: { error: "upload_failed" },
     };
   }
 
@@ -278,7 +287,7 @@ export async function onRequest({ request, env }) {
         ),
       });
     } catch (error) {
-      return json(500, { error: error.message });
+      return internalServerError("admin.content_assets.list", error);
     }
   }
 
@@ -310,7 +319,7 @@ export async function onRequest({ request, env }) {
       if (!result.ok) return json(400, { error: result.error });
       return json(200, { ...result, asset: withPublicUrl(env, result.asset) });
     } catch (error) {
-      return json(500, { error: error.message });
+      return internalServerError("admin.content_assets.save", error);
     }
   }
 
@@ -347,7 +356,7 @@ export async function onRequest({ request, env }) {
       });
       return json(200, { ok: true });
     } catch (error) {
-      return json(500, { error: error.message });
+      return internalServerError("admin.content_assets.delete", error);
     }
   }
 

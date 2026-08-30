@@ -1,5 +1,5 @@
 // /api/admin/content - staff-managed CMS entries for non-commerce public content.
-import { adminClient, requireStaff, json, readBody } from "../../_lib/supabase.js";
+import { adminClient, requireStaff, json, readBody, internalServerError } from "../../_lib/supabase.js";
 import {
   createContentPublicationLifecycle,
   createContentRepository,
@@ -59,7 +59,7 @@ export async function onRequest({ request, env }) {
       const entries = await repository.list({ type, status, locale });
       return json(200, { entries });
     } catch (error) {
-      return json(500, { error: error.message });
+      return internalServerError("admin.content.read", error);
     }
   }
 

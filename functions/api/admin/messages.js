@@ -1,6 +1,6 @@
 // /api/admin/messages — staff side of company support threads.
 //   GET → thread list · GET ?company_id= → full thread · PATCH → lifecycle · POST → reply
-import { adminClient, requireStaff, json, readBody, emailsByIds, sendEmail, htmlEscape, emailLayout } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, emailsByIds, sendEmail, htmlEscape, emailLayout, internalServerError } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { messageReplyAddress } from '../../_lib/message-replies.js';
 import { shouldEmailClosedChatReply } from '../../_lib/message-notifications.js';
@@ -28,7 +28,7 @@ export async function onRequest({ request, env }) {
         .eq('company_id', companyId).order('created_at', { ascending: false }).limit(SUPPORT_PAGE_SIZE + 1);
       if (before) query = query.lt('created_at', before);
       const { data, error } = await query;
-      if (error) return json(500, { error: error.message });
+      if (error) return internalServerError('admin.messages.thread_read', error);
       await sb.from('messages').update({ read_by_staff: true })
         .eq('company_id', companyId).eq('sender_role', 'buyer').eq('read_by_staff', false);
       const { data: company } = await sb.from('companies')
@@ -43,13 +43,28 @@ export async function onRequest({ request, env }) {
         },
       });
     }
+    if (params.get('summary') === '1') {
+      const openThreads = sb.from('companies')
+        .select('id', { count: 'exact', head: true })
+        .not('support_last_message_at', 'is', null)
+        .neq('support_thread_status', 'complete');
+      const unansweredThreads = sb.from('companies')
+        .select('id', { count: 'exact', head: true })
+        .not('support_last_message_at', 'is', null)
+        .neq('support_thread_status', 'complete')
+        .eq('support_last_sender_role', 'buyer');
+      const [openResult, unansweredResult] = await Promise.all([openThreads, unansweredThreads]);
+      if (openResult.error) return internalServerError('admin.messages.summary_open', openResult.error);
+      if (unansweredResult.error) return internalServerError('admin.messages.summary_unanswered', unansweredResult.error);
+      return json(200, { summary: { open: openResult.count || 0, unanswered: unansweredResult.count || 0 } });
+    }
     const { data, error } = await sb.from('companies')
       .select('id,name,support_thread_status,support_thread_completed_at,support_last_message_at,support_last_message_body,support_last_sender_role')
       .not('support_last_message_at', 'is', null)
       .neq('support_thread_status', 'complete')
       .order('support_last_message_at', { ascending: false })
       .limit(500);
-    if (error) return json(500, { error: error.message });
+    if (error) return internalServerError('admin.messages.thread_list', error);
     const threads = (data || []).map((company) => ({
       company_id: company.id,
       company_name: company.name || '—',
@@ -59,7 +74,10 @@ export async function onRequest({ request, env }) {
       completed_at: company.support_thread_completed_at || null,
       unanswered: company.support_last_sender_role === 'buyer',
     }));
-    return json(200, { threads });
+    return json(200, {
+      threads,
+      summary: { open: threads.length, unanswered: threads.filter((thread) => thread.unanswered).length },
+    });
   }
 
   if (request.method === 'PATCH') {
@@ -71,7 +89,7 @@ export async function onRequest({ request, env }) {
     const patch = supportThreadPatch(status, user.id);
     if (!patch) return json(400, { error: 'invalid_status' });
     const { error } = await sb.from('companies').update(patch).eq('id', companyId);
-    if (error) return json(500, { error: error.message });
+    if (error) return internalServerError('admin.messages.status_update', error);
     return json(200, { status });
   }
 
@@ -90,7 +108,7 @@ export async function onRequest({ request, env }) {
       company_id: companyId, user_id: null, sender_role: 'staff', body: text,
       read_by_staff: true, read_by_user: false,
     }).select('id,created_at').single();
-    if (error) return json(500, { error: error.message });
+    if (error) return internalServerError('admin.messages.reply_insert', error);
     let summarySynced = true;
     try {
       await recordSupportMessage(sb, {

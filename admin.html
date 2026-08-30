@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="vendor/phosphor/style.css?v=20260711u">
 <link rel="stylesheet" href="css/style.css?v=20260829b">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
-<link rel="stylesheet" href="css/components.css?v=20260822d">
+<link rel="stylesheet" href="css/components.css?v=20260830e">
 <style>
   /* The staff chrome bar is sticky at 59px, so anchor jumps and scrollIntoView
      (the #qbo deep link, for one) would otherwise land their target underneath
@@ -355,6 +355,8 @@
   .adm-content-workspace-actions { grid-template-columns: auto minmax(0, 1fr); margin-bottom: 16px; }
   .adm-content-workspace-actions > .btn { min-width: 120px; justify-content: center; }
   .adm-content-workspace-actions [data-content-action-group="manage"] { justify-content: flex-end; padding: 0; border: 0; background: transparent; }
+  .adm-content-conflict-actions { justify-content: space-between; margin-top: 12px; }
+  .adm-content-conflict-actions .adm-status { flex: 1 1 320px; margin: 0; }
   .adm-content-workspace-panel { min-width: 0; padding-top: 2px; }
   .adm-content-workspace-panel[hidden] { display: none !important; }
   .adm-content-workspace-card { display: grid; gap: 12px; min-width: 0; }
@@ -691,7 +693,11 @@
     .adm-tools > * { width: 100%; max-width: none; }
     .adm-form-grid > .btn { width: 100%; justify-self: stretch; }
     .account-detail .adm-form-grid { grid-template-columns: 1fr; }
-    .adm-content-hub-metrics span { flex: 1 1 120px; }
+    .adm-content-hub { gap: 10px; padding: 12px; }
+    .adm-content-hub h2 { font-size: 1.12rem; }
+    .adm-content-hub p.muted { display: none; }
+    .adm-content-hub-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 6px; }
+    .adm-content-hub-metrics span { min-width: 0; padding: 8px; font-size: .7rem; }
     .adm-content-workspace-tabs { margin-inline: -2px; padding-inline: 2px; }
     .adm-content-workspace-tab { flex: 0 0 auto; }
     .adm-content-workspace-actions { grid-template-columns: 1fr; }
@@ -1210,6 +1216,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260823d"></script>
+<script type="module" src="js/admin.js?v=20260830e"></script>
 </body>
 </html>

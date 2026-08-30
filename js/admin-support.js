@@ -1,5 +1,71 @@
 const POLL_MS = 15_000;
+const MAX_POLL_MS = 60_000;
 const PRESENCE_HEARTBEAT_MS = 30_000;
+
+export function createSupportPoller({
+  isHidden,
+  isOpen,
+  loadSummary,
+  loadThreads,
+  heartbeat = async () => {},
+  setTimer = (callback, delay) => window.setTimeout(callback, delay),
+  clearTimer = (id) => window.clearTimeout(id),
+  baseDelay = POLL_MS,
+  maxDelay = MAX_POLL_MS,
+} = {}) {
+  let timerId = null;
+  let failures = 0;
+  let generation = 0;
+  let stopped = false;
+
+  const clear = () => {
+    if (timerId === null) return;
+    clearTimer(timerId);
+    timerId = null;
+  };
+  const schedule = () => {
+    clear();
+    if (stopped || isHidden()) return;
+    const delay = Math.min(maxDelay, baseDelay * (2 ** failures));
+    timerId = setTimer(() => {
+      timerId = null;
+      return refresh();
+    }, delay);
+  };
+  const refresh = async () => {
+    stopped = false;
+    clear();
+    if (isHidden()) return false;
+    const current = ++generation;
+    try {
+      const result = isOpen() ? await loadThreads() : await loadSummary();
+      if (result === false) throw new Error("support_refresh_failed");
+      if (current !== generation) return false;
+      if (isOpen()) await heartbeat();
+      failures = 0;
+      return true;
+    } catch {
+      if (current === generation) failures += 1;
+      return false;
+    } finally {
+      if (current === generation) schedule();
+    }
+  };
+  const stop = () => {
+    stopped = true;
+    generation += 1;
+    clear();
+  };
+  const visibilityChanged = () => {
+    if (isHidden()) {
+      stop();
+      return Promise.resolve(false);
+    }
+    return refresh();
+  };
+
+  return { refresh, stop, visibilityChanged };
+}
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
@@ -14,6 +80,14 @@ const routeSuppressesSupport = () => (
   /(?:^|\/)dashboard(?:\.html)?$/.test(location.pathname)
   && location.hash.replace(/^#/, "") === "messages"
 ) || document.body.classList.contains("support-suppressed");
+
+export function filterSupportThreads(threads, query) {
+  const needle = String(query ?? "").trim().toLocaleLowerCase();
+  if (!needle) return threads;
+  return threads.filter((thread) => `${thread.company_name ?? ""}\n${thread.last_body ?? ""}`
+    .toLocaleLowerCase()
+    .includes(needle));
+}
 
 // Staff notification prefs. These used to live on their own admin page, which
 // the drawer covered on a phone the moment the gear navigated there — so they
@@ -34,7 +108,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/admin-support.css?v=20260822c`;
+    stylesheet.href = `${root}css/admin-support.css?v=20260830e`;
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }
@@ -45,7 +119,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   shell.className = "site-support";
   shell.hidden = routeSuppressesSupport();
   shell.innerHTML = `
-    <section class="site-support__drawer" role="dialog" aria-modal="false" aria-labelledby="siteSupportTitle" data-view="inbox" hidden>
+    <section class="site-support__drawer" role="dialog" aria-modal="false" aria-labelledby="siteSupportTitle" data-view="inbox" data-thread-selected="false" hidden>
       <div class="site-support__list-pane">
         <header class="site-support__header">
           <div><p>Customer support</p><h2 id="siteSupportTitle">Open chats</h2><span data-support-summary>Loading…</span></div>
@@ -53,7 +127,12 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
             <button type="button" data-support-settings-toggle aria-label="Customer support settings" title="Customer support settings" aria-expanded="false" aria-controls="siteSupportSettings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg></button>
           </div>
         </header>
-        <div class="site-support__threads" aria-label="Open customer chats"></div>
+        <div class="site-support__search">
+          <label for="siteSupportSearch">Search customer chats</label>
+          <input id="siteSupportSearch" name="support_search" type="search" autocomplete="off" placeholder="Customer or recent message…" aria-controls="siteSupportThreads" data-support-search>
+          <p data-support-results role="status" aria-live="polite"></p>
+        </div>
+        <div class="site-support__threads" id="siteSupportThreads" aria-label="Open customer chats"></div>
       </div>
       <div class="site-support__conversation">
         <header class="site-support__conversation-toolbar">
@@ -61,7 +140,7 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
             <button type="button" data-support-back aria-label="Back to conversations" title="Back to conversations" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>
             <p data-support-view-label>Customer inbox</p>
           </div>
-          <button type="button" aria-label="Close support menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+          <button type="button" data-support-close aria-label="Close support menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
         </header>
         <div class="site-support__conversation-body"><div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div></div>
         <div class="site-support__settings" id="siteSupportSettings" hidden>
@@ -82,8 +161,11 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
 
   const drawer = shell.querySelector(".site-support__drawer");
   const launcher = shell.querySelector(".site-support__launcher");
-  const close = shell.querySelector('[aria-label="Close support menu"]');
+  const close = shell.querySelector("[data-support-close]");
+  const launcherIcon = launcher.querySelector("i");
   const list = shell.querySelector(".site-support__threads");
+  const search = shell.querySelector("[data-support-search]");
+  const searchResults = shell.querySelector("[data-support-results]");
   const view = shell.querySelector(".site-support__conversation-body");
   const summary = shell.querySelector("[data-support-summary]");
   const counter = shell.querySelector("[data-support-count]");
@@ -98,7 +180,10 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   let selected = null;
   let messages = [];
   let page = { has_more: false, next_before: null };
-  let pollId = 0;
+  let threadRequestId = 0;
+  let threadsRequestId = 0;
+  let summaryRequestId = 0;
+  let poller = null;
   let presenceOpen = false;
   let lastPresencePing = 0;
   let presenceRequest = Promise.resolve();
@@ -143,8 +228,8 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     drawer.dataset.view = isSettings ? "settings" : "inbox";
     settings.hidden = !isSettings;
     view.hidden = isSettings;
-    back.hidden = !isSettings;
-    viewLabel.textContent = isSettings ? "Support settings" : "Customer inbox";
+    back.hidden = !(isSettings || selected);
+    viewLabel.textContent = isSettings ? "Support settings" : selected ? "Conversation" : "Customer inbox";
     settingsToggle.setAttribute("aria-expanded", String(isSettings));
     if (isSettings) void loadPrefs();
   };
@@ -153,16 +238,20 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     drawer.hidden = !open;
     launcher.setAttribute("aria-expanded", String(open));
     launcher.setAttribute("aria-label", open ? "Close customer support" : "Open customer support");
+    launcherIcon.className = open ? "ph ph-x" : "ph ph-lifebuoy";
     if (open) {
+      summaryRequestId += 1;
       void setPresence(true);
-      void loadThreads();
-      requestAnimationFrame(() => (focus || list.querySelector("button") || close).focus());
+      void poller?.refresh();
+      requestAnimationFrame(() => (focus || search || close).focus());
     } else {
+      threadsRequestId += 1;
       void setPresence(false);
       // Reopening lands on conversations; settings is somewhere you go, not a state
       // the console gets stuck in.
       setView("inbox");
       if (restoreFocus) launcher.focus();
+      void poller?.refresh();
     }
   };
 
@@ -175,7 +264,12 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   // phone width, where the pane holding that gear is not on screen.
   const leaveSettings = () => {
     setView("inbox");
-    (settingsToggle.offsetParent ? settingsToggle : list.querySelector("button") || close).focus();
+    const target = settingsToggle.offsetParent
+      ? settingsToggle
+      : back.offsetParent
+        ? back
+        : list.querySelector("button") || close;
+    target.focus();
   };
   const syncRouteVisibility = () => {
     const suppressed = routeSuppressesSupport();
@@ -183,19 +277,51 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     shell.hidden = suppressed;
   };
 
-  const renderThreads = () => {
-    const ordered = [...threads].sort((a, b) => Number(b.unanswered) - Number(a.unanswered) || String(b.last_at).localeCompare(String(a.last_at)));
-    const unanswered = ordered.filter((thread) => thread.unanswered).length;
+  const renderSummary = ({ open = 0, unanswered = 0 } = {}) => {
     counter.hidden = unanswered === 0;
     counter.textContent = String(unanswered);
-    summary.textContent = unanswered === 1 ? "1 chat needs a reply" : unanswered ? `${unanswered} chats need a reply` : "No chats need a reply";
+    summary.textContent = unanswered === 1 ? "1 chat needs a reply" : unanswered
+      ? `${unanswered} chats need a reply`
+      : open ? "No chats need a reply" : "Inbox clear";
+  };
+
+  const renderThreads = () => {
+    const ordered = [...threads].sort((a, b) => Number(b.unanswered) - Number(a.unanswered) || String(b.last_at).localeCompare(String(a.last_at)));
+    const visible = filterSupportThreads(ordered, search.value);
+    const unanswered = ordered.filter((thread) => thread.unanswered).length;
+    renderSummary({ open: ordered.length, unanswered });
     if (!ordered.length) {
+      searchResults.textContent = "No open chats";
       selected = null;
+      drawer.dataset.threadSelected = "false";
       view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
       list.innerHTML = '<div class="site-support__empty"><i class="ph ph-lifebuoy" aria-hidden="true"></i><div><strong>Inbox clear</strong><p>No open customer conversations.</p></div></div>';
       return;
     }
-    list.innerHTML = ordered.map((thread) => `<button type="button" class="site-support__thread${thread.unanswered ? " is-unanswered" : ""}${thread.company_id === selected?.company_id ? " is-selected" : ""}" data-company-id="${escapeHtml(thread.company_id)}" aria-pressed="${thread.company_id === selected?.company_id}"><span><strong>${escapeHtml(thread.company_name || "Customer")}</strong><small>${escapeHtml((thread.last_body || "").slice(0, 90))}</small></span><span class="site-support__meta"><em>${thread.status === "escalated" ? "Escalated" : "Open"}</em>${thread.unanswered ? "<b>Needs reply</b>" : ""}</span></button>`).join("");
+    const hasQuery = search.value.trim().length > 0;
+    searchResults.textContent = hasQuery
+      ? (visible.length ? `${visible.length} of ${ordered.length} chats shown` : "No chats match your search")
+      : `${ordered.length} open ${ordered.length === 1 ? "chat" : "chats"}`;
+    if (!visible.length) {
+      list.innerHTML = '<div class="site-support__empty"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><div><strong>No matching chats</strong><p>Try a customer name or words from the latest message.</p></div></div>';
+      return;
+    }
+    list.innerHTML = visible.map((thread) => {
+      const badges = `${thread.status === "escalated" ? "<em>Escalated</em>" : ""}${thread.unanswered ? "<b>Needs reply</b>" : ""}`;
+      return `<button type="button" class="site-support__thread${thread.unanswered ? " is-unanswered" : ""}${thread.company_id === selected?.company_id ? " is-selected" : ""}" data-company-id="${escapeHtml(thread.company_id)}" aria-pressed="${thread.company_id === selected?.company_id}"><span><strong>${escapeHtml(thread.company_name || "Customer")}</strong><small>${escapeHtml((thread.last_body || "").slice(0, 90))}</small></span>${badges ? `<span class="site-support__meta">${badges}</span>` : ""}</button>`;
+    }).join("");
+  };
+
+  const clearThreadSelection = () => {
+    threadRequestId += 1;
+    selected = null;
+    messages = [];
+    page = { has_more: false, next_before: null };
+    drawer.dataset.threadSelected = "false";
+    renderThreads();
+    view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
+    setView("inbox");
+    requestAnimationFrame(() => (list.querySelector("button") || search || close).focus());
   };
 
   const renderConversation = () => {
@@ -236,28 +362,54 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   };
 
   const openThread = async (companyId, { before = null, older = false } = {}) => {
+    const requestId = ++threadRequestId;
     if (!older) view.innerHTML = '<p class="site-support__placeholder">Loading…</p>';
     try {
       const suffix = before ? `&before=${encodeURIComponent(before)}` : "";
       const result = await auth.api(`/api/admin/messages?company_id=${encodeURIComponent(companyId)}${suffix}`);
-      selected = result.thread || selected || { company_id: companyId, company_name: "Customer", status: "open" };
+      if (requestId !== threadRequestId) return;
+      selected = result.thread
+        || threads.find((thread) => String(thread.company_id) === String(companyId))
+        || { company_id: companyId, company_name: "Customer", status: "open" };
       messages = older ? [...(result.messages || []), ...messages] : (result.messages || []);
       page = { has_more: result.has_more === true, next_before: result.next_before || null };
+      drawer.dataset.threadSelected = "true";
+      setView("inbox");
       renderThreads();
       renderConversation();
       if (!older) view.querySelector(".site-support__messages")?.scrollTo({ top: 999999, behavior: "instant" });
-    } catch { view.innerHTML = '<p class="site-support__error">Could not load this conversation.</p>'; }
+    } catch {
+      if (requestId === threadRequestId) view.innerHTML = '<p class="site-support__error">Could not load this conversation.</p>';
+    }
   };
 
   const loadThreads = async () => {
+    const requestId = ++threadsRequestId;
     if (!threadsLoaded) list.innerHTML = '<div class="site-support__skeleton" aria-label="Loading customer conversations"><div class="skeleton skeleton-block"></div><div class="skeleton skeleton-block"></div><div class="skeleton skeleton-block"></div></div>';
     try {
-      threads = (await auth.api("/api/admin/messages")).threads || [];
+      const result = await auth.api("/api/admin/messages");
+      if (requestId !== threadsRequestId) return;
+      threads = result.threads || [];
       threadsLoaded = true;
       renderThreads();
+      return true;
     } catch {
+      if (requestId !== threadsRequestId) return;
       threadsLoaded = true;
       list.innerHTML = '<p class="site-support__error">Could not load support.</p>';
+      return false;
+    }
+  };
+
+  const loadSummary = async () => {
+    const requestId = ++summaryRequestId;
+    try {
+      const result = await auth.api("/api/admin/messages?summary=1");
+      if (requestId !== summaryRequestId) return false;
+      renderSummary(result.summary || result);
+      return true;
+    } catch {
+      return false;
     }
   };
 
@@ -267,10 +419,14 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     setView("inbox");
     void openThread(button.dataset.companyId);
   });
+  search.addEventListener("input", renderThreads);
   launcher.addEventListener("click", () => setOpen(drawer.hidden));
   close.addEventListener("click", () => setOpen(false));
   settingsToggle.addEventListener("click", () => setView(drawer.dataset.view === "settings" ? "inbox" : "settings"));
-  back.addEventListener("click", leaveSettings);
+  back.addEventListener("click", () => {
+    if (drawer.dataset.view === "settings") leaveSettings();
+    else clearThreadSelection();
+  });
   settings.addEventListener("change", (event) => { if (event.target.matches("[data-support-pref]")) void savePrefs(); });
 
   // Staff menus and emailed alerts open this console where staff already are.
@@ -291,20 +447,30 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || drawer.hidden) return;
     if (drawer.dataset.view === "settings") leaveSettings();
+    else if (selected) clearThreadSelection();
     else setOpen(false);
   });
   document.addEventListener("visibilitychange", () => {
-    if (drawer.hidden) return;
-    void setPresence(!document.hidden, { force: true, keepalive: document.hidden });
-    if (!document.hidden) void loadThreads();
+    if (!drawer.hidden) void setPresence(!document.hidden, { force: true, keepalive: document.hidden });
+    void poller?.visibilityChanged();
   });
-  window.addEventListener("pagehide", () => { if (!drawer.hidden) void setPresence(false, { force: true, keepalive: true }); });
-  pollId = window.setInterval(() => {
-    if (document.hidden) return;
-    void loadThreads();
-    if (!drawer.hidden && Date.now() - lastPresencePing > PRESENCE_HEARTBEAT_MS) void setPresence(true, { force: true });
-  }, POLL_MS);
-  void loadThreads();
+  window.addEventListener("pagehide", () => {
+    poller?.stop();
+    if (!drawer.hidden) void setPresence(false, { force: true, keepalive: true });
+  });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) void poller?.visibilityChanged();
+  });
+  poller = createSupportPoller({
+    isHidden: () => document.hidden,
+    isOpen: () => !drawer.hidden,
+    loadSummary,
+    loadThreads,
+    heartbeat: () => Date.now() - lastPresencePing > PRESENCE_HEARTBEAT_MS
+      ? setPresence(true, { force: true })
+      : Promise.resolve(),
+  });
+  void poller.refresh();
 
   // Returned so the admin console can open a specific company thread from the
   // Accounts tab instead of shipping a second inbox implementation.
@@ -312,6 +478,6 @@ export function initAdminSupport({ auth, root = "", staff = null } = {}) {
     openThread: (companyId) => { setView("inbox"); setOpen(true); return openThread(companyId); },
     open: () => { setView("inbox"); setOpen(true); },
     openSettings,
-    refresh: () => loadThreads(),
+    refresh: () => poller.refresh(),
   };
 }

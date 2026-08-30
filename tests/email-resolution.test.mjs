@@ -47,10 +47,12 @@ test('companyEmails + admin/account email lookups use emailsByIds, not listUsers
     ['functions/api/account/team.js', /emailsByIds\(/],
     ['functions/api/admin/company.js', /emailsByIds\(/],
     ['functions/api/admin/offers.js', /emailsByIds\(/],
-    ['functions/api/admin/customers.js', /allUserEmails\(/],
+    ['functions/api/admin/customers.js', /emailsByIds\(/],
   ]) {
     const src = read(path);
     assert.match(src, helper, `${path} must use the new helper`);
     assert.doesNotMatch(src, /listUsers\(/, `${path} must not call listUsers directly`);
   }
+  const customers = read('functions/api/admin/customers.js');
+  assert.match(customers, /fullCustomerExport[\s\S]*allUserEmails\(/, 'full Auth scan is CSV-only');
 });

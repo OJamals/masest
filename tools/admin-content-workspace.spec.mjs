@@ -41,7 +41,14 @@ const entry = (overrides = {}) => ({
   title: "Water analysis",
   status: "published",
   locale: "en",
-  payload: {},
+  payload: {
+    sku: "WATER-ANALYSIS",
+    category: "Lab",
+    unit: "sample",
+    public_price: 100,
+    currency: "usd",
+    active: true,
+  },
   seo: {},
   updated_at: "2026-08-01T12:00:00Z",
   ...overrides,
@@ -74,10 +81,44 @@ async function bootAsStaff(page) {
     contentType: "application/json",
     body: JSON.stringify({
       entries: /type=blog_post/.test(route.request().url())
-        ? [entry({ type: "blog_post", slug: "descaling-101", title: "Descaling 101", status: "draft" })]
+        ? [entry({
+            type: "blog_post",
+            slug: "descaling-101",
+            title: "Descaling 101",
+            status: "draft",
+            payload: {
+              title: "Descaling 101",
+              category: "technical",
+              date: "2026-08-01",
+              excerpt: "Safe industrial descaling.",
+              body: "Initial body",
+            },
+          })]
         : [entry()],
     }),
   }));
+}
+
+async function enableStubbedContentEditor(page) {
+  await page.locator("#admContent #contentForm").evaluate((form) => {
+    form.querySelectorAll("input, textarea, select, button").forEach((control) => {
+      control.disabled = false;
+      control.removeAttribute("aria-disabled");
+      control.removeAttribute("data-permission-disabled");
+      control.removeAttribute("title");
+    });
+  });
+}
+
+async function enableStubbedBlogEditor(page) {
+  await page.locator("#admBlog #contentForm").evaluate((form) => {
+    form.querySelectorAll("input, textarea, select, button").forEach((control) => {
+      control.disabled = false;
+      control.removeAttribute("aria-disabled");
+      control.removeAttribute("data-permission-disabled");
+      control.removeAttribute("title");
+    });
+  });
 }
 
 test("Content hosts pages and blog as sub-views, remounting the editor on switch", async ({ page }) => {
@@ -112,4 +153,151 @@ test("legacy #blog deep link lands on the blog sub-view", async ({ page }) => {
   await expect(page.locator('[data-content-panel="blog"]')).toBeVisible();
   await expect(page.locator("#admBlog #contentList")).toContainText("Descaling 101");
   await expect(page).toHaveURL(/#content$/);
+});
+
+test("a slow Pages response cannot overwrite Blog after a fast sub-view switch", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/content**");
+
+  let releasePages;
+  let markPagesStarted;
+  let markPagesFinished;
+  const pagesGate = new Promise((resolve) => { releasePages = resolve; });
+  const pagesStarted = new Promise((resolve) => { markPagesStarted = resolve; });
+  const pagesFinished = new Promise((resolve) => { markPagesFinished = resolve; });
+
+  await page.route("**/api/admin/content**", async (route) => {
+    const isBlog = /type=blog_post/.test(route.request().url());
+    if (!isBlog) {
+      markPagesStarted();
+      await pagesGate;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        entries: isBlog
+          ? [entry({ type: "blog_post", slug: "descaling-101", title: "Descaling 101", status: "draft" })]
+          : [entry()],
+      }),
+    });
+    if (!isBlog) markPagesFinished();
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`);
+  await pagesStarted;
+  await page.locator('[data-content-view="blog"]').click();
+  await expect(page.locator("#admBlog #contentList")).toContainText("Descaling 101");
+
+  releasePages();
+  await pagesFinished;
+  await expect(page.locator("#admBlog #contentList")).toContainText("Descaling 101");
+  await expect(page.locator("#admBlog #contentList")).not.toContainText("Water analysis");
+});
+
+test("dirty sub-view switch preserves exact edits on cancel and switches once on confirm", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.goto(`${BASE_URL}/admin.html#content`);
+  await page.locator("#admContent [data-content-edit]").first().click();
+  await enableStubbedContentEditor(page);
+  await page.locator("#admContent #contentTitle").fill("Unsaved exact title");
+
+  await page.locator('[data-content-view="blog"]').click();
+  await expect(page.locator("dialog.confirm-dialog")).toContainText("unsaved edits");
+  await page.locator('dialog.confirm-dialog button[value="cancel"]').click();
+  await expect(page.locator('[data-content-panel="pages"]')).toBeVisible();
+  await expect(page.locator("#admContent #contentTitle")).toHaveValue("Unsaved exact title");
+  await expect(page.locator('[data-content-view="pages"]')).toHaveAttribute("aria-pressed", "true");
+
+  await page.locator('[data-content-view="blog"]').click();
+  await page.locator('dialog.confirm-dialog button[value="confirm"]').click();
+  await expect(page.locator('[data-content-panel="blog"]')).toBeVisible();
+  await expect(page.locator("#admBlog #contentList")).toContainText("Descaling 101");
+  await expect(page.locator("dialog.confirm-dialog")).toHaveCount(0);
+});
+
+test("late Pages save cannot repaint Blog and duplicate submits are blocked", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/content**");
+
+  let releaseSave;
+  let markSaveStarted;
+  const saveGate = new Promise((resolve) => { releaseSave = resolve; });
+  const saveStarted = new Promise((resolve) => { markSaveStarted = resolve; });
+  let postCount = 0;
+
+  await page.route("**/api/admin/content**", async (route) => {
+    const request = route.request();
+    const isBlog = /type=blog_post/.test(request.url());
+    if (request.method() === "POST") {
+      postCount += 1;
+      markSaveStarted();
+      await saveGate;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ entry: entry({ title: "Saved Pages", version: 2 }) }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        entries: isBlog
+          ? [entry({ type: "blog_post", slug: "descaling-101", title: "Descaling 101", status: "draft", version: 1 })]
+          : [entry({ status: "draft", version: 1 })],
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#content`);
+  await page.locator("#admContent [data-content-edit]").first().click();
+  await enableStubbedContentEditor(page);
+  await page.locator("#admContent #contentTitle").fill("Saving Pages");
+  const saveButton = page.locator('#admContent [data-content-action="draft"]');
+  await saveButton.click();
+  await saveStarted;
+  await expect(saveButton).toBeDisabled();
+  await saveButton.click({ force: true });
+  expect(postCount).toBe(1);
+
+  await page.locator('[data-content-view="blog"]').click();
+  await page.locator('dialog.confirm-dialog button[value="confirm"]').click();
+  await expect(page.locator("#admBlog #contentList")).toContainText("Descaling 101");
+
+  releaseSave();
+  await expect.poll(() => postCount).toBe(1);
+  await expect(page.locator("#admBlog #contentTitle")).not.toHaveValue("Saved Pages");
+  await expect(page.locator("#admBlog #contentList")).not.toContainText("Water analysis");
+});
+
+test("rich-editor burst typing performs one preview update and uses a concise live status", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.goto(`${BASE_URL}/admin.html#blog`);
+  await page.locator("#admBlog [data-content-edit]").first().click();
+  await enableStubbedBlogEditor(page);
+
+  const articlePreview = page.locator("#admBlog [data-md-preview-for]");
+  await expect(articlePreview).not.toHaveAttribute("aria-live", /.+/);
+  await expect(page.locator("#admBlog #contentPreviewStatus")).toHaveAttribute("aria-live", "polite");
+
+  await page.locator("#admBlog #contentPreviewFrame").evaluate((frame) => {
+    frame.contentWindow.__masestPreviewMessages = 0;
+    frame.contentWindow.addEventListener("message", () => {
+      frame.contentWindow.__masestPreviewMessages += 1;
+    });
+  });
+  await page.locator("#admBlog [data-rich-editor-surface]").evaluate((surface) => {
+    surface.innerHTML = "<p>Burst preview body</p>";
+    for (let index = 0; index < 6; index += 1) {
+      surface.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+    }
+  });
+
+  await expect.poll(() => page.locator("#admBlog #contentPreviewFrame").evaluate((frame) => (
+    frame.contentWindow.__masestPreviewMessages
+  ))).toBe(1);
+  await expect(page.locator("#admBlog [data-rich-editor-output]")).toHaveValue("Burst preview body");
+  await expect(page.locator("#admBlog #contentPreviewStatus")).toContainText("Preview updated");
 });

@@ -10,7 +10,7 @@ import { renderMarkdown, escapeHtml, readingTime } from "./_md.mjs";
 import { canonicalPublicImageUrl } from "../js/image-url.js";
 import { specializedContentDeliveries } from "../js/content-types.js";
 import { organizationJsonLd } from "./company-identity.mjs";
-import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
+import { BLOG_VERSION, COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const BASE = "https://masest.co";
@@ -171,7 +171,7 @@ function postPage(post, all) {
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=${NAVIGATION_VERSION}">
 <link rel="stylesheet" href="../css/components.css?v=${COMPONENT_VERSION}">
-<link rel="stylesheet" href="../css/blog.css">
+<link rel="stylesheet" href="../css/blog.css?v=${BLOG_VERSION}">
 <!-- seo:auto -->
 <link rel="canonical" href="${BASE}/blog/${post.slug}">
 <meta property="og:url" content="${BASE}/blog/${post.slug}">
@@ -212,7 +212,7 @@ function postPage(post, all) {
     </aside>
   </article>
 </main>
-<script type="module" src="../js/main.js?v=20260830a"></script>
+<script type="module" src="../js/main.js?v=20260830e"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
@@ -239,7 +239,7 @@ function postCard(post) {
 function indexPage(posts) {
   const cats = ["all", ...CATEGORIES];
   const chips = cats
-    .map((c) => `<button type="button" class="blog-chip${c === "all" ? " is-active" : ""}" data-filter-cat="${c}" aria-pressed="${c === "all" ? "true" : "false"}">${c === "all" ? "All" : text(categoryLabel(c))}</button>`)
+    .map((c) => `<button type="button" class="blog-chip${c === "all" ? " is-active" : ""}" data-filter-cat="${c}" aria-pressed="${c === "all" ? "true" : "false"}" aria-controls="blogPostGrid">${c === "all" ? "All" : text(categoryLabel(c))}</button>`)
     .join("");
   const cards = posts.map(postCard).join("\n");
   const schema = {
@@ -267,7 +267,7 @@ function indexPage(posts) {
 <link rel="stylesheet" href="css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="css/navigation.css?v=${NAVIGATION_VERSION}">
 <link rel="stylesheet" href="css/components.css?v=${COMPONENT_VERSION}">
-<link rel="stylesheet" href="css/blog.css">
+<link rel="stylesheet" href="css/blog.css?v=${BLOG_VERSION}">
 <!-- seo:auto -->
 <link rel="canonical" href="${BASE}/blog">
 <meta property="og:url" content="${BASE}/blog">
@@ -300,11 +300,19 @@ function indexPage(posts) {
   </section>
   <section class="section">
     <div class="wrap" data-blog-filter>
+      <form class="blog-search" role="search" data-blog-search>
+        <label for="blogSearch">Search articles</label>
+        <div class="blog-search-field">
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <input id="blogSearch" name="q" type="search" autocomplete="off" placeholder="Search products, jobs, or problems" aria-describedby="blogResults" aria-controls="blogPostGrid" data-blog-query>
+        </div>
+        <p id="blogResults" class="blog-results" data-blog-results role="status" aria-live="polite">${posts.length} articles</p>
+      </form>
       <div class="blog-chips" role="group" aria-label="Filter by category">${chips}</div>
-      <div class="blog-grid">
+      <div class="blog-grid" id="blogPostGrid">
 ${cards}
       </div>
-      <p class="blog-empty" role="status" aria-live="polite" hidden>No posts match that filter.</p>
+      <p class="blog-empty" hidden>Try fewer words or a different category.</p>
     </div>
   </section>
   <section class="block-dark on-dark cta-band">
@@ -316,8 +324,8 @@ ${cards}
   </section>
   <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="blog" data-cms-region="body"></div>
 </main>
-<script type="module" src="js/main.js?v=20260830a"></script>
-<script type="module" src="js/blog-index.js"></script>
+<script type="module" src="js/main.js?v=20260830e"></script>
+<script type="module" src="js/blog-index.js?v=20260830e"></script>
 <script src="js/track.js" defer></script>
 </body>
 </html>

@@ -590,5 +590,5 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { searchTextMatchesQuery } from "./fuzzy-search.js?v=20260830a";
-import { loadPricingData } from "./pricing-data.js?v=20260830a";
+import { searchTextMatchesQuery } from "./fuzzy-search.js?v=20260830e";
+import { loadPricingData } from "./pricing-data.js?v=20260830e";

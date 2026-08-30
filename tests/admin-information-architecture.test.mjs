@@ -5,6 +5,9 @@ import test from 'node:test';
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const html = read('admin.html');
 const admin = read('js/admin.js');
+const content = read('js/admin/content.js');
+const crmWorkspace = read('js/admin/crm-workspace.js');
+const components = read('css/components.css');
 
 function panel(name, nextName) {
   const start = html.indexOf(`data-panel="${name}"`);
@@ -52,4 +55,18 @@ test('admin tab renderer preserves historical deep links in the new information 
   assert.match(admin, /import\('\.\/admin\/traffic\.js\?v=\d{8}[a-z]'\)/);
   assert.match(admin, /import\('\.\/admin\/seo\.js\?v=\d{8}[a-z]'\)/);
   assert.match(admin, /import\('\.\/admin\/qbo\.js\?v=\d{8}[a-z]'\)/);
+});
+
+test('content and CRM mobile workspaces remove repeated chrome before primary work', () => {
+  assert.match(content, /<h2>Website pages<\/h2>/);
+  assert.match(content, /<h2>Blog publishing<\/h2>/);
+  assert.doesNotMatch(content, /<p class="adm-eyebrow">(?:Website|Blog) CMS<\/p>/);
+  assert.doesNotMatch(content, /<p class="adm-eyebrow">\$\{blog \? "Blog CMS" : "CMS"\}<\/p>/);
+
+  assert.match(html, /@media \(max-width: 720px\) \{[\s\S]*\.adm-content-hub-metrics \{[\s\S]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(html, /@media \(max-width: 720px\) \{[\s\S]*\.adm-content-hub p\.muted \{ display:\s*none; \}/);
+
+  assert.match(crmWorkspace, /<span><b>\$\{visible\.length\}<\/b> open<\/span>/);
+  assert.match(components, /@media \(max-width: 640px\) \{[\s\S]*\.crm-ws-head p\.muted \{ display:\s*none; \}/);
+  assert.match(components, /@media \(max-width: 640px\) \{[\s\S]*\.crm-quick-stats span \{[\s\S]*border:\s*0;/);
 });

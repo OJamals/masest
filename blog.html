@@ -15,8 +15,8 @@
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260829b">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
-<link rel="stylesheet" href="css/components.css?v=20260822d">
-<link rel="stylesheet" href="css/blog.css">
+<link rel="stylesheet" href="css/components.css?v=20260830e">
+<link rel="stylesheet" href="css/blog.css?v=20260830e">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/blog">
 <meta property="og:url" content="https://masest.co/blog">
@@ -49,8 +49,16 @@
   </section>
   <section class="section">
     <div class="wrap" data-blog-filter>
-      <div class="blog-chips" role="group" aria-label="Filter by category"><button type="button" class="blog-chip is-active" data-filter-cat="all" aria-pressed="true">All</button><button type="button" class="blog-chip" data-filter-cat="marketing" aria-pressed="false">Product news</button><button type="button" class="blog-chip" data-filter-cat="technical" aria-pressed="false">How-to guide</button><button type="button" class="blog-chip" data-filter-cat="news" aria-pressed="false">Company news</button></div>
-      <div class="blog-grid">
+      <form class="blog-search" role="search" data-blog-search>
+        <label for="blogSearch">Search articles</label>
+        <div class="blog-search-field">
+          <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+          <input id="blogSearch" name="q" type="search" autocomplete="off" placeholder="Search products, jobs, or problems" aria-describedby="blogResults" aria-controls="blogPostGrid" data-blog-query>
+        </div>
+        <p id="blogResults" class="blog-results" data-blog-results role="status" aria-live="polite">27 articles</p>
+      </form>
+      <div class="blog-chips" role="group" aria-label="Filter by category"><button type="button" class="blog-chip is-active" data-filter-cat="all" aria-pressed="true" aria-controls="blogPostGrid">All</button><button type="button" class="blog-chip" data-filter-cat="marketing" aria-pressed="false" aria-controls="blogPostGrid">Product news</button><button type="button" class="blog-chip" data-filter-cat="technical" aria-pressed="false" aria-controls="blogPostGrid">How-to guide</button><button type="button" class="blog-chip" data-filter-cat="news" aria-pressed="false" aria-controls="blogPostGrid">Company news</button></div>
+      <div class="blog-grid" id="blogPostGrid">
 <article class="blog-card" data-slug="car-dealership-cleaning-checklist" data-category="technical" data-tags="operations automotive dealership cr-hd torque">
     <a class="blog-card-link" href="/blog/car-dealership-cleaning-checklist">
       <img class="blog-card-img" src="/img/blog/car-dealership-cleaning-hero.webp" alt="Cleaning technician running a floor scrubber through an automotive dealership service bay" width="1440" height="811" loading="lazy" decoding="async">
@@ -295,7 +303,7 @@
     </a>
   </article>
       </div>
-      <p class="blog-empty" role="status" aria-live="polite" hidden>No posts match that filter.</p>
+      <p class="blog-empty" hidden>Try fewer words or a different category.</p>
     </div>
   </section>
   <section class="block-dark on-dark cta-band">
@@ -307,8 +315,8 @@
   </section>
   <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="blog" data-cms-region="body"></div>
 </main>
-<script type="module" src="js/main.js?v=20260830a"></script>
-<script type="module" src="js/blog-index.js"></script>
+<script type="module" src="js/main.js?v=20260830e"></script>
+<script type="module" src="js/blog-index.js?v=20260830e"></script>
 <script src="js/track.js" defer></script>
 </body>
 </html>

@@ -43,6 +43,18 @@ export function json(status, body, extraHeaders = {}) {
   });
 }
 
+export function reportInternalError(scope, error) {
+  const detail = error && typeof error === 'object' && 'message' in error
+    ? error.message
+    : error;
+  console.error(`[${String(scope || 'server_error')}]`, String(detail || 'unknown_error').slice(0, 1000));
+}
+
+export function internalServerError(scope, error) {
+  reportInternalError(scope, error);
+  return json(500, { error: 'server_error' });
+}
+
 export async function readBody(request) {
   try { return await request.json(); } catch { return {}; }
 }

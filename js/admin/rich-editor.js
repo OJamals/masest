@@ -1,4 +1,4 @@
-import { escapeHtml, renderMarkdown } from "../md.js?v=20260823d";
+import { escapeHtml, renderMarkdown } from "../md.js?v=20260830e";
 
 function decodeEntities(value) {
   return String(value || "")
@@ -107,13 +107,13 @@ export function referencePickerTemplate({ prefix, admEmpty }) {
   `;
 }
 
-export function insertMarkdownIntoRichEditor(editor, markdown, onChange) {
+export function insertMarkdownIntoRichEditor(editor, markdown) {
   if (!editor) return false;
   const surface = editor.querySelector("[data-rich-editor-surface]");
   const output = editor.querySelector("[data-rich-editor-output]");
   if (!surface || !output) return false;
   insertHtmlAtSelection(surface, markdownToEditorHtml(markdown));
-  syncOutput(surface, output, onChange);
+  syncOutput(surface, output);
   return true;
 }
 
@@ -168,10 +168,9 @@ function appendMarkdownBlock(surface, markdown) {
   surface.insertAdjacentHTML("beforeend", `<p>${markdownToEditorHtml(markdown)}</p>`);
 }
 
-function syncOutput(surface, output, onChange) {
+function syncOutput(surface, output) {
   if (!surface || !output) return;
   output.value = htmlToMarkdown(surface.innerHTML);
-  onChange?.(output.value, output);
   output.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
 }
 
@@ -290,7 +289,7 @@ export function createRichTextEditor(editor, options = {}) {
 
   surface.addEventListener("input", () => {
     rememberSelection();
-    syncOutput(surface, output, options.onChange);
+    syncOutput(surface, output);
   });
   surface.addEventListener("keyup", rememberSelection);
   surface.addEventListener("mouseup", rememberSelection);
@@ -301,7 +300,7 @@ export function createRichTextEditor(editor, options = {}) {
     if (event.target.matches("[data-editor-format-size]")) {
       const size = event.target.value;
       if (size) wrapSelection(surface, (text) => `<span data-md-size="${escapeHtml(size)}">${escapeHtml(text)}</span>`, lastSelectionRange);
-      syncOutput(surface, output, options.onChange);
+      syncOutput(surface, output);
     }
   });
   editor.addEventListener("click", async (event) => {
@@ -327,7 +326,7 @@ export function createRichTextEditor(editor, options = {}) {
           surface,
           insertMarkdown: (markdown) => {
             insertHtmlAtSelection(surface, markdownToEditorHtml(markdown));
-            syncOutput(surface, output, options.onChange);
+            syncOutput(surface, output);
           },
         });
         return;
@@ -344,13 +343,13 @@ export function createRichTextEditor(editor, options = {}) {
       rows.innerHTML = '<p class="adm-status">Loading references…</p>';
       rows.__richEditorInsert = (markdown) => {
         appendMarkdownBlock(surface, markdown);
-        syncOutput(surface, output, options.onChange);
+        syncOutput(surface, output);
         picker.hidden = true;
       };
       const groups = await loadReferenceGroups(options.api).catch(() => []);
       rows.innerHTML = groups.length ? referenceRows(groups) : '<p class="adm-status" data-state="warn">No references found.</p>';
     }
-    syncOutput(surface, output, options.onChange);
+    syncOutput(surface, output);
   });
   if (rows && !rows.dataset.richEditorReferenceWired) {
     rows.dataset.richEditorReferenceWired = "1";

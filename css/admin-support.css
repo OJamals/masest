@@ -75,7 +75,7 @@
 .site-support__drawer[hidden] { display: none; }
 .site-support__list-pane,
 .site-support__conversation { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.site-support__list-pane { display: grid; grid-template-rows: auto minmax(0, 1fr); border-right: 1px solid var(--line, #dfe3e7); background: var(--paper-soft, #f5f7f8); }
+.site-support__list-pane { display: grid; grid-template-rows: auto auto minmax(0, 1fr); border-right: 1px solid var(--line, #dfe3e7); background: var(--paper-soft, #f5f7f8); }
 .site-support__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 16px; border-bottom: 1px solid var(--line, #dfe3e7); background: var(--ink, #15171c); color: #fff; }
 .site-support__header p,
 .site-support__conversation-head p { margin: 0; color: var(--accent, #33b5c0); font-size: .7rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
@@ -85,6 +85,11 @@
 .site-support__header-actions a,
 .site-support__header-actions button { display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 50%; background: transparent; color: inherit; }
 .site-support__header-actions svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.site-support__search { display: grid; gap: 6px; padding: 12px 12px 8px; }
+.site-support__search label { color: var(--ink-soft, #626a73); font-size: .72rem; font-weight: 800; }
+.site-support__search input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid var(--line, #dfe3e7); border-radius: var(--r-input, 10px); background: var(--paper, #fff); color: inherit; font: inherit; }
+.site-support__search input::placeholder { color: var(--ink-soft, #626a73); }
+.site-support__search p { min-height: 1.1em; margin: 0; color: var(--ink-soft, #626a73); font-size: .72rem; }
 .site-support__threads { min-height: 0; overflow-y: auto; padding: 10px; }
 .site-support__skeleton { display: grid; gap: 8px; padding: 2px 0; }
 .site-support__skeleton .skeleton { height: 74px; border-radius: 11px; }
@@ -106,6 +111,7 @@
    16px inset whether or not the back arrow is showing. */
 .site-support__toolbar-lead { display: flex; min-width: 0; align-items: center; gap: 4px; margin-left: -10px; }
 .site-support__toolbar-lead > button[hidden] { display: none; }
+.site-support__drawer[data-view="inbox"] [data-support-back] { display: none; }
 /* Both views own the second row, so the one that is showing fills the pane. */
 .site-support__conversation-body,
 .site-support__settings { grid-row: 2; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
@@ -181,16 +187,18 @@
     top: -7px;
     right: -7px;
   }
-  /* Stacked, so the rows must be declared. Left implicit both are `auto` and
-     align-content:stretch splits the spare height between them, which clipped
-     the thread list and left a dead band above the conversation. The cap has to
-     sit on the TRACK: a percentage max-height on the pane resolves against its
-     own content-sized row, so it only ever shrank the pane inside a row that had
-     already grown. fit-content(42%) measures against the drawer's real height. */
-  .site-support__drawer { bottom: 64px; grid-template-columns: 1fr; grid-template-rows: fit-content(42%) minmax(0, 1fr); width: calc(100vw - 24px); height: min(720px, calc(100dvh - 88px)); }
+  /* Phones use a list-to-detail flow. One screen owns the full drawer at a
+     time, so neither the thread list nor the reply editor is squeezed. */
+  .site-support__drawer { bottom: 64px; grid-template-columns: 1fr; grid-template-rows: fit-content(56%) minmax(0, 1fr); width: calc(100vw - 24px); height: min(720px, calc(100dvh - 88px)); }
   .site-support__list-pane { border-right: 0; border-bottom: 1px solid var(--line, #dfe3e7); }
   .site-support__conversation { min-height: 0; }
   .site-support__messages { max-height: 28dvh; }
+  .site-support__drawer[data-view="inbox"][data-thread-selected="false"] { grid-template-rows: minmax(0, 1fr); }
+  .site-support__drawer[data-view="inbox"][data-thread-selected="false"] .site-support__conversation { display: none; }
+  .site-support__drawer[data-view="inbox"][data-thread-selected="true"] { grid-template-rows: minmax(0, 1fr); }
+  .site-support__drawer[data-view="inbox"][data-thread-selected="true"] .site-support__list-pane { display: none; }
+  .site-support__drawer[data-view="inbox"][data-thread-selected="true"] .site-support__conversation { display: grid; grid-row: 1; }
+  .site-support__drawer[data-view="inbox"][data-thread-selected="true"] [data-support-back] { display: grid; }
   /* The whole reason settings moved in here: at phone width a thread list above
      them leaves a strip too short to use. Desktop keeps both panes. */
   .site-support__drawer[data-view="settings"] .site-support__list-pane { display: none; }

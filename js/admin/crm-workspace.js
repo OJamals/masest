@@ -3,8 +3,8 @@
 // slice; sub-views are filled by later plans. Mirrors the createQuotesTab shape
 // (#36 per-tab split). Shared primitives ($, api, state, admSkeleton, admEmpty)
 // are injected; esc/delegate come from util.js.
-import { esc, delegate, dateTime as date } from '../util.js?v=20260823d';
-import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260823d';
+import { esc, delegate, dateTime as date } from '../util.js?v=20260830e';
+import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260830e';
 
 const DIR_ROLES = [
   ['', 'All roles'],
@@ -66,6 +66,8 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
   // The currently loaded inbox tasks for the active scope. The assignee filter
   // narrows this in-memory (no refetch), so it persists across assignee changes.
   let inboxTasks = [];
+  let viewLoadId = 0;
+  let portalLoadId = 0;
 
   function taskRow(t) {
     const overdue = t.due_at && new Date(t.due_at) < new Date();
@@ -90,7 +92,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const overdue = tasks.filter((t) => t.status !== 'done' && t.due_at && new Date(t.due_at) < new Date()).length;
     const unassigned = tasks.filter((t) => !t.assigned_to).length;
     return `<div class="crm-quick-stats" aria-label="Follow-up summary">
-      <span><b>${visible.length}</b> showing</span>
+      <span><b>${visible.length}</b> open</span>
       <span><b>${overdue}</b> overdue</span>
       <span><b>${unassigned}</b> unassigned</span>
     </div>`;
@@ -127,12 +129,15 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
 
   // Tasks inbox — replaces plan 001 placeholder.
   async function renderTasks(body) {
+    const loadId = ++viewLoadId;
     const scope = state.crmTaskScope || 'open';
     body.innerHTML = admSkeleton(4);
     try {
       const { tasks, needs_migration } = await api(`/api/admin/crm/tasks?scope=${scope}`);
       // View or scope changed while this request was in flight — drop it (X8 race).
-      if ((state.crmView || 'tasks') !== 'tasks' || (state.crmTaskScope || 'open') !== scope) return;
+      if (!body.isConnected || loadId !== viewLoadId
+        || (state.crmView || 'tasks') !== 'tasks'
+        || (state.crmTaskScope || 'open') !== scope) return;
       if (needs_migration) { inboxTasks = []; body.innerHTML = scopeButtons(scope) + admEmpty('ph-database', 'No CRM database yet', 'Apply supabase/schema-crm.sql to enable follow-ups.'); return; }
       inboxTasks = tasks || [];
       // Drop a stale assignee selection that no longer appears in the new scope.
@@ -140,24 +145,20 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
       if (state.crmTaskAssignee && !facetValues.has(state.crmTaskAssignee)) state.crmTaskAssignee = '';
       paintInbox(body);
     } catch (err) {
+      if (!body.isConnected || loadId !== viewLoadId
+        || (state.crmView || 'tasks') !== 'tasks'
+        || (state.crmTaskScope || 'open') !== scope) return;
       inboxTasks = [];
       body.innerHTML = scopeButtons(scope) + `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load tasks. Retry.')}</p>`;
     }
   }
   // ---- Portal users (the old top-level Customers tab, folded in here) ----
-  // Sign-in accounts fetched once and searched client-side; CRM contacts stay a
-  // server-side search. One directory for every person tied to an account.
-  async function loadPortalUsers() {
-    if (state.customers) return state.customers;
-    try { state.customers = (await api('/api/admin/customers')).customers || []; } catch { return null; }
-    return state.customers;
-  }
-
-  function filterPortalUsers(users, q) {
-    if (!q) return users;
-    const needle = q.toLowerCase();
-    const text = (c) => [c.full_name, c.email, c.phone, c.company_name, c.role].filter(Boolean).join(' ').toLowerCase();
-    return users.filter((c) => text(c).includes(needle));
+  // Sign-in accounts are searched and paged by the server. Email lookup is then
+  // limited to this page's IDs; the full Auth directory is reserved for CSV.
+  async function loadPortalUsers({ q, offset, limit = 50 }) {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (q) params.set('q', q);
+    return api(`/api/admin/customers?${params}`);
   }
 
   function portalRow(c) {
@@ -179,21 +180,31 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
       <span class="crm-contact-actions">${accountBtn}${emailBtn}</span></li>`;
   }
 
-  async function renderPortalUsers(body) {
+  async function renderPortalUsers(body, { append = false } = {}) {
     const boxEl = body.querySelector('[data-dir-users]');
     if (!boxEl) return;
-    // The role facet is contact-specific — a role search shows contacts only.
-    if (state.crmContactRole) { boxEl.innerHTML = ''; return; }
-    boxEl.innerHTML = admSkeleton(2);
-    const users = await loadPortalUsers();
-    if (!boxEl.isConnected) return; // view switched while loading
-    if (users === null) { boxEl.innerHTML = '<p class="adm-status" data-state="err">Could not load portal users. Retry.</p>'; return; }
+    const loadId = ++portalLoadId;
     const q = state.crmContactQ || '';
-    const visible = filterPortalUsers(users, q);
-    const heading = `<h4 class="crm-dir-heading">Portal sign-ins <span class="muted">(${visible.length}${q ? ` of ${users.length}` : ''})</span></h4>`;
-    boxEl.innerHTML = heading + (visible.length
-      ? `<ul class="crm-contact-list">${visible.map(portalRow).join('')}</ul>`
-      : `<p class="muted">${q ? 'No portal users match that search.' : 'No portal users yet.'}</p>`);
+    const role = state.crmContactRole || '';
+    // The role facet is contact-specific — a role search shows contacts only.
+    if (role) { boxEl._users = []; boxEl.innerHTML = ''; return; }
+    if (!append) boxEl.innerHTML = admSkeleton(2);
+    const offset = append ? (boxEl._users?.length || 0) : 0;
+    try {
+      const { customers, total, has_more } = await loadPortalUsers({ q, offset, limit: 50 });
+      if (!boxEl.isConnected || loadId !== portalLoadId
+        || state.crmContactQ !== q || state.crmContactRole !== role) return;
+      const next = append ? [...(boxEl._users || []), ...(customers || [])] : (customers || []);
+      boxEl._users = next;
+      const heading = `<h4 class="crm-dir-heading">Portal sign-ins <span class="muted">(${next.length}${total != null ? ` of ${total}` : ''})</span></h4>`;
+      boxEl.innerHTML = heading + (next.length
+        ? `<ul class="crm-contact-list">${next.map(portalRow).join('')}</ul>${admListPager('data-dir-users-more', next.length, total, has_more)}`
+        : `<p class="muted">${q ? 'No portal users match that search.' : 'No portal users yet.'}</p>`);
+    } catch (err) {
+      if (!boxEl.isConnected || loadId !== portalLoadId
+        || state.crmContactQ !== q || state.crmContactRole !== role) return;
+      boxEl.innerHTML = `<p class="adm-status" data-state="err">${esc(err.data?.error || 'Could not load portal users. Retry.')}</p>`;
+    }
   }
 
   function contactRow(c) {
@@ -247,6 +258,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
   }
 
   async function renderContacts(body) {
+    viewLoadId += 1;
     const term = state.crmContactQ || '';
     const currentRole = state.crmContactRole || '';
     const roleOpts = DIR_ROLES.map(([v, l]) => `<option value="${esc(v)}"${v === currentRole ? ' selected' : ''}>${esc(l)}</option>`).join('');
@@ -337,6 +349,10 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     });
     delegate(box, 'click', '[data-dir-more]', () => {
       runContactSearch(box.querySelector('[data-crm-ws-body]'), { append: true });
+    });
+    delegate(box, 'click', '[data-dir-users-more]', (event, btn) => {
+      btn.disabled = true;
+      renderPortalUsers(box.querySelector('[data-crm-ws-body]'), { append: true });
     });
     delegate(box, 'click', '[data-dir-open-company]', (event, btn) => {
       if (openSubject) openSubject('company', btn.dataset.dirOpenCompany, btn.dataset.companyLabel);

@@ -65,11 +65,14 @@ async function bootAsStaff(page) {
     contentType: "application/json",
     body: JSON.stringify({ notify_admin_support_requests: true, notify_admin_messages: false }),
   }));
-  await page.route("**/api/admin/messages**", (route) => route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({ threads: [] }),
-  }));
+  await page.route("**/api/admin/messages**", (route) => {
+    const summary = new URL(route.request().url()).searchParams.get("summary") === "1";
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(summary ? { summary: { open: 0, unanswered: 0 } } : { threads: [] }),
+    });
+  });
 }
 
 test("#support-settings opens the console on its settings view, not a page", async ({ page }) => {
@@ -132,7 +135,7 @@ test("at phone width the settings are operable, not covered by the drawer", asyn
   await expect(page.locator(".site-support__settings-status")).toHaveText("Saved.");
 });
 
-test("at phone width the stacked panes fill the drawer with no dead band", async ({ page }) => {
+test("at phone width support moves from the full inbox to a full conversation", async ({ page }) => {
   await bootAsStaff(page);
   await page.unroute("**/api/admin/messages**");
   await page.route("**/api/admin/messages**", (route) => route.fulfill({
@@ -150,27 +153,25 @@ test("at phone width the stacked panes fill the drawer with no dead band", async
   await page.waitForSelector(".site-support__drawer:not([hidden])");
   await expect(page.locator(".site-support__thread")).toHaveCount(2);
 
-  const box = await page.evaluate(() => {
-    const rect = (selector) => document.querySelector(selector).getBoundingClientRect();
-    const drawer = rect(".site-support__drawer");
-    const listPane = rect(".site-support__list-pane");
-    const conversation = rect(".site-support__conversation");
-    const threads = document.querySelector(".site-support__threads");
-    return {
-      gap: Math.round(conversation.top - listPane.bottom),
-      slack: Math.round(drawer.bottom - conversation.bottom),
-      listShare: listPane.height / drawer.height,
-      threadsClipped: threads.scrollHeight - threads.clientHeight,
-    };
-  });
+  const drawer = page.locator(".site-support__drawer");
+  const listPane = page.locator(".site-support__list-pane");
+  const conversation = page.locator(".site-support__conversation");
+  await expect(drawer).toHaveAttribute("data-thread-selected", "false");
+  await expect(listPane).toBeVisible();
+  await expect(conversation).toBeHidden();
+  await expect(page.locator(".site-support__launcher i")).toHaveClass(/ph-x/);
 
-  // Implicit auto rows used to split the drawer's spare height between the two
-  // panes, stranding a ~220px band above the conversation and clipping the list.
-  expect(box.gap).toBe(0);
-  expect(box.slack).toBeLessThanOrEqual(1);
-  // A short list keeps its own height; it may never eat more than the 42% cap.
-  expect(box.listShare).toBeLessThanOrEqual(0.43);
-  expect(box.threadsClipped).toBe(0);
+  await page.locator('[data-company-id="c1"]').click();
+  await expect(drawer).toHaveAttribute("data-thread-selected", "true");
+  await expect(listPane).toBeHidden();
+  await expect(conversation).toBeVisible();
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Acme HVAC");
+  await expect(page.locator("[data-support-back]")).toBeVisible();
+
+  await page.locator("[data-support-back]").click();
+  await expect(drawer).toHaveAttribute("data-thread-selected", "false");
+  await expect(listPane).toBeVisible();
+  await expect(conversation).toBeHidden();
 });
 
 test("Overview's unread count opens the inbox without leaving Overview", async ({ page }) => {
@@ -207,4 +208,173 @@ test("a [data-support-open] link opens the console in place instead of navigatin
 
   await expect(page.locator(".site-support__drawer")).toBeVisible();
   await expect(page.locator('[data-panel="orders"]')).toHaveAttribute("data-active", "true");
+});
+
+test("support search filters by customer and recent message without hiding the inbox count", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/messages**");
+  await page.route("**/api/admin/messages**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      threads: [
+        { company_id: "c1", company_name: "Acme HVAC", last_body: "Chiller loop is fouling again.", last_at: "2026-08-07T10:00:00Z", unanswered: true, status: "open" },
+        { company_id: "c2", company_name: "Northbay Foods", last_body: "Thanks, received.", last_at: "2026-08-06T10:00:00Z", unanswered: false, status: "open" },
+      ],
+    }),
+  }));
+  await page.goto(`${BASE_URL}/admin.html#support`);
+
+  const search = page.getByRole("searchbox", { name: "Search customer chats" });
+  await search.fill("received");
+  await expect(page.locator(".site-support__thread")).toHaveCount(1);
+  await expect(page.locator(".site-support__thread")).toContainText("Northbay Foods");
+  await expect(page.locator("[data-support-results]")).toHaveText("1 of 2 chats shown");
+  await expect(page.locator("[data-support-summary]")).toHaveText("1 chat needs a reply");
+
+  await search.fill("no match");
+  await expect(page.locator(".site-support__thread")).toHaveCount(0);
+  await expect(page.locator("[data-support-results]")).toHaveText("No chats match your search");
+});
+
+test("the latest conversation request wins when staff switch threads quickly", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/messages**");
+
+  let releaseSlow;
+  let markSlowStarted;
+  let markSlowFinished;
+  const slowGate = new Promise((resolve) => { releaseSlow = resolve; });
+  const slowStarted = new Promise((resolve) => { markSlowStarted = resolve; });
+  const slowFinished = new Promise((resolve) => { markSlowFinished = resolve; });
+  const threads = [
+    { company_id: "c1", company_name: "Acme HVAC", last_body: "First thread", last_at: "2026-08-07T10:00:00Z", unanswered: true, status: "open" },
+    { company_id: "c2", company_name: "Northbay Foods", last_body: "Second thread", last_at: "2026-08-06T10:00:00Z", unanswered: false, status: "open" },
+  ];
+
+  await page.route("**/api/admin/messages**", async (route) => {
+    const companyId = new URL(route.request().url()).searchParams.get("company_id");
+    if (!companyId) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ threads }) });
+      return;
+    }
+    if (companyId === "c1") {
+      markSlowStarted();
+      await slowGate;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        thread: threads.find((thread) => thread.company_id === companyId),
+        messages: [{ id: companyId, sender_role: "buyer", body: `${companyId} message`, created_at: "2026-08-07T10:00:00Z" }],
+      }),
+    });
+    if (companyId === "c1") markSlowFinished();
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#support`);
+  await expect(page.locator(".site-support__thread")).toHaveCount(2);
+  await page.locator('[data-company-id="c1"]').click();
+  await slowStarted;
+  await page.locator('[data-company-id="c2"]').click();
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Northbay Foods");
+  await expect(page.locator(".site-support__messages")).toContainText("c2 message");
+
+  releaseSlow();
+  await slowFinished;
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Northbay Foods");
+  await expect(page.locator(".site-support__messages")).toContainText("c2 message");
+});
+
+test("the latest inbox refresh wins when an older list response arrives late", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/messages**");
+
+  let releaseSlow;
+  let markSlowStarted;
+  let markSlowFinished;
+  const slowGate = new Promise((resolve) => { releaseSlow = resolve; });
+  const slowStarted = new Promise((resolve) => { markSlowStarted = resolve; });
+  const slowFinished = new Promise((resolve) => { markSlowFinished = resolve; });
+  let listRequest = 0;
+
+  await page.route("**/api/admin/messages**", async (route) => {
+    const requestNumber = ++listRequest;
+    if (requestNumber === 2) {
+      markSlowStarted();
+      await slowGate;
+    }
+    const snapshot = requestNumber === 1 ? "Initial snapshot"
+      : requestNumber === 2 ? "Old snapshot"
+        : "Fresh snapshot";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        threads: [{
+          company_id: snapshot.toLocaleLowerCase().split(" ")[0],
+          company_name: snapshot,
+          last_body: "Support request",
+          last_at: "2026-08-07T10:00:00Z",
+          unanswered: true,
+          status: "open",
+        }],
+      }),
+    });
+    if (requestNumber === 2) markSlowFinished();
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#support`);
+  await slowStarted;
+  await page.locator(".site-support__launcher").click();
+  await page.locator(".site-support__launcher").click();
+  await expect(page.locator(".site-support__thread")).toContainText("Fresh snapshot");
+
+  releaseSlow();
+  await slowFinished;
+  await expect(page.locator(".site-support__thread")).toContainText("Fresh snapshot");
+  await expect(page.locator(".site-support__thread")).not.toContainText("Old snapshot");
+});
+
+test("closed support fetches only counts, open support fetches threads, and hidden pages stop", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/messages**");
+  const requests = [];
+  await page.route("**/api/admin/messages**", (route) => {
+    const url = new URL(route.request().url());
+    const summary = url.searchParams.get("summary") === "1";
+    requests.push(summary ? "summary" : "threads");
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(summary
+        ? { summary: { open: 4, unanswered: 2 } }
+        : { threads: [{ company_id: "c1", company_name: "Acme HVAC", last_body: "Need help", last_at: "2026-08-07T10:00:00Z", unanswered: true, status: "open" }] }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#overview`);
+  await expect.poll(() => requests.filter((kind) => kind === "summary").length).toBeGreaterThan(0);
+  expect(requests).not.toContain("threads");
+  await expect(page.locator("[data-support-count]")).toHaveText("2");
+
+  await page.locator(".site-support__launcher").click();
+  await expect.poll(() => requests.filter((kind) => kind === "threads").length).toBeGreaterThan(0);
+  await expect(page.locator(".site-support__thread")).toHaveCount(1);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  const hiddenRequestCount = requests.length;
+  await page.waitForTimeout(100);
+  expect(requests).toHaveLength(hiddenRequestCount);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: false });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(() => requests.length).toBeGreaterThan(hiddenRequestCount);
+  expect(requests.at(-1)).toBe("threads");
 });

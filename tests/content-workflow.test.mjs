@@ -33,7 +33,7 @@ test("content API exposes workflow actions with publish and review permissions",
   assert.match(source, /request_changes:\s*\{\s*capability:\s*"content\.review"/);
   assert.match(source, /staffCan\(role, policy\.capability\)/);
   assert.match(source, /staffCan\(role, "content\.publish"\)/);
-  assert.match(source, /result\.error === "content_locked" \? 409/);
+  assert.match(source, /\["content_locked", "content_version_conflict"\]\.includes\(result\.error\) \? 409/);
 });
 
 test("content repository enforces active editorial locks", () => {
@@ -57,7 +57,7 @@ test("content editor surfaces workflow queues and actions", () => {
   assert.match(source, /data-content-action="publish_scheduled"/);
   assert.match(source, /contentWorkflowNote/);
   assert.match(source, /publishScheduledContent/);
-  assert.match(source, /body:\s*\{\s*action,\s*note,\s*entry\s*\}/);
+  assert.match(source, /body:\s*\{\s*action,\s*note,\s*entry,\s*\.\.\.mutationVersion\(entry\)\s*\}/);
   assert.match(source, /Submit for review/);
   assert.match(source, /Schedule CMS publish/);
   assert.match(source, /Publish due to CMS/);

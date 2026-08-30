@@ -1,5 +1,5 @@
 // /api/admin/content-revisions - revision history and restore for native CMS entries.
-import { adminClient, requireStaff, json, readBody } from "../../_lib/supabase.js";
+import { adminClient, requireStaff, json, readBody, internalServerError } from "../../_lib/supabase.js";
 import { staffCan } from "../../_lib/authz.js";
 import { createContentRepository } from "../../_lib/content.js";
 
@@ -20,7 +20,7 @@ export async function onRequest({ request, env }) {
       });
       return json(200, { revisions });
     } catch (error) {
-      return json(500, { error: error.message });
+      return internalServerError("admin.content_revisions.list", error);
     }
   }
 
@@ -30,11 +30,17 @@ export async function onRequest({ request, env }) {
     }
     const body = await readBody(request);
     try {
-      const result = await repo.restoreRevision(body || {}, user.id);
-      if (!result.ok) return json(result.error === "content_locked" ? 409 : 400, result);
+      const result = await repo.restoreRevision(
+        body || {},
+        user.id,
+        { expectedVersion: body?.expected_version },
+      );
+      if (!result.ok) {
+        return json(["content_locked", "content_version_conflict"].includes(result.error) ? 409 : 400, result);
+      }
       return json(200, result);
     } catch (error) {
-      return json(500, { error: error.message });
+      return internalServerError("admin.content_revisions.restore", error);
     }
   }
 

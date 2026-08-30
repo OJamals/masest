@@ -4,15 +4,15 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260823d';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260830e';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260823d';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260823d';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260823d';
+} from './rich-editor.js?v=20260830e';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260830e';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260830e';
 
 const SECTIONS = [
   ['compose', 'Compose'],
@@ -356,7 +356,6 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       root,
       api,
       output: $('nlBody'),
-      onChange: () => updatePreview(),
       referencePickerSelector: '#nlReferencePicker',
       referenceRowsSelector: '#nlReferenceRows',
       onInsertImage: async (_key, ctx) => {

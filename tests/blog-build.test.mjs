@@ -8,8 +8,10 @@ import { snapshotPayloads } from "../tools/build-content.mjs";
 import { buildBlog } from "../tools/build-blog.mjs";
 import { escapeHtml } from "../tools/_md.mjs";
 import { organizationJsonLd } from "../tools/company-identity.mjs";
+import { filterBlogPosts } from "../js/blog-index.js";
 
 const SEED = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
+const BLOG_CSS = readFileSync(new URL("../css/blog.css", import.meta.url), "utf8");
 const P3_AUTHORITY_POSTS = [
   {
     slug: "industrial-cleaning-trial-scope-isolate-contain-release",
@@ -213,6 +215,13 @@ test("blog_post content type is registered", () => {
   }
 });
 
+test("blog index keeps search and first results close to the hero at desktop and phone widths", () => {
+  assert.match(BLOG_CSS, /\.blog-index-hero \{ padding-bottom:\s*clamp\(/);
+  assert.match(BLOG_CSS, /\.blog-index-hero \+ \.section \{ padding-top:\s*clamp\(/);
+  assert.match(BLOG_CSS, /@media \(max-width: 640px\) \{[\s\S]*\.blog-index-hero \{ padding-bottom:\s*36px; \}/);
+  assert.match(BLOG_CSS, /@media \(max-width: 640px\) \{[\s\S]*\.blog-index-hero \+ \.section \{ padding-top:\s*36px; \}/);
+});
+
 test("blog_post fields are in the structured payload key set", () => {
   const keys = structuredPayloadKeys();
   assert.ok(keys.has("category"));
@@ -249,6 +258,7 @@ test("buildBlog writes a static page per post", () => {
       assert.match(html, new RegExp(`<h1[^>]*>${expectedTitle}`));
       assert.match(html, /"@type":"BlogPosting"/);
       assert.match(html, new RegExp(`canonical" href="https://masest.co/blog/${p.slug}"`));
+      assert.match(html, /href="\.\.\/css\/blog\.css\?v=\d{8}[a-z]"/);
     }
   } finally {
     rmSync(out, { recursive: true, force: true });
@@ -434,12 +444,28 @@ test("buildBlog writes an index listing every post with filter data", () => {
       assert.ok(idx.includes(`data-category="${p.category}"`), `${p.slug} category attr`);
     }
     assert.match(idx, /data-blog-filter/);
+    assert.match(idx, /role="search" data-blog-search/);
+    assert.match(idx, /type="search"[^>]+data-blog-query/);
+    assert.match(idx, /data-blog-results[^>]+role="status"[^>]+aria-live="polite"/);
+    assert.match(idx, /id="blogPostGrid"/);
     assert.match(idx, /data-cms-page="blog"/);
     assert.match(idx, /canonical" href="https:\/\/masest\.co\/blog"/);
     assert.ok(idx.includes(JSON.stringify(organizationJsonLd())));
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
+});
+
+test("blog discovery combines category and tokenized text search", () => {
+  const posts = [
+    { title: "Heat Exchanger Descaling", excerpt: "Remove mineral scale safely", category: "technical", tags: ["HVAC", "HCR"] },
+    { title: "Warehouse Floor Guide", excerpt: "Oil and grease removal", category: "how-to", tags: ["CR HD"] },
+  ];
+
+  assert.deepEqual(filterBlogPosts(posts, { category: "technical", query: "scale HCR" }), [posts[0]]);
+  assert.deepEqual(filterBlogPosts(posts, { category: "all", query: "GREASE floor" }), [posts[1]]);
+  assert.deepEqual(filterBlogPosts(posts, { category: "how-to", query: "scale" }), []);
+  assert.deepEqual(filterBlogPosts(posts), posts);
 });
 
 test("buildBlog writes a well-formed RSS feed", () => {
@@ -505,7 +531,7 @@ test("JSON-LD escapes '<' so a CMS title can't break out of the script block", (
   }
 });
 
-test("index chips expose aria-pressed and the empty state is a live region", () => {
+test("index filters expose pressed state, controlled grid, and one live result status", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
   try {
     buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
@@ -513,8 +539,10 @@ test("index chips expose aria-pressed and the empty state is a live region", () 
     // "All" chip starts pressed; category chips start unpressed.
     assert.match(idx, /data-filter-cat="all" aria-pressed="true"/);
     assert.match(idx, /data-filter-cat="technical" aria-pressed="false"/);
-    // Empty state announces to assistive tech.
-    assert.match(idx, /class="blog-empty" role="status" aria-live="polite"/);
+    assert.match(idx, /data-filter-cat="all"[^>]+aria-controls="blogPostGrid"/);
+    assert.match(idx, /data-blog-results[^>]+role="status"[^>]+aria-live="polite"/);
+    assert.match(idx, /class="blog-empty"[^>]+hidden/);
+    assert.doesNotMatch(idx, /class="blog-empty"[^>]+role="status"/);
   } finally {
     rmSync(out, { recursive: true, force: true });
   }

@@ -1,5 +1,15 @@
 // /api/admin/crm/tasks — staff CRM follow-up tasks on a company or quote (slice 1).
-import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../../_lib/supabase.js';
+import {
+  adminClient,
+  emailLayout,
+  htmlEscape,
+  internalServerError,
+  json,
+  readBody,
+  reportInternalError,
+  requireStaff,
+  sendEmail,
+} from '../../../_lib/supabase.js';
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
 import { taskRow, taskPatch, validSubject, taskDigest } from '../../../_lib/crm.js';
@@ -53,7 +63,8 @@ async function sweepDueTasks({ sb, env }) {
     if (/does not exist|relation|schema cache/i.test(error.message)) {
       return { ok: true, processed: 0, needs_migration: true };
     }
-    return { ok: false, error: error.message };
+    reportInternalError('admin.crm.tasks.sweep', error);
+    return { ok: false, error: 'server_error' };
   }
   const tasks = data || [];
   await enrichLabels(sb, tasks);
@@ -130,7 +141,7 @@ export async function onRequest({ request, env }) {
     const { data, error } = await query.order('due_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }).limit(200);
     if (error) {
       if (/does not exist|relation|schema cache/i.test(error.message)) return json(200, { tasks: [], needs_migration: true });
-      return json(500, { error: error.message });
+      return internalServerError('admin.crm.tasks.list', error);
     }
     const tasks = data || [];
     if (['mine', 'overdue', 'open'].includes(scope) && tasks.length) {
@@ -145,7 +156,7 @@ export async function onRequest({ request, env }) {
     const built = taskRow({ ...body, actor: user.email || null });
     if (built.error) return json(400, { error: built.error });
     const { data, error } = await sb.from('crm_tasks').insert(built.row).select(SELECT).single();
-    if (error) return json(500, { error: error.message });
+    if (error) return internalServerError('admin.crm.tasks.create', error);
     await recordAudit(sb, { user, action: 'crm.task_add', targetType: built.row.subject_type, targetId: built.row.subject_id, detail: { title: built.row.title } });
     return json(200, { ok: true, task: data });
   }
@@ -157,7 +168,7 @@ export async function onRequest({ request, env }) {
     const result = taskPatch({ action: body.action, assigned_to: body.assigned_to, actor: user.email || null }, new Date());
     if (result.error) return json(400, { error: result.error });
     const { data, error } = await sb.from('crm_tasks').update(result.patch).eq('id', body.id).select(SELECT).single();
-    if (error) return json(500, { error: error.message });
+    if (error) return internalServerError('admin.crm.tasks.update', error);
     await recordAudit(sb, { user, action: 'crm.task_update', targetType: 'task', targetId: String(body.id), detail: { action: body.action } });
     return json(200, { ok: true, task: data });
   }

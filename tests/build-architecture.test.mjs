@@ -16,12 +16,23 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/update-content-regressions.spec.mjs",
   ];
   const storyPerformanceTitle = "desktop story stays inside a controlled-scroll frame budget";
+  const workspaceSpecs = [
+    "tools/admin-content-workspace.spec.mjs",
+    "tools/admin-support-entrypoints.spec.mjs",
+    "tools/admin-crm-workspace.spec.mjs",
+    "tools/blog-index.spec.mjs",
+  ];
 
   assert.match(scripts.check || "", /node tools\/check-js\.mjs/);
   assert.match(scripts.test || "", /node --test --test-concurrency=1 --test-timeout=\d+ tests\/\*\.test\.mjs/);
   assert.match(scripts.build || "", /node tools\/cf-build\.mjs/);
   assert.match(scripts.verify || "", /npm run check && npm test && npm run build/);
   assert.match(scripts.verify || "", /npm run qa:commerce-smoke/);
+  assert.equal(
+    scripts["qa:workspace-regressions"],
+    `playwright test ${workspaceSpecs.join(" ")} --workers=1 --reporter=line`,
+  );
+  assert.match(scripts.verify || "", /npm run qa:workspace-regressions/);
   assert.equal(
     scripts["qa:ui-critical"],
     "npm run qa:ui-critical:interaction && npm run qa:ui-critical:performance",
@@ -42,8 +53,13 @@ test("package exposes one-command build and verification scripts", () => {
   );
   assert.ok(
     scripts.verify.indexOf("npm run verify:site")
+      < scripts.verify.indexOf("npm run qa:workspace-regressions"),
+    "workspace browser regressions must follow built-site validation",
+  );
+  assert.ok(
+    scripts.verify.indexOf("npm run qa:workspace-regressions")
       < scripts.verify.indexOf("npm run qa:commerce-smoke"),
-    "commerce smoke must follow built-site validation",
+    "commerce smoke must follow workspace regressions",
   );
   assert.ok(
     scripts.verify.indexOf("npm run qa:commerce-smoke")

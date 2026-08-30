@@ -373,10 +373,17 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
 .crm-dir-heading { margin: 18px 0 8px; font-size: .95rem; }
 .crm-dir-heading .muted { font-weight: 400; }
 @media (max-width: 640px) {
+  .crm-ws { gap: 10px; }
   .crm-ws-head,
   .crm-section-head { grid-template-columns: 1fr; }
+  .crm-ws-head { padding: 12px 14px; }
+  .crm-ws-head p.muted { display: none; }
   .crm-ws-shortcuts,
   .crm-quick-stats { justify-content: flex-start; }
+  .crm-quick-stats { flex-wrap: nowrap; gap: 0; }
+  .crm-quick-stats span { min-width: 0; display: inline-flex; align-items: baseline; gap: 4px; padding: 0; border: 0; background: transparent; }
+  .crm-quick-stats span + span::before { content: "·"; margin: 0 8px; color: var(--muted, #6b7280); }
+  .crm-quick-stats b { font-size: .88rem; }
   .crm-note-form,
   .crm-task-form { grid-template-columns: 1fr; }
   .adm-tools.crm-contact-search { grid-template-columns: 1fr; }
