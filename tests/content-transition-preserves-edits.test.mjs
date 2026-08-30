@@ -34,7 +34,14 @@ function fakeSb(db) {
           return Promise.resolve({ error: null });
         },
         _match(row) { return q._filters.every(([c, v]) => row[c] === v); },
-        async maybeSingle() { return { data: db[table].find((r) => q._match(r)) || null, error: null }; },
+        async maybeSingle() {
+          const idx = db[table].findIndex((r) => q._match(r));
+          if (q._update && idx >= 0) {
+            db[table][idx] = { ...db[table][idx], ...q._update };
+            return { data: { ...db[table][idx] }, error: null };
+          }
+          return { data: idx >= 0 ? { ...db[table][idx] } : null, error: null };
+        },
         async single() {
           const idx = db[table].findIndex((r) => q._match(r));
           if (q._update && idx >= 0) {
@@ -153,4 +160,77 @@ test("status-only content mutations advance the revision version", async () => {
   assert.equal(transitioned.ok, true);
   assert.equal(transitioned.entry.version, 6);
   assert.deepEqual(db.content_revisions.map((revision) => revision.version), [3, 4, 5, 6]);
+});
+
+test("workflow, archive, and lock mutations reject stale editor versions", async () => {
+  const methods = [
+    ["transition", (repo) => repo.transition(
+      { type: "service", slug: "water-analysis", locale: "en" },
+      "staff_9",
+      "in_review",
+      "Ready",
+      { expectedVersion: 3 },
+    )],
+    ["archive", (repo) => repo.archive(
+      { type: "service", slug: "water-analysis", locale: "en" },
+      "staff_9",
+      { expectedVersion: 3 },
+    )],
+    ["unarchive", (repo) => repo.unarchive(
+      { type: "service", slug: "water-analysis", locale: "en" },
+      "staff_9",
+      { expectedVersion: 3 },
+    )],
+    ["lock", (repo) => repo.lock(
+      { type: "service", slug: "water-analysis", locale: "en" },
+      "staff_9",
+      { expectedVersion: 3 },
+    )],
+    ["unlock", (repo) => repo.unlock(
+      { type: "service", slug: "water-analysis", locale: "en" },
+      "staff_9",
+      { expectedVersion: 3 },
+    )],
+  ];
+
+  for (const [name, run] of methods) {
+    const db = { content_entries: [seedEntry({ version: 4 })], content_revisions: [] };
+    const result = await run(createContentRepository(fakeSb(db)));
+    assert.deepEqual(result, {
+      ok: false,
+      error: "content_version_conflict",
+      expected_version: 3,
+      current_version: 4,
+    }, name);
+    assert.equal(db.content_entries[0].version, 4, `${name} must not mutate stale content`);
+    assert.deepEqual(db.content_revisions, [], `${name} must not write a revision`);
+  }
+});
+
+test("revision restore rejects a stale editor version before replacing content", async () => {
+  const db = {
+    content_entries: [seedEntry({ version: 4, title: "Concurrent edit" })],
+    content_revisions: [{
+      entry_id: "e1",
+      version: 2,
+      payload: { sku: "RESTORE" },
+      seo: { description: "old" },
+    }],
+  };
+  const repo = createContentRepository(fakeSb(db));
+
+  const result = await repo.restoreRevision(
+    { type: "service", slug: "water-analysis", locale: "en", version: 2 },
+    "staff_9",
+    { expectedVersion: 3 },
+  );
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: "content_version_conflict",
+    expected_version: 3,
+    current_version: 4,
+  });
+  assert.equal(db.content_entries[0].title, "Concurrent edit");
+  assert.equal(db.content_entries[0].version, 4);
 });

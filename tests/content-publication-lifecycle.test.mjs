@@ -6,12 +6,12 @@ function publicationRepository(overrides = {}) {
   const calls = [];
   return {
     calls,
-    async saveDraft(entry, userId) {
-      calls.push(["saveDraft", entry, userId]);
+    async saveDraft(entry, userId, options) {
+      calls.push(["saveDraft", entry, userId, options]);
       return { ok: true, entry: { ...entry, status: "draft" } };
     },
-    async publish(entry, userId) {
-      calls.push(["publish", entry, userId]);
+    async publish(entry, userId, options) {
+      calls.push(["publish", entry, userId, options]);
       return { ok: true, entry: { ...entry, status: "published" } };
     },
     async publishScheduledDue(filter, userId) {
@@ -26,24 +26,24 @@ function publicationRepository(overrides = {}) {
         skipped: [],
       };
     },
-    async lock(entry, userId) {
-      calls.push(["lock", entry, userId]);
+    async lock(entry, userId, options) {
+      calls.push(["lock", entry, userId, options]);
       return { ok: true, entry };
     },
     async unlock(entry, userId, options) {
       calls.push(["unlock", entry, userId, options]);
       return { ok: true, entry };
     },
-    async unarchive(entry, userId) {
-      calls.push(["unarchive", entry, userId]);
+    async unarchive(entry, userId, options) {
+      calls.push(["unarchive", entry, userId, options]);
       return { ok: true, entry: { ...entry, status: "draft" } };
     },
-    async transition(entry, userId, status, note) {
-      calls.push(["transition", entry, userId, status, note]);
+    async transition(entry, userId, status, note, options) {
+      calls.push(["transition", entry, userId, status, note, options]);
       return { ok: true, entry: { ...entry, status } };
     },
-    async archive(entry, userId) {
-      calls.push(["archive", entry, userId]);
+    async archive(entry, userId, options) {
+      calls.push(["archive", entry, userId, options]);
       return { ok: true, entry: { ...entry, status: "archived" } };
     },
     ...overrides,
@@ -190,4 +190,44 @@ test("archiving a blog routes only to the blog commit workflow", async () => {
   assert.equal(response.result.publish_hook, undefined);
   assert.deepEqual(response.result.blog_workflow, { ok: true, status: 204 });
   assert.deepEqual(effects.map(([name]) => name), ["blogWorkflow"]);
+});
+
+test("publication lifecycle forwards the editor version to every entry mutation", async () => {
+  const repository = publicationRepository();
+  const lifecycle = createContentPublicationLifecycle({ repository });
+  const entry = { type: "page_section", slug: "home", version: 7 };
+
+  for (const action of ["save_draft", "publish", "lock", "unlock", "unarchive", "submit_review"]) {
+    await lifecycle.execute({ action, entry: { ...entry }, body: { note: "Ready" }, role: "owner", userId: "u1" });
+  }
+  await lifecycle.archive({ entry: { ...entry }, role: "owner", userId: "u1" });
+
+  const optionsByAction = Object.fromEntries(repository.calls.map((call) => [call[0], call.at(-1)]));
+  for (const action of ["saveDraft", "publish", "lock", "unlock", "unarchive", "transition", "archive"]) {
+    assert.deepEqual(optionsByAction[action], { expectedVersion: 7 }, `${action} must receive expectedVersion`);
+  }
+});
+
+test("publication lifecycle maps stale editor versions to HTTP 409", async () => {
+  const repository = publicationRepository({
+    async saveDraft() {
+      return {
+        ok: false,
+        error: "content_version_conflict",
+        expected_version: 3,
+        current_version: 4,
+      };
+    },
+  });
+  const lifecycle = createContentPublicationLifecycle({ repository });
+
+  const response = await lifecycle.execute({
+    action: "save_draft",
+    entry: { type: "page_section", slug: "home", version: 3 },
+    role: "owner",
+    userId: "u1",
+  });
+
+  assert.equal(response.status, 409);
+  assert.equal(response.result.error, "content_version_conflict");
 });

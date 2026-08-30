@@ -64,6 +64,27 @@ function contentLockConflict(entry = {}, userId, { force = false } = {}) {
   };
 }
 
+function expectedContentVersion({ expectedVersion } = {}) {
+  if (expectedVersion === undefined || expectedVersion === null || expectedVersion === "") return null;
+  const value = Number(expectedVersion);
+  return Number.isInteger(value) && value >= 0 ? value : Number.NaN;
+}
+
+function contentVersionConflict(entry = {}, options = {}) {
+  const expectedVersion = expectedContentVersion(options);
+  if (expectedVersion === null) return null;
+  if (!Number.isFinite(expectedVersion)) {
+    return { ok: false, error: "invalid_expected_version" };
+  }
+  if (Number(entry?.version || 0) === expectedVersion) return null;
+  return {
+    ok: false,
+    error: "content_version_conflict",
+    expected_version: expectedVersion,
+    current_version: Number(entry?.version || 0),
+  };
+}
+
 function unsafeAssetReference(value) {
   const compact = String(value || "").trim().replace(/[\u0000-\u001F\u007F\s]+/g, "");
   return /^(?:javascript|data|vbscript):/i.test(compact);
@@ -205,6 +226,29 @@ async function writeRevision(sb, entry, userId, note) {
   if (error) throw error;
 }
 
+async function updateContentEntry(sb, prior, patch, options = {}) {
+  const conflict = contentVersionConflict(prior, options);
+  if (conflict) return conflict;
+  const expectedVersion = expectedContentVersion(options);
+  let query = sb.from("content_entries").update(patch).eq("id", prior.id);
+  if (expectedVersion !== null) query = query.eq("version", expectedVersion);
+  const result = expectedVersion === null
+    ? await query.select("*").single()
+    : await query.select("*").maybeSingle();
+  if (result.error) throw result.error;
+  if (!result.data) {
+    const current = await existingEntry(sb, prior);
+    if (!current) return { ok: false, error: "entry_not_found" };
+    return contentVersionConflict(current, options) || {
+      ok: false,
+      error: "content_version_conflict",
+      expected_version: expectedVersion,
+      current_version: Number(current.version || 0),
+    };
+  }
+  return { ok: true, entry: result.data };
+}
+
 export function createContentRepository(sb) {
   return {
     async list({ type, status = "published", locale = "en" } = {}) {
@@ -316,7 +360,7 @@ export function createContentRepository(sb) {
       return { ok: true, asset: data };
     },
 
-    async restoreRevision({ type, slug, locale = "en", version } = {}, userId) {
+    async restoreRevision({ type, slug, locale = "en", version } = {}, userId, options = {}) {
       const entry = await existingEntry(sb, { type, slug: normalizeSlug(slug), locale });
       if (!entry?.id) return { ok: false, error: "entry_not_found" };
       const revisionVersion = Number(version);
@@ -338,6 +382,7 @@ export function createContentRepository(sb) {
         },
         userId,
         `Restored revision ${revision.version}`,
+        options,
       );
     },
 
@@ -368,13 +413,9 @@ export function createContentRepository(sb) {
         title: input.title !== undefined && normalized.title ? normalized.title : undefined,
         seo: input.seo !== undefined ? normalized.seo : undefined,
       });
-      const { data, error } = await sb
-        .from("content_entries")
-        .update(patch)
-        .eq("id", prior.id)
-        .select("*")
-        .single();
-      if (error) throw error;
+      const updated = await updateContentEntry(sb, prior, patch, options);
+      if (!updated.ok) return updated;
+      const data = updated.entry;
       await writeRevision(sb, data, userId, note || `Status changed to ${nextStatus}`);
       return { ok: true, entry: data };
     },
@@ -437,16 +478,10 @@ export function createContentRepository(sb) {
       const prior = await existingEntry(sb, input);
       const conflict = contentLockConflict(prior, userId, options);
       if (conflict) return conflict;
-      const expectedVersion = Number(options.expectedVersion);
-      const checksVersion = Number.isFinite(expectedVersion);
-      if (checksVersion && Number(prior?.version || 0) !== expectedVersion) {
-        return {
-          ok: false,
-          error: "content_version_conflict",
-          expected_version: expectedVersion,
-          current_version: Number(prior?.version || 0),
-        };
-      }
+      const expectedVersion = expectedContentVersion(options);
+      const checksVersion = expectedVersion !== null;
+      const versionConflict = contentVersionConflict(prior, options);
+      if (versionConflict) return versionConflict;
       const version = Number(prior?.version || 0) + 1;
       const now = new Date().toISOString();
       const row = compactRow({
@@ -490,19 +525,13 @@ export function createContentRepository(sb) {
       if (!entry?.id) return { ok: false, error: "entry_not_found" };
       const conflict = contentLockConflict(entry, userId, options);
       if (conflict) return conflict;
-      const { data, error } = await sb
-        .from("content_entries")
-        .update({
-          locked_by: userId || null,
-          locked_at: new Date().toISOString(),
-          updated_by: userId || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", entry.id)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return { ok: true, entry: data };
+      const updated = await updateContentEntry(sb, entry, {
+        locked_by: userId || null,
+        locked_at: new Date().toISOString(),
+        updated_by: userId || null,
+        updated_at: new Date().toISOString(),
+      }, options);
+      return updated;
     },
 
     async unlock({ type, slug, locale = "en" } = {}, userId, options = {}) {
@@ -510,19 +539,13 @@ export function createContentRepository(sb) {
       if (!entry?.id) return { ok: false, error: "entry_not_found" };
       const conflict = contentLockConflict(entry, userId, options);
       if (conflict) return conflict;
-      const { data, error } = await sb
-        .from("content_entries")
-        .update({
-          locked_by: null,
-          locked_at: null,
-          updated_by: userId || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", entry.id)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return { ok: true, entry: data };
+      const updated = await updateContentEntry(sb, entry, {
+        locked_by: null,
+        locked_at: null,
+        updated_by: userId || null,
+        updated_at: new Date().toISOString(),
+      }, options);
+      return updated;
     },
 
     async archive({ type, slug, locale = "en" }, userId, options = {}) {
@@ -530,18 +553,14 @@ export function createContentRepository(sb) {
       if (!prior?.id) return { ok: false, error: "entry_not_found" };
       const conflict = contentLockConflict(prior, userId, options);
       if (conflict) return conflict;
-      const { data, error } = await sb
-        .from("content_entries")
-        .update({
-          status: "archived",
-          version: Number(prior.version || 0) + 1,
-          updated_by: userId || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", prior.id)
-        .select("*")
-        .single();
-      if (error) throw error;
+      const updated = await updateContentEntry(sb, prior, {
+        status: "archived",
+        version: Number(prior.version || 0) + 1,
+        updated_by: userId || null,
+        updated_at: new Date().toISOString(),
+      }, options);
+      if (!updated.ok) return updated;
+      const data = updated.entry;
       await writeRevision(sb, data, userId, "Archived");
       return { ok: true, entry: data };
     },
@@ -551,21 +570,17 @@ export function createContentRepository(sb) {
       if (!prior?.id) return { ok: false, error: "entry_not_found" };
       const conflict = contentLockConflict(prior, userId, options);
       if (conflict) return conflict;
-      const { data, error } = await sb
-        .from("content_entries")
-        .update({
-          status: "draft",
-          version: Number(prior.version || 0) + 1,
-          scheduled_at: null,
-          published_at: null,
-          review_note: null,
-          updated_by: userId || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", prior.id)
-        .select("*")
-        .single();
-      if (error) throw error;
+      const updated = await updateContentEntry(sb, prior, {
+        status: "draft",
+        version: Number(prior.version || 0) + 1,
+        scheduled_at: null,
+        published_at: null,
+        review_note: null,
+        updated_by: userId || null,
+        updated_at: new Date().toISOString(),
+      }, options);
+      if (!updated.ok) return updated;
+      const data = updated.entry;
       await writeRevision(sb, data, userId, "Restored from archive");
       return { ok: true, entry: data };
     },
@@ -622,9 +637,16 @@ const CONTENT_ACTION_POLICY = Object.freeze({
 function publicationResponse(result) {
   if (result.ok) return { status: 200, result };
   return {
-    status: result.error === "content_locked" ? 409 : 400,
+    status: ["content_locked", "content_version_conflict"].includes(result.error) ? 409 : 400,
     result,
   };
+}
+
+function contentMutationOptions(entry = {}, body = {}) {
+  const expectedVersion = body.expected_version ?? entry.version;
+  return expectedVersion === undefined || expectedVersion === null || expectedVersion === ""
+    ? {}
+    : { expectedVersion: Number(expectedVersion) };
 }
 
 function denied(action) {
@@ -685,21 +707,23 @@ export function createContentPublicationLifecycle({
         });
       }
 
+      const options = contentMutationOptions(entry, body);
       let result;
       if (action === "lock") {
-        result = await repository.lock(entry, userId);
+        result = await repository.lock(entry, userId, options);
       } else if (action === "unlock") {
-        result = await repository.unlock(entry, userId);
+        result = await repository.unlock(entry, userId, options);
       } else if (action === "force_unlock") {
-        result = await repository.unlock(entry, userId, { force: true });
+        result = await repository.unlock(entry, userId, { ...options, force: true });
       } else if (action === "unarchive") {
-        result = await repository.unarchive(entry, userId);
+        result = await repository.unarchive(entry, userId, options);
       } else if (action === "submit_review") {
         result = await repository.transition(
           entry,
           userId,
           "in_review",
           body.note || "Submitted for review",
+          options,
         );
       } else if (action === "request_changes") {
         result = await repository.transition(
@@ -707,6 +731,7 @@ export function createContentPublicationLifecycle({
           userId,
           "changes_requested",
           body.note || "Changes requested",
+          options,
         );
       } else if (action === "schedule") {
         const scheduledAt = new Date(entry.scheduled_at || "");
@@ -725,9 +750,10 @@ export function createContentPublicationLifecycle({
           userId,
           "scheduled",
           body.note || "Scheduled publish",
+          options,
         );
       } else if (action === "publish") {
-        result = await repository.publish(entry, userId);
+        result = await repository.publish(entry, userId, options);
         if (result.ok) {
           if (result.entry?.type === "blog_post") {
             result.blog_workflow = await blogWorkflow(result.entry);
@@ -736,7 +762,7 @@ export function createContentPublicationLifecycle({
           }
         }
       } else {
-        result = await repository.saveDraft(entry, userId);
+        result = await repository.saveDraft(entry, userId, options);
       }
       return publicationResponse(result);
     } catch (error) {
@@ -747,7 +773,7 @@ export function createContentPublicationLifecycle({
   async function archive({ entry = {}, userId, role } = {}) {
     if (!staffCan(role, "content.write")) return denied("archive");
     try {
-      const result = await repository.archive(entry, userId);
+      const result = await repository.archive(entry, userId, contentMutationOptions(entry, entry));
       if (result.ok) {
         if (result.entry?.type === "blog_post") {
           result.blog_workflow = await blogWorkflow(result.entry);
