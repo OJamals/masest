@@ -373,7 +373,7 @@ function bindSearch(root, items, categories) {
     const needle = query.toLocaleLowerCase();
     const searching = Boolean(needle);
     const matches = searching
-      ? items.filter((item) => serviceSearchText(item).includes(needle))
+      ? items.filter((item) => searchTextMatchesQuery(serviceSearchText(item), needle))
       : [];
 
     clear.hidden = !searching;
@@ -568,4 +568,5 @@ export function initServiceCatalog() {
 }
 
 export default initServiceCatalog;
-import { loadPricingData } from "./pricing-data.js?v=20260829b";
+import { searchTextMatchesQuery } from "./fuzzy-search.js?v=20260829c";
+import { loadPricingData } from "./pricing-data.js?v=20260829c";

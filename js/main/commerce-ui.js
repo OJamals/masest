@@ -1,8 +1,8 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260829b";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260829c";
 import { smoothPref } from "./engagement.js";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260829b";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260829c";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);

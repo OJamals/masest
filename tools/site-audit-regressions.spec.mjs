@@ -182,6 +182,12 @@ test("service search finds offerings across categories and restores selected cat
   await expect(status).toContainText("2 results");
   await expect(catalog.getByRole("button", { name: "Clear service search" })).toBeVisible();
 
+  await search.fill("legionela");
+  await expect(catalog.locator("[data-service-search-results] .service-card")).toHaveCount(2);
+  await expect(catalog.locator("[data-service-search-results]")).toContainText("Legionella - Full Culture + Species ID");
+  await expect(catalog.locator("[data-service-search-results]")).toContainText("Legionella - PCR Pos/Neg");
+  await expect(status).toContainText("2 results");
+
   await search.fill("service-name-that-does-not-exist");
   await expect(catalog.locator("[data-service-search-empty]")).toContainText("No services match");
   await expect(catalog.locator("[data-service-search-empty]").getByRole("link", { name: "Ask MASEST" })).toBeVisible();
