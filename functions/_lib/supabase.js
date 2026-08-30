@@ -4,7 +4,7 @@
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
 import { filterByStream, categoryStream, unsubscribeToken, htmlToText } from './email.js';
-import { isStaffEmail, normalizeStaffRole } from './authz.js';
+import { isStaffEmail, platformStaffRole } from './authz.js';
 import {
   CommerceContextError,
   resolveCommerceContextSnapshot,
@@ -118,10 +118,11 @@ export async function requireStaff(request, env) {
   if (isStaffEmail(user.email, env)) return { user, staff: true, role: 'owner' };
   // Fallback: profiles.is_staff=true (settable only server-side / via SQL) also grants
   // staff, so staff can be added/removed in the DB without a Cloudflare redeploy.
-  // profiles.staff_role (#21) narrows the tier; older rows without one default to owner.
+  // profiles.staff_role narrows the tier. Missing or unknown roles fail closed.
   try {
     const { data } = await adminClient(env).from('profiles').select('is_staff,staff_role').eq('id', user.id).maybeSingle();
-    if (data?.is_staff) return { user, staff: true, role: normalizeStaffRole(data.staff_role) };
+    const role = platformStaffRole(data);
+    if (role) return { user, staff: true, role };
   } catch { /* is_staff/staff_role column may not exist pre-migration → env gate only */ }
   return { user, staff: false, role: null };
 }

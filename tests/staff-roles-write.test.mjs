@@ -8,8 +8,10 @@ import { staffCanWrite } from '../functions/_lib/authz.js';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
-test('staffCanWrite blocks only read_only', () => {
+test('staffCanWrite permits only explicit write roles', () => {
   assert.equal(staffCanWrite('read_only'), false);
+  assert.equal(staffCanWrite(null), false);
+  assert.equal(staffCanWrite('superuser'), false);
   for (const r of ['owner', 'finance', 'support']) assert.equal(staffCanWrite(r), true, r);
 });
 

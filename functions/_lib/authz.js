@@ -19,8 +19,8 @@ export function isStaffEmail(email, env) {
 }
 
 // ---- Staff role tiers (#21) ----
-// Platform-staff are no longer all-powerful: a role narrows what each staff member
-// can do. ADMIN_EMAILS members and older is_staff rows resolve to 'owner' (full).
+// Platform staff require an explicit role. ADMIN_EMAILS remains the separate root
+// operator authority; database staff never inherit owner from missing data.
 export const STAFF_ROLES = ["owner", "finance", "support", "read_only"];
 
 // capability -> roles permitted. Only the dangerous/financial mutations are gated
@@ -44,11 +44,15 @@ const STAFF_CAPABILITIES = {
   "user.role": ["owner"],
 };
 
-// Map a raw profiles.staff_role into a known role. Unknown/blank -> 'owner' so
-// staff that predate tiers (no staff_role set) never silently lose access.
+// Map a raw profiles.staff_role into a known role. Unknown/blank fails closed.
 export function normalizeStaffRole(value) {
   const r = String(value || "").trim().toLowerCase();
-  return STAFF_ROLES.includes(r) ? r : "owner";
+  return STAFF_ROLES.includes(r) ? r : null;
+}
+
+export function platformStaffRole(profile) {
+  if (profile?.is_staff !== true) return null;
+  return normalizeStaffRole(profile.staff_role);
 }
 
 // Can a staff role perform a capability? Unknown capability -> owner-only (fail-safe).
@@ -58,10 +62,10 @@ export function staffCan(role, capability) {
   return allowed.includes(role);
 }
 
-// Baseline write gate: read_only staff may never mutate. Every admin mutation path
-// checks this; fine-grained staffCan() then narrows specific dangerous actions.
+// Baseline write gate: only explicit write roles may mutate. Every admin mutation
+// path checks this; fine-grained staffCan() then narrows dangerous actions.
 export function staffCanWrite(role) {
-  return role !== "read_only";
+  return ["owner", "finance", "support"].includes(role);
 }
 
 // Safe client-facing access summary. API handlers remain authoritative; this only

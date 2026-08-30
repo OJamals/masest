@@ -2,7 +2,7 @@
 // POST /api/account/me — change the caller's login email (Supabase double opt-in re-verification).
 import { createClient } from '@supabase/supabase-js';
 import { adminClient, userFromRequest, json, readBody } from '../../_lib/supabase.js';
-import { isStaffEmail, normalizeStaffRole } from '../../_lib/authz.js';
+import { isStaffEmail, platformStaffRole } from '../../_lib/authz.js';
 import { buildAccountSetup } from '../../_lib/setup.js';
 import { companyCreditState } from '../../_lib/credit.js';
 import { companyStoreCreditSummary } from '../../_lib/store-credit.js';
@@ -71,9 +71,8 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
-  const profileStaffRole = profile.staff_role ? normalizeStaffRole(profile.staff_role) : null;
-  const profileStaff = profile.is_staff === true && !!profileStaffRole;
-  const canAdmin = emailStaff || profileStaff;
+  const profileStaffRole = platformStaffRole(profile);
+  const canAdmin = emailStaff || !!profileStaffRole;
 
   return json(200, {
     email: user.email,

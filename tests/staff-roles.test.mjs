@@ -2,7 +2,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { STAFF_ROLES, normalizeStaffRole, staffAccessSummary, staffCan } from '../functions/_lib/authz.js';
+import {
+  STAFF_ROLES,
+  normalizeStaffRole,
+  platformStaffRole,
+  staffAccessSummary,
+  staffCan,
+} from '../functions/_lib/authz.js';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
@@ -13,10 +19,18 @@ test('normalizeStaffRole passes through known roles (case-insensitive)', () => {
   assert.equal(normalizeStaffRole(' READ_ONLY '), 'read_only');
 });
 
-test('normalizeStaffRole defaults unknown/blank to owner (older staff keep access)', () => {
-  assert.equal(normalizeStaffRole(''), 'owner');
-  assert.equal(normalizeStaffRole(null), 'owner');
-  assert.equal(normalizeStaffRole('superuser'), 'owner');
+test('normalizeStaffRole rejects unknown and blank roles', () => {
+  assert.equal(normalizeStaffRole(''), null);
+  assert.equal(normalizeStaffRole(null), null);
+  assert.equal(normalizeStaffRole('superuser'), null);
+});
+
+test('platformStaffRole requires both staff membership and an explicit role', () => {
+  assert.equal(platformStaffRole({ is_staff: true, staff_role: 'support' }), 'support');
+  assert.equal(platformStaffRole({ is_staff: true, staff_role: null }), null);
+  assert.equal(platformStaffRole({ is_staff: true, staff_role: 'superuser' }), null);
+  assert.equal(platformStaffRole({ is_staff: false, staff_role: 'owner' }), null);
+  assert.equal(platformStaffRole(null), null);
 });
 
 // ---- staffCan capability matrix ----
@@ -81,6 +95,11 @@ test('staffAccessSummary exposes only the current role capabilities', () => {
   const readOnly = staffAccessSummary('read_only');
   assert.equal(readOnly.can_write, false);
   assert.deepEqual(readOnly.capabilities, ['order.read']);
+
+  const invalid = staffAccessSummary('superuser');
+  assert.equal(invalid.role, null);
+  assert.equal(invalid.can_write, false);
+  assert.deepEqual(invalid.capabilities, []);
 });
 
 test('stats attaches per-user access context after the org-wide cache lookup', () => {
@@ -94,7 +113,7 @@ test('stats attaches per-user access context after the org-wide cache lookup', (
 test('requireStaff resolves and returns a role from env owner + DB staff_role', () => {
   const src = read('functions/_lib/supabase.js');
   assert.match(src, /staff_role/, 'must read profiles.staff_role');
-  assert.match(src, /normalizeStaffRole\(/, 'must normalize the DB role');
+  assert.match(src, /platformStaffRole\(/, 'must require explicit DB staff membership and role');
   assert.match(src, /role:\s*'owner'/, 'env ADMIN_EMAILS members resolve to owner');
 });
 
@@ -132,4 +151,11 @@ test('schema-staff-roles.sql adds staff_role with a value constraint', () => {
   const sql = read('supabase/schema-staff-roles.sql');
   assert.match(sql, /add column if not exists staff_role text/i);
   assert.match(sql, /check\s*\(\s*staff_role is null or staff_role in/i);
+});
+
+test('explicit staff-role migration preserves legacy staff then requires a role', () => {
+  const sql = read('supabase/schema-staff-roles-explicit.sql');
+  assert.match(sql, /update\s+public\.profiles\s+set\s+staff_role\s*=\s*'owner'/i);
+  assert.match(sql, /where\s+is_staff\s+is\s+true\s+and\s+staff_role\s+is\s+null/i);
+  assert.match(sql, /check\s*\(\s*is_staff\s+is\s+not\s+true\s+or\s+staff_role\s+is\s+not\s+null\s*\)/i);
 });
