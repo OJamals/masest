@@ -1,8 +1,8 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260829d";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260830a";
 import { smoothPref } from "./engagement.js";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260829d";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260830a";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -744,18 +744,30 @@ export function initShop() {
   });
 
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
-  const initialParams = new URLSearchParams(location.search);
-  const initialGroup = initialParams.get("category") || "all";
-  const initialSort = initialParams.get("sort") || "featured";
-  const initialSearch = (initialParams.get("q") || "").trim();
+  const validGroup = (group) => group === "all" || CATALOG_GROUPS.some((item) => item.key === group);
+  const groupFromHash = () => {
+    const group = (location.hash.match(/^#cat-(.+)$/) || [])[1] || "";
+    return validGroup(group) ? group : "";
+  };
+  const readUrlState = () => {
+    const params = new URLSearchParams(location.search);
+    const group = params.get("category") || "all";
+    const sort = params.get("sort") || "featured";
+    const query = (params.get("q") || "").trim();
+    return {
+      group: groupFromHash() || (validGroup(group) ? group : "all"),
+      sort: ["featured", "az"].includes(sort) ? sort : "featured",
+      search: normalizeProductSearch(query),
+      query,
+    };
+  };
+  const initialHashGroup = groupFromHash();
+  const initialUrlState = readUrlState();
   const state = {
-    group: initialGroup === "all" || CATALOG_GROUPS.some((g) => g.key === initialGroup) ? initialGroup : "all",
-    sort: ["featured", "az"].includes(initialSort) ? initialSort : "featured",
-    search: normalizeProductSearch(initialSearch),
-    query: initialSearch,
+    ...initialUrlState,
     expanded: false,
   };
-  if (searchEl) searchEl.value = initialSearch;
+  if (searchEl) searchEl.value = state.query;
   if (sortSel) sortSel.value = state.sort;
 
   const chips = [{ key: "all", label: "All products" }, ...CATALOG_GROUPS.map((g) => ({ key: g.key, label: g.label }))];
@@ -796,8 +808,8 @@ export function initShop() {
     history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
   };
 
-  const apply = () => {
-    syncUrl();
+  const apply = (options = {}) => {
+    if (options?.updateUrl !== false) syncUrl();
     const ids = visibleIds();
     const canCollapse = state.group === "all" && !state.search && ids.length > 6;
     const collapsed = canCollapse && !state.expanded;
@@ -930,15 +942,23 @@ export function initShop() {
     }
   });
 
-  // Deep link: products.html#cat-water preselects a category (footer + home cards).
-  const catHash = (location.hash.match(/^#cat-(.+)$/) || [])[1];
-  if (catHash && CATALOG_GROUPS.some((g) => g.key === catHash)) {
-    state.group = catHash;
-  }
+  const restoreFromUrl = () => {
+    const next = readUrlState();
+    state.group = next.group;
+    state.sort = next.sort;
+    state.search = next.search;
+    state.query = next.query;
+    state.expanded = false;
+    if (searchEl) searchEl.value = state.query;
+    if (sortSel) sortSel.value = state.sort;
+    syncChips();
+    apply({ updateUrl: false });
+  };
+  window.addEventListener("popstate", restoreFromUrl);
 
   syncChips();
   apply();
   loadCommerceCatalog().then(apply);
 
-  if (catHash) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
+  if (initialHashGroup) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
 }

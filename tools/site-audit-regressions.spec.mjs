@@ -85,6 +85,64 @@ test("mobile catalog starts concise and expands without hiding search results", 
   await expect(page.locator("#shopGrid .shop-card:visible")).toHaveCount(1);
 });
 
+test("product catalog hydrates and restores shareable URL state", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    `${BASE_URL}/products.html?qa=regression&q=descalr&category=descale&sort=az#catalog`,
+    { waitUntil: "domcontentloaded" },
+  );
+
+  const search = page.locator("#shopSearch");
+  const sort = page.locator("#shopSort");
+  const descale = page.getByRole("button", { name: "Descaling & Rust", exact: true });
+  const degrease = page.getByRole("button", { name: "Degreasers", exact: true });
+  const water = page.getByRole("button", { name: "Water Treatment", exact: true });
+  await search.waitFor();
+
+  await expect(search).toHaveValue("descalr");
+  await expect(descale).toHaveAttribute("aria-pressed", "true");
+  await expect(sort).toHaveValue("az");
+  await expect(page.locator("#shopCount")).toContainText("1 result");
+
+  await search.fill("grease");
+  await degrease.click();
+  await sort.selectOption("featured");
+  await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe("grease");
+  expect(new URL(page.url()).searchParams.get("category")).toBe("degrease");
+  expect(new URL(page.url()).searchParams.get("sort")).toBeNull();
+  expect(new URL(page.url()).searchParams.get("qa")).toBe("regression");
+  expect(new URL(page.url()).hash).toBe("#catalog");
+
+  await page.evaluate(() => {
+    const params = new URLSearchParams(location.search);
+    params.set("q", "descalr");
+    params.set("category", "descale");
+    params.set("sort", "az");
+    history.pushState(null, "", `${location.pathname}?${params}${location.hash}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(search).toHaveValue("descalr");
+  await expect(descale).toHaveAttribute("aria-pressed", "true");
+  await expect(sort).toHaveValue("az");
+
+  await page.evaluate(() => {
+    const params = new URLSearchParams(location.search);
+    params.set("q", "water");
+    params.set("category", "water");
+    params.delete("sort");
+    history.pushState(null, "", `${location.pathname}?${params}${location.hash}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(search).toHaveValue("water");
+  await expect(water).toHaveAttribute("aria-pressed", "true");
+  await expect(sort).toHaveValue("featured");
+
+  await page.evaluate(() => history.back());
+  await expect(search).toHaveValue("descalr");
+  await expect(descale).toHaveAttribute("aria-pressed", "true");
+  await expect(sort).toHaveValue("az");
+});
+
 test("mobile catalog filters stay inside the page width", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/products.html#catalog`, { waitUntil: "domcontentloaded" });
