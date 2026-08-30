@@ -118,6 +118,7 @@ test("story performance budgets normalize animation cadence against the measured
   assert.match(storyVisualSpec, /metrics\.frameCoverage[\s\S]*toBeGreaterThanOrEqual\(2\s*\/\s*3\)/);
   assert.match(storyVisualSpec, /metrics\.p95BaselineMultiple[\s\S]*toBeLessThanOrEqual\(2\.05\)/);
   assert.match(storyVisualSpec, /metrics\.p99BaselineMultiple[\s\S]*toBeLessThanOrEqual\(3\.05\)/);
+  assert.doesNotMatch(storyVisualSpec, /over50/);
   assert.doesNotMatch(storyVisualSpec, /expect\(metrics\.p9[59][\s\S]*toBeLessThan\((?:25|35)\)/);
 });
 

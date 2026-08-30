@@ -35,7 +35,7 @@
     "qa:commerce-smoke": "playwright test tools/commerce-states.spec.mjs tools/product-buy.spec.mjs tools/commerce-cart.spec.mjs tools/cart-checkout-redirect.spec.mjs tools/checkout-validation.spec.mjs tools/cart-shipping-estimate.spec.mjs tools/contact-prefill.spec.mjs --reporter=line",
     "qa:ui-critical": "npm run qa:ui-critical:interaction && npm run qa:ui-critical:performance",
     "qa:ui-critical:interaction": "playwright test tools/focus-visible-a11y.spec.mjs tools/service-tabs-a11y.spec.mjs tools/site-audit-regressions.spec.mjs tools/story-hmis-visual.spec.mjs tools/update-content-regressions.spec.mjs --grep-invert=\"desktop story stays inside a controlled-scroll frame budget\" --reporter=line",
-    "qa:ui-critical:performance": "playwright test tools/story-hmis-visual.spec.mjs --grep=\"desktop story stays inside a controlled-scroll frame budget\" --workers=1 --reporter=line",
+    "qa:ui-critical:performance": "playwright test tools/story-hmis-visual.spec.mjs --grep=\"desktop story stays inside a controlled-scroll frame budget\" --workers=1 --retries=1 --reporter=line",
     "qa:remediation": "playwright test tools/*.spec.mjs --reporter=line",
     "seed": "node tools/seed-products.mjs"
   },

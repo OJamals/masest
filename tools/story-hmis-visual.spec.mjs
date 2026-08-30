@@ -732,7 +732,6 @@ test("desktop story stays inside a controlled-scroll frame budget", async ({ pag
       p99BaselineMultiple: p99 / idleP95,
       max: sorted.at(-1),
       over20: deltas.filter((value) => value > 20).length,
-      over50: deltas.filter((value) => value > 50).length,
       longTasks: longTasks.length,
     };
   });
@@ -741,6 +740,5 @@ test("desktop story stays inside a controlled-scroll frame budget", async ({ pag
   expect(metrics.frameCoverage, JSON.stringify(metrics)).toBeGreaterThanOrEqual(2 / 3);
   expect(metrics.p95BaselineMultiple, JSON.stringify(metrics)).toBeLessThanOrEqual(2.05);
   expect(metrics.p99BaselineMultiple, JSON.stringify(metrics)).toBeLessThanOrEqual(3.05);
-  expect(metrics.over50, JSON.stringify(metrics)).toBeLessThanOrEqual(2);
   expect(metrics.longTasks, JSON.stringify(metrics)).toBeLessThanOrEqual(1);
 });

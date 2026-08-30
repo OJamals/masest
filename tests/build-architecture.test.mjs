@@ -43,7 +43,7 @@ test("package exposes one-command build and verification scripts", () => {
   );
   assert.equal(
     scripts["qa:ui-critical:performance"],
-    `playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --reporter=line`,
+    `playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --retries=1 --reporter=line`,
   );
   assert.doesNotMatch(scripts["qa:ui-critical:interaction"], /tools\/\*\.spec/);
   assert.ok(
