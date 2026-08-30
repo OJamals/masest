@@ -165,13 +165,15 @@ test("mobile service category rail keeps a visible leading inset", async ({ page
 
 test("service catalog deep link clears the sticky navigation", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`${BASE_URL}/services.html?q=legionela#serviceCatalog`, { waitUntil: "domcontentloaded" });
 
   const catalog = page.locator("[data-service-catalog]");
   await catalog.getByRole("searchbox", { name: "Search services" }).waitFor();
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => document.fonts.ready);
   await page.locator("#serviceCatalog").evaluate((node) => {
-    document.documentElement.style.scrollBehavior = "auto";
-    node.scrollIntoView();
+    node.scrollIntoView({ block: "start", behavior: "instant" });
   });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
   const navBox = await page.locator(".nav").boundingBox();
