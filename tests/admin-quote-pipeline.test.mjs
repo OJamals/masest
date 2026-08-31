@@ -116,9 +116,9 @@ test("admin quotes API can send a lead follow-up email", () => {
 test("admin quote follow-up can hand off to buyer message thread", () => {
   assert.match(ADMIN_QUOTES, /async function companyIdForQuote/);
   assert.match(ADMIN_QUOTES, /sb\.auth\.admin\.listUsers/);
-  assert.match(ADMIN_QUOTES, /\.from\('messages'\)\.insert/);
-  assert.match(ADMIN_QUOTES, /sender_role:\s*'staff'/);
-  assert.match(ADMIN_QUOTES, /read_by_user:\s*false/);
+  assert.match(ADMIN_QUOTES, /appendSupportMessage\(sb/);
+  assert.match(ADMIN_QUOTES, /senderRole:\s*'staff'/);
+  assert.match(ADMIN_QUOTES, /source:\s*'quote_followup'/);
   assert.match(ADMIN_QUOTES, /\.from\('notifications'\)\.insert/);
   assert.match(ADMIN_QUOTES, /Quote follow-up posted/);
   assert.match(ADMIN_QUOTES, /dashboard\.html#messages/);

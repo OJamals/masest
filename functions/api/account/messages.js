@@ -5,8 +5,9 @@ import { requireCompany, json, readBody, sendEmail, emailLayout, htmlEscape } fr
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 import { adminMessageAlertKind, adminMessageRecipients } from '../../_lib/admin-message-notifications.js';
 import {
+  appendSupportMessage,
+  hydrateSupportOrderContexts,
   messagePage,
-  recordSupportMessage,
   resolveSupportOrderId,
   SUPPORT_PAGE_SIZE,
 } from '../../_lib/support-messages.js';
@@ -20,20 +21,35 @@ export async function onRequest({ request, env }) {
     const url = new URL(request.url);
     const peek = url.searchParams.get('peek') === '1';
     const before = url.searchParams.get('before');
+    const orderContext = await resolveSupportOrderId(sb, {
+      orderId: url.searchParams.get('order_id'),
+      companyId,
+    });
+    if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
     let query = sb
       .from('messages')
       .select('id,sender_role,body,order_id,source,created_at')
       .eq('company_id', companyId)
       .order('created_at', { ascending: false })
       .limit(SUPPORT_PAGE_SIZE + 1);
+    if (orderContext.orderId) query = query.eq('order_id', orderContext.orderId);
     if (before) query = query.lt('created_at', before);
     const { data, error } = await query;
     if (error) return json(500, { error: 'server_error' });
     if (!peek) {
-      await sb.from('messages').update({ read_by_user: true })
+      let readQuery = sb.from('messages').update({ read_by_user: true })
         .eq('company_id', companyId).eq('sender_role', 'staff').eq('read_by_user', false);
+      if (orderContext.orderId) readQuery = readQuery.eq('order_id', orderContext.orderId);
+      await readQuery;
     }
-    return json(200, messagePage(data, SUPPORT_PAGE_SIZE));
+    try {
+      const page = messagePage(data, SUPPORT_PAGE_SIZE);
+      page.messages = await hydrateSupportOrderContexts(sb, page.messages, companyId);
+      page.order_scope = orderContext.order || null;
+      return json(200, page);
+    } catch {
+      return json(500, { error: 'server_error' });
+    }
   }
 
   if (request.method === 'POST') {
@@ -62,26 +78,23 @@ export async function onRequest({ request, env }) {
       companyId,
     });
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
-    const [{ data: previousMessage }, { data: company }] = await Promise.all([
-      sb.from('messages').select('sender_role').eq('company_id', companyId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      sb.from('companies').select('name,support_thread_status').eq('id', companyId).maybeSingle(),
-    ]);
-    const { data, error } = await sb.from('messages').insert({
-      company_id: companyId, user_id: user.id, sender_role: 'buyer', body: text,
-      order_id: orderContext.orderId, source, read_by_user: true, read_by_staff: false,
-    }).select('id,created_at').single();
-    if (error) return json(500, { error: 'server_error' });
-
-    let summarySynced = true;
+    let data;
     try {
-      await recordSupportMessage(sb, {
-        companyId, senderRole: 'buyer', body: text, createdAt: data.created_at,
+      data = await appendSupportMessage(sb, {
+        companyId,
+        userId: user.id,
+        senderRole: 'buyer',
+        body: text,
+        orderId: orderContext.orderId,
+        source,
       });
-    } catch { summarySynced = false; }
+    } catch {
+      return json(500, { error: 'server_error' });
+    }
 
     const alertKind = adminMessageAlertKind({
-      previousMessage,
-      threadStatus: company?.support_thread_status,
+      previousMessage: data.previous_sender_role ? { sender_role: data.previous_sender_role } : null,
+      threadStatus: data.prior_thread_status,
     });
     if (alertKind) {
       const recipients = await adminMessageRecipients(sb, alertKind, env);
@@ -89,10 +102,10 @@ export async function onRequest({ request, env }) {
         const firstRequest = alertKind === 'support_request';
         await sendEmail(env, {
           to: recipients,
-          subject: firstRequest ? `New support request from ${company?.name || companyId}` : `New message from ${company?.name || companyId}`,
+          subject: firstRequest ? `New support request from ${data.company_name || companyId}` : `New message from ${data.company_name || companyId}`,
           html: emailLayout({
             heading: firstRequest ? 'New support request' : 'New customer message',
-            bodyHtml: `<p>Company: ${htmlEscape(company?.name || companyId)}</p><p>${htmlEscape(text.slice(0, 500))}</p>`,
+            bodyHtml: `<p>Company: ${htmlEscape(data.company_name || companyId)}</p><p>${htmlEscape(text.slice(0, 500))}</p>`,
             // #support opens the support console over the admin console, on the
             // conversation this alert is about — not on notification settings.
             ctaText: 'Open customer messages',
@@ -103,7 +116,12 @@ export async function onRequest({ request, env }) {
       }
     }
 
-    return json(201, { id: data.id, created_at: data.created_at, summary_synced: summarySynced });
+    return json(201, {
+      id: data.id,
+      created_at: data.created_at,
+      order_id: data.order_id || null,
+      summary_synced: true,
+    });
   }
 
   return json(405, { error: 'method_not_allowed' });

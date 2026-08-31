@@ -1,5 +1,43 @@
 # Implementation Plan: Unified Order, Fulfillment, Finance, and Support Console
 
+## Current Execution Amendment — Unified Support and Order Messaging (2026-08-30)
+
+This delivery advances the existing Phase 3 seam without replacing the broader approved plan. Scope is deliberately bounded to one canonical support conversation shared by buyer chat, buyer Orders, Admin Customer Support, and Admin Orders.
+
+### Confirmed current defects
+
+- Buyer chat and Dashboard Messages use `messages`, but neither sends `order_id`.
+- Admin Customer Support reads the same table, but staff replies discard active order context.
+- Buyer order requests attempt a best-effort `messages` insert with obsolete `direction`, omit required `sender_role`, swallow the failure, and still return `201`.
+- Admin Orders exposes neither the open request queue nor a human message entry point.
+- Message insertion and `companies.support_*` projection updates are separate writes, so thread summaries can drift from canonical messages.
+
+### Scoped architecture
+
+1. Keep `messages` as the only conversation stream. `messages.order_id` is optional context; no parallel order-chat table.
+2. Add one atomic database append function that validates order/company ownership, inserts the message, and updates the support projection in one transaction.
+3. Add one atomic order-request function that creates the request and its order-linked buyer message together. A failed handoff must never report success.
+4. Keep provider-generated delivery adapters transactional where already specialized. Route all human-authored application messages through the canonical append function.
+5. Return normalized order context (`id`, reference, status, direct URL) from account/admin message APIs. Order-scoped reads affect only that order; full-thread reads retain company-wide behavior.
+6. Admin Orders opens the existing Customer Support console scoped to the selected company/order. Buyer Orders opens the existing customer chat scoped to that order. No second composer or message state owner.
+7. Surface the existing open order-request queue in Admin Orders. Resolving a request stays an order operation; human follow-up uses the same support stream.
+8. Preserve automated shipment/payment notifications outside human chat unless explicitly authored by staff.
+
+### Delivery slices
+
+1. RED contracts: atomic append, atomic order-request handoff, order ownership, scoped reads/replies, buyer/admin order-to-chat entry points.
+2. Database + server seam: additive SQL, shared append adapter, normalized order context, fail-closed request flow.
+3. Buyer UI: order-context banner, order tags, “Message about this order” action, shared floating/full inbox state.
+4. Admin UI: scoped support thread/reply, order links/tags, Orders “Message customer” action, open request queue.
+5. Verification/review: focused Node tests, direct Playwright specs, full `npm run verify`, security/accessibility/performance review.
+6. Release: database backup, additive migration, commit, rebase, push, CI/Pages commit-parity proof, live API/browser/visual QA. Rollback app code by revert; retain additive DB objects unless a separately reviewed cleanup is needed.
+
+### Release safety
+
+- No production message/order mutation without a designated test account/order.
+- Live unauthenticated QA may verify guards, routing, assets, console, and responsive visuals.
+- Deployment is complete only after exact commit, CI, Pages deployment, live route/API, and browser evidence agree.
+
 ## Overview
 
 Build one staff Orders console that becomes the primary operating surface for orders and quotes. It will prioritize work that needs attention, support independent inline expansion for multiple orders, expose most fulfillment and communication actions without leaving the queue, and retain a focused full-order record for uncommon or high-risk operations. The console will coordinate existing ShipEngine, Stripe, QuickBooks Online (QBO), Resend, CMS/CRM, and Customer Support capabilities rather than create parallel data paths.

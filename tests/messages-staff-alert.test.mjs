@@ -18,4 +18,7 @@ test("staff reply emails only a closed-chat user with an unanswered question", (
   assert.match(ADMIN, /support_chat_open/);
   assert.match(ADMIN, /shouldEmailClosedChatReply/);
   assert.match(ADMIN, /emailsByIds/);
+  const latestQuery = ADMIN.match(/let lastMessageQuery[\s\S]*?maybeSingle\(\)/)?.[0] || "";
+  assert.doesNotMatch(latestQuery, /\.eq\('sender_role', 'buyer'\)/,
+    "latest-message lookup must see a prior staff reply and suppress duplicate email");
 });

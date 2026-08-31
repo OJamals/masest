@@ -139,6 +139,9 @@
 .site-support__controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .site-support__context { display: flex; flex-wrap: wrap; gap: 7px; margin: -4px 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line, #dfe3e7); }
 .site-support__context a { display: inline-flex; min-height: 44px; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--line, #dfe3e7); border-radius: 9px; color: var(--ink, #15171c); font-size: .78rem; font-weight: 800; text-decoration: none; }
+.site-support__order-scope { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 10px; margin: -2px 0 12px; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--accent, #118894) 38%, var(--line, #dfe3e7)); border-radius: 10px; background: color-mix(in srgb, var(--accent, #118894) 9%, white); font-size: .8rem; }
+.site-support__order-scope span { min-width: 0; overflow-wrap: anywhere; }
+.site-support__order-scope button { min-height: 36px; flex: 0 0 auto; padding: 0 9px; border: 0; border-radius: 8px; background: transparent; color: var(--accent, #118894); font-weight: 800; }
 .site-support__controls button,
 .site-support__older,
 .site-support__reply button { min-height: 44px; padding: 0 12px; border: 1px solid var(--line, #dfe3e7); border-radius: 9px; background: var(--paper, #fff); color: inherit; font-weight: 800; }
@@ -146,6 +149,7 @@
 .site-support__messages article { max-width: 78%; padding: 10px 12px; border: 1px solid var(--line, #dfe3e7); border-radius: 11px; background: var(--paper-soft, #f5f7f8); }
 .site-support__messages article[data-role="staff"] { justify-self: end; background: color-mix(in srgb, var(--accent, #118894) 12%, white); }
 .site-support__messages p { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.site-support__message-order { display: block; width: fit-content; margin-bottom: 6px; color: inherit; font-size: .68rem; font-weight: 850; letter-spacing: .04em; text-decoration: underline; text-underline-offset: 2px; text-transform: uppercase; }
 .site-support__messages time { display: block; margin-top: 5px; color: var(--ink-soft, #626a73); font-size: .68rem; }
 .site-support__reply { display: grid; gap: 7px; margin-top: 14px; }
 .site-support__reply label { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: .78rem; font-weight: 800; }

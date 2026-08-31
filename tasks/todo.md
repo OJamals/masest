@@ -2,6 +2,32 @@
 
 Canonical detail: `tasks/plan.md`. Do not implement tasks out of dependency order. Keep tree clean; stage only owned paths.
 
+## Active Slice — Unified Support and Order Messaging (2026-08-30)
+
+- [x] **S1 — RED contracts**
+  - [x] Atomic support append owns message + thread projection.
+  - [x] Order request cannot return success when chat handoff fails.
+  - [x] Order/company mismatch fails closed; scoped read/reply retains `order_id`.
+  - [x] Buyer/Admin Orders entry points reuse existing chat/support consoles.
+- [x] **S2 — Canonical DB/API seam** (`deps: S1`)
+  - [x] Additive migration and shared server adapter.
+  - [x] Account/Admin message APIs return normalized order context.
+  - [x] Replace human-authored direct inserts; retain specialized transactional provider adapters.
+- [x] **S3 — Buyer integration** (`deps: S2`)
+  - [x] Orders action opens existing chat with active order context.
+  - [x] Floating/full inbox sends `order_id` and renders order tags/clear context.
+- [x] **S4 — Admin integration** (`deps: S2`)
+  - [x] Support thread supports order scope, order links, and context-preserving replies.
+  - [x] Orders opens same support console; open request queue visible/actionable.
+- [x] **S5 — Verification and review** (`deps: S3,S4`)
+  - [x] Focused Node tests and direct Playwright specs pass.
+  - [x] `npm run verify` passes.
+  - [x] Security, accessibility, performance, failure semantics, and code ownership reviewed.
+- [ ] **S6 — Release and live QA** (`deps: S5`)
+  - [x] DB backup + additive migration.
+  - [ ] Commit, rebase, push; CI/Pages exact-commit parity proved.
+  - [ ] Live API guards, responsive visuals, console/network, and authorized functional paths pass.
+
 ## Phase 1 — Contracts and Staff Navigation
 
 - [ ] **T1 — Order-console state/deep links** (`deps: none`, `M`)

@@ -111,34 +111,32 @@ export async function handleAccountOrderRequests({ request, env }, dependencies 
     });
   }
 
-  const { data: created, error: insertError } = await sb.from('order_requests').insert({
-    order_id: order.id,
-    type,
-    reason,
-    line_items: Array.isArray(body?.lines) ? body.lines.slice(0, 50) : [],
-    requested_by: user.id,
-    requested_email: user.email || order.customer_email || null,
-  }).select('id,order_id,type,status,created_at').maybeSingle();
+  const messageBody = `${type === 'cancel' ? 'Cancellation' : 'Return'} requested for order ${orderReference(order)}: ${reason}`;
+  const { data: result, error: requestError } = await sb.rpc('create_order_support_request', {
+    p_order_id: order.id,
+    p_type: type,
+    p_reason: reason,
+    p_line_items: Array.isArray(body?.lines) ? body.lines.slice(0, 50) : [],
+    p_requested_by: user.id,
+    p_requested_email: user.email || order.customer_email || null,
+    p_message_body: messageBody,
+  });
+  if (requestError || !result?.request) return json(500, { error: 'server_error' });
 
-  // The partial unique index turns a second open request of the same kind into a no-op
-  // rather than a duplicate queue entry — re-submitting is idempotent for the buyer.
-  if (insertError?.code === '23505') {
-    return json(200, { ok: true, duplicate: true, message: 'We already have this request and are working on it.' });
+  if (result.duplicate) {
+    return json(200, {
+      ok: true,
+      duplicate: true,
+      request: result.request,
+      message: 'We already have this request and are working on it.',
+    });
   }
-  if (insertError) return json(500, { error: 'server_error' });
-
-  // Land it in the thread staff already watch, so it never waits in a queue nobody opens.
-  await sb.from('messages').insert({
-    company_id: order.company_id || null,
-    user_id: user.id,
-    order_id: order.id,
-    direction: 'inbound',
-    body: `${type === 'cancel' ? 'Cancellation' : 'Return'} requested for order ${orderReference(order)}: ${reason}`,
-  }).then(() => {}, () => {});
 
   return json(201, {
     ok: true,
-    request: created,
+    request: result.request,
+    support_message: result.message,
+    chat_linked: Boolean(result.chat_linked),
     message: type === 'cancel'
       ? 'Cancellation requested. We will confirm by email once it is processed.'
       : 'Return requested. We will email a prepaid return label once it is approved.',

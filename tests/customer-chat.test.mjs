@@ -110,7 +110,8 @@ test("customer chat posts to the authenticated message thread and receives staff
   assert.match(chat, /source: "customer_chat"/);
   assert.match(chat, /POLL_MS/);
   assert.match(messages, /body\.source === 'customer_chat'/);
-  assert.match(messages, /source, read_by_user/);
+  assert.match(messages, /appendSupportMessage\(sb,/);
+  assert.match(messages, /source,/);
   assert.match(admin, /source === 'customer_chat'/);
 });
 

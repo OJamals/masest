@@ -18,7 +18,7 @@ export function createThreadsTab({ api, state, openContext }) {
   // One console per document, lazily mounted. initAdminSupport() returns null if
   // one is already present, so a second call cannot produce a second inbox.
   function ensureConsole() {
-    consolePromise ||= import('../admin-support.js?v=20260830g')
+    consolePromise ||= import('../admin-support.js?v=20260830h')
       .then(({ initAdminSupport }) => initAdminSupport({
         auth: { api },
         root: '/',
@@ -38,9 +38,9 @@ export function createThreadsTab({ api, state, openContext }) {
 
   // Accounts tab deep link ("message this business") opens the shared console on
   // that company rather than a second inbox implementation.
-  async function openThread(companyId) {
+  async function openThread(companyId, options = {}) {
     const support = await ensureConsole();
-    await support?.openThread?.(companyId);
+    await support?.openThread?.(companyId, options);
   }
 
   async function openConsole() {

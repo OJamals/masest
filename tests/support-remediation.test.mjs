@@ -237,5 +237,5 @@ test('buyer and staff inboxes page backward from the newest message', () => {
     assert.match(source, /messagePage/);
   }
   assert.match(dashboard, /loadEarlierMessages/);
-  assert.match(dashboard, /before=\$\{encodeURIComponent\(messageCursor\)\}/);
+  assert.match(dashboard, /params\.set\('before', messageCursor\)/);
 });

@@ -8,7 +8,7 @@ const adminMessagesSrc = readFileSync(new URL("../functions/api/admin/messages.j
 const emailSrc = readFileSync(new URL("../functions/_lib/email.js", import.meta.url), "utf8");
 
 test("support notification emails escape customer and staff-supplied body", () => {
-  assert.match(messagesSrc, /htmlEscape\(company\?\.name \|\| companyId\)/);
+  assert.match(messagesSrc, /htmlEscape\(data\.company_name \|\| companyId\)/);
   assert.match(messagesSrc, /htmlEscape\(text\.slice\(0, 500\)\)/);
   assert.match(adminMessagesSrc, /import \{[^}]*htmlEscape[^}]*\} from '\.\.\/\.\.\/_lib\/supabase\.js'/);
   assert.match(adminMessagesSrc, /\$\{htmlEscape\(text\)\}/);

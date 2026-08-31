@@ -18,6 +18,13 @@ function routeSuppressesSupport() {
 function makeMessage(message) {
   const item = document.createElement("article");
   item.className = `customer-chat__message customer-chat__message--${message.sender_role === "staff" ? "staff" : "buyer"}`;
+  if (message.order?.id) {
+    const order = document.createElement("a");
+    order.className = "customer-chat__message-order";
+    order.href = message.order.buyer_url || `/dashboard.html?order=${encodeURIComponent(message.order.id)}#orders`;
+    order.textContent = `Order ${message.order.reference || message.order.id}`;
+    item.append(order);
+  }
   const body = document.createElement("p");
   body.textContent = message.body || "";
   const meta = document.createElement("time");
@@ -41,7 +48,7 @@ export async function initCustomerChat() {
     if (await session.getToken()) {
       const account = await session.me();
       if (account?.can_admin) {
-        const { initAdminSupport } = await import("./admin-support.js?v=20260830g");
+        const { initAdminSupport } = await import("./admin-support.js?v=20260830h");
         initAdminSupport({ auth: session, root, staff: account.staff });
         return;
       }
@@ -57,7 +64,7 @@ export async function initCustomerChat() {
       stylesheet.addEventListener("error", resolve, { once: true });
     });
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/customer-chat.css?v=20260826d`;
+    stylesheet.href = `${root}css/customer-chat.css?v=20260830h`;
     stylesheet.dataset.masestCustomerChat = "true";
     document.head.append(stylesheet);
   }
@@ -79,6 +86,10 @@ export async function initCustomerChat() {
       <div class="customer-chat__thread" hidden>
         <div class="customer-chat__messages" aria-live="polite" aria-label="Messages"></div>
         <form class="customer-chat__form">
+          <div class="customer-chat__order-context" hidden>
+            <span><i class="ph ph-package" aria-hidden="true"></i> About <b data-customer-chat-order></b></span>
+            <button type="button" data-customer-chat-order-clear aria-label="Return to full company conversation">Clear</button>
+          </div>
           <label class="sr-only" for="customerChatBody">Message</label>
           <textarea id="customerChatBody" name="chat_message" autocomplete="off" maxlength="4000" required placeholder="Ask about VertKleen, an order, or your account…"></textarea>
           <div class="customer-chat__form-row"><p class="customer-chat__status" role="status" aria-live="polite"></p><button class="btn btn-primary" type="submit">Send</button></div>
@@ -100,7 +111,12 @@ export async function initCustomerChat() {
   const form = shell.querySelector(".customer-chat__form");
   const body = shell.querySelector("#customerChatBody");
   const status = shell.querySelector(".customer-chat__status");
+  const orderContext = shell.querySelector(".customer-chat__order-context");
+  const orderLabel = shell.querySelector("[data-customer-chat-order]");
+  const orderClear = shell.querySelector("[data-customer-chat-order-clear]");
+  const inboxLink = shell.querySelector(".customer-chat__inbox-link");
   const quoteActions = [...shell.querySelectorAll(".customer-chat__quote-link")];
+  let activeOrder = null;
   let authenticated = false;
   let pollId = 0;
   let chatPresenceOpen = false;
@@ -168,6 +184,19 @@ export async function initCustomerChat() {
   const setStatus = (text = "", state = "") => {
     status.textContent = text;
     status.dataset.state = state;
+  };
+  const setOrderContext = (order) => {
+    const id = String(order?.id || "").trim();
+    activeOrder = id ? {
+      id,
+      reference: String(order?.reference || order?.order_number || id).trim(),
+      status: order?.status || null,
+    } : null;
+    orderContext.hidden = !activeOrder;
+    orderLabel.textContent = activeOrder ? `order ${activeOrder.reference}` : "";
+    inboxLink.href = activeOrder
+      ? `${root}dashboard.html?order=${encodeURIComponent(activeOrder.id)}#messages`
+      : `${root}dashboard.html#messages`;
   };
   const setChatPresence = async (open, { force = false, keepalive = false } = {}) => {
     if (!authenticated || (!force && chatPresenceOpen === open)) return;
@@ -242,7 +271,9 @@ export async function initCustomerChat() {
     if (!authenticated) return;
     try {
       const { api } = await auth();
-      const result = await api("/api/account/messages");
+      const suffix = activeOrder ? `?order_id=${encodeURIComponent(activeOrder.id)}` : "";
+      const result = await api(`/api/account/messages${suffix}`);
+      if (activeOrder && result.order_scope) setOrderContext(result.order_scope);
       renderMessages(result.messages || []);
       if (!quiet) setStatus();
     } catch (error) {
@@ -271,6 +302,11 @@ export async function initCustomerChat() {
 
   toggle.addEventListener("click", () => panel.hidden ? void open() : setOpen(false));
   close.addEventListener("click", () => setOpen(false));
+  orderClear.addEventListener("click", () => {
+    setOrderContext(null);
+    void loadMessages();
+    body.focus();
+  });
   list.addEventListener("wheel", (event) => {
     if (list.scrollHeight <= list.clientHeight) return;
     const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? list.clientHeight : 1;
@@ -287,6 +323,12 @@ export async function initCustomerChat() {
   document.addEventListener("masest:auth", () => { if (!panel.hidden) void refresh(); });
   document.addEventListener("masest:session-expired", () => { if (!panel.hidden) showGuest(); });
   document.addEventListener("cart:updated", () => { if (!panel.hidden) void updateQuoteHref(); });
+  document.addEventListener("masest:open-support-order", (event) => {
+    const order = event.detail?.order || event.detail;
+    if (!order?.id) return;
+    setOrderContext(order);
+    void open();
+  });
   document.addEventListener("masest:support-route", syncRouteVisibility);
   document.addEventListener(OBSTRUCTION_EVENT, scheduleDockAvoidance);
   window.addEventListener("hashchange", syncRouteVisibility);
@@ -313,7 +355,10 @@ export async function initCustomerChat() {
     setStatus("Sending…");
     try {
       const { api } = await auth();
-      await api("/api/account/messages", { method: "POST", body: { body: text, source: "customer_chat" } });
+      await api("/api/account/messages", {
+        method: "POST",
+        body: { body: text, source: "customer_chat", order_id: activeOrder?.id || null },
+      });
       body.value = "";
       setStatus("Sent.", "ok");
       await loadMessages({ quiet: true });

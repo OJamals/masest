@@ -8,7 +8,7 @@ import { csvResponse } from '../../_lib/reports.js';
 import { pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
 import { klaviyoTrack } from '../../_lib/klaviyo.js';
 import { escapeLike } from '../../_lib/crm.js';
-import { recordSupportMessage } from '../../_lib/support-messages.js';
+import { appendSupportMessage } from '../../_lib/support-messages.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { createQuoteLeadLifecycle, createSupabaseQuoteLeadStore } from '../../_lib/quote-leads.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
@@ -105,21 +105,18 @@ async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
   if (!resolvedCompanyId) return { posted: false, reason: 'company_not_found' };
 
   const messageBody = `Quote follow-up: ${text}`.slice(0, 4000);
-  const { data: message, error } = await sb.from('messages').insert({
-    company_id: resolvedCompanyId,
-    sender_role: 'staff',
-    body: messageBody,
-    read_by_staff: true,
-    read_by_user: false,
-  }).select('id,created_at').single();
-  if (error) return { posted: false, company_id: resolvedCompanyId, error: error.message };
-  await recordSupportMessage(sb, {
-    companyId: resolvedCompanyId,
-    senderRole: 'staff',
-    body: messageBody,
-    createdAt: message.created_at,
-    reopen: false,
-  }).catch(() => {});
+  let message;
+  try {
+    message = await appendSupportMessage(sb, {
+      companyId: resolvedCompanyId,
+      senderRole: 'staff',
+      body: messageBody,
+      source: 'quote_followup',
+      reopen: false,
+    });
+  } catch (error) {
+    return { posted: false, company_id: resolvedCompanyId, error: error.message };
+  }
 
   await sb.from('notifications').insert({
     company_id: resolvedCompanyId,

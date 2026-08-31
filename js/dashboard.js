@@ -8,7 +8,7 @@ import {
   replaceWithQuote,
 } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, restoreFocusOnClose, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
-import { initBusinessHub } from './business.js?v=20260821a';
+import { initBusinessHub } from './business.js?v=20260830h';
 import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260821a';
 import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260821a';
 
@@ -26,6 +26,8 @@ let lastMsgId = null;
 let messageHistory = [];
 let messageCursor = null;
 let messageHasMore = false;
+let messageOrderScope = null;
+let activeMessageOrderId = new URLSearchParams(location.search).get('order') || null;
 let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
 let activeDashboardTab = '';
@@ -506,7 +508,7 @@ async function renderOrders({ append = false } = {}) {
     const n = items.reduce((s, it) => s + (it.qty || 0), 0);
     const reference = o.order_number || o.id;
     const lines = items.map((it) => `<div class="dash-row dash-order-line"><span>${esc(it.name)} × ${it.qty}</span><span>${money(it.line_total, o.currency)}</span></div>`).join('');
-    return `<details class="dash-order-card">
+    return `<details class="dash-order-card" data-order-id="${esc(o.id)}">
       <summary class="dash-order-summary">
         <span>${esc(reference)} · ${fmtDate(o.created_at)} · ${orderLifecycleBadge(o)} · ${n} item${n === 1 ? '' : 's'}</span>
         <b>${money(o.total, o.currency)}</b>
@@ -518,12 +520,19 @@ async function renderOrders({ append = false } = {}) {
         <div class="dash-order-actions">
         ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
         ${o.payment_method === 'stripe' ? `<button class="btn btn-ghost btn-sm" data-receipt="${esc(o.id)}">Receipt</button>` : ''}
+        ${ACCOUNT?.company ? `<button class="btn btn-ghost btn-sm" type="button" data-message-order="${esc(o.id)}" data-order-reference="${esc(reference)}" data-order-status="${esc(o.status || '')}">Message about this order</button>` : ''}
         ${orderRequestButton(o)}
         </div>
       </div></details>`;
   }).join('') + pagerHtml('data-load-more-orders', st)
     : '<div class="empty-state"><i class="ph ph-package empty-icon" aria-hidden="true"></i><div class="empty-title">No orders yet</div><div class="empty-body">Browse the <a href="products.html">catalog</a> to place your first order.</div></div>';
   box.innerHTML = `${requisitionHtml}<section><h2 class="headline dash-section-title">Order history</h2>${orderHtml}</section>`;
+  const linkedOrderId = location.hash === '#orders' ? new URLSearchParams(location.search).get('order') : null;
+  const linkedOrder = linkedOrderId ? box.querySelector(`[data-order-id="${CSS.escape(linkedOrderId)}"]`) : null;
+  if (linkedOrder) {
+    linkedOrder.open = true;
+    requestAnimationFrame(() => linkedOrder.scrollIntoView({ block: 'center' }));
+  }
   const restoreCart = async (id, button, emptyMessage) => {
     if (cartItems().length && !(await confirmDialog('Replace your current cart with these items?', { confirmText: 'Replace cart', cancelText: 'Keep cart' }))) return;
     button.disabled = true;
@@ -562,6 +571,15 @@ async function renderOrders({ append = false } = {}) {
   box.querySelectorAll('[data-reorder]').forEach((b) => b.addEventListener('click', async () => {
     const o = list[Number(b.dataset.reorder)];
     restoreCart(o.id, b, 'None of these items are available to reorder.');
+  }));
+  box.querySelectorAll('[data-message-order]').forEach((button) => button.addEventListener('click', () => {
+    document.dispatchEvent(new CustomEvent('masest:open-support-order', {
+      detail: { order: {
+        id: button.dataset.messageOrder,
+        reference: button.dataset.orderReference,
+        status: button.dataset.orderStatus,
+      } },
+    }));
   }));
   box.querySelectorAll('[data-order-request]').forEach((button) => button.addEventListener('click', async () => {
     const type = button.dataset.requestType;
@@ -751,7 +769,10 @@ async function renderMessages({ older = false } = {}) {
   const previousHeight = older ? thread.scrollHeight : 0;
   let result;
   try {
-    const suffix = older && messageCursor ? `?before=${encodeURIComponent(messageCursor)}` : '';
+    const params = new URLSearchParams();
+    if (activeMessageOrderId) params.set('order_id', activeMessageOrderId);
+    if (older && messageCursor) params.set('before', messageCursor);
+    const suffix = params.size ? `?${params}` : '';
     result = await api(`/api/account/messages${suffix}`);
   } catch {
     loaded.messages = false;
@@ -765,14 +786,19 @@ async function renderMessages({ older = false } = {}) {
     : page;
   messageCursor = result.next_before || null;
   messageHasMore = result.has_more === true;
+  messageOrderScope = result.order_scope || null;
   const msgs = messageHistory;
   lastMsgCount = msgs.length;
   lastMsgId = msgs.at(-1)?.id || null;
   if (earlier) { earlier.hidden = !messageHasMore; earlier.disabled = false; }
-  if (count) count.textContent = msgs.length ? `${msgs.length}${messageHasMore ? '+' : ''} message${msgs.length === 1 ? '' : 's'} loaded.` : 'No messages in this conversation yet.';
+  const orderContext = $('msgOrderContext');
+  const orderLabel = $('msgOrderLabel');
+  if (orderContext) orderContext.hidden = !messageOrderScope;
+  if (orderLabel) orderLabel.textContent = messageOrderScope ? `Order ${messageOrderScope.reference}` : '';
+  if (count) count.textContent = msgs.length ? `${msgs.length}${messageHasMore ? '+' : ''} message${msgs.length === 1 ? '' : 's'} loaded${messageOrderScope ? ` for order ${messageOrderScope.reference}` : ''}.` : 'No messages in this conversation yet.';
   if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question about orders, pricing, NET terms, or anything else.</div></div>`; }
   else {
-    thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${esc(m.body)}<time>${fmtDT(m.created_at)}${m.source === 'email_reply' ? ' · <span class="msg-source">Email reply</span>' : ''}</time></div>`).join('');
+    thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${m.order ? `<a class="msg-order" href="${esc(m.order.buyer_url)}">Order ${esc(m.order.reference)}</a>` : ''}${esc(m.body)}<time>${fmtDT(m.created_at)}${m.source === 'email_reply' ? ' · <span class="msg-source">Email reply</span>' : ''}</time></div>`).join('');
     requestAnimationFrame(() => {
       thread.scrollTop = older ? thread.scrollHeight - previousHeight : thread.scrollHeight;
     });
@@ -787,7 +813,7 @@ function wireMessageForm() {
     if (sendBtn) sendBtn.disabled = true;
     status.textContent = 'Sending…'; status.dataset.state = '';
     try {
-      await api('/api/account/messages', { method: 'POST', body: { body } });
+      await api('/api/account/messages', { method: 'POST', body: { body, order_id: activeMessageOrderId } });
       input.value = ''; status.textContent = '';
       loaded.messages = false; await renderMessages();
     } catch { status.textContent = 'Could not send. Try again.'; status.dataset.state = 'err'; }
@@ -802,6 +828,18 @@ function wireMessageForm() {
   $('loadEarlierMessages')?.addEventListener('click', async (event) => {
     event.currentTarget.disabled = true;
     await renderMessages({ older: true });
+  });
+  $('msgOrderClear')?.addEventListener('click', async () => {
+    activeMessageOrderId = null;
+    messageOrderScope = null;
+    messageHistory = [];
+    messageCursor = null;
+    const url = new URL(location.href);
+    url.searchParams.delete('order');
+    history.replaceState(null, '', `${url.pathname}${url.search}#messages`);
+    loaded.messages = false;
+    await renderMessages();
+    $('msgInput')?.focus();
   });
 }
 
@@ -1299,7 +1337,9 @@ async function pollLive() {
   const msgPanel = document.querySelector('[data-panel="messages"]');
   if (msgPanel && !msgPanel.hidden) {
     try {
-      const msgs = (await api('/api/account/messages?peek=1')).messages || [];
+      const params = new URLSearchParams({ peek: '1' });
+      if (activeMessageOrderId) params.set('order_id', activeMessageOrderId);
+      const msgs = (await api(`/api/account/messages?${params}`)).messages || [];
       if ((msgs.at(-1)?.id || null) !== lastMsgId) { loaded.messages = false; await renderMessages(); }
     } catch { /* keep current view */ }
   }

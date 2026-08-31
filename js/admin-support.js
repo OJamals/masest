@@ -108,7 +108,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/admin-support.css?v=20260830g`;
+    stylesheet.href = `${root}css/admin-support.css?v=20260830h`;
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }
@@ -186,6 +186,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   let threadsLoaded = false;
   const drafts = new Map();
   let selected = null;
+  let activeOrderId = null;
   let messages = [];
   let page = { has_more: false, next_before: null };
   let threadRequestId = 0;
@@ -195,6 +196,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   let presenceOpen = false;
   let lastPresencePing = 0;
   let presenceRequest = Promise.resolve();
+  const draftKey = (companyId, orderId = activeOrderId) => `${companyId}:${orderId || "all"}`;
 
   const setPresence = async (open, { force = false, keepalive = false } = {}) => {
     if (!force && presenceOpen === open) return;
@@ -304,9 +306,13 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     else renderSummary({ open: ordered.length, unanswered });
     if (!ordered.length) {
       searchResults.textContent = resolvedView ? "No resolved chats" : "No open chats";
-      selected = null;
-      drawer.dataset.threadSelected = "false";
-      view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
+      // A directly opened Company/order conversation can be valid before the
+      // cached inbox list arrives (or while that list is empty). List rendering
+      // must not erase the independently loaded conversation.
+      if (!selected) {
+        drawer.dataset.threadSelected = "false";
+        view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
+      }
       list.innerHTML = resolvedView
         ? '<div class="site-support__empty"><i class="ph ph-check-circle" aria-hidden="true"></i><div><strong>No resolved chats</strong><p>Resolved conversations appear here for later review.</p></div></div>'
         : '<div class="site-support__empty"><i class="ph ph-lifebuoy" aria-hidden="true"></i><div><strong>Inbox clear</strong><p>No open customer conversations.</p></div></div>';
@@ -321,9 +327,12 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       return;
     }
     list.innerHTML = visible.map((thread) => {
-      const hasDraft = Boolean(drafts.get(String(thread.company_id))?.trim());
+      const hasDraft = [...drafts.entries()].some(([key, value]) => key.startsWith(`${thread.company_id}:`) && value.trim());
       const badges = `${thread.status === "escalated" ? "<em>Escalated</em>" : ""}${hasDraft ? "<em>Draft</em>" : ""}${thread.unanswered ? "<b>Needs reply</b>" : ""}`;
-      return `<button type="button" class="site-support__thread${thread.unanswered ? " is-unanswered" : ""}${thread.company_id === selected?.company_id ? " is-selected" : ""}" data-company-id="${escapeHtml(thread.company_id)}" aria-pressed="${thread.company_id === selected?.company_id}"><span><strong>${escapeHtml(thread.company_name || "Customer")}</strong><small>${escapeHtml((thread.last_body || "").slice(0, 90))}</small></span><span class="site-support__meta"><time datetime="${escapeHtml(thread.last_at)}">${escapeHtml(date(thread.last_at))}</time>${badges}</span></button>`;
+      const label = thread.order
+        ? `[Order ${thread.order.reference}] / ${thread.company_name || "Customer"}`
+        : thread.company_name || "Customer";
+      return `<button type="button" class="site-support__thread${thread.unanswered ? " is-unanswered" : ""}${thread.company_id === selected?.company_id ? " is-selected" : ""}" data-company-id="${escapeHtml(thread.company_id)}" aria-pressed="${thread.company_id === selected?.company_id}"><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml((thread.last_body || "").slice(0, 90))}</small></span><span class="site-support__meta"><time datetime="${escapeHtml(thread.last_at)}">${escapeHtml(date(thread.last_at))}</time>${badges}</span></button>`;
     }).join("");
   };
 
@@ -335,6 +344,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     threads = [];
     threadsLoaded = false;
     selected = null;
+    activeOrderId = null;
     messages = [];
     page = { has_more: false, next_before: null };
     search.value = "";
@@ -350,6 +360,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   const clearThreadSelection = () => {
     threadRequestId += 1;
     selected = null;
+    activeOrderId = null;
     messages = [];
     page = { has_more: false, next_before: null };
     drawer.dataset.threadSelected = "false";
@@ -364,21 +375,25 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     const companyId = String(selected.company_id);
     const resolved = selected.status === "complete";
     const escalated = selected.status === "escalated";
-    const linkedOrderId = [...messages].reverse().find((message) => message.order_id)?.order_id || null;
+    const activeOrder = selected.order_scope
+      || (activeOrderId ? messages.find((message) => message.order_id === activeOrderId)?.order : null)
+      || null;
+    const linkedOrder = activeOrder || [...messages].reverse().find((message) => message.order)?.order || null;
     const contextLinks = `<nav class="site-support__context" aria-label="Customer context">
       <a href="${escapeHtml(`${root}admin.html#companies`)}" data-support-context="company" data-context-id="${escapeHtml(companyId)}"><i class="ph ph-buildings" aria-hidden="true"></i>View account</a>
-      ${linkedOrderId ? `<a href="${escapeHtml(`${root}admin.html#orders`)}" data-support-context="order" data-context-id="${escapeHtml(linkedOrderId)}"><i class="ph ph-package" aria-hidden="true"></i>View linked order</a>` : ""}
+      ${linkedOrder ? `<a href="${escapeHtml(linkedOrder.admin_url || `${root}admin.html?order=${encodeURIComponent(linkedOrder.id)}#orders`)}" data-support-context="order" data-context-id="${escapeHtml(linkedOrder.id)}"><i class="ph ph-package" aria-hidden="true"></i>View order ${escapeHtml(linkedOrder.reference)}</a>` : ""}
     </nav>`;
+    const orderScope = activeOrder ? `<div class="site-support__order-scope"><span><i class="ph ph-package" aria-hidden="true"></i>Replying about <b>order ${escapeHtml(activeOrder.reference)}</b>${activeOrder.status ? ` · ${escapeHtml(activeOrder.status.replaceAll("_", " "))}` : ""}</span><button type="button" data-support-full-thread>Full company conversation</button></div>` : "";
     const controls = canWrite
       ? `<div class="site-support__controls">${resolved
         ? '<button type="button" data-status="open">Reopen</button>'
         : `<button type="button" data-status="complete">Mark resolved</button><button type="button" data-status="${escalated ? "open" : "escalated"}">${escalated ? "Return to open" : "Escalate"}</button>`}</div>`
       : "";
-    const messageList = messages.map((message) => `<article data-role="${escapeHtml(message.sender_role)}"><p>${escapeHtml(message.body)}</p><time datetime="${escapeHtml(message.created_at)}">${message.sender_role === "staff" ? "Team" : "Customer"} · ${escapeHtml(date(message.created_at))}</time></article>`).join("");
+    const messageList = messages.map((message) => `<article data-role="${escapeHtml(message.sender_role)}">${message.order ? `<a class="site-support__message-order" href="${escapeHtml(message.order.admin_url)}" data-support-context="order" data-context-id="${escapeHtml(message.order.id)}">Order ${escapeHtml(message.order.reference)}</a>` : ""}<p>${escapeHtml(message.body)}</p><time datetime="${escapeHtml(message.created_at)}">${message.sender_role === "staff" ? "Team" : "Customer"} · ${escapeHtml(date(message.created_at))}</time></article>`).join("");
     const reply = canWrite && !resolved
-      ? '<form class="site-support__reply"><label for="siteSupportReply">Reply <small id="siteSupportReplyHint">⌘/Ctrl + Enter sends</small></label><textarea id="siteSupportReply" name="support_message" autocomplete="off" maxlength="4000" aria-describedby="siteSupportReplyHint" required></textarea><div><span role="status" aria-live="polite"></span><button type="submit">Send reply</button></div></form>'
+      ? `<form class="site-support__reply"><label for="siteSupportReply">${activeOrder ? `Reply about order ${escapeHtml(activeOrder.reference)}` : "Reply"} <small id="siteSupportReplyHint">⌘/Ctrl + Enter sends</small></label><textarea id="siteSupportReply" name="support_message" autocomplete="off" maxlength="4000" aria-describedby="siteSupportReplyHint" required></textarea><div><span role="status" aria-live="polite"></span><button type="submit">Send reply</button></div></form>`
       : '<p class="site-support__notice">' + (resolved ? "Reopen this conversation before replying." : "Your staff role has read-only access.") + "</p>";
-    view.innerHTML = `<header class="site-support__conversation-head"><div><p>${resolved ? "Resolved" : escalated ? "Escalated" : "Open"} conversation</p><h3>${escapeHtml(selected.company_name || "Customer")}</h3></div>${controls}</header>${contextLinks}${page.has_more ? '<button class="site-support__older" type="button">Load earlier messages</button>' : ""}<div class="site-support__messages">${messageList}</div>${reply}`;
+    view.innerHTML = `<header class="site-support__conversation-head"><div><p>${resolved ? "Resolved" : escalated ? "Escalated" : "Open"} conversation</p><h3>${escapeHtml(selected.company_name || "Customer")}</h3></div>${controls}</header>${contextLinks}${orderScope}${page.has_more ? '<button class="site-support__older" type="button">Load earlier messages</button>' : ""}<div class="site-support__messages">${messageList}</div>${reply}`;
 
     view.querySelectorAll("[data-support-context]").forEach((link) => link.addEventListener("click", async (event) => {
       if (typeof openContext !== "function") return;
@@ -389,6 +404,9 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
         if (result?.cancelled) setOpen(true);
       } catch { setOpen(true); }
     }));
+    view.querySelector("[data-support-full-thread]")?.addEventListener("click", () => {
+      void openThread(companyId, { orderId: null });
+    });
     view.querySelectorAll("[data-status]").forEach((button) => button.addEventListener("click", async () => {
       button.disabled = true;
       const actionRequestId = threadRequestId;
@@ -398,7 +416,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
         if (actionRequestId !== threadRequestId || String(selected?.company_id) !== companyId) return;
         if (nextStatus === "open" && threadFilter === "complete") {
           await setThreadFilter("open");
-          await openThread(companyId);
+          await openThread(companyId, { orderId: activeOrderId });
           return;
         }
         if (nextStatus === "complete" && threadFilter === "open") {
@@ -406,21 +424,22 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
           if (actionRequestId === threadRequestId && String(selected?.company_id) === companyId) clearThreadSelection();
           return;
         }
-        await openThread(companyId);
+        await openThread(companyId, { orderId: activeOrderId });
         await loadThreads();
       } catch { button.disabled = false; }
     }));
     view.querySelector(".site-support__older")?.addEventListener("click", (event) => {
       event.currentTarget.disabled = true;
-      void openThread(companyId, { before: page.next_before, older: true });
+      void openThread(companyId, { orderId: activeOrderId, before: page.next_before, older: true });
     });
     const replyForm = view.querySelector(".site-support__reply");
     const replyTextarea = replyForm?.querySelector("textarea");
     if (replyTextarea) {
-      replyTextarea.value = drafts.get(companyId) || "";
+      const key = draftKey(companyId);
+      replyTextarea.value = drafts.get(key) || "";
       replyTextarea.addEventListener("input", () => {
-        if (replyTextarea.value) drafts.set(companyId, replyTextarea.value);
-        else drafts.delete(companyId);
+        if (replyTextarea.value) drafts.set(key, replyTextarea.value);
+        else drafts.delete(key);
       });
       replyTextarea.addEventListener("keydown", (event) => {
         if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return;
@@ -439,9 +458,14 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       status.textContent = "Sending…";
       const actionRequestId = threadRequestId;
       try {
-        await auth.api("/api/admin/messages", { method: "POST", body: { company_id: companyId, body } });
-        drafts.delete(companyId);
-        if (actionRequestId === threadRequestId && String(selected?.company_id) === companyId) await openThread(companyId);
+        await auth.api("/api/admin/messages", {
+          method: "POST",
+          body: { company_id: companyId, body, order_id: activeOrderId },
+        });
+        drafts.delete(draftKey(companyId));
+        if (actionRequestId === threadRequestId && String(selected?.company_id) === companyId) {
+          await openThread(companyId, { orderId: activeOrderId });
+        }
         await loadThreads();
       } catch (error) {
         status.textContent = error?.data?.message || "Could not send reply.";
@@ -450,11 +474,12 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     });
   };
 
-  const openThread = async (companyId, { before = null, older = false } = {}) => {
+  const openThread = async (companyId, { orderId = activeOrderId, before = null, older = false } = {}) => {
     const requestId = ++threadRequestId;
+    activeOrderId = String(orderId || "").trim() || null;
     if (!older) view.innerHTML = '<p class="site-support__placeholder">Loading…</p>';
     try {
-      const suffix = before ? `&before=${encodeURIComponent(before)}` : "";
+      const suffix = `${activeOrderId ? `&order_id=${encodeURIComponent(activeOrderId)}` : ""}${before ? `&before=${encodeURIComponent(before)}` : ""}`;
       const result = await auth.api(`/api/admin/messages?company_id=${encodeURIComponent(companyId)}${suffix}`);
       if (requestId !== threadRequestId) return;
       selected = result.thread
@@ -513,7 +538,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     const button = event.target.closest("[data-company-id]");
     if (!button) return;
     setView("inbox");
-    void openThread(button.dataset.companyId);
+    void openThread(button.dataset.companyId, { orderId: null });
   });
   filters.addEventListener("click", (event) => {
     const button = event.target.closest("[data-support-filter]");
@@ -575,7 +600,11 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   // Returned so the admin console can open a specific company thread from the
   // Accounts tab instead of shipping a second inbox implementation.
   return {
-    openThread: (companyId) => { setView("inbox"); setOpen(true); return openThread(companyId); },
+    openThread: (companyId, { orderId = null } = {}) => {
+      setView("inbox");
+      setOpen(true);
+      return openThread(companyId, { orderId });
+    },
     open: () => { setView("inbox"); setOpen(true); },
     openSettings,
     refresh: () => poller.refresh(),

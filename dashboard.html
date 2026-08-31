@@ -92,6 +92,7 @@
   .msg.buyer { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
   .msg.staff { align-self: flex-start; background: var(--accent-soft); color: var(--ink); border-bottom-left-radius: 4px; }
   .msg time { display: block; font-size: .68rem; opacity: .7; margin-top: 4px; }
+  .msg-order { display: block; width: fit-content; margin-bottom: 5px; color: inherit; font-size: .68rem; font-weight: 850; letter-spacing: .04em; text-decoration: underline; text-underline-offset: 2px; text-transform: uppercase; }
   .msg-source { font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
   .notif { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .notif.unread { background: var(--accent-tint); margin: 0; padding: 14px; border-radius: var(--r-input); }
@@ -134,6 +135,8 @@
   .dash-overview-marker small { color: var(--ink-soft); font-size: .72rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
   .dash-overview-marker b { color: var(--ink); font-size: 1rem; font-variant-numeric: tabular-nums; line-height: 1.25; }
   .msg-send { margin-top: 10px; }
+  .msg-order-context { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; padding: 9px 11px; border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--line)); border-radius: var(--r-input); background: var(--accent-soft); color: var(--accent-ink); font-size: .86rem; font-weight: 750; }
+  .msg-order-context[hidden] { display: none; }
   /* Strips .form-card's chrome to sit bare on the page. It must drop the
      background too: keeping .form-card's white surface while zeroing its 46px
      padding left a painted slab with labels, inputs, and the save button flush
@@ -537,6 +540,7 @@
                 <button class="btn btn-ghost btn-sm" id="refreshMessages" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh</button>
               </div>
             </div>
+            <div class="msg-order-context" id="msgOrderContext" hidden><span><i class="ph ph-package" aria-hidden="true"></i> <b id="msgOrderLabel"></b></span><button class="btn btn-ghost btn-sm" id="msgOrderClear" type="button">Full company conversation</button></div>
             <p class="muted" id="msgCount" aria-live="polite"></p>
             <button class="btn btn-ghost btn-sm" id="loadEarlierMessages" type="button" hidden>Load earlier messages</button>
             <div class="msg-thread" id="msgThread"><p class="muted">Loading…</p></div>
@@ -723,8 +727,8 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/main.js?v=20260830g"></script>
+<script type="module" src="js/main.js?v=20260830h"></script>
 <script src="js/track.js" defer></script>
-<script type="module" src="js/dashboard.js?v=20260821a"></script>
+<script type="module" src="js/dashboard.js?v=20260830h"></script>
 </body>
 </html>

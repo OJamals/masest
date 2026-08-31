@@ -533,6 +533,12 @@ test("reply drafts survive thread switches and context jumps use canonical admin
           sender_role: "buyer",
           body: `${companyId} message`,
           order_id: companyId === "c1" ? orderId : null,
+          order: companyId === "c1" ? {
+            id: orderId,
+            reference: "SO-42",
+            status: "cancelled",
+            admin_url: `/admin.html?order=${orderId}#orders`,
+          } : null,
           created_at: "2026-08-30T14:30:00Z",
         }],
       } : { threads }),
@@ -548,7 +554,7 @@ test("reply drafts survive thread switches and context jumps use canonical admin
   await expect(reply).toHaveValue("Saved Acme draft");
   await reply.press("Control+Enter");
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toEqual({ company_id: "c1", body: "Saved Acme draft" });
+  expect(sent[0]).toEqual({ company_id: "c1", body: "Saved Acme draft", order_id: null });
   await expect(reply).toHaveValue("");
 
   await page.getByRole("link", { name: "View account" }).click();
@@ -557,10 +563,129 @@ test("reply drafts survive thread switches and context jumps use canonical admin
 
   await page.locator(".site-support__launcher").click();
   await page.locator('[data-company-id="c1"]').click();
-  await page.getByRole("link", { name: "View linked order" }).click();
+  await page.getByRole("link", { name: "View order SO-42" }).click();
   await expect(page.locator('[data-panel="orders"]')).toHaveAttribute("data-active", "true");
   await expect(page.locator("#ordSearch")).toHaveValue(orderId);
   await expect.poll(() => detailRequests).toContain(orderId);
+});
+
+test("Admin Orders opens and replies through the order-scoped support conversation", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/orders**");
+  await page.unroute("**/api/admin/messages**");
+
+  const orderId = "22222222-2222-4222-8222-222222222222";
+  const companyId = "c-order";
+  const messageRequests = [];
+  const sent = [];
+  const order = {
+    id: orderId,
+    order_number: "MST-2042",
+    company_id: companyId,
+    companies: { name: "Great Lakes Facilities" },
+    customer_email: "buyer@example.test",
+    status: "paid",
+    tracking_status: "processing",
+    payment_method: "stripe",
+    created_at: "2026-08-30T14:00:00Z",
+    subtotal: 240,
+    total: 240,
+    currency: "usd",
+    order_items: [],
+  };
+  const orderContext = {
+    id: orderId,
+    reference: "MST-2042",
+    status: "paid",
+    admin_url: `/admin.html?order=${orderId}#orders`,
+  };
+
+  await page.route("**/api/admin/orders**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("view") === "requests") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ requests: [{
+          id: "request-1",
+          order_id: orderId,
+          type: "cancel",
+          reason: "Please confirm before shipment.",
+          created_at: "2026-08-30T14:15:00Z",
+          requested_email: "buyer@example.test",
+          orders: order,
+        }] }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ orders: [order], total: 1, has_more: false }),
+    });
+  });
+
+  await page.route("**/api/admin/messages**", (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "POST") {
+      sent.push(request.postDataJSON());
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({ id: "staff-reply", created_at: "2026-08-30T15:00:00Z", order_id: orderId }),
+      });
+    }
+    if (url.searchParams.get("summary") === "1") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ summary: { open: 1, unanswered: 1 } }),
+      });
+    }
+    messageRequests.push(url.search);
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        thread: {
+          company_id: companyId,
+          company_name: "Great Lakes Facilities",
+          status: "open",
+          order_scope: orderContext,
+        },
+        messages: [{
+          id: "buyer-question",
+          sender_role: "buyer",
+          body: "Can this ship Friday?",
+          order_id: orderId,
+          order: orderContext,
+          created_at: "2026-08-30T14:30:00Z",
+        }],
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#orders`);
+  const orderCard = page.locator(".admin-order-card").filter({ hasText: "MST-2042" });
+  await expect(orderCard).toBeVisible();
+  await orderCard.getByRole("button", { name: "Message customer" }).click();
+
+  await expect(page.locator(".site-support__drawer")).toBeVisible();
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Great Lakes Facilities");
+  await expect(page.locator(".site-support__order-scope")).toContainText("Replying about order MST-2042");
+  await expect.poll(() => messageRequests.some((search) => (
+    search.includes(`company_id=${companyId}`) && search.includes(`order_id=${orderId}`)
+  ))).toBe(true);
+
+  const reply = page.locator("#siteSupportReply");
+  await reply.fill("Friday shipment confirmed.");
+  await reply.press("Control+Enter");
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toEqual({
+    company_id: companyId,
+    body: "Friday shipment confirmed.",
+    order_id: orderId,
+  });
 });
 
 test("support list load failures offer an in-place retry", async ({ page }) => {

@@ -3,9 +3,9 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260830g';
-import { captureDirty, restoreDirty } from './edits.js?v=20260830g';
-import { createSavedViews } from './saved-views.js?v=20260830g';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260830h';
+import { captureDirty, restoreDirty } from './edits.js?v=20260830h';
+import { createSavedViews } from './saved-views.js?v=20260830h';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 /* Lifecycle view rather than a column value: everything still owed a shipment.
@@ -90,7 +90,7 @@ export function orderAdjustmentEvidence(providerLinks = []) {
   };
 }
 
-export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats }) {
+export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats, onMessageCustomer }) {
   const REFUND_BLOCKING_STATUSES = new Set(['cancelled', 'refunded']);
   const reversalRequestIds = new Map();
 
@@ -709,11 +709,22 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         if (searchTerm) params.set('search', searchTerm);
         params.set('limit', '100');
         params.set('offset', String(state.ordersOffset || 0));
-        const res = await api('/api/admin/orders?' + params.toString());
+        const [res, requestsResult] = await Promise.all([
+          api('/api/admin/orders?' + params.toString()),
+          append
+            ? Promise.resolve({ requests: state.orderRequests || [] })
+            : api('/api/admin/orders?view=requests&status=open').catch(() => ({ requests: null })),
+        ]);
         state.orders = (state.orders || []).concat(res.orders || []);
         state.ordersOffset = (state.ordersOffset || 0) + (res.orders || []).length;
         state.ordersTotal = res.total;
         state.ordersHasMore = !!res.has_more;
+        if (Array.isArray(requestsResult.requests)) {
+          state.orderRequests = requestsResult.requests;
+          state.orderRequestsUnavailable = false;
+        } else {
+          state.orderRequestsUnavailable = true;
+        }
         state.loaded.add('orders');
       } catch {
         if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load orders. Reload to retry.</p>';
@@ -722,8 +733,17 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     }
     const q = $('ordSearch').value.trim().toLowerCase();
     const orders = state.orders.filter((order) => rowMatchesQuery(order, q));
+    const requestQueue = state.orderRequestsUnavailable
+      ? '<section class="admin-support-requests" aria-labelledby="adminSupportRequestsTitle"><div class="admin-support-requests__head"><div><span class="admin-kicker">Customer follow-up</span><h3 id="adminSupportRequestsTitle">Open support requests</h3></div></div><p class="adm-status" data-state="err">Could not load requests. Refresh Orders to retry.</p></section>'
+      : (state.orderRequests || []).length
+        ? `<section class="admin-support-requests" aria-labelledby="adminSupportRequestsTitle"><div class="admin-support-requests__head"><div><span class="admin-kicker">Customer follow-up</span><h3 id="adminSupportRequestsTitle">Open support requests</h3></div><b>${state.orderRequests.length}</b></div><div class="admin-support-request-list">${state.orderRequests.map((request) => {
+          const order = (Array.isArray(request.orders) ? request.orders[0] : request.orders) || {};
+          const reference = order.order_number || request.order_id;
+          return `<article class="admin-support-request"><div><span class="admin-kicker">${esc(request.type)} · ${esc(date(request.created_at))}</span><h4>Order ${esc(reference)}</h4><p>${esc(request.reason || 'No reason supplied.')}</p><small class="muted">${esc(request.requested_email || order.customer_email || '')}</small></div><div class="admin-order-primary"><a class="btn btn-ghost btn-sm" href="admin.html?order=${encodeURIComponent(request.order_id)}#orders">Open order</a>${order.company_id ? `<button class="btn btn-primary btn-sm" type="button" data-order-request-chat="${esc(request.id)}" data-message-company="${esc(order.company_id)}" data-message-order="${esc(request.order_id)}">Message customer</button>` : ''}</div></article>`;
+        }).join('')}</div></section>`
+        : '';
     if (!orders.length) {
-      box.innerHTML = admEmpty('ph-package', q ? 'No matching orders' : 'No orders yet', q ? 'No orders match your search.' : 'Orders appear here once customers check out.') + admOrdersPager();
+      box.innerHTML = requestQueue + admEmpty('ph-package', q ? 'No matching orders' : 'No orders yet', q ? 'No orders match your search.' : 'Orders appear here once customers check out.') + admOrdersPager();
       return;
     }
     // Accept is the only order action safe to batch — it stamps ownership and
@@ -733,7 +753,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       <label class="admin-select-all"><input type="checkbox" id="ordAll" name="select_all_orders" aria-label="Select all orders"> Select all</label>
       <button class="btn btn-ghost btn-sm" id="ordBulkAccept" type="button">Accept selected</button>
     </div>`;
-    box.innerHTML = bulkBar + `<div class="admin-order-list">${orders.map((order) => {
+    box.innerHTML = requestQueue + bulkBar + `<div class="admin-order-list">${orders.map((order) => {
       const id = esc(order.id);
       const reference = esc(order.order_number || order.id);
       const items = (order.order_items || [])
@@ -778,6 +798,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         </div>
         <div class="admin-order-primary">
           <button class="btn btn-ghost btn-sm" data-order-detail="${id}" type="button">Details</button>
+          ${order.company_id ? `<button class="btn btn-ghost btn-sm" type="button" data-message-company="${esc(order.company_id)}" data-message-order="${id}">Message customer</button>` : ''}
           ${primaryAction}
         </div>
         <details class="adm-order-manage">
@@ -1773,6 +1794,13 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         message('ordStatus', err.data?.error || 'Could not mark the NET balance paid. Retry.', 'err');
         button.disabled = false;
       }
+    });
+    delegate(box, 'click', '[data-message-company][data-message-order]', (event, button) => {
+      event.preventDefault();
+      onMessageCustomer?.({
+        companyId: button.dataset.messageCompany,
+        orderId: button.dataset.messageOrder,
+      });
     });
     delegate(box, 'click', '[data-load-more-orders]', () => renderOrders({ append: true }));
   }

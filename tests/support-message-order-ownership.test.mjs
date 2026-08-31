@@ -13,7 +13,7 @@ function orderLookup(result) {
       assert.equal(table, 'orders');
       return {
         select(columns) {
-          assert.equal(columns, 'id');
+          assert.equal(columns, 'id,order_number,status,company_id');
           return this;
         },
         eq(column, value) {
@@ -43,7 +43,8 @@ test('general support messages do not query order ownership', async () => {
 });
 
 test('support order context resolves only inside the authenticated company', async () => {
-  const { db, filters } = orderLookup({ data: { id: ORDER_ID }, error: null });
+  const order = { id: ORDER_ID, order_number: 'MST-1042', status: 'paid', company_id: 'company-1' };
+  const { db, filters } = orderLookup({ data: order, error: null });
 
   const result = await resolveSupportOrderId(db, {
     orderId: ` ${ORDER_ID} `,
@@ -54,7 +55,15 @@ test('support order context resolves only inside the authenticated company', asy
     ['id', ORDER_ID],
     ['company_id', 'company-1'],
   ]);
-  assert.deepEqual(result, { ok: true, orderId: ORDER_ID });
+  assert.equal(result.ok, true);
+  assert.equal(result.orderId, ORDER_ID);
+  assert.deepEqual(result.order, {
+    id: ORDER_ID,
+    reference: 'MST-1042',
+    status: 'paid',
+    buyer_url: `/dashboard.html?order=${ORDER_ID}#orders`,
+    admin_url: `/admin.html?order=${ORDER_ID}#orders`,
+  });
 });
 
 test('foreign or unknown support order context fails without disclosure', async () => {
@@ -107,6 +116,16 @@ test('support order schema enforces the company relationship', () => {
 test('buyer message route inserts only the resolved order id', () => {
   const source = readFileSync(new URL('../functions/api/account/messages.js', import.meta.url), 'utf8');
   assert.match(source, /resolveSupportOrderId\(sb,/);
-  assert.match(source, /order_id:\s*orderContext\.orderId/);
+  assert.match(source, /appendSupportMessage\(sb,/);
+  assert.match(source, /orderId:\s*orderContext\.orderId/);
   assert.doesNotMatch(source, /order_id:\s*body\.order_id/);
+});
+
+test('staff replies validate and retain active order context', () => {
+  const source = readFileSync(new URL('../functions/api/admin/messages.js', import.meta.url), 'utf8');
+  assert.match(source, /resolveSupportOrderId\(sb,/);
+  assert.match(source, /appendSupportMessage\(sb,/);
+  assert.match(source, /orderId:\s*orderContext\.orderId/);
+  assert.match(source, /ctaUrl:\s*`\$\{appUrl\}\$\{messageLink\}`/);
+  assert.doesNotMatch(source, /from\('messages'\)\.insert/);
 });

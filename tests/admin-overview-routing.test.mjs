@@ -51,9 +51,10 @@ test('order rows stay scannable with the edit surface behind a disclosure', () =
   // 476px per order, so a fulfillment queue was unscannable.
   assert.match(ordersUi, /<details class="adm-order-manage">/);
   assert.match(ordersUi, /<summary>[\s\S]{0,80}Manage order<\/summary>/);
-  // Only the action that moves the row forward stays on the surface.
+  // Only lightweight context actions and the action that moves the row forward
+  // stay on the surface; heavy mutation controls remain collapsed.
   assert.match(ordersUi, /const primaryAction = openStatus && !order\.accepted_at/);
-  assert.match(ordersUi, /<div class="admin-order-primary">[\s\S]{0,200}data-order-detail[\s\S]{0,120}\$\{primaryAction\}/);
+  assert.match(ordersUi, /<div class="admin-order-primary">[\s\S]{0,200}data-order-detail[\s\S]{0,240}data-message-company[\s\S]{0,160}\$\{primaryAction\}/);
   // The heavy controls still exist — collapsed, not removed.
   for (const control of ['orderEditor(order)', 'trackingControls(order)', 'data-save-order', '${netControls}', '${refundControls}']) {
     assert.ok(ordersUi.includes(control), `${control} should remain inside the disclosure`);

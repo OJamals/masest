@@ -45,13 +45,15 @@ test('support API persists thread lifecycle and admin message preferences', () =
   const settings = read('functions/api/admin/message-settings.js');
   const notifications = read('functions/_lib/admin-message-notifications.js');
   const sql = read('supabase/schema-phase5.sql');
-  assert.match(account, /recordSupportMessage/);
+  const unifiedSql = read('supabase/schema-unified-support-messages.sql');
+  assert.match(account, /appendSupportMessage/);
   assert.match(admin, /request\.method === 'PATCH'/);
   assert.match(admin, /support_thread_status/);
   assert.match(settings, /ADMIN_MESSAGE_PREF_COLUMNS/);
   assert.match(notifications, /notify_admin_support_requests/);
   assert.match(notifications, /notify_admin_messages/);
   assert.match(sql, /support_thread_status text not null default 'open'/);
+  assert.match(unifiedSql, /append_support_message/);
 });
 
 test('admin inbox surfaces unanswered threads, lifecycle controls, and notification settings', () => {
