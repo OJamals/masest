@@ -498,10 +498,16 @@ as $$
 declare
   v_order_id uuid;
 begin
-  v_order_id := case
-    when tg_table_name = 'orders' then old.id
-    else coalesce(new.order_id, old.order_id)
-  end;
+  -- NEW/OLD are untyped trigger records. Referencing new.order_id inside one CASE
+  -- still fails when this function runs for orders, whose row has no order_id field.
+  -- Branch first; then dereference only fields present on that trigger's table/event.
+  if tg_table_name = 'orders' then
+    v_order_id := old.id;
+  elsif tg_op = 'DELETE' then
+    v_order_id := old.order_id;
+  else
+    v_order_id := new.order_id;
+  end if;
   if tg_table_name = 'order_items' then
     perform 1 from public.orders where id = v_order_id for update;
   end if;

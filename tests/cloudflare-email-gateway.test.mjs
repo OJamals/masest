@@ -42,7 +42,6 @@ test('Pages sends transactional email only through the private Cloudflare servic
   assert.equal(request.body.replyTo, 'reply@example.com');
   assert.deepEqual(request.body.headers, {
     References: '<root@example.com>',
-    'Thread-Topic': 'MASEST support · Buyer Co',
   });
   assert.deepEqual(result, {
     ok: true,

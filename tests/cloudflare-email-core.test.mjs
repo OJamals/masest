@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   classifyEmailSendError,
+  emailSendErrorDetail,
   normalizeInboundEmail,
   normalizeSendRequest,
   readBoundedJsonRequest,
@@ -21,7 +22,6 @@ const sendRequest = {
   headers: {
     'In-Reply-To': '<parent@example.com>',
     References: '<root@example.com> <parent@example.com>',
-    'Thread-Topic': 'MASEST support · Buyer Co · Order VK-100',
   },
   attachments: [],
 };
@@ -43,6 +43,11 @@ test('email Worker rejects marketing, arbitrary headers, missing keys, and overs
   assert.throws(() => normalizeSendRequest({ ...sendRequest, stream: 'marketing' }, config), /marketing_provider_required/);
   assert.throws(() => normalizeSendRequest({ ...sendRequest, idempotencyKey: '' }, config), /idempotency_key_required/);
   assert.throws(() => normalizeSendRequest({ ...sendRequest, headers: { Date: 'tomorrow' } }, config), /header_not_allowed/);
+  assert.throws(() => normalizeSendRequest({ ...sendRequest, headers: { 'Thread-Topic': 'Unsupported by live binding' } }, config), /header_not_allowed/);
+  assert.throws(() => normalizeSendRequest({
+    ...sendRequest,
+    to: [`${'a'.repeat(65)}@example.com`],
+  }, config), /invalid_recipient/);
   assert.throws(() => normalizeSendRequest({
     ...sendRequest,
     to: Array.from({ length: 51 }, (_, index) => `buyer${index}@example.com`),
@@ -90,6 +95,15 @@ test('email Worker exposes only explicit transient provider failures as retryabl
     retryable: false,
     error: 'email_delivery_state_unknown',
   });
+});
+
+test('email Worker logs bounded provider detail without recipient PII', () => {
+  assert.equal(
+    emailSendErrorDetail(new Error('Reply-To buyer@example.com must use an available domain')),
+    'Reply-To [email] must use an available domain',
+  );
+  assert.equal(emailSendErrorDetail({ cause: { message: ' '.repeat(2) + 'invalid payload' } }), 'invalid payload');
+  assert.equal(emailSendErrorDetail(new Error('x'.repeat(400))).length, 300);
 });
 
 test('inbound normalization is privacy-bounded and keeps RFC threading metadata', () => {

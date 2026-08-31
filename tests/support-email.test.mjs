@@ -52,7 +52,7 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
   assert.match(sent.replyTo, /^reply\+/);
   assert.equal(sent.emailHeaders['In-Reply-To'], '<prior-buyer-visible@example.com>');
   assert.equal(sent.emailHeaders.References, '<root-buyer-visible@example.com> <prior-buyer-visible@example.com>');
-  assert.equal(sent.emailHeaders['Thread-Topic'], 'MASEST support · Northwind HVAC · Order VK-1042');
+  assert.equal(sent.emailHeaders['Thread-Topic'], undefined);
   assert.match(sent.subject, /^Re: MASEST support · Northwind HVAC · Order VK-1042$/);
   assert.match(sent.html, /Order VK-1042/);
   assert.equal(sent.idempotencyKey, `support-message/${MESSAGE_ID}/staff`);
@@ -126,7 +126,7 @@ test('buyer message emails opted-in admins through the same message-addressed th
   assert.deepEqual(sent.to, ['support@masest.co']);
   assert.equal(sent.category, 'staff_alert');
   assert.match(sent.subject, /^MASEST support · Northwind HVAC · Order VK-1042$/);
-  assert.equal(sent.emailHeaders['Thread-Topic'], 'MASEST support · Northwind HVAC · Order VK-1042');
+  assert.deepEqual(sent.emailHeaders, {});
   assert.match(sent.html, /Can you confirm tracking\?/);
 });
 

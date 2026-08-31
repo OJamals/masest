@@ -1,4 +1,5 @@
 const EMAIL_RE = /^[^<>\s@]+@[^<>\s@]+\.[^<>\s@]+$/;
+const EMAIL_IN_TEXT_RE = /[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const MESSAGE_ID_RE = /^<[^<>\s]{1,510}>$/;
 const TRANSIENT_CODES = new Map([
   ['E_RATE_LIMIT_EXCEEDED', { status: 429, error: 'email_rate_limited' }],
@@ -24,7 +25,9 @@ const HARD_CODES = new Map([
   ['E_HEADERS_TOO_LARGE', 'email_header_invalid'],
   ['E_HEADERS_TOO_MANY', 'email_header_invalid'],
 ]);
-const ALLOWED_HEADERS = new Set(['in-reply-to', 'references', 'thread-topic']);
+// Live Email Service binding currently rejects Thread-Topic despite its docs allowlist.
+// Standards-based In-Reply-To + References remain authoritative for threading.
+const ALLOWED_HEADERS = new Set(['in-reply-to', 'references']);
 
 function invalid(code) {
   const error = new Error(code);
@@ -77,7 +80,10 @@ export async function readBoundedJsonRequest(request, maxBytes) {
 
 function cleanEmail(value) {
   const email = String(value || '').trim().toLowerCase();
-  return EMAIL_RE.test(email) && email.length <= 254 ? email : '';
+  const separator = email.lastIndexOf('@');
+  const local = separator > 0 ? email.slice(0, separator) : '';
+  const domain = separator > 0 ? email.slice(separator + 1) : '';
+  return EMAIL_RE.test(email) && local.length <= 64 && domain.length <= 253 && email.length <= 254 ? email : '';
 }
 
 function cleanRecipients(values) {
@@ -101,8 +107,7 @@ function cleanHeaders(input) {
       invalid('invalid_header_value');
     }
     const canonical = lower === 'in-reply-to' ? 'In-Reply-To'
-      : lower === 'references' ? 'References'
-        : lower === 'thread-topic' ? 'Thread-Topic' : name;
+      : lower === 'references' ? 'References' : name;
     headers[canonical] = value;
   }
   return headers;
@@ -179,6 +184,11 @@ export function classifyEmailSendError(error) {
   const hard = HARD_CODES.get(code);
   if (hard) return { status: 400, retryable: false, error: hard };
   return { status: 502, retryable: false, error: 'email_delivery_state_unknown' };
+}
+
+export function emailSendErrorDetail(error) {
+  const raw = String(error?.message || error?.cause?.message || '').replace(EMAIL_IN_TEXT_RE, '[email]');
+  return raw.replace(/\s+/g, ' ').trim().slice(0, 300) || null;
 }
 
 function headerValue(headers, name) {

@@ -327,7 +327,7 @@ export async function sendEmailResult(env, {
   // text/plain improves spam scoring and serves plain-text clients + screen readers.
   const bodyText = text || htmlToText(html) || null;
   const messageHeaders = Object.fromEntries(Object.entries(emailHeaders || {})
-    .filter(([key, value]) => /^(?:In-Reply-To|References|Thread-Topic|X-[A-Za-z0-9_-]+)$/i.test(key)
+    .filter(([key, value]) => /^(?:In-Reply-To|References|X-[A-Za-z0-9_-]+)$/i.test(key)
       && typeof value === 'string' && value.length <= 2048 && !/[\r\n]/.test(value)));
   const stableKey = await emailIdempotencyKey(idempotencyKey || `ephemeral/${crypto.randomUUID()}`);
   try {

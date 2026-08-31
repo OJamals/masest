@@ -561,6 +561,8 @@ test('Quote Checkout attempt migration locks ownership, one active row, and exac
   assert.match(schema, /create or replace function public\.claim_quote_checkout_webhook/);
   assert.match(schema, /create or replace function public\.finish_legacy_quote_checkout_attempt/);
   assert.match(schema, /prevent_active_quote_checkout_order_mutation/);
+  assert.match(schema, /if tg_table_name = 'orders' then\s+v_order_id := old\.id;\s+elsif tg_op = 'DELETE' then\s+v_order_id := old\.order_id;\s+else\s+v_order_id := new\.order_id;/i,
+    'the shared trigger must branch before dereferencing table-specific NEW fields');
   assert.match(schema, /offer_revision/);
   assert.match(schema, /offer_status', ''\) not in \('accepted', 'expired'\)/i,
     'a paid exact Session must remain recoverable when the local expiry sweep wins the webhook race');

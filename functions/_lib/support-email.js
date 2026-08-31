@@ -243,10 +243,7 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
       ctaUrl: `${appUrl}${ctaPath}`,
     }),
     replyTo,
-    emailHeaders: {
-      ...threading.headers,
-      'Thread-Topic': threadSubject(threadName, false),
-    },
+    emailHeaders: threading.headers,
     category: isStaffMessage ? 'messages' : 'staff_alert',
     idempotencyKey: `support-message/${message.id}/${message.sender_role}`,
   });

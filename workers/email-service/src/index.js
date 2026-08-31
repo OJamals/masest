@@ -4,6 +4,7 @@ import PostalMime from 'postal-mime';
 import { signEmailBridgePayload } from '../../../shared/email-bridge.js';
 import {
   classifyEmailSendError,
+  emailSendErrorDetail,
   normalizeInboundEmail,
   normalizeSendRequest,
   readBoundedJsonRequest,
@@ -164,6 +165,7 @@ export class EmailDelivery extends DurableObject {
         event: 'email_send_failed',
         code: String(error?.code || 'unknown'),
         error: classified.error,
+        detail: emailSendErrorDetail(error),
       }));
       return { ok: false, ...classified };
     }
