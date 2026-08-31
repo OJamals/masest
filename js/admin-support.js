@@ -487,7 +487,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
           method: "POST",
           body: {
             company_id: companyId,
-            recipient_user_id: selected.participant?.id || null,
+            ...(selected.participant?.id ? { recipient_user_id: selected.participant.id } : {}),
             body,
             order_id: activeOrderId,
           },
