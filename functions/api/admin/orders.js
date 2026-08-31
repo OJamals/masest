@@ -49,23 +49,25 @@ export async function loadOrderIntegrationTimeline(sb, orderId, trackingNumber =
     events = response.data || [];
   }
   const eventById = new Map(events.map((event) => [event.id, event]));
-  const resendIds = [...new Set(effects
-    .map((effect) => effect.provider_result?.resend_id)
+  const providerMessageIds = [...new Set(effects
+    .map((effect) => effect.provider_result?.provider_message_id)
     .filter(Boolean))];
   let emailEvents = [];
-  if (resendIds.length) {
+  if (providerMessageIds.length) {
     const response = await sb.from('email_events')
-      .select('resend_id,status,updated_at,created_at')
-      .in('resend_id', resendIds);
+      .select('provider_message_id,status,updated_at,created_at')
+      .in('provider_message_id', providerMessageIds);
     if (response.error) throw response.error;
     emailEvents = response.data || [];
   }
-  const emailByResendId = new Map();
+  const emailByProviderMessageId = new Map();
   for (const emailEvent of emailEvents) {
-    const current = emailByResendId.get(emailEvent.resend_id);
+    const current = emailByProviderMessageId.get(emailEvent.provider_message_id);
     const observedAt = emailEvent.updated_at || emailEvent.created_at || '';
     const currentAt = current?.updated_at || current?.created_at || '';
-    if (!current || observedAt > currentAt) emailByResendId.set(emailEvent.resend_id, emailEvent);
+    if (!current || observedAt > currentAt) {
+      emailByProviderMessageId.set(emailEvent.provider_message_id, emailEvent);
+    }
   }
   return effects.map((effect) => ({
     id: effect.id,
@@ -78,10 +80,10 @@ export async function loadOrderIntegrationTimeline(sb, orderId, trackingNumber =
     result: effect.provider_result ? {
       applied: effect.provider_result.applied,
       skipped: effect.provider_result.skipped,
-      resend_id: effect.provider_result.resend_id,
-      email_status: emailByResendId.get(effect.provider_result.resend_id)?.status,
-      email_updated_at: emailByResendId.get(effect.provider_result.resend_id)?.updated_at
-        || emailByResendId.get(effect.provider_result.resend_id)?.created_at,
+      provider_message_id: effect.provider_result.provider_message_id,
+      email_status: emailByProviderMessageId.get(effect.provider_result.provider_message_id)?.status,
+      email_updated_at: emailByProviderMessageId.get(effect.provider_result.provider_message_id)?.updated_at
+        || emailByProviderMessageId.get(effect.provider_result.provider_message_id)?.created_at,
     } : null,
     created_at: effect.created_at,
     completed_at: effect.completed_at,

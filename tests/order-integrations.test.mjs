@@ -8,6 +8,7 @@ import {
 } from '../functions/_lib/order-integrations.js';
 
 const schema = readFileSync(new URL('../supabase/schema-commerce-integrations.sql', import.meta.url), 'utf8');
+const cloudflareEmailMigration = readFileSync(new URL('../supabase/migrate-cloudflare-email-service-2026-08-31.sql', import.meta.url), 'utf8');
 const rollback = readFileSync(new URL('../supabase/rollback-commerce-integrations.sql', import.meta.url), 'utf8');
 const staffOrderOperations = readFileSync(new URL('../functions/_lib/staff-order-operations.js', import.meta.url), 'utf8');
 const stripeWebhook = readFileSync(new URL('../functions/api/stripe-webhook.js', import.meta.url), 'utf8');
@@ -78,6 +79,11 @@ test('commerce schema allocates immutable MST numbers and a globally unique prov
   assert.match(schema, /enable row level security/i);
   assert.match(schema, /revoke all on function public\.link_order_provider_object/i);
   assert.match(schema, /grant execute on function public\.link_order_provider_object[\s\S]*to service_role/i);
+  const providerLinkContract = schema.match(/create table if not exists public\.order_provider_links[\s\S]*?grant execute on function public\.link_order_provider_object/i)?.[0] || '';
+  assert.match(providerLinkContract, /'stripe'[\s\S]*'shipstation'[\s\S]*'quickbooks'/i);
+  assert.doesNotMatch(providerLinkContract, /'resend'/i);
+  assert.match(cloudflareEmailMigration, /drop constraint if exists order_provider_links_provider_check[\s\S]*check \(provider in \('stripe', 'shipstation', 'quickbooks'\)\)/i);
+  assert.match(cloudflareEmailMigration, /create or replace function public\.link_order_provider_object[\s\S]*p_provider not in \('stripe', 'shipstation', 'quickbooks'\)/i);
 });
 
 test('commerce rollback removes all new integration objects in dependency order', () => {

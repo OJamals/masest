@@ -23,7 +23,7 @@ export async function ingestShipStationTrackingUpdate(env, update, dependencies 
     max_attempts: 3,
   }, {
     // The projection owns the state transition; this effect owns telling the buyer about
-    // it. Splitting them means a Resend outage retries the email without re-applying the
+    // it. Splitting them means an email outage retries delivery without re-applying the
     // status, and the projection's own result decides whether an email is warranted at all
     // (unmatched order, stale scan, repeated in-transit ping → skipped).
     effect_key: 'shipment-notification',

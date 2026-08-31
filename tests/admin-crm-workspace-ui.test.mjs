@@ -49,6 +49,14 @@ test('account announcements live with newsletter publishing, not CRM follow-ups'
   assert.match(ADMIN, /tab === 'offers'\) tab = 'newsletter'/);
 });
 
+test('account announcements expose only their working in-app delivery path', () => {
+  const newsletter = HTML.match(/data-panel="newsletter"[\s\S]*?data-panel="crm"/)?.[0] || '';
+
+  assert.match(newsletter, /In-app only/);
+  assert.doesNotMatch(newsletter, /id="ofEmail"|optionally by email/);
+  assert.doesNotMatch(read('js/admin/offers.js'), /ofEmail|send_email/);
+});
+
 test('workspace delegates events on stable container (no per-render listener leak)', () => {
   assert.match(WS, /delegate\(/);
   assert.match(WS, /\[data-crm-ws-tab\]/);

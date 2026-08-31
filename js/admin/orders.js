@@ -952,8 +952,8 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       : '<h4 style="margin:16px 0 4px">Persisted shipments & packages</h4><p class="muted" style="margin:0">No normalized shipment revision yet.</p>';
     const integrationHistory = integrationTimeline.length
       ? `<h4 style="margin:16px 0 4px">Integration delivery</h4><ul style="margin:0;padding-left:18px">${integrationTimeline.map((entry) => {
-          const emailDelivery = entry.result?.resend_id
-            ? ` · Resend <code>${esc(entry.result.resend_id)}</code>${entry.result?.email_status ? ` · email ${esc(entry.result.email_status)}` : ''}`
+          const emailDelivery = entry.result?.provider_message_id
+            ? ` · Email <code>${esc(entry.result.provider_message_id)}</code>${entry.result?.email_status ? ` · ${esc(entry.result.email_status)}` : ''}`
             : '';
           return `<li><b>${esc(entry.provider)}</b> ${esc(entry.effect_type)} — ${esc(entry.status)} · ${esc(date(entry.completed_at || entry.dead_at || entry.created_at))}${emailDelivery}${entry.result?.skipped ? ` · ${esc(entry.result.skipped)}` : ''}${entry.last_error_code ? ` · <code>${esc(entry.last_error_code)}</code>` : ''}</li>`;
         }).join('')}</ul>`

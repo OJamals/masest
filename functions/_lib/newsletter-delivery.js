@@ -45,7 +45,7 @@ export function deliveryTransition(result = {}, attempts = 1, nowMs = Date.now()
   if (result.ok) {
     return {
       state: 'sent',
-      provider_message_id: result.resendId || null,
+      provider_message_id: result.providerMessageId || null,
       sent_at: new Date(nowMs).toISOString(),
     };
   }
@@ -56,7 +56,7 @@ export function deliveryTransition(result = {}, attempts = 1, nowMs = Date.now()
     };
   }
 
-  const error = String(result.error || (result.status ? `resend_${result.status}` : 'delivery_failed')).slice(0, 500);
+  const error = String(result.error || (result.status ? `email_${result.status}` : 'delivery_failed')).slice(0, 500);
   if (retryableResult(result) && attempts < DELIVERY_MAX_ATTEMPTS) {
     const delayMs = Math.min(60 * 60 * 1000, 60_000 * (2 ** Math.max(0, attempts - 1)));
     return {

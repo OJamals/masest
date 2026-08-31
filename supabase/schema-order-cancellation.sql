@@ -1,7 +1,7 @@
 -- Order cancellation effect handlers.
 --
 -- Cancelling a paid order touches four providers (ShipEngine label, Stripe refund, QBO
--- credit memo, Resend notice) plus local stock. Doing that inline means a mid-sequence
+-- credit memo, customer email) plus local stock. Doing that inline means a mid-sequence
 -- failure leaves the order in a state nobody can name. These run as leased effect rows on
 -- the integration ledger instead: each step is idempotent, retried independently, and
 -- visible in the per-order timeline.

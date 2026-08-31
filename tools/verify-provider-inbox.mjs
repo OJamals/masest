@@ -9,8 +9,13 @@ const envValue = (key) => {
   if (!match) throw new Error(`${key} missing`);
   return match[1].trim().replace(/^['"]|['"]$/g, '');
 };
+const withoutTransactionBoundary = (sql) => String(sql)
+  .replace(/^\s*begin;\s*$/gim, '')
+  .replace(/^\s*commit;\s*$/gim, '');
 const schema = fs.readFileSync('supabase/schema-provider-inbox.sql', 'utf8');
-const ownershipSchema = fs.readFileSync('supabase/schema-shipment-label-ownership.sql', 'utf8');
+const ownershipSchema = withoutTransactionBoundary(
+  fs.readFileSync('supabase/schema-shipment-label-ownership.sql', 'utf8'),
+);
 const rollback = fs.readFileSync('supabase/rollback-provider-inbox.sql', 'utf8');
 const client = new pg.Client({ connectionString: envValue('SUPABASE_DB_URL') });
 
@@ -23,11 +28,11 @@ async function state() {
      where n.nspname='public' and p.proname in (
        'ingest_provider_event',
        'ingest_qbo_provider_events',
-       'upsert_resend_inbound_message',
+       'upsert_email_inbound_message',
+       'apply_email_delivery_event',
        'provider_integration_health',
        'provider_integration_dead_letters',
        'apply_shipstation_tracking_integration_effect',
-       'apply_resend_delivery_integration_effect',
        'apply_qbo_change_integration_effect'
      ) order by p.proname
   `);
@@ -150,67 +155,44 @@ async function behavioralProof() {
     throw new Error(`QBO ordering proof failed: ${JSON.stringify({ current, stale, qbo: qbo.rows[0] })}`);
   }
 
-  const resendRaw = JSON.stringify({ type: 'email.delivered', id: suffix });
-  await ingest({
-    provider: 'resend', tenant: 'production', eventId: `svix-${suffix}`,
-    eventType: 'email.delivered', objectId: `email-${suffix}`,
-    occurredAt: '2026-08-04T15:00:00Z', transportId: `svix-${suffix}`, payload: resendRaw,
-    effect: {
-      effect_key: 'delivery-projection',
-      effect_type: 'resend_delivery_projection',
-      aggregate_type: 'email',
-      aggregate_id: `email-${suffix}`,
-      payload: {
-        resend_id: `email-${suffix}`,
-        event_type: 'email.delivered',
-        status: 'delivered',
-        occurred_at: '2026-08-04T15:00:00Z',
-      },
-    },
-  });
-  const resend = await claimAndProject(
-    `resend-${suffix}`,
-    'resend_delivery_projection',
-    'apply_resend_delivery_integration_effect',
-  );
-  if (resend?.skipped !== 'unmatched_email') throw new Error('Resend unmatched proof failed');
-
   const buyerEmail = `buyer-${suffix}@example.com`;
   const staffEmail = `staff-${suffix}@masest.co`;
-  await client.query(`insert into public.email_events (resend_id, to_email, category, subject, status)
+  const providerMessageId = `email-cloudflare-${suffix}`;
+  await client.query(`insert into public.email_events (provider_message_id, to_email, category, subject, status)
     values ($1,$2,'order','Verification','sent')`, [
-    `email-bounce-${suffix}`, `${buyerEmail}, ${staffEmail}`,
+    providerMessageId, `${buyerEmail}, ${staffEmail}`,
   ]);
-  const bounce = async (id, occurredAt, recipient) => {
-    const raw = JSON.stringify({ type: 'email.bounced', id, occurredAt });
-    await ingest({
-      provider: 'resend', tenant: 'production', eventId: id,
-      eventType: 'email.bounced', objectId: `email-bounce-${suffix}`,
-      occurredAt, transportId: id, payload: raw,
-      effect: {
-        effect_key: 'delivery-projection',
-        effect_type: 'resend_delivery_projection',
-        aggregate_type: 'email',
-        aggregate_id: `email-bounce-${suffix}`,
-        payload: {
-          resend_id: `email-bounce-${suffix}`,
-          event_type: 'email.bounced',
-          status: 'bounced',
-          occurred_at: occurredAt,
-          recipient_digests: [hash(`resend-recipient:v1:${recipient}`)],
-        },
-      },
-    });
-    return claimAndProject(`resend-${id}`, 'resend_delivery_projection', 'apply_resend_delivery_integration_effect');
+  const applyLifecycle = async (eventId, status, occurredAt, recipient, suppressionReason = null) => {
+    const response = await client.query(
+      'select public.apply_email_delivery_event($1,$2,$3,$4,$5,$6,$7) result',
+      [eventId, providerMessageId, recipient, status, status !== 'deferred', occurredAt, suppressionReason],
+    );
+    return response.rows[0].result;
   };
-  const buyerBounce = await bounce(`svix-buyer-${suffix}`, '2026-08-04T16:00:00Z', buyerEmail);
-  const staleStaffBounce = await bounce(`svix-staff-${suffix}`, '2026-08-04T15:00:00Z', staffEmail);
+  const delivered = await applyLifecycle(
+    `cf-delivered-${suffix}`, 'delivered', '2026-08-04T16:00:00Z', buyerEmail,
+  );
+  const complained = await applyLifecycle(
+    `cf-complained-${suffix}`, 'complained', '2026-08-04T17:00:00Z', buyerEmail, 'complaint',
+  );
+  const duplicateComplaint = await applyLifecycle(
+    `cf-complained-${suffix}`, 'complained', '2026-08-04T17:00:00Z', buyerEmail, 'complaint',
+  );
+  await applyLifecycle(
+    `cf-late-delivered-${suffix}`, 'delivered', '2026-08-04T18:00:00Z', staffEmail,
+  );
+  const emailState = await client.query(
+    'select status from public.email_events where provider_message_id=$1',
+    [providerMessageId],
+  );
   const suppressions = await client.query(`select email from public.email_suppressions
     where email in ($1,$2) order by email`, [buyerEmail, staffEmail]);
-  if (buyerBounce?.applied !== true || staleStaffBounce?.skipped !== 'stale_event'
+  if (delivered?.applied !== true || complained?.applied !== true
+      || duplicateComplaint?.duplicate !== true || emailState.rows[0]?.status !== 'complained'
       || suppressions.rowCount !== 1 || suppressions.rows[0].email !== buyerEmail) {
-    throw new Error(`Resend recipient suppression proof failed: ${JSON.stringify({
-      buyerBounce, staleStaffBounce, suppressions: suppressions.rows,
+    throw new Error(`Cloudflare email lifecycle proof failed: ${JSON.stringify({
+      delivered, complained, duplicateComplaint, emailState: emailState.rows[0],
+      suppressions: suppressions.rows,
     })}`);
   }
 
@@ -269,16 +251,16 @@ async function behavioralProof() {
   if (member.rowCount) {
     const input = [member.rows[0].company_id, member.rows[0].user_id, `inbound-${suffix}`, 'Verification reply'];
     const firstMessage = await client.query(
-      'select public.upsert_resend_inbound_message($1,$2,$3,$4) result', input,
+      'select public.upsert_email_inbound_message($1,$2,$3,$4) result', input,
     );
     const duplicateMessage = await client.query(
-      'select public.upsert_resend_inbound_message($1,$2,$3,$4) result', input,
+      'select public.upsert_email_inbound_message($1,$2,$3,$4) result', input,
     );
     const firstResult = firstMessage.rows[0].result;
     const duplicateResult = duplicateMessage.rows[0].result;
     if (firstResult?.inserted !== true || duplicateResult?.inserted !== false
         || firstResult?.message_id !== duplicateResult?.message_id) {
-      throw new Error(`Resend inbound atomic proof failed: ${JSON.stringify({ firstResult, duplicateResult })}`);
+      throw new Error(`Email inbound atomic proof failed: ${JSON.stringify({ firstResult, duplicateResult })}`);
     }
     inboundAtomic = true;
   }
@@ -328,8 +310,9 @@ async function behavioralProof() {
     qboOutOfOrder: true,
     qboBatchAtomic: true,
     unmatchedSafe: true,
-    resendExactSuppression: true,
-    resendStaleSuppressionBlocked: true,
+    emailLifecycleIdempotent: true,
+    emailTerminalStateMonotonic: true,
+    emailExactSuppression: true,
     inboundAtomic,
     deadLetterWindowIndependent: true,
   };

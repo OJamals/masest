@@ -17,6 +17,19 @@ Cloudflare Pages project:
 runs the complete verification gate, and then uploads `dist/` directly to the
 existing `masest-commerce` project with Wrangler.
 
+The Pages workflow does not deploy the separately versioned email Worker. When
+`workers/email-service/`, `shared/email-bridge.js`, or the Worker's package
+dependencies change, deploy the Worker first from a clean, verified checkout:
+
+```bash
+npx wrangler deploy --config workers/email-service/wrangler.jsonc --keep-vars
+```
+
+Then push the same commit to `main` and let `verify.yml` publish Pages. Keeping
+the releases in that order prevents new Pages code from calling an older Worker
+contract. `--keep-vars` preserves dashboard-managed Worker variables while the
+checked-in bindings remain authoritative.
+
 The old Cloudflare-native `OJamals/masest` Git source is retained only as
 historical project metadata; its production and preview auto-deployments are
 disabled. Do not re-enable that source or recreate the Pages project: the
@@ -64,30 +77,38 @@ site.
   published CMS **Shipping rates** override it, and paid checkout fails closed when effective
   configuration is missing, disabled, or invalid
 - `APP_URL=https://masest.co`
-- `RESEND_API_KEY`
-- `RESEND_FROM=MASEST Orders <orders@send.masest.co>`
 - `ORDER_NOTIFY_EMAIL`
+- `EMAIL_REPLY_TO=team@masest.co`
+- `MESSAGE_REPLY_DOMAIN=reply.masest.co`
+- `MESSAGE_REPLY_SECRET`
+- `EMAIL_INGRESS_SECRET`
 - `KLAVIYO_PRIVATE_KEY`
 - `KLAVIYO_LIST_ID`
+
+Required Pages binding:
+
+- `EMAIL_SERVICE` — service binding to `masest-email-service`.
+
+The email Worker owns the restricted `EMAIL` Email Sending binding, idempotency
+Durable Object, lifecycle queue, and inbound Email Routing handler. Pages never
+receives a provider API key.
 
 After env var changes, run the `Verify` workflow on `main` so the new values bind.
 
 ## Customer-message email replies
 
-The dashboard is the primary message inbox. To let customers reply directly to
-a MASEST message email, configure Resend Receiving and set:
+The dashboard is the primary message inbox. Cloudflare Email Routing receives
+`reply+<message-id>.<signature>@reply.masest.co` and invokes
+`masest-email-service`. The Worker parses the message, signs a bounded JSON
+projection, and posts it to `/api/email/inbound`. Pages verifies the signature,
+the addressed chat message, the exact customer/staff participant, and the linked
+order before atomically appending through the same support-chat RPC.
 
-- `RESEND_INBOUND_DOMAIN` — use the Resend-managed `*.resend.app` receiving
-  address. This requires no DNS change and must not replace the `masest.co` MX
-  records used by Outlook/GoDaddy.
-- `MESSAGE_REPLY_SECRET` — a new random secret used to sign per-company reply addresses.
-- `RESEND_WEBHOOK_SECRET` — configure the same signed webhook at
-  `https://masest.co/api/resend-webhook` with `email.received` in addition to
-  the existing delivery events.
-- `RESEND_WEBHOOK_ENDPOINT_ID=production` — optional non-secret receipt scope.
-
-The webhook accepts only signed MASEST reply addresses and email addresses that
-belong to that company. Valid replies enter Admin → Messages and notify staff.
+Use the dedicated `reply.masest.co` routing subdomain. Never replace the apex
+`masest.co` MX records used by the existing hosted mailbox. Set the identical
+`EMAIL_INGRESS_SECRET` on Worker and Pages, and set `MESSAGE_REPLY_SECRET` only
+on Pages. Delivery events arrive through `masest-email-events` at
+`/api/email/events` using the same signed bridge.
 
 ## Supabase Auth Email
 
@@ -95,17 +116,21 @@ Supabase Auth confirmation, resend, invite, and password-reset emails are sent
 by Supabase Auth, not by the Pages Functions `sendEmail` helper. Configure this
 in Supabase Dashboard -> Authentication -> Emails -> SMTP Settings.
 
-Use an SMTP/API key that is allowed to send from the configured sender domain.
-For Resend, the key must either have full access or be scoped to the verified
-`masest.co` domain that matches the Supabase Auth sender email. If signup logs
-show:
+Configure Cloudflare Email Service SMTP with:
 
-```text
-gomail: could not send email 1: 550 "The associated domain with your API key is not verified..."
-```
+- Host: `smtp.mx.cloudflare.net`
+- Port: `465`
+- Username: `api_token`
+- Password: an account-owned Cloudflare API token with `Email Sending: Edit`
+- Sender: `MASEST <noreply@send.masest.co>`
 
-the site code has already reached Supabase Auth successfully; replace the Auth
-SMTP credential with one tied to the verified sending domain, then retry signup.
+The API token must belong to the Cloudflare account where `send.masest.co` is
+verified for Email Sending. Cloudflare does not expose a sender-domain resource
+scope for this token, so keep it account-owned with only `Email Sending: Edit`.
+If signup logs show an SMTP sender or domain authorization error, the site code
+has already reached Supabase Auth; replace the Auth SMTP credential with one
+tied to the correct Cloudflare account, then retry signup.
+
 Do not fix this by disabling email confirmation.
 
 ## Verify

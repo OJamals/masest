@@ -64,8 +64,8 @@ test('integration health is staff-only and redacts provider results', async () =
 
 test('dead-letter page is independent from newer completed effects and returns explicit cursor', async () => {
   const dead = Array.from({ length: 3 }, (_, index) => ({
-    id: `dead-${index}`, event_id: `event-${index}`, provider: 'resend', status: 'dead',
-    effect_type: 'resend_delivery_projection', created_at: `2026-08-04T12:00:0${index}Z`,
+    id: `dead-${index}`, event_id: `event-${index}`, provider: 'quickbooks', status: 'dead',
+    effect_type: 'qbo_change_projection', created_at: `2026-08-04T12:00:0${index}Z`,
   }));
   const handlers = createAdminIntegrationsHandlers({
     requireStaff: staff,

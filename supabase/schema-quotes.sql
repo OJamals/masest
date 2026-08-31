@@ -1,6 +1,6 @@
 -- schema-quotes.sql — inbound contact/quote requests captured by POST /api/quote.
 -- Replaces the third-party (Formspree) form handler: leads now live in our own DB,
--- surface in the admin Quotes tab, and trigger Resend (sales notify + buyer autoreply).
+-- surface in the admin Quotes tab, and trigger transactional sales/buyer email.
 -- Apply once via the pooler (psql) or the Supabase SQL editor.
 
 create extension if not exists pgcrypto;

@@ -13,7 +13,6 @@ import {
   technicalDocumentRequestNoteHtml,
 } from './order-email.js';
 import { orderReference } from './order-integrations.js';
-import { routeInboundMessageReply } from './support-email.js';
 import { computeRefund, qboFullDocumentRefund } from './refund.js';
 import { linkOrderProviderObject } from './order-integrations.js';
 import { getAccessToken, voidQboInvoice } from './qbo.js';
@@ -82,15 +81,6 @@ const PAYLOAD_KEYS = Object.freeze({
   order_cancellation_email: new Set(['order_id', 'command_id', 'reason']),
   quote_message: new Set(['quote_id', 'company_id']),
   quote_offer_email: new Set(['quote_id', 'email', 'product']),
-  resend_delivery_projection: new Set([
-    'resend_id',
-    'message_id',
-    'event_type',
-    'status',
-    'occurred_at',
-    'recipient_digests',
-  ]),
-  resend_inbound_reply: new Set(['resend_id']),
   qbo_change_projection: new Set([
     'realm_id',
     'entity_name',
@@ -1054,7 +1044,6 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
   const send = dependencies.sendEmail || sendEmailResult;
   const localProjectionRpc = {
     shipstation_tracking_projection: 'apply_shipstation_tracking_integration_effect',
-    resend_delivery_projection: 'apply_resend_delivery_integration_effect',
     qbo_change_projection: 'apply_qbo_change_integration_effect',
     quote_message: 'deliver_quote_message_effect',
   }[effectRow.effect_type];
@@ -1067,20 +1056,6 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
       providerRecorded: true,
       providerResult: result || {},
       skipped: Boolean(result?.skipped),
-    };
-  }
-  if (effectRow.effect_type === 'resend_inbound_reply') {
-    const routed = await (dependencies.routeInboundReply || routeInboundMessageReply)(env, {
-      data: { email_id: effectRow.payload?.resend_id },
-    });
-    return {
-      providerRecorded: false,
-      providerResult: {
-        routed: routed?.routed === true,
-        duplicate: routed?.duplicate === true,
-        skipped: routed?.routed === true ? undefined : String(routed?.reason || 'unmatched_reply'),
-      },
-      skipped: routed?.routed !== true,
     };
   }
   // Each effect type declares which provider inbox may produce it. This used to be a bare
@@ -1195,7 +1170,9 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
   if (delivered && typeof delivered === 'object' && 'ok' in delivered) {
     if (delivered.ok) {
       const providerResult = {};
-      if (delivered.resendId) providerResult.resend_id = String(delivered.resendId).slice(0, 160);
+      if (delivered.providerMessageId) {
+        providerResult.provider_message_id = String(delivered.providerMessageId).slice(0, 512);
+      }
       if (Number.isInteger(delivered.status)) providerResult.http_status = delivered.status;
       return { providerRecorded: false, providerResult, skipped: false };
     }

@@ -1,6 +1,6 @@
 // /api/admin/offers — staff broadcasts. GET → past sends · POST → in-app notification fan-out
-// (+ optional Resend email when send_email and RESEND_API_KEY are set).
-import { adminClient, requireStaff, json, readBody, emailLayout, sendEmail, htmlEscape, emailsByIds } from '../../_lib/supabase.js';
+// (+ optional marketing email when a compliant marketing provider is configured).
+import { adminClient, requireStaff, json, readBody, emailLayout, sendEmailResult, htmlEscape, emailsByIds } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 
 const AUDIENCES = ['all', 'approved', 'pending', 'company'];
@@ -69,7 +69,8 @@ export async function onRequest({ request, env }) {
     }))).then(() => {}, () => {});
 
     let emailed = false;
-    if (body.send_email && env.RESEND_API_KEY) {
+    let emailError = null;
+    if (body.send_email) {
       const emails = await memberEmails(sb, companyIds);
       if (emails.length) {
         const html = emailLayout({
@@ -78,13 +79,17 @@ export async function onRequest({ request, env }) {
           ctaText: ctaUrl ? 'View' : undefined,
           ctaUrl: ctaUrl || undefined,
         });
-        emailed = await sendEmail(env, {
+        const delivery = await sendEmailResult(env, {
           to: emails.slice(0, 1),
           bcc: emails.slice(1),
           subject: title,
           html,
           category: 'offer',
         });
+        emailed = delivery.ok === true;
+        emailError = emailed ? null : delivery.error || 'marketing_delivery_failed';
+      } else {
+        emailError = 'no_email_recipients';
       }
     }
 
@@ -94,7 +99,13 @@ export async function onRequest({ request, env }) {
       created_by: user.email || null, recipients: companyIds.length, emailed,
     }).select('id').single();
 
-    return json(201, { ok: true, id: offer?.id, recipients: companyIds.length, emailed });
+    return json(201, {
+      ok: true,
+      id: offer?.id,
+      recipients: companyIds.length,
+      emailed,
+      email_error: emailError,
+    });
   }
 
   return json(405, { error: 'method_not_allowed' });

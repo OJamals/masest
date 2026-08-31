@@ -172,69 +172,23 @@ test('dueNewsletters: scheduled + next_run_at in the past', () => {
   assert.deepEqual(dueNewsletters(rows, now).map((n) => n.id), [1, 4]);
 });
 
-test('sendEmailResult exposes suppression and retryable Resend/network failures', async () => {
-  const base = {
+test('sendEmailResult fails closed when a marketing provider is not configured', async () => {
+  let calls = 0;
+  const result = await sendEmailResult({}, {
     to: ['person@example.test'],
     subject: 'Subject',
     html: '<p>Body</p>',
     category: 'newsletter',
     idempotencyKey: 'newsletter:campaign-1:person@example.test',
     suppressionLoader: async () => new Map(),
-  };
-  let idempotencyKey = null;
-  const rateLimited = await sendEmailResult(
-    { RESEND_API_KEY: 'test-key' },
-    {
-      ...base,
-      fetchImpl: async (_url, init) => {
-        idempotencyKey = init.headers['Idempotency-Key'];
-        return Response.json({ message: 'rate limited' }, { status: 429 });
-      },
-    },
-  );
-  assert.equal(idempotencyKey, base.idempotencyKey);
-  assert.equal(rateLimited.status, 429);
-  assert.equal(rateLimited.retryable, true);
-
-  const oversizedPrefix = `blog-newsletter:${'post-'.repeat(55)}`;
-  const oversizedHeaders = [];
-  for (const suffix of ['first@example.test', 'second@example.test', 'first@example.test']) {
-    await sendEmailResult(
-      { RESEND_API_KEY: 'test-key' },
-      {
-        ...base,
-        idempotencyKey: `${oversizedPrefix}:${suffix}`,
-        fetchImpl: async (_url, init) => {
-          oversizedHeaders.push(init.headers['Idempotency-Key']);
-          return Response.json({ id: 'email-id' });
-        },
-      },
-    );
-  }
-  assert.ok(oversizedHeaders.every((key) => key.length <= 256));
-  assert.notEqual(oversizedHeaders[0], oversizedHeaders[1]);
-  assert.equal(oversizedHeaders[0], oversizedHeaders[2]);
-
-  const network = await sendEmailResult(
-    { RESEND_API_KEY: 'test-key' },
-    { ...base, fetchImpl: async () => { throw new Error('network_down'); } },
-  );
-  assert.equal(network.network, true);
-  assert.equal(network.retryable, true);
-
-  const suppressed = await sendEmailResult(
-    { RESEND_API_KEY: 'test-key' },
-    {
-      ...base,
-      suppressionLoader: async () => new Map([
-        ['person@example.test', new Set(['marketing'])],
-      ]),
-      fetchImpl: async () => {
-        assert.fail('suppressed delivery must not call Resend');
-      },
-    },
-  );
-  assert.equal(suppressed.suppressed, true);
+    fetchImpl: async () => { calls += 1; return Response.json({ ok: true }); },
+  });
+  assert.equal(calls, 0);
+  assert.deepEqual(result, {
+    ok: false,
+    retryable: false,
+    error: 'marketing_provider_required',
+  });
 });
 
 test('strict audience reads distinguish source failure from an empty audience', async () => {

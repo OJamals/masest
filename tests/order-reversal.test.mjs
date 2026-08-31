@@ -461,7 +461,7 @@ test('manual and provider tracking cannot race a confirmed cancellation', () => 
 
   const providerProjection = PROVIDER_INBOX_SQL.slice(
     PROVIDER_INBOX_SQL.indexOf('create or replace function public.apply_shipstation_tracking_integration_effect'),
-    PROVIDER_INBOX_SQL.indexOf('create or replace function public.apply_resend_delivery_integration_effect'),
+    PROVIDER_INBOX_SQL.indexOf('create or replace function public.apply_qbo_change_integration_effect'),
   );
   assert.doesNotMatch(providerProjection, /order_reversal_commands/i);
   assert.doesNotMatch(providerProjection, /reversal_revision\s*=/i);

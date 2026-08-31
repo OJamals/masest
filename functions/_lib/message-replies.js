@@ -1,5 +1,7 @@
+import { timingSafeHexEqual } from '../../shared/email-bridge.js';
+
 // Signed reply-to addresses for first-party support threads. The UUID identifies
-// the company; the HMAC prevents forged addresses from routing arbitrary inbound mail.
+// the exact parent message; the HMAC prevents forged inbound-message routing.
 
 const UUID_RE = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const DOMAIN_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
@@ -15,7 +17,7 @@ async function signature(value, secret) {
 }
 
 export function inboundDomain(env) {
-  const domain = String(env?.RESEND_INBOUND_DOMAIN || '').trim().toLowerCase();
+  const domain = String(env?.MESSAGE_REPLY_DOMAIN || '').trim().toLowerCase();
   if (!DOMAIN_RE.test(domain)) return '';
   let appDomain = '';
   try { appDomain = new URL(String(env?.APP_URL || '')).hostname.toLowerCase(); }
@@ -25,16 +27,16 @@ export function inboundDomain(env) {
   return domain;
 }
 
-export async function messageReplyAddress(env, companyId) {
+export async function messageReplyAddress(env, messageId) {
   const domain = inboundDomain(env);
   const secret = String(env?.MESSAGE_REPLY_SECRET || '');
-  const id = String(companyId || '').toLowerCase();
+  const id = String(messageId || '').toLowerCase();
   if (!domain || !secret || !UUID_RE.test(id)) return null;
   const token = (await signature(`message-reply:${id}`, secret)).slice(0, TOKEN_HEX_LENGTH);
   return `reply+${id}.${token}@${domain}`;
 }
 
-export async function companyIdFromReplyAddress(env, recipients) {
+export async function messageIdFromReplyAddress(env, recipients) {
   const domain = inboundDomain(env);
   const secret = String(env?.MESSAGE_REPLY_SECRET || '');
   if (!domain || !secret) return null;
@@ -46,7 +48,7 @@ export async function companyIdFromReplyAddress(env, recipients) {
     if (!match) continue;
     const [, id, token] = match;
     const expected = (await signature(`message-reply:${id}`, secret)).slice(0, TOKEN_HEX_LENGTH);
-    if (token === expected) return id;
+    if (timingSafeHexEqual(token, expected)) return id;
   }
   return null;
 }

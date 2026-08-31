@@ -14,9 +14,9 @@ Linked from `account.html` ("Open dashboard") once signed in.
 
 ### Admin console — `admin.html` + `js/admin.js`  (staff only)
 Tabs: Overview (revenue, orders, pending accounts, unread msgs, low stock, 7-day traffic) ·
-Orders (change status, notifies buyer) · Accounts (approve / set NET terms + credit / suspend) ·
+Orders (change status, notifies buyer through the shared support thread) · Accounts (approve / set NET terms + credit / suspend) ·
 Products & stock (edit price/mode/stock/active, add SKU, soft-delete) · Messages (reply to buyer threads) ·
-Offers (broadcast in-app notification to an audience, optional Resend email) · Traffic & SEO (first-party
+Offers (broadcast in-app notification to an audience; marketing email fails closed until a dedicated provider is configured) · Traffic & SEO (first-party
 pageview analytics + live SEO audit of the marketing pages + sitemap/robots links).
 
 ### API — implemented for BOTH runtimes (repo keeps both ports in sync)
@@ -42,8 +42,13 @@ New tables `messages`, `notifications`, `offers`, `page_views`; new columns
    Then register/sign in with that email at `account.html` and open `/admin.html`.
 3. **Stripe Customer Portal**: activate it once in the Stripe Dashboard (Settings → Billing → Customer portal),
    else `account/billing-portal` errors. `STRIPE_SECRET_KEY` must be set (already used by checkout).
-4. **(optional) `RESEND_API_KEY` + `RESEND_FROM`** to let admin offers also email recipients.
-5. **(optional) direct email replies:** use Resend's managed `*.resend.app` receiving address for `RESEND_INBOUND_DOMAIN` (do not change the Outlook/GoDaddy MX records for `masest.co`), set `MESSAGE_REPLY_SECRET`, then configure Resend's signed `email.received` webhook for `/api/resend-webhook`. Buyer email replies are verified against their company and appear in the Messages thread.
+4. **Transactional email:** bind Pages `EMAIL_SERVICE` to `masest-email-service`; set
+   `EMAIL_REPLY_TO`, `MESSAGE_REPLY_DOMAIN`, `MESSAGE_REPLY_SECRET`, and
+   `EMAIL_INGRESS_SECRET` as documented in `CLOUDFLARE_PAGES.md`.
+5. **Direct email replies:** route `reply@reply.masest.co` (with subaddressing enabled)
+   to `masest-email-service`. Do not change the Proofpoint MX records for
+   `masest.co`. Signed replies are verified against the exact chat message,
+   customer, company, and order before entering the Messages thread.
 6. Redeploy: push to `medicux/masest` `main`; the Verify workflow runs the full gate and uploads `dist/` to Cloudflare Pages.
    Verify env presence at `/api/health`.
 
@@ -63,5 +68,5 @@ So after a person registers you can grant them via SQL (no CF env change / redep
 
 ## Deferred (next)
 - Multi-user company invites; per-user (vs per-company) notifications targeting.
-- Klaviyo *campaign* creation for offers (today: in-app notification + optional Resend blast).
+- Dedicated marketing-provider delivery for offers (today: in-app notification only; email fails closed).
 - QBO invoice sync for NET orders (Phase 3) surfaced in the admin Orders tab.

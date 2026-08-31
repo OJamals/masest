@@ -1,24 +1,24 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { companyIdFromReplyAddress, inboundDomain, inboundReplyText, messageReplyAddress } from '../functions/_lib/message-replies.js';
+import { inboundDomain, inboundReplyText, messageIdFromReplyAddress, messageReplyAddress } from '../functions/_lib/message-replies.js';
 import { shouldEmailSupportRecipient } from '../functions/_lib/message-notifications.js';
 
-const companyId = '9b081f60-7410-4b04-bf1e-30f109b20b9a';
-const env = { APP_URL: 'https://masest.co', RESEND_INBOUND_DOMAIN: 'wilaucoreu.resend.app', MESSAGE_REPLY_SECRET: 'test-secret' };
+const messageId = '9b081f60-7410-4b04-bf1e-30f109b20b9a';
+const env = { APP_URL: 'https://masest.co', MESSAGE_REPLY_DOMAIN: 'reply.masest.co', MESSAGE_REPLY_SECRET: 'test-secret' };
 
-test('signed Reply-To address routes only to its company', async () => {
-  const address = await messageReplyAddress(env, companyId);
+test('signed Reply-To address routes only to its exact chat message', async () => {
+  const address = await messageReplyAddress(env, messageId);
   assert.ok(address.split('@')[0].length <= 64, 'Reply-To local part must satisfy RFC email length');
-  assert.match(address, /^reply\+9b081f60-7410-4b04-bf1e-30f109b20b9a\.[a-f0-9]{20}@wilaucoreu\.resend\.app$/);
-  assert.equal(await companyIdFromReplyAddress(env, [address]), companyId);
-  assert.equal(await companyIdFromReplyAddress(env, [address.replace(/.$/, 'x')]), null);
-  assert.equal(await companyIdFromReplyAddress({ ...env, MESSAGE_REPLY_SECRET: 'other' }, [address]), null);
+  assert.match(address, /^reply\+9b081f60-7410-4b04-bf1e-30f109b20b9a\.[a-f0-9]{20}@reply\.masest\.co$/);
+  assert.equal(await messageIdFromReplyAddress(env, [address]), messageId);
+  assert.equal(await messageIdFromReplyAddress(env, [address.replace(/.$/, 'x')]), null);
+  assert.equal(await messageIdFromReplyAddress({ ...env, MESSAGE_REPLY_SECRET: 'other' }, [address]), null);
 });
 
 test('inbound replies reject the primary app domain to protect existing MX routing', async () => {
-  const unsafe = { ...env, RESEND_INBOUND_DOMAIN: 'masest.co' };
+  const unsafe = { ...env, MESSAGE_REPLY_DOMAIN: 'masest.co' };
   assert.equal(inboundDomain(unsafe), '');
-  assert.equal(await messageReplyAddress(unsafe, companyId), null);
+  assert.equal(await messageReplyAddress(unsafe, messageId), null);
 });
 
 test('inbound reply text drops common quoted content and caps the payload', () => {

@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { verifySvixSignature } from "../functions/_lib/email.js";
+import {
+  signEmailBridgePayload,
+  verifyEmailBridgePayload,
+} from "../shared/email-bridge.js";
 
 const messagesSrc = readFileSync(new URL("../functions/api/account/messages.js", import.meta.url), "utf8");
 const adminMessagesSrc = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
 const supportEmailSrc = readFileSync(new URL("../functions/_lib/support-email.js", import.meta.url), "utf8");
-const emailSrc = readFileSync(new URL("../functions/_lib/email.js", import.meta.url), "utf8");
+const emailBridgeSrc = readFileSync(new URL("../shared/email-bridge.js", import.meta.url), "utf8");
+const messageRepliesSrc = readFileSync(new URL("../functions/_lib/message-replies.js", import.meta.url), "utf8");
 
 test("support notification emails escape customer and staff-supplied body", () => {
   assert.match(messagesSrc, /deliverSupportMessageEmail/);
@@ -16,35 +20,39 @@ test("support notification emails escape customer and staff-supplied body", () =
   assert.doesNotMatch(supportEmailSrc, /<blockquote[^>]*>\$\{message\.body\}/);
 });
 
-test("Svix verifier uses a constant-time compare (no === short-circuit on the MAC)", () => {
-  assert.match(emailSrc, /import \{ timingSafeEqual \} from "\.\/secret\.js"/);
-  assert.match(emailSrc, /timingSafeEqual\(sig, expected\)/);
-  assert.doesNotMatch(emailSrc, /provided\.some\(\(sig\) => sig === expected\)/);
+test("email bridge verifier compares every MAC byte without a signature equality short-circuit", () => {
+  assert.match(emailBridgeSrc, /difference \|= a\.charCodeAt\(index\) \^ b\.charCodeAt\(index\)/);
+  assert.match(emailBridgeSrc, /return difference === 0/);
+  assert.doesNotMatch(emailBridgeSrc, /expected === signature|signature === expected/);
 });
 
-// Helper mirrors the library's own signing to craft a genuinely valid Svix signature.
-async function signSvix(secret, id, timestamp, body) {
-  const rawSecret = secret.startsWith("whsec_") ? secret.slice(6) : secret;
-  const keyBytes = Uint8Array.from(atob(rawSecret), (c) => c.charCodeAt(0));
-  const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${id}.${timestamp}.${body}`));
-  return `v1,${btoa(String.fromCharCode(...new Uint8Array(mac)))}`;
-}
+test("reply-address verifier uses the shared constant-time comparison", () => {
+  assert.match(messageRepliesSrc, /timingSafeHexEqual\(token, expected\)/);
+  assert.doesNotMatch(messageRepliesSrc, /token === expected|expected === token/);
+});
 
-test("constant-time Svix verify still accepts valid signatures and rejects tampered ones", async () => {
-  const secret = `whsec_${btoa("super-secret-key-bytes-32-length!!")}`;
-  const id = "msg_1";
+test("email bridge verification accepts valid signatures and rejects tampering and replay", async () => {
+  const secret = "super-secret-key-bytes-32-length!!";
   const nowMs = 1_700_000_000_000;
   const timestamp = Math.floor(nowMs / 1000);
   const body = JSON.stringify({ type: "email.delivered", data: { email_id: "e1" } });
 
-  const valid = await signSvix(secret, id, timestamp, body);
-  assert.equal(await verifySvixSignature(secret, { id, timestamp, signature: valid }, body, { nowMs }), true);
+  const valid = await signEmailBridgePayload(secret, timestamp, body);
+  const verify = (overrides = {}) => verifyEmailBridgePayload({
+    secret,
+    timestamp,
+    rawBody: body,
+    signature: valid,
+    nowMs,
+    ...overrides,
+  });
 
-  // Tampered body → reject.
-  assert.equal(await verifySvixSignature(secret, { id, timestamp, signature: valid }, body + "x", { nowMs }), false);
-  // Wrong signature → reject.
-  assert.equal(await verifySvixSignature(secret, { id, timestamp, signature: "v1,AAAA" }, body, { nowMs }), false);
-  // Multiple sigs, one valid → accept (Svix may rotate keys).
-  assert.equal(await verifySvixSignature(secret, { id, timestamp, signature: `v1,AAAA ${valid}` }, body, { nowMs }), true);
+  assert.equal(await verify(), true);
+
+  assert.equal(await verify({ rawBody: `${body}x` }), false);
+  assert.equal(await verify({ signature: "0".repeat(64) }), false);
+  assert.equal(await verify({ signature: "not-hex" }), false);
+  assert.equal(await verify({ timestamp: timestamp - 301 }), false);
+  assert.equal(await verify({ timestamp: timestamp + 301 }), false);
+  assert.equal(await verify({ timestamp: "not-a-timestamp" }), false);
 });

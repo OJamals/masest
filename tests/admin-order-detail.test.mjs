@@ -22,9 +22,9 @@ test("detail endpoint reads ?id, joins items+timeline, exposes backordered", () 
   assert.match(API, /order_items\(sku,product_sku,name,qty,unit_price,line_total,backordered\)/); // list select too
 });
 
-test('order timeline resolves provider effects and Resend delivery telemetry', async () => {
+test('order timeline resolves provider effects and provider-neutral email telemetry', async () => {
   const rows = {
-    payload: [{ id: 'stripe-effect', event_id: 'stripe-event', effect_type: 'order_confirmation', status: 'completed', provider_result: { resend_id: 'email-resend-1', http_status: 200 }, created_at: '2026-08-04T12:00:00Z' }],
+    payload: [{ id: 'stripe-effect', event_id: 'stripe-event', effect_type: 'order_confirmation', status: 'completed', provider_result: { provider_message_id: 'email-provider-1', http_status: 200 }, created_at: '2026-08-04T12:00:00Z' }],
     provider_result: [{ id: 'ship-effect', event_id: 'ship-event', effect_type: 'shipstation_tracking_projection', status: 'completed', provider_result: { order_id: 'order-1', applied: true }, created_at: '2026-08-04T13:00:00Z' }],
     shipment: [{ id: 'ship-effect', event_id: 'ship-event', effect_type: 'shipstation_tracking_projection', status: 'completed', provider_result: { order_id: 'order-1', applied: true }, created_at: '2026-08-04T13:00:00Z' }],
   };
@@ -45,7 +45,7 @@ test('order timeline resolves provider effects and Resend delivery telemetry', a
         return {
           select() { return this; },
           in: async () => ({ data: [{
-            resend_id: 'email-resend-1',
+            provider_message_id: 'email-provider-1',
             status: 'delivered',
             updated_at: '2026-08-04T12:02:00Z',
             created_at: '2026-08-04T12:00:01Z',
@@ -69,7 +69,7 @@ test('order timeline resolves provider effects and Resend delivery telemetry', a
   assert.deepEqual(timeline.find(({ id }) => id === 'stripe-effect').result, {
     applied: undefined,
     skipped: undefined,
-    resend_id: 'email-resend-1',
+    provider_message_id: 'email-provider-1',
     email_status: 'delivered',
     email_updated_at: '2026-08-04T12:02:00Z',
   });
@@ -81,7 +81,7 @@ test("UI fetches detail by id and opens the modal with a backorder badge", () =>
   assert.match(UI, /detailDialog\(/);
   assert.match(UI, /Integration delivery/);
   assert.match(UI, /entry\.result\?\.email_status/);
-  assert.match(UI, /Resend/);
+  assert.match(UI, /Email/);
   assert.match(UI, /Financial evidence/);
   assert.match(UI, /pending carrier credit/);
   assert.match(UI, /backordered \? ' <span class="badge badge-warning">backordered/);

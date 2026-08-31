@@ -47,8 +47,9 @@ export async function onRequest({ request, env }) {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json(400, { error: 'invalid_email' });
     const inviteRole = body.role === 'admin' ? 'admin' : 'buyer';
 
+    const inviteId = crypto.randomUUID();
     const { error } = await sb.from('company_invites').insert({
-      company_id, email, role: inviteRole, status: 'pending', invited_by: user.id,
+      id: inviteId, company_id, email, role: inviteRole, status: 'pending', invited_by: user.id,
     });
     if (error) {
       if (/duplicate|unique/i.test(error.message)) return json(409, { error: 'already_invited' });
@@ -56,20 +57,19 @@ export async function onRequest({ request, env }) {
     }
 
     // Best-effort invite email — logged + suppression-checked via sendEmail (category 'team').
-    if (env.RESEND_API_KEY) {
-      const appUrl = env.APP_URL || new URL(request.url).origin;
-      await sendEmail(env, {
-        to: [email],
-        subject: 'You’re invited to a MASEST business account',
-        html: emailLayout({
-          heading: 'You’re invited',
-          bodyHtml: `<p>You’ve been invited to join a MASEST VertKleen business account.</p><p>Create your account with <b>this email address</b> to join automatically.</p>`,
-          ctaText: 'Open your account', ctaUrl: `${appUrl}/account.html`,
-        }),
-        category: 'team',
-      });
-    }
-    return json(201, { ok: true, email, role: inviteRole });
+    const appUrl = env.APP_URL || new URL(request.url).origin;
+    const emailed = await sendEmail(env, {
+      to: [email],
+      subject: 'You’re invited to a MASEST business account',
+      html: emailLayout({
+        heading: 'You’re invited',
+        bodyHtml: `<p>You’ve been invited to join a MASEST VertKleen business account.</p><p>Create your account with <b>this email address</b> to join automatically.</p>`,
+        ctaText: 'Open your account', ctaUrl: `${appUrl}/account.html`,
+      }),
+      category: 'team',
+      idempotencyKey: `team-invite/${inviteId}`,
+    });
+    return json(201, { ok: true, email, role: inviteRole, emailed });
   }
 
   if (request.method === 'PATCH') {

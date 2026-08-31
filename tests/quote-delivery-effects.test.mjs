@@ -93,14 +93,14 @@ test('notification and email delivery route the Buyer to the real Orders workspa
   }, {
     sendEmail: async (_env, input) => {
       email = input;
-      return { ok: true, resendId: 'email-resend-1', status: 200 };
+      return { ok: true, providerMessageId: 'email-provider-1', status: 200 };
     },
   });
   assert.match(email.html, /https:\/\/masest\.test\/dashboard\.html#orders/);
   assert.equal(email.idempotencyKey, `masest/quote:${QUOTE_ID}:offer-1/quote-email`);
   assert.deepEqual(emailResult, {
     providerRecorded: false,
-    providerResult: { resend_id: 'email-resend-1', http_status: 200 },
+    providerResult: { provider_message_id: 'email-provider-1', http_status: 200 },
     skipped: false,
   });
 });

@@ -9,10 +9,11 @@ test("sendEmail filters suppressed recipients per stream before sending", () => 
   assert.match(SRC, /filterByStream\(allTo, category/, "sendEmail must filter by category stream");
 });
 
-test("sendEmail logs an email_events row with category and resend id", () => {
+test("sendEmail logs an email_events row with category and provider message id", () => {
   assert.match(SRC, /logEmailEvent\(/, "sendEmail must log the send");
   assert.match(SRC, /category/, "sendEmail must accept a category");
   assert.match(SRC, /email_events/, "must write to email_events");
+  assert.match(SRC, /provider_message_id/, "must persist provider lifecycle identity");
 });
 
 test("supabase lib imports the pure email helpers", () => {
@@ -30,8 +31,8 @@ test("sendEmail supports bcc (offer broadcast privacy)", () => {
 
 const OFFERS = readFileSync(new URL("../functions/api/admin/offers.js", import.meta.url), "utf8");
 
-test("offers broadcast routes through sendEmail (logged + suppressed)", () => {
-  assert.match(OFFERS, /sendEmail\(/, "offers must call sendEmail");
+test("offers remain on the canonical gateway and are blocked from transactional sending", () => {
+  assert.match(OFFERS, /sendEmailResult\(/, "offers must call the canonical email gateway");
   assert.match(OFFERS, /category:\s*'offer'/, "offers must tag category 'offer'");
-  assert.doesNotMatch(OFFERS, /api\.resend\.com/, "offers must not call Resend directly anymore");
+  assert.doesNotMatch(OFFERS, /api\.resend\.com/, "offers must not call a retired provider directly");
 });

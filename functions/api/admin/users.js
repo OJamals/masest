@@ -298,6 +298,7 @@ export async function onRequest({ request, env }) {
       to: [invite.email],
       subject: 'Reminder: join your MASEST business account',
       category: 'team',
+      idempotencyKey: `team-invite-reminder/${invite.id}/${crypto.randomUUID()}`,
       html: emailLayout({
         heading: 'Your MASEST invite is waiting',
         bodyHtml: `<p>You were invited to join a MASEST business account as <b>${htmlEscape(invite.role || 'buyer')}</b>.</p>`,

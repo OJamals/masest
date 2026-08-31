@@ -33,7 +33,7 @@ export function checkoutReadiness(env = {}) {
     shipstation_webhook_token: String(env.SHIPSTATION_WEBHOOK_TOKEN || '').trim() ? 'ready' : 'missing',
     stripe_secret: String(env.STRIPE_SECRET_KEY || '').trim() ? 'ready' : 'missing',
     stripe_webhook_secret: String(env.STRIPE_WEBHOOK_SECRET || '').trim() ? 'ready' : 'missing',
-    resend_api_key: String(env.RESEND_API_KEY || '').trim() ? 'ready' : 'missing',
+    email_service_binding: typeof env.EMAIL_SERVICE?.fetch === 'function' ? 'ready' : 'missing',
   };
   const blocking = Object.entries(checks)
     .filter(([, state]) => state === 'missing' || state === 'too_short')

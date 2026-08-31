@@ -131,7 +131,7 @@ test("admin quotes API sweeps stale due leads with email and notes", () => {
   assert.match(ADMIN_QUOTES, /category:\s*'lead_followup_reminder'/);
   assert.match(ADMIN_QUOTES, /category:\s*'lead_followup_alert'/);
   assert.match(ADMIN_QUOTES, /logEmailEvent/);
-  assert.match(ADMIN_QUOTES, /resend_not_configured|no_recipients/);
+  assert.match(ADMIN_QUOTES, /no_recipients/);
   assert.match(QUOTE_LEADS, /Automated due follow-up/);
   assert.match(QUOTE_LEADS, /Automated reminder sent/);
   assert.match(ADMIN_QUOTES, /x-quote-crm-secret/i);

@@ -10,8 +10,8 @@ import { isStaffEmail } from './authz.js';
 import { adminMessageAlertKind, adminMessageRecipients } from './admin-message-notifications.js';
 import { shouldEmailSupportRecipient } from './message-notifications.js';
 import {
-  companyIdFromReplyAddress,
   inboundReplyText,
+  messageIdFromReplyAddress,
   messageReplyAddress,
 } from './message-replies.js';
 import {
@@ -68,31 +68,6 @@ function orderLine(order) {
   return `<p><strong>Order ${reference}</strong>${status}</p>`;
 }
 
-async function fetchResendEmail(env, path, fetchImpl = globalThis.fetch) {
-  if (!env?.RESEND_API_KEY) throw new Error('resend_email_not_configured');
-  let response;
-  try {
-    response = await fetchImpl(`https://api.resend.com${path}`, {
-      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}` },
-    });
-  } catch (error) {
-    throw new Error('resend_email_unavailable', { cause: error });
-  }
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`resend_email_http_${response.status}`);
-  const payload = await response.json().catch(() => null);
-  if (!payload) throw new Error('resend_email_response_invalid');
-  return payload;
-}
-
-async function fetchReceivedEmail(env, id, fetchImpl = globalThis.fetch) {
-  return fetchResendEmail(env, `/emails/receiving/${encodeURIComponent(id)}`, fetchImpl);
-}
-
-async function fetchSentEmail(env, id, fetchImpl = globalThis.fetch) {
-  return fetchResendEmail(env, `/emails/${encodeURIComponent(id)}`, fetchImpl);
-}
-
 async function orderContext(sb, message) {
   if (!message?.order_id) return null;
   const contexts = await supportOrderContextsById(sb, [message.order_id], message.company_id);
@@ -100,19 +75,23 @@ async function orderContext(sb, message) {
 }
 
 async function threadParent(sb, message) {
-  if (!message?.company_id || !message?.sender_role) return null;
+  if (!message?.company_id) return null;
   let query = sb.from('messages')
     .select('id,email_message_id,email_references,created_at')
     .eq('company_id', message.company_id)
-    .eq('sender_role', message.sender_role)
-    .not('email_message_id', 'is', null)
+    .or('email_message_id.not.is.null,email_references.not.is.null')
     .order('created_at', { ascending: false })
     .limit(1);
   if (message.id) query = query.neq('id', message.id);
+  if (message.order_id) query = query.eq('order_id', message.order_id);
+  else query = query.is('order_id', null);
+  const participantId = message.sender_role === 'staff' ? message.recipient_user_id : message.user_id;
+  if (participantId) query = query.or(`user_id.eq.${participantId},recipient_user_id.eq.${participantId}`);
   const { data, error } = await query.maybeSingle();
   if (error) throw error;
-  return data?.email_message_id ? {
-    messageId: data.email_message_id,
+  const messageId = data?.email_message_id || messageIds(data?.email_references).at(-1) || null;
+  return messageId ? {
+    messageId,
     references: data.email_references || null,
   } : null;
 }
@@ -126,16 +105,8 @@ async function saveDelivery(sb, { messageId, deliveryId, emailMessageId, referen
   if (error) throw error;
 }
 
-async function captureSentMessageId(env, sb, message, deliveryId, references, dependencies) {
-  let emailMessageId = null;
-  try {
-    const sent = await (dependencies.sentEmail || fetchSentEmail)(env, deliveryId);
-    const sentContent = sent?.data || sent;
-    emailMessageId = messageIds(sentContent?.message_id)[0] || null;
-  } catch {
-    // Resend accepted the email already. Its verified delivery webhook can fill
-    // the RFC Message-ID without risking a duplicate send.
-  }
+async function saveProviderDelivery(sb, message, deliveryId, references, dependencies) {
+  const emailMessageId = messageIds(deliveryId)[0] || null;
   await (dependencies.saveDelivery || saveDelivery)(sb, {
     messageId: message.id,
     deliveryId,
@@ -143,10 +114,10 @@ async function captureSentMessageId(env, sb, message, deliveryId, references, de
     references,
   });
   return emailMessageId
-    ? { ok: true, resendId: deliveryId, emailMessageId, references }
+    ? { ok: true, providerMessageId: deliveryId, emailMessageId, references }
     : {
         ok: true,
-        resendId: deliveryId,
+        providerMessageId: deliveryId,
         emailMessageId: null,
         references,
         threadingPending: true,
@@ -174,43 +145,17 @@ async function senderIdentity(sb, sender, companyId, env) {
   return null;
 }
 
-async function replyContext(sb, { companyId, senderRole, userId, inReplyTo, references }) {
-  const candidates = [...new Set([
-    ...messageIds(inReplyTo),
-    ...messageIds(references).reverse(),
-  ])];
-  let parent = null;
-  if (candidates.length) {
-    const { data, error } = await sb.from('messages')
-      .select('id,sender_role,user_id,recipient_user_id,order_id,email_message_id,created_at')
-      .eq('company_id', companyId)
-      .in('email_message_id', candidates);
-    if (error) throw error;
-    const byMessageId = new Map((data || []).map((message) => [message.email_message_id, message]));
-    parent = candidates.map((id) => byMessageId.get(id)).find(Boolean) || null;
-  }
-  if (!parent) {
-    const { data, error } = await sb.from('messages')
-      .select('id,sender_role,user_id,recipient_user_id,order_id,created_at')
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) throw error;
-    parent = data || null;
-  }
-  const recipientUserId = senderRole === 'staff'
-    ? parent?.user_id || parent?.recipient_user_id || null
-    : null;
-  if (senderRole === 'staff' && !recipientUserId) return null;
-  if (senderRole === 'buyer' && parent?.recipient_user_id && parent.recipient_user_id !== userId) {
-    return { recipientUserId: null, orderId: null };
-  }
-  return { recipientUserId, orderId: parent?.order_id || null };
+async function loadReplyMessage(sb, messageId) {
+  const { data, error } = await sb.from('messages')
+    .select('id,company_id,sender_role,user_id,recipient_user_id,order_id')
+    .eq('id', messageId)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
 }
 
 async function upsertInboundMessage(sb, input) {
-  const { data, error } = await sb.rpc('upsert_resend_inbound_message', {
+  const { data, error } = await sb.rpc('upsert_email_inbound_message', {
     p_company_id: input.companyId,
     p_user_id: input.userId,
     p_external_message_id: input.emailId,
@@ -218,9 +163,10 @@ async function upsertInboundMessage(sb, input) {
     p_sender_role: input.senderRole,
     p_recipient_user_id: input.recipientUserId,
     p_order_id: input.orderId,
+    p_email_references: input.emailReferences,
   });
   if (error) throw error;
-  if (!data?.message_id && !data?.id) throw new Error('resend_inbound_message_upsert_failed');
+  if (!data?.message_id && !data?.id) throw new Error('email_inbound_message_upsert_failed');
   return data;
 }
 
@@ -232,14 +178,13 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     return { ok: true, skipped: 'already_delivered' };
   }
   if (message.email_delivery_id) {
-    return captureSentMessageId(
-      env,
-      sb,
-      message,
-      message.email_delivery_id,
-      message.email_references || null,
-      dependencies,
-    );
+    return {
+      ok: true,
+      skipped: 'already_delivered',
+      providerMessageId: message.email_delivery_id,
+      emailMessageId: message.email_message_id || null,
+      references: message.email_references || null,
+    };
   }
   let recipients = [];
   if (message.sender_role === 'staff') {
@@ -264,13 +209,20 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     if (!recipients.length) return { ok: true, skipped: 'no_admin_recipients' };
   }
 
-  const replyTo = await (dependencies.replyAddress || messageReplyAddress)(env, message.company_id);
+  const replyTo = await (dependencies.replyAddress || messageReplyAddress)(env, message.id);
   if (!replyTo) return { ok: false, retryable: false, error: 'support_reply_address_not_configured' };
   const [order, parent] = await Promise.all([
     (dependencies.orderContext || orderContext)(sb, message),
     (dependencies.threadParent || threadParent)(sb, message),
   ]);
-  const threading = threadHeaders(parent);
+  const inheritedIds = messageIds(message.email_references);
+  const threading = inheritedIds.length ? {
+    headers: {
+      'In-Reply-To': inheritedIds.at(-1),
+      References: inheritedIds.join(' '),
+    },
+    references: inheritedIds.join(' '),
+  } : threadHeaders(parent);
   const companyName = message.company_name || message.company_id;
   const isStaffMessage = message.sender_role === 'staff';
   const appUrl = String(env?.APP_URL || 'https://masest.co').replace(/\/+$/, '');
@@ -279,10 +231,11 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     : '/admin.html#support';
   const heading = isStaffMessage ? 'New message from MASEST' : 'New customer message';
   const bodyHtml = `${orderLine(order)}<blockquote style="border-left:3px solid #0e7c86;padding-left:12px;color:#334;margin:12px 0;white-space:pre-wrap">${htmlEscape(String(message.body).slice(0, 4000))}</blockquote>`;
+  const threadName = order?.reference ? `${companyName} · Order ${order.reference}` : companyName;
   const send = dependencies.sendEmail || sendEmailResult;
   const delivery = await send(env, {
     to: recipients,
-    subject: threadSubject(companyName, Boolean(threading.headers['In-Reply-To'])),
+    subject: threadSubject(threadName, Boolean(threading.headers['In-Reply-To'])),
     html: emailLayout({
       heading,
       bodyHtml,
@@ -290,7 +243,10 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
       ctaUrl: `${appUrl}${ctaPath}`,
     }),
     replyTo,
-    emailHeaders: threading.headers,
+    emailHeaders: {
+      ...threading.headers,
+      'Thread-Topic': threadSubject(threadName, false),
+    },
     category: isStaffMessage ? 'messages' : 'staff_alert',
     idempotencyKey: `support-message/${message.id}/${message.sender_role}`,
   });
@@ -299,56 +255,59 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
       ? delivery
       : { ok: false, retryable: true, error: 'support_email_failed' };
   }
-  if (!delivery?.resendId) {
+  if (!delivery?.providerMessageId) {
     return { ok: false, retryable: true, error: 'support_email_delivery_id_missing' };
   }
-  const captured = await captureSentMessageId(
-    env,
+  const captured = await saveProviderDelivery(
     sb,
     message,
-    delivery.resendId,
+    delivery.providerMessageId,
     threading.references,
     dependencies,
   );
   return { ...delivery, ...captured };
 }
 
-export async function routeInboundMessageReply(env, event, dependencies = {}) {
-  const emailId = event?.data?.email_id || event?.data?.id;
+export async function routeInboundMessageReply(env, input, dependencies = {}) {
+  const emailId = String(input?.id || '').trim();
   if (!emailId) return { routed: false };
-  const received = await (dependencies.receivedEmail || fetchReceivedEmail)(env, emailId);
-  if (!received) return { routed: false, reason: 'received_email_not_found' };
-  const content = received?.data || received;
-  const recipients = event?.data?.to || content?.to || [];
-  const companyId = await (dependencies.companyIdFromReplyAddress || companyIdFromReplyAddress)(env, recipients);
-  if (!companyId) return { routed: false, reason: 'invalid_reply_address' };
+  const replyMessageId = await (
+    dependencies.messageIdFromReplyAddress || messageIdFromReplyAddress
+  )(env, input?.to || []);
+  if (!replyMessageId) return { routed: false, reason: 'invalid_reply_address' };
   const sb = dependencies.sb || adminClient(env);
-  const sender = emailAddress(event?.data?.from || content?.from);
+  const parent = await (dependencies.replyMessage || loadReplyMessage)(sb, replyMessageId);
+  if (!parent?.company_id) return { routed: false, reason: 'reply_message_not_found' };
+  const companyId = parent.company_id;
+  const sender = emailAddress(input?.from);
   const identity = await (dependencies.senderIdentity || senderIdentity)(sb, sender, companyId, env);
   if (!identity) return { routed: false, reason: 'sender_not_participant' };
-  const body = inboundReplyText(content?.text || htmlToText(content?.html || ''));
-  if (!body) return { routed: false, reason: 'empty_reply' };
-  const headers = content?.headers || {};
-  const inReplyTo = headerValue(headers, 'in-reply-to');
-  const references = headerValue(headers, 'references');
-  const context = await (dependencies.replyContext || replyContext)(sb, {
-    companyId,
-    senderRole: identity.role,
-    userId: identity.userId,
-    inReplyTo,
-    references,
-  });
-  if (!context && identity.role === 'staff') {
+  if (identity.role === 'buyer'
+    && (parent.sender_role !== 'staff' || parent.recipient_user_id !== identity.userId)) {
+    return { routed: false, reason: 'sender_not_recipient' };
+  }
+  if (identity.role === 'staff' && (parent.sender_role !== 'buyer' || !parent.user_id)) {
     return { routed: false, reason: 'reply_context_not_found' };
   }
+  const body = inboundReplyText(input?.text || htmlToText(input?.html || ''));
+  if (!body) return { routed: false, reason: 'empty_reply' };
+  const headers = input?.headers || {};
+  const inReplyTo = headerValue(headers, 'in-reply-to');
+  const references = headerValue(headers, 'references');
+  const emailReferences = messageIds(
+    references,
+    inReplyTo,
+    headerValue(headers, 'message-id'),
+  ).join(' ') || null;
   const result = await (dependencies.upsertMessage || upsertInboundMessage)(sb, {
     companyId,
     userId: identity.role === 'buyer' ? identity.userId : null,
     senderRole: identity.role,
-    recipientUserId: identity.role === 'staff' ? context?.recipientUserId || null : null,
-    orderId: context?.orderId || null,
+    recipientUserId: identity.role === 'staff' ? parent.user_id : null,
+    orderId: parent.order_id || null,
     emailId,
     body,
+    emailReferences,
   });
   const message = {
     ...result,
@@ -357,14 +316,15 @@ export async function routeInboundMessageReply(env, event, dependencies = {}) {
     sender_role: result.sender_role || identity.role,
     user_id: result.user_id ?? (identity.role === 'buyer' ? identity.userId : null),
     recipient_user_id: result.recipient_user_id
-      ?? (identity.role === 'staff' ? context?.recipientUserId || null : null),
-    order_id: result.order_id ?? context?.orderId ?? null,
+      ?? (identity.role === 'staff' ? parent.user_id : null),
+    order_id: result.order_id ?? parent.order_id ?? null,
     body: result.body || body,
+    email_references: result.email_references || emailReferences,
   };
   const deliver = dependencies.deliverMessage || deliverSupportMessageEmail;
   const delivery = await deliver(env, sb, message);
   if (delivery === false || delivery?.ok === false) {
-    throw new Error(delivery?.error || 'resend_inbound_delivery_failed');
+    throw new Error(delivery?.error || 'inbound_delivery_failed');
   }
   return { routed: true, duplicate: result.inserted === false };
 }

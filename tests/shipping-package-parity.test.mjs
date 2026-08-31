@@ -93,7 +93,7 @@ test('health reports each checkout dependency by name', () => {
     SHIPSTATION_WEBHOOK_TOKEN: 't',
     STRIPE_SECRET_KEY: 'sk',
     STRIPE_WEBHOOK_SECRET: 'wh',
-    RESEND_API_KEY: 're',
+    EMAIL_SERVICE: { fetch() {} },
   });
   assert.equal(ready.ready, true);
   assert.deepEqual(ready.blocking, []);

@@ -3,7 +3,7 @@ import { adminClient, json, requireStaff } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { runIntegrationEffectsWorker } from '../../_lib/integration-effects.js';
 
-const PROVIDERS = new Set(['stripe', 'shipstation', 'resend', 'quickbooks']);
+const PROVIDERS = new Set(['stripe', 'shipstation', 'quickbooks']);
 
 function boundedLimit(value, fallback = 50) {
   return Math.min(Math.max(Number.parseInt(value, 10) || fallback, 1), 100);

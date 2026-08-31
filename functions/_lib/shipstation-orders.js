@@ -188,7 +188,7 @@ function allocatedOrderItems(order, itemAllocations) {
 // via SHIPSTATION_WAREHOUSE_ALLOW_OVERRIDE so a provider-side change is not an outage.
 async function sendReturnLabelEmail(env, order, { labelUrl, trackingNumber, returnLabelId, reason }) {
   const to = text(order?.customer_email, 254);
-  if (!to || !env?.RESEND_API_KEY) return false;
+  if (!to) return false;
   const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
   const reference = text(order?.order_number, 60) || text(order?.id, 40);
   const details = [

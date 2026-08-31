@@ -153,13 +153,13 @@ async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
 async function sendTrackedLeadEmail(env, options) {
   const recipients = [...(Array.isArray(options.to) ? options.to : []), ...(Array.isArray(options.bcc) ? options.bcc : [])]
     .filter(Boolean);
-  if (!recipients.length || !env.RESEND_API_KEY) {
+  if (!recipients.length) {
     await logEmailEvent(env, {
       to_email: recipients.join(', ') || 'none',
       category: options.category,
       subject: options.subject,
       status: 'failed',
-      error: recipients.length ? 'resend_not_configured' : 'no_recipients',
+      error: 'no_recipients',
     });
     return false;
   }

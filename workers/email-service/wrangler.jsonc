@@ -1,0 +1,53 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "masest-email-service",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-31",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["noreply@send.masest.co"]
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "EMAIL_DELIVERIES",
+        "class_name": "EmailDelivery"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["EmailDelivery"]
+    }
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "masest-email-events",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 5,
+        "dead_letter_queue": "masest-email-events-dlq"
+      }
+    ]
+  },
+  "vars": {
+    "EMAIL_FROM_ADDRESS": "noreply@send.masest.co",
+    "EMAIL_FROM_NAME": "MASEST",
+    "EMAIL_INGRESS_URL": "https://masest.co/api/email/inbound",
+    "EMAIL_EVENTS_URL": "https://masest.co/api/email/events",
+    "INBOUND_DOMAIN": "reply.masest.co"
+  }
+}

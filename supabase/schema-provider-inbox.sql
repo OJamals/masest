@@ -1,7 +1,6 @@
--- Durable provider receipts + local projections for ShipStation, Resend, and QBO.
+-- Durable provider receipts + local projections for ShipStation and QBO.
 -- Apply after schema-integration-events.sql, schema-integration-effect-handlers.sql,
--- schema-shipstation.sql, schema-email.sql, schema-email-stream.sql, and
--- schema-unified-support-messages.sql.
+-- and schema-shipstation.sql.
 
 create table if not exists public.integration_receipts (
   id uuid primary key default gen_random_uuid(),
@@ -215,7 +214,7 @@ security definer
 set search_path = public
 as $$
   with providers(provider) as (
-    values ('stripe'::text), ('shipstation'), ('resend'), ('quickbooks')
+    values ('stripe'::text), ('shipstation'), ('quickbooks')
   ), event_stats as (
     select event.provider,
            count(*)::bigint event_count,
@@ -316,157 +315,6 @@ revoke all on function public.provider_integration_health() from public, anon, a
 revoke all on function public.provider_integration_dead_letters(text, integer, timestamptz, uuid) from public, anon, authenticated;
 grant execute on function public.provider_integration_health() to service_role;
 grant execute on function public.provider_integration_dead_letters(text, integer, timestamptz, uuid) to service_role;
-
-drop function if exists public.upsert_resend_inbound_message(uuid, uuid, text, text);
-
-create or replace function public.upsert_resend_inbound_message(
-  p_company_id uuid,
-  p_user_id uuid,
-  p_external_message_id text,
-  p_body text,
-  p_sender_role text default 'buyer',
-  p_recipient_user_id uuid default null,
-  p_order_id uuid default null
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_company public.companies%rowtype;
-  v_message public.messages%rowtype;
-  v_previous_sender text;
-  v_alert_kind text;
-  v_inserted boolean := false;
-begin
-  if p_company_id is null
-     or p_sender_role not in ('buyer', 'staff')
-     or btrim(coalesce(p_external_message_id, '')) = ''
-     or char_length(p_external_message_id) > 512
-     or btrim(coalesce(p_body, '')) = ''
-     or char_length(p_body) > 4000 then
-    raise exception 'invalid_resend_inbound_message';
-  end if;
-  select * into v_company from public.companies where id = p_company_id for update;
-  if not found then raise exception 'resend_inbound_company_not_found'; end if;
-
-  if p_sender_role = 'buyer' and (
-    p_user_id is null or not exists (
-      select 1 from public.profiles
-       where id = p_user_id and company_id = p_company_id
-    )
-  ) then
-    raise exception 'resend_inbound_user_company_mismatch';
-  end if;
-  if p_sender_role = 'staff' and (
-    p_recipient_user_id is null or not exists (
-      select 1 from public.profiles
-       where id = p_recipient_user_id and company_id = p_company_id
-    )
-  ) then
-    raise exception 'resend_inbound_recipient_company_mismatch';
-  end if;
-  if p_order_id is not null and not exists (
-    select 1 from public.orders
-     where id = p_order_id and company_id = p_company_id
-  ) then
-    raise exception 'resend_inbound_order_company_mismatch';
-  end if;
-
-  select * into v_message
-    from public.messages
-   where source = 'email_reply' and external_message_id = p_external_message_id
-   for update;
-  if not found then
-    select sender_role::text into v_previous_sender
-      from public.messages
-     where company_id = p_company_id
-     order by created_at desc, id desc
-     limit 1;
-    v_alert_kind := case when p_sender_role = 'buyer' then case
-      when v_previous_sender is null or v_company.support_thread_status = 'complete' then 'support_request'
-      else 'message'
-    end else null end;
-    insert into public.messages (
-      company_id, user_id, recipient_user_id, sender_role, body, order_id, source,
-      external_message_id, external_alert_kind, read_by_user, read_by_staff
-    ) values (
-      p_company_id,
-      case when p_sender_role = 'buyer' then p_user_id else null end,
-      case when p_sender_role = 'staff' then p_recipient_user_id else null end,
-      p_sender_role::public.message_sender,
-      p_body,
-      p_order_id,
-      'email_reply',
-      p_external_message_id,
-      v_alert_kind,
-      p_sender_role = 'buyer',
-      p_sender_role = 'staff'
-    )
-    on conflict do nothing
-    returning * into v_message;
-    if found then v_inserted := true; end if;
-    if not found then
-      select * into v_message
-        from public.messages
-       where source = 'email_reply' and external_message_id = p_external_message_id
-       for update;
-    end if;
-  end if;
-  if v_message.id is null
-     or v_message.company_id is distinct from p_company_id
-     or v_message.sender_role::text is distinct from p_sender_role then
-    raise exception 'resend_inbound_message_identity_collision';
-  end if;
-  if v_previous_sender is null then
-    select sender_role::text into v_previous_sender
-      from public.messages
-     where company_id = p_company_id
-       and id <> v_message.id
-       and created_at <= v_message.created_at
-     order by created_at desc, id desc
-     limit 1;
-  end if;
-  v_alert_kind := case when v_message.sender_role::text = 'buyer' then
-    coalesce(v_message.external_alert_kind, case
-      when v_previous_sender is null then 'support_request' else 'message' end)
-    else null end;
-
-  -- Only a newly accepted reply changes lifecycle state. Provider retries return
-  -- the existing row without reopening a conversation staff resolved later.
-  if v_inserted then
-    update public.companies
-       set support_thread_status = 'open',
-           support_thread_completed_at = null,
-           support_thread_completed_by = null
-     where id = p_company_id;
-  end if;
-
-  return jsonb_build_object(
-    'id', v_message.id,
-    'message_id', v_message.id,
-    'created_at', v_message.created_at,
-    'company_id', v_message.company_id,
-    'user_id', v_message.user_id,
-    'recipient_user_id', v_message.recipient_user_id,
-    'sender_role', v_message.sender_role,
-    'body', v_message.body,
-    'order_id', v_message.order_id,
-    'email_delivery_id', v_message.email_delivery_id,
-    'email_message_id', v_message.email_message_id,
-    'email_references', v_message.email_references,
-    'inserted', v_inserted,
-    'previous_sender_role', v_previous_sender,
-    'prior_thread_status', v_company.support_thread_status,
-    'alert_kind', v_alert_kind,
-    'company_name', v_company.name
-  );
-end;
-$$;
-
-revoke all on function public.upsert_resend_inbound_message(uuid, uuid, text, text, text, uuid, uuid) from public;
-revoke execute on function public.upsert_resend_inbound_message(uuid, uuid, text, text, text, uuid, uuid) from anon, authenticated;
-grant execute on function public.upsert_resend_inbound_message(uuid, uuid, text, text, text, uuid, uuid) to service_role;
 
 create or replace function public.finish_integration_projection(
   p_effect_id uuid,
@@ -749,112 +597,6 @@ begin
 end;
 $$;
 
-create or replace function public.apply_resend_delivery_integration_effect(
-  p_effect_id uuid,
-  p_worker_id text
-) returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_effect public.integration_effects%rowtype;
-  v_event public.integration_events%rowtype;
-  v_email public.email_events%rowtype;
-  v_occurred_at timestamptz;
-  v_status text;
-  v_event_type text;
-  v_current_rank integer;
-  v_next_rank integer;
-  v_stale boolean;
-  v_result jsonb;
-  v_recipient_digests jsonb;
-  v_message_id text;
-  v_thread_linked boolean := false;
-begin
-  select * into v_effect from public.integration_effects where id = p_effect_id for update;
-  if not found or v_effect.status <> 'processing'
-     or v_effect.lease_owner is distinct from p_worker_id
-     or v_effect.effect_type <> 'resend_delivery_projection' then
-    raise exception 'invalid_resend_projection_lease';
-  end if;
-  if v_effect.provider_succeeded_at is not null then
-    return coalesce(v_effect.provider_result, '{}'::jsonb);
-  end if;
-  select * into v_event from public.integration_events where id = v_effect.event_id;
-  if not found or v_event.provider <> 'resend' then
-    raise exception 'invalid_resend_projection_event';
-  end if;
-  begin
-    v_occurred_at := nullif(v_effect.payload ->> 'occurred_at', '')::timestamptz;
-  exception when others then
-    raise exception 'invalid_resend_projection_time';
-  end;
-  v_status := v_effect.payload ->> 'status';
-  v_event_type := v_effect.payload ->> 'event_type';
-  v_recipient_digests := coalesce(v_effect.payload -> 'recipient_digests', '[]'::jsonb);
-  v_message_id := nullif(btrim(coalesce(v_effect.payload ->> 'message_id', '')), '');
-  if v_message_id is not null
-     and v_message_id ~ '^<[^<>[:space:]]{1,510}>$' then
-    update public.messages
-       set email_message_id = v_message_id
-     where email_delivery_id = v_effect.payload ->> 'resend_id'
-       and (email_message_id is null or email_message_id = v_message_id)
-    returning true into v_thread_linked;
-  end if;
-  select * into v_email
-    from public.email_events
-   where resend_id = v_effect.payload ->> 'resend_id'
-   order by created_at desc
-   limit 1
-   for update;
-  if not found then
-    v_result := jsonb_build_object('found', false, 'applied', false, 'skipped', 'unmatched_email');
-    return public.finish_integration_projection(p_effect_id, p_worker_id, v_result);
-  end if;
-  v_current_rank := case v_email.status
-    when 'sent' then 10 when 'delayed' then 20 when 'delivered' then 30
-    when 'bounced' then 40 when 'failed' then 40 when 'complained' then 50 else 0 end;
-  v_next_rank := case v_status
-    when 'sent' then 10 when 'delayed' then 20 when 'delivered' then 30
-    when 'bounced' then 40 when 'failed' then 40 when 'complained' then 50 else 0 end;
-  v_stale := (v_email.provider_occurred_at is not null
-      and (v_occurred_at is null or v_occurred_at < v_email.provider_occurred_at))
-    or v_next_rank < v_current_rank;
-  if not v_stale then
-    update public.email_events
-       set status = v_status,
-           provider_event_id = v_event.provider_event_id,
-           provider_occurred_at = coalesce(v_occurred_at, provider_occurred_at),
-           updated_at = now()
-     where id = v_email.id;
-  end if;
-  if not v_stale and v_event_type in ('email.bounced', 'email.complained')
-     and jsonb_typeof(v_recipient_digests) = 'array' then
-    insert into public.email_suppressions (email, reason, stream)
-    select distinct
-      lower(btrim(recipient.email)),
-      case when v_event_type = 'email.complained' then 'complaint' else 'hard_bounce' end,
-      'all'
-    from regexp_split_to_table(v_email.to_email, ',') as recipient(email)
-    where btrim(recipient.email) <> ''
-      and encode(extensions.digest(
-        convert_to('resend-recipient:v1:' || lower(btrim(recipient.email)), 'UTF8'),
-        'sha256'
-      ), 'hex') in (select jsonb_array_elements_text(v_recipient_digests))
-    on conflict (email, stream) do update
-      set reason = excluded.reason;
-  end if;
-  v_result := jsonb_build_object(
-    'found', true,
-    'applied', not v_stale,
-    'thread_linked', v_thread_linked,
-    'skipped', case when v_stale then 'stale_event' else null end
-  );
-  return public.finish_integration_projection(p_effect_id, p_worker_id, v_result);
-end;
-$$;
-
 create or replace function public.apply_qbo_change_integration_effect(
   p_effect_id uuid,
   p_worker_id text
@@ -926,11 +668,8 @@ end;
 $$;
 
 revoke all on function public.apply_shipstation_tracking_integration_effect(uuid, text) from public;
-revoke all on function public.apply_resend_delivery_integration_effect(uuid, text) from public;
 revoke all on function public.apply_qbo_change_integration_effect(uuid, text) from public;
 revoke execute on function public.apply_shipstation_tracking_integration_effect(uuid, text) from anon, authenticated;
-revoke execute on function public.apply_resend_delivery_integration_effect(uuid, text) from anon, authenticated;
 revoke execute on function public.apply_qbo_change_integration_effect(uuid, text) from anon, authenticated;
 grant execute on function public.apply_shipstation_tracking_integration_effect(uuid, text) to service_role;
-grant execute on function public.apply_resend_delivery_integration_effect(uuid, text) to service_role;
 grant execute on function public.apply_qbo_change_integration_effect(uuid, text) to service_role;

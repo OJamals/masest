@@ -332,7 +332,7 @@ test('SQL tracking projection is the sole fulfillment authority for every active
   const sql = await readFile(new URL('../supabase/schema-provider-inbox.sql', import.meta.url), 'utf8');
   const ownershipSource = await readFile(new URL('../functions/_lib/shipment-label-ownership.js', import.meta.url), 'utf8');
   const start = sql.indexOf('create or replace function public.apply_shipstation_tracking_integration_effect');
-  const end = sql.indexOf('create or replace function public.apply_resend_delivery_integration_effect', start);
+  const end = sql.indexOf('create or replace function public.apply_qbo_change_integration_effect', start);
   const tracking = sql.slice(start, end);
 
   assert.doesNotMatch(ownershipSource, /deriveOrderFulfillment|TERMINAL_TRACKING/,

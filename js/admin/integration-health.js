@@ -16,7 +16,6 @@ function providerName(value) {
   return {
     stripe: 'Stripe',
     shipstation: 'ShipStation',
-    resend: 'Resend',
     quickbooks: 'QuickBooks',
   }[value] || value;
 }

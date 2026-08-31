@@ -116,4 +116,12 @@ test('support integration migration owns message, projection, order request, and
   assert.match(sql, /on conflict \(order_id, type\) where status = 'open' do nothing/i);
   assert.match(sql, /revoke execute on function public\.append_support_message[\s\S]*from anon, authenticated/i);
   assert.match(sql, /grant execute on function public\.append_support_message[\s\S]*to service_role/i);
+  const inboundEmail = sql.match(/create or replace function public\.upsert_email_inbound_message[\s\S]*?grant execute on function public\.upsert_email_inbound_message/i)?.[0] || '';
+  assert.match(inboundEmail, /'email_reply'/i);
+  assert.match(inboundEmail, /p_external_message_id/);
+  assert.match(inboundEmail, /p_email_references/);
+  assert.match(inboundEmail, /v_message\.order_id is distinct from p_order_id/i);
+  assert.match(inboundEmail, /v_message\.user_id is distinct from p_user_id/i);
+  assert.match(inboundEmail, /v_message\.recipient_user_id is distinct from p_recipient_user_id/i);
+  assert.match(sql, /grant execute on function public\.upsert_email_inbound_message[\s\S]*to service_role/i);
 });

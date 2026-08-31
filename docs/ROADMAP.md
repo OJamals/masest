@@ -24,12 +24,14 @@ conversion engine — split into **Scheduled** (committed/near-term) and **Poten
   - DB migrations: apply via the **us-west-2 pooler** (`aws-1-us-west-2.pooler.supabase.com:5432`,
     user `postgres.mvfxzvkzcqmnwcoblvfc`) using the `pg` module. Direct host is IPv6-only (no sandbox egress).
 - **Stripe** — hosted Checkout (SAQ-A), Customer Portal, subscriptions. Webhook at `functions/api/stripe-webhook.js`.
-- **Resend** — transactional email. Verified sending domain is the **root `masest.co`**; `RESEND_FROM=MASEST <noreply@masest.co>`.
+- **Cloudflare Email Service** — transactional Workers binding, delivery-event queue,
+  inbound Email Routing, and Supabase Auth SMTP. Verified sending domain is
+  `send.masest.co`; support replies use the isolated `reply.masest.co` routing subdomain.
 - **Klaviyo** — marketing/newsletter (`functions/api/newsletter.js`).
 - **Turnstile** — CAPTCHA (sitekey in `js/config.js`).
 
 **Shared helpers** (`functions/_lib/supabase.js`): `adminClient`, `userFromRequest`, `json`, `readBody`,
-`companyForUser`, `requireStaff`, `companyEmails`, `sendEmail` (best-effort Resend; no-op without key),
+`companyForUser`, `requireStaff`, `companyEmails`, `sendEmail` (private Cloudflare service binding),
 `htmlEscape`. Reuse these — don't re-implement.
 
 **Deploy / git**
@@ -44,11 +46,11 @@ conversion engine — split into **Scheduled** (committed/near-term) and **Poten
   while PostgreSQL grants new functions to `PUBLIC` by default. Grant tables/functions only to
   `service_role` unless a browser role truly needs direct RLS-mediated access, then re-run
   `supabase/schema-rpc-hardening.sql`.
-- **Email deliverability:** Resend `last_event:"delivered"` means the recipient MX accepted at SMTP, NOT
-  that it hit the inbox. `@masest.co` is behind **Proofpoint**; senders must be allow-listed there or mail
-  is quarantined. (All current senders/recipients are now allow-listed.)
-- **`sendEmail` swallows errors** (best-effort). To debug a missing email, hit the Resend API directly
-  (`GET /domains`, `POST /emails`, `GET /emails/{id}` → `last_event`), not just the endpoint response.
+- **Email deliverability:** Cloudflare `message.delivered` means the recipient MX accepted at SMTP, NOT
+  that it hit the inbox. `@masest.co` is behind **Proofpoint**; inspect Cloudflare Email Sending logs plus
+  the app's `email_delivery_events` ledger before treating an accepted message as inbox delivery.
+- **`sendEmail` is best-effort at call sites.** Debug missing mail through `email_events`,
+  `email_delivery_events`, Cloudflare Email Sending logs, and Worker logs—not only the endpoint response.
 - **Playwright screenshots:** pass `reducedMotion: 'reduce'` or `.reveal` sections render blank.
 - **Glycol** is NOT a product card — its price list lives on `programs.html`.
 

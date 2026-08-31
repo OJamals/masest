@@ -44,9 +44,9 @@ test('delivery identity uses source plus normalized email and preserves provider
 
 test('delivery transitions cover sent, suppression, provider retry, network retry, and dead letter', () => {
   const now = Date.parse('2026-07-19T12:00:00.000Z');
-  assert.deepEqual(deliveryTransition({ ok: true, resendId: 're_1' }, 1, now), {
+  assert.deepEqual(deliveryTransition({ ok: true, providerMessageId: 'email_1' }, 1, now), {
     state: 'sent',
-    provider_message_id: 're_1',
+    provider_message_id: 'email_1',
     sent_at: '2026-07-19T12:00:00.000Z',
   });
   assert.deepEqual(deliveryTransition({ suppressed: true }, 1, now), {
@@ -55,8 +55,8 @@ test('delivery transitions cover sent, suppression, provider retry, network retr
   });
 
   for (const result of [
-    { status: 429, error: 'resend_429' },
-    { status: 500, error: 'resend_500' },
+    { status: 429, error: 'email_429' },
+    { status: 500, error: 'email_500' },
     { network: true, error: 'network_down' },
   ]) {
     const retry = deliveryTransition(result, 2, now);
@@ -66,12 +66,12 @@ test('delivery transitions cover sent, suppression, provider retry, network retr
   }
 
   assert.deepEqual(
-    deliveryTransition({ status: 500, error: 'resend_500' }, DELIVERY_MAX_ATTEMPTS, now),
-    { state: 'dead', last_error: 'resend_500' },
+    deliveryTransition({ status: 500, error: 'email_500' }, DELIVERY_MAX_ATTEMPTS, now),
+    { state: 'dead', last_error: 'email_500' },
   );
   assert.deepEqual(
-    deliveryTransition({ status: 400, error: 'resend_400' }, 1, now),
-    { state: 'dead', last_error: 'resend_400' },
+    deliveryTransition({ status: 400, error: 'email_400' }, 1, now),
+    { state: 'dead', last_error: 'email_400' },
   );
 });
 
@@ -204,7 +204,7 @@ test('partial blog failure stays incomplete until retry becomes terminal', async
     now: () => store.now,
     send: async (row) => (
       row.normalized_email.startsWith('retry')
-        ? { status: 500, error: 'resend_500' }
+        ? { status: 500, error: 'email_500' }
         : { ok: true }
     ),
   });

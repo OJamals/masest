@@ -104,7 +104,7 @@ for each row execute function public.prevent_order_number_change();
 create table if not exists public.order_provider_links (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.orders(id) on delete cascade,
-  provider text not null check (provider in ('stripe', 'shipstation', 'quickbooks', 'resend')),
+  provider text not null check (provider in ('stripe', 'shipstation', 'quickbooks')),
   object_type text not null check (object_type ~ '^[a-z][a-z0-9_]{0,63}$'),
   provider_object_id text not null check (length(provider_object_id) between 1 and 255),
   metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata) = 'object'),
@@ -155,7 +155,7 @@ as $$
 declare v_id uuid;
 begin
   if p_order_id is null
-     or p_provider not in ('stripe', 'shipstation', 'quickbooks', 'resend')
+     or p_provider not in ('stripe', 'shipstation', 'quickbooks')
      or p_object_type !~ '^[a-z][a-z0-9_]{0,63}$'
      or nullif(btrim(p_provider_object_id), '') is null
      or length(p_provider_object_id) > 255

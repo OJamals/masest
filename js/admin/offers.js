@@ -23,9 +23,8 @@ export function createOffersTab({ $, api, state, message, admSkeleton, admEmpty 
     $('offerForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       const audience = $('ofAud').value;
-      const withEmail = $('ofEmail').checked;
       // Mass, irreversible send — the only bulk outbound action in the admin; confirm like refunds do.
-      if (!(await confirmDialog(`Send this offer to ${audience || 'all'} accounts${withEmail ? ' and email them' : ''}?`, { confirmText: 'Send offer' }))) return;
+      if (!(await confirmDialog(`Send this offer to ${audience || 'all'} account dashboards?`, { confirmText: 'Send offer' }))) return;
       message('offerStatus', 'Sending…');
       try {
         const response = await api('/api/admin/offers', {
@@ -35,10 +34,9 @@ export function createOffersTab({ $, api, state, message, admSkeleton, admEmpty 
             body: $('ofBody').value.trim(),
             cta_url: $('ofCta').value.trim() || '/products.html',
             audience: $('ofAud').value,
-            send_email: $('ofEmail').checked,
           },
         });
-        message('offerStatus', `Sent to ${response.recipients || 0} account(s)${response.emailed ? ' + email' : ''}.`, 'ok');
+        message('offerStatus', `Sent to ${response.recipients || 0} account dashboard(s).`, 'ok');
         renderOffers(true);
       } catch (err) {
         message('offerStatus', err.data?.error || 'Could not send the offer. Retry.', 'err');

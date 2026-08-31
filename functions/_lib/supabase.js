@@ -211,7 +211,7 @@ export async function companyEmails(sb, companyId, category) {
   return [...new Set(Object.values(byId))];
 }
 
-// Fire-and-forget transactional email via Resend. No-op unless RESEND_API_KEY + recipients exist.
+// Transactional delivery uses the private Cloudflare Worker service binding below.
 // Load the subset of `emails` that are suppressed. Fails open (empty Set on error).
 // Returns Map<emailLower, Set<stream>> for the given addresses. Fails open (empty Map).
 export async function loadSuppressed(env, emails) {
@@ -232,21 +232,29 @@ export async function loadSuppressed(env, emails) {
 }
 
 // Best-effort insert of an email_events row. Never throws.
-export async function logEmailEvent(env, { resend_id, to_email, category, subject, status, error }) {
+export async function logEmailEvent(env, {
+  provider_message_id,
+  to_email,
+  category,
+  subject,
+  status,
+  error,
+}) {
   try {
     await adminClient(env).from('email_events').insert({
-      resend_id: resend_id || null, to_email, category: category || null,
+      provider_message_id: provider_message_id || null, to_email, category: category || null,
       subject: subject || null, status, error: error || null,
     });
   } catch { /* logging is advisory; never block the send */ }
 }
 
-// Update email_events status by Resend id (best-effort, idempotent).
-export async function updateEmailStatus(env, resendId, status) {
-  if (!resendId || !status) return;
+// Update email_events status by provider message id (best-effort, idempotent).
+export async function updateEmailStatus(env, providerMessageId, status) {
+  if (!providerMessageId || !status) return;
   try {
     await adminClient(env).from('email_events')
-      .update({ status, updated_at: new Date().toISOString() }).eq('resend_id', resendId);
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('provider_message_id', providerMessageId);
   } catch { /* advisory */ }
 }
 
@@ -260,14 +268,16 @@ export async function recordSuppression(env, email, reason, stream = 'all') {
   } catch { /* advisory */ }
 }
 
-async function providerIdempotencyHeader(value) {
-  const raw = String(value);
-  if (raw.length <= 256 && /^[\x20-\x7e]+$/.test(raw)) return raw;
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+async function emailIdempotencyKey(value) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(value)));
   const hex = [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('');
-  return `sha256:${hex}`;
+  return `v1/${hex}`;
+}
+
+export function emailConfigured(env) {
+  return typeof env?.EMAIL_SERVICE?.fetch === 'function';
 }
 
 export async function sendEmailResult(env, {
@@ -286,67 +296,78 @@ export async function sendEmailResult(env, {
 }) {
   const allTo = Array.isArray(to) ? to : [];
   const allBcc = Array.isArray(bcc) ? bcc : [];
-  if (!env.RESEND_API_KEY || (!allTo.length && !allBcc.length)) {
+  const bindingFetch = emailConfigured(env) ? env.EMAIL_SERVICE.fetch.bind(env.EMAIL_SERVICE) : null;
+  const serviceFetch = bindingFetch || (fetchImpl !== globalThis.fetch ? fetchImpl : null);
+  if (!serviceFetch || (!allTo.length && !allBcc.length)) {
     return { ok: false, retryable: false, error: 'email_not_configured' };
   }
-  const from = env.RESEND_FROM || 'MASEST <noreply@masest.co>';
+  if (categoryStream(category) === 'marketing') {
+    await logEmailEvent(env, {
+      to_email: [...allTo, ...allBcc].join(', '),
+      category,
+      subject,
+      status: 'failed',
+      error: 'marketing_provider_required',
+    });
+    return { ok: false, retryable: false, error: 'marketing_provider_required' };
+  }
   const suppressed = await suppressionLoader(env, [...allTo, ...allBcc]);
   // Per-stream: a marketing opt-out blocks only marketing categories; hard blocks ('all')
   // block everything. Transactional receipts survive a marketing unsubscribe.
   const toR = filterByStream(allTo, category, suppressed).slice(0, 50);
-  const bccR = filterByStream(allBcc, category, suppressed).slice(0, 50);
+  const bccR = filterByStream(allBcc, category, suppressed).slice(0, 50 - toR.length);
   const logTo = [...allTo, ...allBcc].join(', ');
   if (!toR.length && !bccR.length) {
     await logEmailEvent(env, { to_email: logTo, category, subject, status: 'failed', error: 'all_recipients_suppressed' });
     return { ok: false, suppressed: true, retryable: false, error: 'all_recipients_suppressed' };
   }
-  // Resend requires a `to`; if only bcc recipients survive, use `from` as the visible to.
-  const payloadTo = toR.length ? toR : [from];
   const sentTo = [...toR, ...bccR].join(', ');
-  // Idempotency-Key dedupes a logical email for 24h, so a retried Stripe/QBO webhook
-  // can't double-send. reply_to defaults to RESEND_REPLY_TO so replies reach a human.
-  const reply = replyTo || env.RESEND_REPLY_TO || null;
+  const reply = replyTo || env.EMAIL_REPLY_TO || null;
   // Always send multipart: a caller-supplied text wins, else derive one from the HTML.
   // text/plain improves spam scoring and serves plain-text clients + screen readers.
   const bodyText = text || htmlToText(html) || null;
-  const requestHeaders = { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' };
-  if (idempotencyKey) requestHeaders['Idempotency-Key'] = await providerIdempotencyHeader(idempotencyKey);
   const messageHeaders = Object.fromEntries(Object.entries(emailHeaders || {})
-    .filter(([key, value]) => /^[A-Za-z0-9-]{1,64}$/.test(key)
-      && typeof value === 'string' && value.length <= 4000 && !/[\r\n]/.test(value)));
-  // Marketing categories carry a one-click List-Unsubscribe (token-signed, single recipient)
-  // → suppresses only the 'marketing' stream, so the buyer keeps order/billing receipts.
-  if (categoryStream(category) === 'marketing' && env.EMAIL_UNSUB_SECRET && toR.length === 1) {
-    const target = toR[0];
-    const tok = await unsubscribeToken(target, env.EMAIL_UNSUB_SECRET);
-    const url = `${env.APP_URL || 'https://masest.co'}/api/email/unsubscribe?email=${encodeURIComponent(target)}&token=${tok}`;
-    messageHeaders['List-Unsubscribe'] = `<${url}>`;
-    messageHeaders['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
-  }
+    .filter(([key, value]) => /^(?:In-Reply-To|References|Thread-Topic|X-[A-Za-z0-9_-]+)$/i.test(key)
+      && typeof value === 'string' && value.length <= 2048 && !/[\r\n]/.test(value)));
+  const stableKey = await emailIdempotencyKey(idempotencyKey || `ephemeral/${crypto.randomUUID()}`);
   try {
-    const r = await fetchImpl('https://api.resend.com/emails', {
+    const r = await serviceFetch('https://email.service/v1/send', {
       method: 'POST',
-      headers: requestHeaders,
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        from, to: payloadTo, ...(bccR.length ? { bcc: bccR } : {}), subject, html,
-        ...(bodyText ? { text: bodyText } : {}), ...(reply ? { reply_to: reply } : {}),
+        stream: 'transactional',
+        idempotencyKey: stableKey,
+        to: toR,
+        bcc: bccR,
+        subject,
+        html,
+        ...(bodyText ? { text: bodyText } : {}),
+        ...(reply ? { replyTo: reply } : {}),
         ...(Object.keys(messageHeaders).length ? { headers: messageHeaders } : {}),
-        // Resend fetches `path` URLs itself; callers omit attachments when empty.
         ...(Array.isArray(attachments) && attachments.length ? { attachments } : {}),
       }),
     });
-    let resendId = null;
-    try { resendId = (await r.clone().json())?.id || null; } catch { /* non-json body */ }
+    const response = await r.json().catch(() => null);
+    const providerMessageId = String(response?.providerMessageId || '').trim() || null;
+    const ok = r.ok && response?.ok === true && Boolean(providerMessageId);
+    const status = Number.isInteger(response?.status) ? response.status : r.status;
+    const error = ok ? null : String(response?.error || 'email_service_invalid_response').slice(0, 200);
+    const retryable = ok ? false : response?.retryable === true || (!response && r.status >= 500);
     await logEmailEvent(env, {
-      resend_id: resendId, to_email: sentTo, category, subject,
-      status: r.ok ? 'sent' : 'failed', error: r.ok ? null : `resend_${r.status}`,
+      provider_message_id: providerMessageId,
+      to_email: sentTo,
+      category,
+      subject,
+      status: ok ? 'sent' : 'failed',
+      error,
     });
     return {
-      ok: r.ok,
-      resendId,
-      status: r.status,
-      retryable: r.status === 429 || r.status >= 500,
-      error: r.ok ? null : `resend_${r.status}`,
+      ok,
+      providerMessageId,
+      status,
+      retryable,
+      replayed: response?.replayed === true,
+      error,
     };
   } catch (err) {
     const error = String(err).slice(0, 200);
