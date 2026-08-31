@@ -22,17 +22,18 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/admin-crm-workspace.spec.mjs",
     "tools/blog-index.spec.mjs",
   ];
+  const verifyCore = "npm run check && npm test && npm run build && npm run verify:site && npm run qa:workspace-regressions && npm run qa:commerce-smoke && npm run qa:ui-critical:interaction";
 
   assert.match(scripts.check || "", /node tools\/check-js\.mjs/);
   assert.match(scripts.test || "", /node --test --test-concurrency=1 --test-timeout=\d+ tests\/\*\.test\.mjs/);
   assert.match(scripts.build || "", /node tools\/cf-build\.mjs/);
-  assert.match(scripts.verify || "", /npm run check && npm test && npm run build/);
-  assert.match(scripts.verify || "", /npm run qa:commerce-smoke/);
+  assert.equal(scripts["verify:core"], verifyCore);
+  assert.equal(scripts.verify, "npm run verify:core && npm run qa:ui-critical:performance");
   assert.equal(
     scripts["qa:workspace-regressions"],
     `playwright test ${workspaceSpecs.join(" ")} --workers=1 --reporter=line`,
   );
-  assert.match(scripts.verify || "", /npm run qa:workspace-regressions/);
+  assert.match(scripts["verify:core"] || "", /npm run qa:workspace-regressions/);
   assert.equal(
     scripts["qa:ui-critical"],
     "npm run qa:ui-critical:interaction && npm run qa:ui-critical:performance",
@@ -43,27 +44,27 @@ test("package exposes one-command build and verification scripts", () => {
   );
   assert.equal(
     scripts["qa:ui-critical:performance"],
-    `playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --retries=1 --reporter=line`,
+    `playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --retries=0 --reporter=line`,
   );
   assert.doesNotMatch(scripts["qa:ui-critical:interaction"], /tools\/\*\.spec/);
   assert.ok(
-    scripts.verify.indexOf("npm run build")
-      < scripts.verify.indexOf("npm run verify:site"),
+    scripts["verify:core"].indexOf("npm run build")
+      < scripts["verify:core"].indexOf("npm run verify:site"),
     "built-site validation must follow the build",
   );
   assert.ok(
-    scripts.verify.indexOf("npm run verify:site")
-      < scripts.verify.indexOf("npm run qa:workspace-regressions"),
+    scripts["verify:core"].indexOf("npm run verify:site")
+      < scripts["verify:core"].indexOf("npm run qa:workspace-regressions"),
     "workspace browser regressions must follow built-site validation",
   );
   assert.ok(
-    scripts.verify.indexOf("npm run qa:workspace-regressions")
-      < scripts.verify.indexOf("npm run qa:commerce-smoke"),
+    scripts["verify:core"].indexOf("npm run qa:workspace-regressions")
+      < scripts["verify:core"].indexOf("npm run qa:commerce-smoke"),
     "commerce smoke must follow workspace regressions",
   );
   assert.ok(
-    scripts.verify.indexOf("npm run qa:commerce-smoke")
-      < scripts.verify.indexOf("npm run qa:ui-critical"),
+    scripts["verify:core"].indexOf("npm run qa:commerce-smoke")
+      < scripts["verify:core"].indexOf("npm run qa:ui-critical:interaction"),
     "critical UI gate must follow built-site and commerce validation",
   );
   assert.match(scripts.serve || "", /python3 -m http\.server 4195/);

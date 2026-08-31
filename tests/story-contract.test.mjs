@@ -7,6 +7,7 @@ const home = read("index.html");
 const storyCss = read("css/story.css");
 const storyJs = read("js/story.js");
 const storyVisualSpec = read("tools/story-hmis-visual.spec.mjs");
+const storyPerformanceBudget = read("tools/story-performance-budget.mjs");
 const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<section class="story-summary/)?.[0] || "";
 const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
 const acts = [...story.matchAll(/<section class="act[^"]*"[^>]*data-act="(\d)"[^>]*data-scene="([^"]+)"/g)];
@@ -111,19 +112,24 @@ test("story uses compact native-scroll roads and scene renderer contracts", () =
   assert.match(storyJs, /rect\.bottom\s*>=\s*window\.innerHeight/);
 });
 
-test("story performance budgets normalize animation cadence against the measured idle baseline", () => {
-  assert.match(storyVisualSpec, /frameCoverage:\s*deltas\.length\s*\/\s*\(7000\s*\/\s*idleAverage\)/);
+test("story performance budgets normalize each sample and tolerate only one cadence outlier", () => {
+  assert.match(storyVisualSpec, /frameCoverage:\s*deltas\.length\s*\/\s*\(sweepDuration\s*\/\s*idleAverage\)/);
   assert.match(storyVisualSpec, /p95BaselineMultiple:\s*p95\s*\/\s*idleP95/);
   assert.match(storyVisualSpec, /p99BaselineMultiple:\s*p99\s*\/\s*idleP95/);
-  assert.match(storyVisualSpec, /metrics\.frameCoverage[\s\S]*toBeGreaterThanOrEqual\(2\s*\/\s*3\)/);
-  assert.match(storyVisualSpec, /metrics\.p95BaselineMultiple[\s\S]*toBeLessThanOrEqual\(2\.05\)/);
-  assert.match(storyVisualSpec, /metrics\.p99BaselineMultiple[\s\S]*toBeLessThanOrEqual\(3\.05\)/);
+  assert.match(storyVisualSpec, /STORY_PERFORMANCE_SAMPLE_COUNT/);
+  assert.match(storyVisualSpec, /evaluateStoryPerformanceSamples\(samples\)/);
+  assert.match(storyVisualSpec, /evaluation\.pass/);
+  assert.match(storyPerformanceBudget, /frameCoverage:\s*2\s*\/\s*3/);
+  assert.match(storyPerformanceBudget, /p95BaselineMultiple:\s*2\.05/);
+  assert.match(storyPerformanceBudget, /p99BaselineMultiple:\s*3\.05/);
+  assert.match(storyPerformanceBudget, /longTasks:\s*1/);
+  assert.match(storyPerformanceBudget, /Math\.floor\(samples\.length\s*\/\s*2\)\s*\+\s*1/);
   assert.doesNotMatch(storyVisualSpec, /over50/);
   assert.doesNotMatch(storyVisualSpec, /expect\(metrics\.p9[59][\s\S]*toBeLessThan\((?:25|35)\)/);
 });
 
 test("story long-task budget measures only the controlled-scroll interval", () => {
-  const idleBaselineEnd = storyVisualSpec.indexOf("requestAnimationFrame(idleFrame);\n    });");
+  const idleBaselineEnd = storyVisualSpec.indexOf("const idleDeltas = await collectFrameDeltas(idleDuration);");
   const longTaskObserverStart = storyVisualSpec.indexOf('observer.observe({ type: "longtask" });');
   const controlledScrollStart = storyVisualSpec.indexOf("function frame(now)");
 

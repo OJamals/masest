@@ -15,7 +15,11 @@ test('pushes and pull requests run the complete verification gate', () => {
   assert.match(workflow, /npm install --no-audit --no-fund/);
   assert.doesNotMatch(workflow, /cache:\s*npm/, 'setup-node cache requires a lockfile');
   assert.match(workflow, /playwright install --with-deps chromium/);
-  assert.match(workflow, /npm run verify/);
+  assert.match(workflow, /run: npm run verify:core/);
+  assert.match(workflow, /story_performance:[\s\S]+run: npm run qa:ui-critical:performance/);
+  assert.match(workflow, /deploy:[\s\S]+needs: \[verify, story_performance\]/);
+  assert.match(workflow, /uses: actions\/upload-artifact@v7/);
+  assert.match(workflow, /uses: actions\/download-artifact@v8/);
   assert.match(workflow, /contents:\s*read/);
 });
 

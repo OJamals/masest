@@ -1,5 +1,9 @@
 import { spawn } from "node:child_process";
 import { expect, test } from "@playwright/test";
+import {
+  STORY_PERFORMANCE_SAMPLE_COUNT,
+  evaluateStoryPerformanceSamples,
+} from "./story-performance-budget.mjs";
 
 const PORT = 4194;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -653,92 +657,108 @@ test("desktop story stays inside a controlled-scroll frame budget", async ({ pag
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
 
-  const metrics = await page.evaluate(async () => {
+  const samples = await page.evaluate(async ({ sampleCount, sweepDuration, idleDuration }) => {
     const story = document.getElementById("story");
     const startY = story.offsetTop;
     const endY = startY + story.offsetHeight - innerHeight;
-    const idleDeltas = [];
-    const deltas = [];
-    const longTasks = [];
-    let observer = null;
+    const wait = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
 
-    await new Promise((resolve) => {
-      let startedAt = 0;
-      let previous = 0;
-      function idleFrame(now) {
-        if (!startedAt) {
-          startedAt = now;
-          previous = now;
-        } else {
-          idleDeltas.push(now - previous);
-          previous = now;
+    async function collectFrameDeltas(duration) {
+      const frameDeltas = [];
+      await new Promise((resolve) => {
+        let startedAt = 0;
+        let previous = 0;
+        function idleFrame(now) {
+          if (!startedAt) {
+            startedAt = now;
+            previous = now;
+          } else {
+            frameDeltas.push(now - previous);
+            previous = now;
+          }
+          if (now - startedAt < duration) requestAnimationFrame(idleFrame);
+          else resolve();
         }
-        if (now - startedAt < 2000) requestAnimationFrame(idleFrame);
-        else resolve();
-      }
-      requestAnimationFrame(idleFrame);
-    });
-
-    if ("PerformanceObserver" in window
-      && PerformanceObserver.supportedEntryTypes?.includes("longtask")) {
-      observer = new PerformanceObserver((list) => {
-        longTasks.push(...list.getEntries().map((entry) => entry.duration));
+        requestAnimationFrame(idleFrame);
       });
-      observer.observe({ type: "longtask" });
+      return frameDeltas;
     }
 
-    await new Promise((resolve) => {
-      let startedAt = 0;
-      let previous = 0;
-      function frame(now) {
-        if (!startedAt) {
-          startedAt = now;
-          previous = now;
-        } else {
-          deltas.push(now - previous);
-          previous = now;
-        }
-        const progress = Math.min(1, (now - startedAt) / 7000);
-        scrollTo(0, startY + (endY - startY) * progress);
-        if (progress < 1) requestAnimationFrame(frame);
-        else resolve();
-      }
-      requestAnimationFrame(frame);
-    });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    longTasks.push(...(observer?.takeRecords() || []).map((entry) => entry.duration));
-    observer?.disconnect();
+    const results = [];
+    for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex += 1) {
+      scrollTo(0, startY);
+      window.ScrollTrigger.update();
+      await wait(400);
+      const idleDeltas = await collectFrameDeltas(idleDuration);
+      const deltas = [];
+      const longTasks = [];
+      let observer = null;
 
-    const sorted = deltas.slice().sort((a, b) => a - b);
-    const idleSorted = idleDeltas.slice().sort((a, b) => a - b);
-    const percentile = (fraction) => sorted[Math.min(
-      sorted.length - 1,
-      Math.floor(sorted.length * fraction),
-    )];
-    const idleAverage = idleDeltas.reduce((sum, value) => sum + value, 0) / idleDeltas.length;
-    const idleP95 = idleSorted[Math.min(idleSorted.length - 1, Math.floor(idleSorted.length * .95))];
-    const average = deltas.reduce((sum, value) => sum + value, 0) / deltas.length;
-    const p95 = percentile(.95);
-    const p99 = percentile(.99);
-    return {
-      frames: deltas.length,
-      frameCoverage: deltas.length / (7000 / idleAverage),
-      idleAverage,
-      idleP95,
-      average,
-      p95,
-      p95BaselineMultiple: p95 / idleP95,
-      p99,
-      p99BaselineMultiple: p99 / idleP95,
-      max: sorted.at(-1),
-      over20: deltas.filter((value) => value > 20).length,
-      longTasks: longTasks.length,
-    };
+      if ("PerformanceObserver" in window
+        && PerformanceObserver.supportedEntryTypes?.includes("longtask")) {
+        observer = new PerformanceObserver((list) => {
+          longTasks.push(...list.getEntries().map((entry) => entry.duration));
+        });
+        observer.observe({ type: "longtask" });
+      }
+
+      await new Promise((resolve) => {
+        let startedAt = 0;
+        let previous = 0;
+        function frame(now) {
+          if (!startedAt) {
+            startedAt = now;
+            previous = now;
+          } else {
+            deltas.push(now - previous);
+            previous = now;
+          }
+          const progress = Math.min(1, (now - startedAt) / sweepDuration);
+          scrollTo(0, startY + (endY - startY) * progress);
+          if (progress < 1) requestAnimationFrame(frame);
+          else resolve();
+        }
+        requestAnimationFrame(frame);
+      });
+      await wait(0);
+      longTasks.push(...(observer?.takeRecords() || []).map((entry) => entry.duration));
+      observer?.disconnect();
+
+      const sorted = deltas.slice().sort((a, b) => a - b);
+      const idleSorted = idleDeltas.slice().sort((a, b) => a - b);
+      const percentile = (fraction) => sorted[Math.min(
+        sorted.length - 1,
+        Math.floor(sorted.length * fraction),
+      )];
+      const idleAverage = idleDeltas.reduce((sum, value) => sum + value, 0) / idleDeltas.length;
+      const idleP95 = idleSorted[Math.min(idleSorted.length - 1, Math.floor(idleSorted.length * .95))];
+      const average = deltas.reduce((sum, value) => sum + value, 0) / deltas.length;
+      const p95 = percentile(.95);
+      const p99 = percentile(.99);
+      results.push({
+        sample: sampleIndex + 1,
+        frames: deltas.length,
+        frameCoverage: deltas.length / (sweepDuration / idleAverage),
+        idleAverage,
+        idleP95,
+        average,
+        p95,
+        p95BaselineMultiple: p95 / idleP95,
+        p99,
+        p99BaselineMultiple: p99 / idleP95,
+        max: sorted.at(-1),
+        over20: deltas.filter((value) => value > 20).length,
+        longTasks: longTasks.length,
+      });
+    }
+    return results;
+  }, {
+    sampleCount: STORY_PERFORMANCE_SAMPLE_COUNT,
+    sweepDuration: 7000,
+    idleDuration: 2000,
   });
 
-  console.log("story-performance", JSON.stringify(metrics));
-  expect(metrics.frameCoverage, JSON.stringify(metrics)).toBeGreaterThanOrEqual(2 / 3);
-  expect(metrics.p95BaselineMultiple, JSON.stringify(metrics)).toBeLessThanOrEqual(2.05);
-  expect(metrics.p99BaselineMultiple, JSON.stringify(metrics)).toBeLessThanOrEqual(3.05);
-  expect(metrics.longTasks, JSON.stringify(metrics)).toBeLessThanOrEqual(1);
+  const evaluation = evaluateStoryPerformanceSamples(samples);
+  console.log("story-performance", JSON.stringify({ samples, evaluation }));
+  expect(evaluation.pass, JSON.stringify({ samples, evaluation })).toBe(true);
 });
