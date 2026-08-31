@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 259,
-  "usedCount": 150,
+  "count": 260,
+  "usedCount": 151,
   "bufferCount": 109,
   "icons": [
     {
@@ -32,6 +32,11 @@
     {
       "name": "arrow-counter-clockwise",
       "cp": "E038",
+      "src": "used"
+    },
+    {
+      "name": "arrow-left",
+      "cp": "E058",
       "src": "used"
     },
     {

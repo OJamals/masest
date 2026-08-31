@@ -8,10 +8,10 @@
 <meta name="description" content="MASEST VertKleen staff admin.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
-<link rel="stylesheet" href="vendor/phosphor/style.css?v=20260711u">
+<link rel="stylesheet" href="vendor/phosphor/style.css?v=20260830g">
 <link rel="stylesheet" href="css/style.css?v=20260829b">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
-<link rel="stylesheet" href="css/components.css?v=20260830f">
+<link rel="stylesheet" href="css/components.css?v=20260830g">
 <style>
   /* The staff chrome bar is sticky at 59px, so anchor jumps and scrollIntoView
      (the #qbo deep link, for one) would otherwise land their target underneath
@@ -347,6 +347,9 @@
   .adm-content-layout { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr); gap: 16px; align-items: start; }
   .adm-content-stack { display: grid; gap: 16px; min-width: 0; }
   .adm-content-side { display: grid; gap: 16px; min-width: 0; }
+  /* Shared .btn forces inline-flex for touch targets; compact-only navigation must override it. */
+  .adm-content-mobile-back,
+  .adm-content-mobile-new { display: none !important; }
   .adm-content-workspace-tabs { display: flex; gap: 6px; margin: 0 -4px 16px; padding: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
   .adm-content-workspace-tab { min-width: max-content; min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid transparent; border-radius: var(--r-input); background: transparent; color: var(--ink-soft); padding: 9px 11px; font: inherit; font-size: .84rem; font-weight: 800; cursor: pointer; }
   .adm-content-workspace-tab:hover { background: var(--panel); color: var(--ink); }
@@ -677,6 +680,11 @@
     .adm-content-hub { grid-template-columns: 1fr; }
     .adm-content-hub-metrics { justify-content: flex-start; }
     .adm-content-layout { grid-template-columns: 1fr; }
+    .adm-content-layout[data-mobile-view="list"] > .adm-content-stack,
+    .adm-content-layout[data-mobile-view="editor"] > .adm-content-side { display: none; }
+    .adm-content-mobile-back,
+    .adm-content-mobile-new { display: inline-flex !important; min-height: 44px; }
+    .adm-content-mobile-back { flex-basis: 100%; justify-content: flex-start; }
     .variant-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .variant-active { align-self: center; }
   }
@@ -698,8 +706,9 @@
     .adm-content-hub p.muted { display: none; }
     .adm-content-hub-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 6px; }
     .adm-content-hub-metrics span { min-width: 0; padding: 8px; font-size: .7rem; }
-    .adm-content-workspace-tabs { margin-inline: -2px; padding-inline: 2px; }
-    .adm-content-workspace-tab { flex: 0 0 auto; }
+    .adm-content-workspace-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-inline: 0; padding: 0 0 12px; overflow: visible; }
+    .adm-content-workspace-tab { min-width: 0; min-height: 44px; }
+    .adm-content-workspace-tab:last-child { grid-column: 1 / -1; }
     .adm-content-workspace-actions { grid-template-columns: 1fr; }
     .adm-content-workspace-actions > .btn { width: 100%; }
     .adm-content-workspace-actions [data-content-action-group="manage"] { justify-content: stretch; }
@@ -1216,6 +1225,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260830f"></script>
+<script type="module" src="js/admin.js?v=20260830g"></script>
 </body>
 </html>

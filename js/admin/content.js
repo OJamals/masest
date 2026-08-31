@@ -1,15 +1,15 @@
-import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260830f";
-import { renderMarkdown } from "../md.js?v=20260830f";
-import { supabase } from "../auth.js?v=20260830f";
-import { createContentAssets } from "./content-assets.js?v=20260830f";
-import { openImageLibraryPicker } from "./image-library-picker.js?v=20260830f";
-import { createContentRevisions } from "./content-revisions.js?v=20260830f";
+import { esc, delegate, confirmDialog, fmtDate } from "../util.js?v=20260830g";
+import { renderMarkdown } from "../md.js?v=20260830g";
+import { supabase } from "../auth.js?v=20260830g";
+import { createContentAssets } from "./content-assets.js?v=20260830g";
+import { openImageLibraryPicker } from "./image-library-picker.js?v=20260830g";
+import { createContentRevisions } from "./content-revisions.js?v=20260830g";
 import {
   createRichTextEditor,
   insertMarkdownIntoRichEditor,
   referencePickerTemplate as richReferencePickerTemplate,
   richEditorTemplate,
-} from "./rich-editor.js?v=20260830f";
+} from "./rich-editor.js?v=20260830g";
 import {
   CONTENT_TYPE_DEFINITIONS,
   contentPageOptionsFromSitemap,
@@ -18,7 +18,7 @@ import {
   normalizeStructuredPayload,
   structuredPayloadKeys,
   validateStructuredPayload,
-} from "../content-types.js?v=20260830f";
+} from "../content-types.js?v=20260830g";
 
 const TYPES = contentTypeOptions();
 const ASSET_FIELD_KEYS = new Set(["image", "image_after", "og_image", "hero"]);
@@ -324,8 +324,11 @@ function formTemplate({ blog = false, admEmpty } = {}) {
   return `
     <div class="adm-card adm-content-editor">
       <div class="adm-panel-header">
+        <button class="btn btn-ghost btn-sm adm-content-mobile-back" type="button" data-content-mobile-back data-permission-exempt>
+          <i class="ph ph-arrow-left" aria-hidden="true"></i> Back to ${blog ? "posts" : "pages"}
+        </button>
         <div>
-          <h2 id="contentWorkspaceHeading">${blog ? "New blog post" : "New content entry"}</h2>
+          <h2 id="contentWorkspaceHeading" tabindex="-1">${blog ? "New blog post" : "New content entry"}</h2>
           <p class="muted">Copy, SEO, images, preview, schedule, and publish in one place.</p>
         </div>
         <span id="contentEditorBadge" class="badge" data-s="draft">draft</span>
@@ -597,9 +600,12 @@ function shellTemplate(admEmpty) {
           <div class="adm-card adm-content-list">
             <div class="adm-panel-header">
               <div>
-                <h2>Content library</h2>
+                <h2 id="contentLibraryHeading" tabindex="-1">Content library</h2>
                 <p class="muted">Pick an entry to edit. Filters only change this list, not the review queue.</p>
               </div>
+              <button class="btn btn-secondary btn-sm adm-content-mobile-new" type="button" data-content-mobile-new data-capability="content.write">
+                <i class="ph ph-plus" aria-hidden="true"></i> New page
+              </button>
             </div>
             <div class="adm-tools adm-tools-flush">
               <input id="contentSearch" name="content_search" class="adm-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search title or slug…" aria-label="Search content library">
@@ -643,9 +649,12 @@ function blogShellTemplate(admEmpty) {
           <div class="adm-card adm-content-list">
             <div class="adm-panel-header">
               <div>
-                <h2>Current posts</h2>
+                <h2 id="contentLibraryHeading" tabindex="-1">Current posts</h2>
                 <p class="muted">Published posts, drafts, review items, and scheduled posts scoped to the blog.</p>
               </div>
+              <button class="btn btn-secondary btn-sm adm-content-mobile-new" type="button" data-content-mobile-new data-capability="content.write">
+                <i class="ph ph-plus" aria-hidden="true"></i> New post
+              </button>
             </div>
             <div id="contentList" class="adm-content-list-body">${admEmpty("ph-note-pencil", "No blog posts", "Create a blog draft to get started.")}</div>
           </div>
@@ -776,6 +785,22 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
 
   function activeRoot() {
     return $(mountedRootId) || $("admContent") || $("admBlog");
+  }
+
+  function setMobileContentView(view, { focus = false } = {}) {
+    const layout = activeRoot()?.querySelector(".adm-content-layout");
+    if (!layout) return;
+    const nextView = view === "editor" ? "editor" : "list";
+    layout.dataset.mobileView = nextView;
+    if (!focus || !window.matchMedia("(max-width: 1060px)").matches) return;
+    const target = nextView === "editor"
+      ? $("contentWorkspaceHeading")
+      : $("contentLibraryHeading");
+    if (!target) return;
+    requestAnimationFrame(() => {
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: "start" });
+    });
   }
 
   function setMutationPending(pending) {
@@ -1054,6 +1079,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     editorLockOwned = false;
     formDirty = false;
     root.innerHTML = blog ? blogShellTemplate(admEmpty) : shellTemplate(admEmpty);
+    setMobileContentView("list");
     contentWorkspaceTab = "copy";
     setContentWorkspaceTab(contentWorkspaceTab);
     renderStructuredFields(blog ? "blog_post" : "service", {});
@@ -1773,12 +1799,32 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
   }
 
   async function editEntry(key) {
-    if (!(await confirmDiscardEdits())) return;
-    const [type, slug, locale] = String(key || "").split(":");
+    const entryKey = String(key || "");
+    if (formDirty && entryKey && entryKey === currentEntryKey) {
+      setMobileContentView("editor", { focus: true });
+      return;
+    }
+    if (!(await confirmDiscardEdits())) {
+      setMobileContentView("editor", { focus: true });
+      return;
+    }
+    const [type, slug, locale] = entryKey.split(":");
     const entry = [...(state.content || []), ...(workflowEntries || [])].find((row) => (
       row.type === type && row.slug === slug && (row.locale || "en") === (locale || "en")
     ));
-    if (entry) populateForm(entry);
+    if (entry) {
+      populateForm(entry);
+      setMobileContentView("editor", { focus: true });
+    }
+  }
+
+  async function startNewEntry() {
+    if (!(await confirmDiscardEdits())) {
+      setMobileContentView("editor", { focus: true });
+      return;
+    }
+    populateForm();
+    setMobileContentView("editor", { focus: true });
   }
 
 
@@ -1885,6 +1931,10 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     delegate(root, "click", "[data-content-workspace-tab]", (_event, button) => {
       setContentWorkspaceTab(button.dataset.contentWorkspaceTab || "copy");
     });
+    delegate(root, "click", "[data-content-mobile-back]", () => {
+      setMobileContentView("list", { focus: true });
+    });
+    delegate(root, "click", "[data-content-mobile-new]", () => startNewEntry());
     delegate(root, "click", "[data-content-edit]", (_event, button) => editEntry(button.dataset.contentEdit));
     delegate(root, "click", "[data-content-revision]", (_event, button) => revisions.inspectRevision(button.dataset.contentRevision));
     delegate(root, "click", "[data-content-revision-restore]", (_event, button) => restoreRevision(button.dataset.contentRevisionRestore));
@@ -1896,7 +1946,7 @@ export function createContentTab({ $, api, state, admSkeleton, admEmpty }) {
     delegate(root, "click", "[data-content-workflow]", (_event, button) => runWorkflow(button.dataset.contentWorkflow));
     delegate(root, "click", "[data-content-action]", (_event, button) => {
       const action = button.dataset.contentAction;
-      if (action === "new") return confirmDiscardEdits().then((ok) => { if (ok) populateForm(); });
+      if (action === "new") return startNewEntry();
       if (action === "duplicate") return duplicateContent();
       if (action === "lock") return updateContentLock("lock");
       if (action === "unlock") return updateContentLock("unlock");

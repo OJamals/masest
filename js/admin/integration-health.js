@@ -1,5 +1,5 @@
-import { api } from '../auth.js?v=20260830f';
-import { esc } from '../util.js?v=20260830f';
+import { api } from '../auth.js?v=20260830g';
+import { esc } from '../util.js?v=20260830g';
 
 const $ = (id) => document.getElementById(id);
 

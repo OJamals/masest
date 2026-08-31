@@ -301,3 +301,98 @@ test("rich-editor burst typing performs one preview update and uses a concise li
   await expect(page.locator("#admBlog [data-rich-editor-output]")).toHaveValue("Burst preview body");
   await expect(page.locator("#admBlog #contentPreviewStatus")).toContainText("Preview updated");
 });
+
+test("mobile CMS opens list-first and preserves unsaved edits when returning to posts", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootAsStaff(page);
+  await page.goto(`${BASE_URL}/admin.html#blog`);
+
+  const layout = page.locator("#admBlog .adm-content-layout");
+  const editor = page.locator("#admBlog .adm-content-stack");
+  const library = page.locator("#admBlog .adm-content-side");
+  await expect(layout).toHaveAttribute("data-mobile-view", "list");
+  await expect(library).toBeVisible();
+  await expect(editor).toBeHidden();
+  await expect(page.locator("#admBlog [data-content-mobile-new]")).toBeVisible();
+
+  await page.locator("#admBlog [data-content-edit]").first().click();
+  await expect(layout).toHaveAttribute("data-mobile-view", "editor");
+  await expect(editor).toBeVisible();
+  await expect(library).toBeHidden();
+  await expect(page.locator("#admBlog #contentWorkspaceHeading")).toHaveText("Descaling 101");
+  await expect(page.locator("#admBlog #contentWorkspaceHeading")).toBeFocused();
+  await expect(page.locator("#admBlog [data-content-mobile-back]")).toContainText("Back to posts");
+
+  const tabBounds = await page.locator("#admBlog [data-content-workspace-tab]").evaluateAll((tabs) => (
+    tabs.map((tab) => {
+      const rect = tab.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, height: rect.height };
+    })
+  ));
+  expect(tabBounds).toHaveLength(5);
+  for (const bounds of tabBounds) {
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(390);
+    expect(bounds.height).toBeGreaterThanOrEqual(44);
+  }
+
+  await enableStubbedBlogEditor(page);
+  await page.locator("#admBlog #contentTitle").fill("Unsaved mobile title");
+  await page.locator("#admBlog [data-content-mobile-back]").click();
+  await expect(layout).toHaveAttribute("data-mobile-view", "list");
+  await expect(library).toBeVisible();
+  await expect(editor).toBeHidden();
+  await expect(page.locator("#admBlog #contentLibraryHeading")).toBeFocused();
+  await expect(page.locator("#admBlog #contentTitle")).toHaveValue("Unsaved mobile title");
+  await expect(page.locator("dialog.confirm-dialog")).toHaveCount(0);
+
+  await page.locator("#admBlog [data-content-edit]").first().click();
+  await expect(layout).toHaveAttribute("data-mobile-view", "editor");
+  await expect(page.locator("#admBlog #contentTitle")).toHaveValue("Unsaved mobile title");
+  await expect(page.locator("dialog.confirm-dialog")).toHaveCount(0);
+
+  await page.locator("#admBlog [data-content-mobile-back]").click();
+  const newButton = page.locator("#admBlog [data-content-mobile-new]");
+  await newButton.evaluate((button) => {
+    button.disabled = false;
+    button.removeAttribute("aria-disabled");
+    button.removeAttribute("data-permission-disabled");
+    button.removeAttribute("title");
+  });
+  await newButton.click();
+  await expect(page.locator("dialog.confirm-dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Keep editing" }).click();
+  await expect(layout).toHaveAttribute("data-mobile-view", "editor");
+  await expect(page.locator("#admBlog #contentTitle")).toHaveValue("Unsaved mobile title");
+});
+
+test("mobile Website library can start a clean entry", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootAsStaff(page);
+  await page.goto(`${BASE_URL}/admin.html#content`);
+
+  const layout = page.locator("#admContent .adm-content-layout");
+  await expect(layout).toHaveAttribute("data-mobile-view", "list");
+  const newButton = page.locator("#admContent [data-content-mobile-new]");
+  await newButton.evaluate((button) => {
+    button.disabled = false;
+    button.removeAttribute("aria-disabled");
+    button.removeAttribute("data-permission-disabled");
+    button.removeAttribute("title");
+  });
+  await newButton.click();
+  await expect(layout).toHaveAttribute("data-mobile-view", "editor");
+  await expect(page.locator("#admContent #contentWorkspaceHeading")).toHaveText("New content entry");
+  await expect(page.locator("#admContent #contentTitle")).toHaveValue("");
+});
+
+test("desktop CMS keeps editor and library together without mobile navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await bootAsStaff(page);
+  await page.goto(`${BASE_URL}/admin.html#blog`);
+
+  await expect(page.locator("#admBlog .adm-content-stack")).toBeVisible();
+  await expect(page.locator("#admBlog .adm-content-side")).toBeVisible();
+  await expect(page.locator("#admBlog [data-content-mobile-back]")).toBeHidden();
+  await expect(page.locator("#admBlog [data-content-mobile-new]")).toBeHidden();
+});

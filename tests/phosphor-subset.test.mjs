@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectUsedIcons, resolveUsed, bufferIcons } from "../tools/subset-phosphor.mjs";
+import { COMPONENT_VERSION } from "../tools/static-release.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const manifest = JSON.parse(readFileSync(`${root}/vendor/phosphor/subset-icons.json`, "utf8"));
@@ -57,6 +58,8 @@ test("served Phosphor woff2 is the subset, not the full font", () => {
 test("admin refreshes the Phosphor CSS and subset font after icon changes", () => {
   const admin = readFileSync(`${root}/admin.html`, "utf8");
   const css = readFileSync(`${root}/vendor/phosphor/style.css`, "utf8");
-  assert.match(admin, /vendor\/phosphor\/style\.css\?v=\d{8}[a-z]/, "admin should cache-bust the Phosphor stylesheet");
-  assert.match(css, /Phosphor\.woff2\?v=\d{8}[a-z]/, "Phosphor stylesheet should cache-bust the subset font");
+  const stylesheetRelease = admin.match(/vendor\/phosphor\/style\.css\?v=(\d{8}[a-z])/)?.[1];
+  const fontRelease = css.match(/Phosphor\.woff2\?v=(\d{8}[a-z])/)?.[1];
+  assert.equal(stylesheetRelease, COMPONENT_VERSION, "admin should request the current Phosphor stylesheet release");
+  assert.equal(fontRelease, COMPONENT_VERSION, "Phosphor stylesheet should request the current subset font release");
 });

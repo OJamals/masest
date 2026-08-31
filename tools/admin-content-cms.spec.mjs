@@ -807,6 +807,8 @@ test("mobile content editor switches to page metadata and page-section fields wi
 
   await page.goto(`${BASE_URL}/admin.html#content`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator("[data-content-mobile-new]").click();
+  await expect(page.locator("#admContent .adm-content-layout")).toHaveAttribute("data-mobile-view", "editor");
   await page.locator("#contentType").selectOption("page_meta");
   await expect(page.locator('[data-content-payload-field="page"]')).toBeVisible();
   await expect(page.locator('[data-content-payload-field="description"]')).toBeVisible();
@@ -820,6 +822,8 @@ test("mobile content editor switches to page metadata and page-section fields wi
   expect(overflow).toBe(false);
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-structured-mobile.png` });
+  await page.locator("[data-content-mobile-back]").click();
+  await expect(page.locator("#contentWorkflowQueue")).toBeVisible();
   await page.locator("#contentWorkflowQueue").scrollIntoViewIfNeeded();
   await page.evaluate(() => window.scrollBy(0, -88));
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-operations-mobile.png` });
@@ -981,7 +985,7 @@ test("blog sub-view renders scoped editor with formatting, references, preview, 
   await expect(page.locator("#admApp")).toBeVisible();
   await expect(page.locator('[data-tab="content"]')).toHaveAttribute("aria-selected", "true");
   await expect(page.locator('#contentToggle [data-content-view="blog"]')).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#admBlog")).toContainText("Blog editor");
+  await expect(page.locator("#admBlog")).toContainText("Blog publishing");
   await expect(page.locator("#admBlog")).toContainText("Current posts");
   await expect(page.locator("#admBlog")).toContainText("What HMIS 0-0-0 Actually Means");
   await expect(page.locator("#contentType")).toHaveValue("blog_post");
