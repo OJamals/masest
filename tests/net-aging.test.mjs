@@ -82,7 +82,7 @@ test('omitting nowMs falls back to current time without throwing', () => {
 // ---- source-contract wiring ----
 test('admin orders endpoint selects net_terms_days and attaches net_aging', () => {
   const src = readFileSync(join(root, 'functions/api/admin/orders.js'), 'utf8');
-  assert.match(src, /companies\(name,net_terms_days\)/, 'GET select must include net_terms_days');
+  assert.match(src, /companies!orders_company_id_fkey\(name,net_terms_days\)/, 'GET select must include net_terms_days through the customer-company relationship');
   assert.match(src, /netAging/, 'must use the netAging helper');
   assert.match(src, /net_aging/, 'must attach a net_aging field per order');
 });

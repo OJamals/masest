@@ -45,6 +45,7 @@ test('canonical support append delegates one atomic database call', async () => 
     args: {
       p_company_id: COMPANY_ID,
       p_user_id: USER_ID,
+      p_recipient_user_id: null,
       p_sender_role: 'buyer',
       p_body: 'Need help with delivery',
       p_order_id: ORDER_ID,
@@ -104,6 +105,8 @@ test('support integration migration owns message, projection, order request, and
   assert.match(sql, /create or replace function public\.project_support_message\s*\(/i);
   assert.match(sql, /update public\.companies/i);
   assert.match(sql, /support_last_order_id/i);
+  assert.match(sql, /recipient_user_id/i);
+  assert.match(sql, /email_message_id/i);
   assert.match(sql, /where id = p_order_id\s+and company_id = p_company_id/i);
   assert.match(sql, /create or replace function public\.create_order_support_request\s*\(/i);
   assert.match(sql, /insert into public\.order_requests/i);

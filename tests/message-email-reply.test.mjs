@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { companyIdFromReplyAddress, inboundDomain, inboundReplyText, messageReplyAddress } from '../functions/_lib/message-replies.js';
-import { shouldEmailClosedChatReply } from '../functions/_lib/message-notifications.js';
+import { shouldEmailSupportRecipient } from '../functions/_lib/message-notifications.js';
 
 const companyId = '9b081f60-7410-4b04-bf1e-30f109b20b9a';
 const env = { APP_URL: 'https://masest.co', RESEND_INBOUND_DOMAIN: 'wilaucoreu.resend.app', MESSAGE_REPLY_SECRET: 'test-secret' };
@@ -27,13 +27,11 @@ test('inbound reply text drops common quoted content and caps the payload', () =
   assert.equal(inboundReplyText('x'.repeat(5000)).length, 4000);
 });
 
-test('email sends only for an unanswered buyer question after chat is closed', () => {
-  const question = { sender_role: 'buyer', user_id: 'buyer-1' };
-  assert.equal(shouldEmailClosedChatReply(question, { notify_messages: true, support_chat_open: false }, 'buyer@example.com'), true);
-  assert.equal(shouldEmailClosedChatReply(question, { notify_messages: true, support_chat_open: true }, 'buyer@example.com'), false);
-  assert.equal(shouldEmailClosedChatReply({ sender_role: 'staff', user_id: null }, { notify_messages: true, support_chat_open: false }, 'buyer@example.com'), false);
-  assert.equal(shouldEmailClosedChatReply(question, { notify_messages: false, support_chat_open: false }, 'buyer@example.com'), false);
+test('selected buyers receive proactive support email unless opted out or actively in chat', () => {
+  assert.equal(shouldEmailSupportRecipient({ notify_messages: true, support_chat_open: false }, 'buyer@example.com'), true);
+  assert.equal(shouldEmailSupportRecipient({ notify_messages: true, support_chat_open: true }, 'buyer@example.com'), false);
+  assert.equal(shouldEmailSupportRecipient({ notify_messages: false, support_chat_open: false }, 'buyer@example.com'), false);
   const now = Date.parse('2026-07-11T05:00:00.000Z');
-  assert.equal(shouldEmailClosedChatReply(question, { notify_messages: true, support_chat_open: true, support_chat_seen_at: '2026-07-11T04:58:00.000Z' }, 'buyer@example.com', now), true);
-  assert.equal(shouldEmailClosedChatReply(question, { notify_messages: true, support_chat_open: true, support_chat_seen_at: '2026-07-11T04:59:40.000Z' }, 'buyer@example.com', now), false);
+  assert.equal(shouldEmailSupportRecipient({ notify_messages: true, support_chat_open: true, support_chat_seen_at: '2026-07-11T04:58:00.000Z' }, 'buyer@example.com', now), true);
+  assert.equal(shouldEmailSupportRecipient({ notify_messages: true, support_chat_open: true, support_chat_seen_at: '2026-07-11T04:59:40.000Z' }, 'buyer@example.com', now), false);
 });

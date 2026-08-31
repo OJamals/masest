@@ -48,7 +48,7 @@ export async function onRequestGet({ request, env }) {
   const groups = (await Promise.all([
     group('order', 'Orders', async () => {
       const { data } = await sb.from('orders')
-        .select('id,order_number,status,total,currency,customer_email,created_at,companies(name)')
+        .select('id,order_number,status,total,currency,customer_email,created_at,companies!orders_company_id_fkey(name)')
         .or(anyOf(['order_number', 'customer_email', 'tracking_number'], like))
         .order('created_at', { ascending: false }).limit(limit);
       return (data || []).map((row) => ({

@@ -124,6 +124,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
         <header class="site-support__header">
           <div><p>Customer support</p><h2 id="siteSupportTitle">Open chats</h2><span data-support-summary>Loading…</span></div>
           <div class="site-support__header-actions">
+            ${canWrite ? '<button type="button" data-support-new-chat aria-label="Start new customer chat" title="Start new customer chat"><i class="ph ph-plus" aria-hidden="true"></i></button>' : ""}
             <button type="button" data-support-settings-toggle aria-label="Customer support settings" title="Customer support settings" aria-expanded="false" aria-controls="siteSupportSettings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63 1.7 1.7 0 0 0 10 3.08V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9 1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg></button>
           </div>
         </header>
@@ -178,6 +179,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   const settings = shell.querySelector(".site-support__settings");
   const settingsStatus = shell.querySelector(".site-support__settings-status");
   const settingsToggle = shell.querySelector("[data-support-settings-toggle]");
+  const newChat = shell.querySelector("[data-support-new-chat]");
   const back = shell.querySelector("[data-support-back]");
   const viewLabel = shell.querySelector("[data-support-view-label]");
   let prefsLoaded = false;
@@ -192,6 +194,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   let threadRequestId = 0;
   let threadsRequestId = 0;
   let summaryRequestId = 0;
+  let newChatRequestId = 0;
   let poller = null;
   let presenceOpen = false;
   let lastPresencePing = 0;
@@ -235,11 +238,12 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
 
   const setView = (next) => {
     const isSettings = next === "settings";
-    drawer.dataset.view = isSettings ? "settings" : "inbox";
+    const isCompose = next === "compose";
+    drawer.dataset.view = isSettings ? "settings" : isCompose ? "compose" : "inbox";
     settings.hidden = !isSettings;
     view.hidden = isSettings;
-    back.hidden = !(isSettings || selected);
-    viewLabel.textContent = isSettings ? "Support settings" : selected ? "Conversation" : "Customer inbox";
+    back.hidden = !(isSettings || isCompose || selected);
+    viewLabel.textContent = isSettings ? "Support settings" : isCompose ? "New conversation" : selected ? "Conversation" : "Customer inbox";
     settingsToggle.setAttribute("aria-expanded", String(isSettings));
     if (isSettings) void loadPrefs();
   };
@@ -257,6 +261,15 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     } else {
       threadsRequestId += 1;
       void setPresence(false);
+      if (drawer.dataset.view === "compose") {
+        newChatRequestId += 1;
+        selected = null;
+        activeOrderId = null;
+        messages = [];
+        page = { has_more: false, next_before: null };
+        drawer.dataset.threadSelected = "false";
+        view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
+      }
       // Reopening lands on conversations; settings is somewhere you go, not a state
       // the console gets stuck in.
       setView("inbox");
@@ -309,7 +322,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       // A directly opened Company/order conversation can be valid before the
       // cached inbox list arrives (or while that list is empty). List rendering
       // must not erase the independently loaded conversation.
-      if (!selected) {
+      if (!selected && drawer.dataset.view !== "compose") {
         drawer.dataset.threadSelected = "false";
         view.innerHTML = '<div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div>';
       }
@@ -339,6 +352,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   const setThreadFilter = async (next) => {
     if (!['open', 'complete'].includes(next) || next === threadFilter) return;
     threadRequestId += 1;
+    newChatRequestId += 1;
     threadsRequestId += 1;
     threadFilter = next;
     threads = [];
@@ -349,6 +363,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     page = { has_more: false, next_before: null };
     search.value = "";
     drawer.dataset.threadSelected = "false";
+    setView("inbox");
     filters.querySelectorAll("[data-support-filter]").forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.supportFilter === threadFilter));
     });
@@ -359,6 +374,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
 
   const clearThreadSelection = () => {
     threadRequestId += 1;
+    newChatRequestId += 1;
     selected = null;
     activeOrderId = null;
     messages = [];
@@ -379,6 +395,11 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       || (activeOrderId ? messages.find((message) => message.order_id === activeOrderId)?.order : null)
       || null;
     const linkedOrder = activeOrder || [...messages].reverse().find((message) => message.order)?.order || null;
+    const participant = selected.participant || [...messages].reverse().find((message) => message.participant)?.participant || null;
+    const participantName = participant?.full_name || participant?.email || "Customer";
+    const participantDetail = participant
+      ? `<span class="site-support__conversation-party">Chat with ${escapeHtml(participantName)}${participant.email && participant.email !== participantName ? ` · ${escapeHtml(participant.email)}` : ""}</span>`
+      : "";
     const contextLinks = `<nav class="site-support__context" aria-label="Customer context">
       <a href="${escapeHtml(`${root}admin.html#companies`)}" data-support-context="company" data-context-id="${escapeHtml(companyId)}"><i class="ph ph-buildings" aria-hidden="true"></i>View account</a>
       ${linkedOrder ? `<a href="${escapeHtml(linkedOrder.admin_url || `${root}admin.html?order=${encodeURIComponent(linkedOrder.id)}#orders`)}" data-support-context="order" data-context-id="${escapeHtml(linkedOrder.id)}"><i class="ph ph-package" aria-hidden="true"></i>View order ${escapeHtml(linkedOrder.reference)}</a>` : ""}
@@ -389,11 +410,15 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
         ? '<button type="button" data-status="open">Reopen</button>'
         : `<button type="button" data-status="complete">Mark resolved</button><button type="button" data-status="${escalated ? "open" : "escalated"}">${escalated ? "Return to open" : "Escalate"}</button>`}</div>`
       : "";
-    const messageList = messages.map((message) => `<article data-role="${escapeHtml(message.sender_role)}">${message.order ? `<a class="site-support__message-order" href="${escapeHtml(message.order.admin_url)}" data-support-context="order" data-context-id="${escapeHtml(message.order.id)}">Order ${escapeHtml(message.order.reference)}</a>` : ""}<p>${escapeHtml(message.body)}</p><time datetime="${escapeHtml(message.created_at)}">${message.sender_role === "staff" ? "Team" : "Customer"} · ${escapeHtml(date(message.created_at))}</time></article>`).join("");
+    const messageList = messages.map((message) => {
+      const messageParticipant = message.participant?.full_name || message.participant?.email || "Customer";
+      const direction = message.sender_role === "staff" ? `Team → ${messageParticipant}` : `${messageParticipant} → Team`;
+      return `<article data-role="${escapeHtml(message.sender_role)}">${message.order ? `<a class="site-support__message-order" href="${escapeHtml(message.order.admin_url)}" data-support-context="order" data-context-id="${escapeHtml(message.order.id)}">Order ${escapeHtml(message.order.reference)}</a>` : ""}<p>${escapeHtml(message.body)}</p><time datetime="${escapeHtml(message.created_at)}">${escapeHtml(direction)} · ${escapeHtml(date(message.created_at))}</time></article>`;
+    }).join("");
     const reply = canWrite && !resolved
       ? `<form class="site-support__reply"><label for="siteSupportReply">${activeOrder ? `Reply about order ${escapeHtml(activeOrder.reference)}` : "Reply"} <small id="siteSupportReplyHint">⌘/Ctrl + Enter sends</small></label><textarea id="siteSupportReply" name="support_message" autocomplete="off" maxlength="4000" aria-describedby="siteSupportReplyHint" required></textarea><div><span role="status" aria-live="polite"></span><button type="submit">Send reply</button></div></form>`
       : '<p class="site-support__notice">' + (resolved ? "Reopen this conversation before replying." : "Your staff role has read-only access.") + "</p>";
-    view.innerHTML = `<header class="site-support__conversation-head"><div><p>${resolved ? "Resolved" : escalated ? "Escalated" : "Open"} conversation</p><h3>${escapeHtml(selected.company_name || "Customer")}</h3></div>${controls}</header>${contextLinks}${orderScope}${page.has_more ? '<button class="site-support__older" type="button">Load earlier messages</button>' : ""}<div class="site-support__messages">${messageList}</div>${reply}`;
+    view.innerHTML = `<header class="site-support__conversation-head"><div><p>${resolved ? "Resolved" : escalated ? "Escalated" : "Open"} conversation</p><h3>${escapeHtml(selected.company_name || "Customer")}</h3>${participantDetail}</div>${controls}</header>${contextLinks}${orderScope}${page.has_more ? '<button class="site-support__older" type="button">Load earlier messages</button>' : ""}<div class="site-support__messages">${messageList}</div>${reply}`;
 
     view.querySelectorAll("[data-support-context]").forEach((link) => link.addEventListener("click", async (event) => {
       if (typeof openContext !== "function") return;
@@ -460,7 +485,12 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       try {
         await auth.api("/api/admin/messages", {
           method: "POST",
-          body: { company_id: companyId, body, order_id: activeOrderId },
+          body: {
+            company_id: companyId,
+            recipient_user_id: selected.participant?.id || null,
+            body,
+            order_id: activeOrderId,
+          },
         });
         drafts.delete(draftKey(companyId));
         if (actionRequestId === threadRequestId && String(selected?.company_id) === companyId) {
@@ -475,6 +505,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   };
 
   const openThread = async (companyId, { orderId = activeOrderId, before = null, older = false } = {}) => {
+    newChatRequestId += 1;
     const requestId = ++threadRequestId;
     activeOrderId = String(orderId || "").trim() || null;
     if (!older) view.innerHTML = '<p class="site-support__placeholder">Loading…</p>';
@@ -482,9 +513,11 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       const suffix = `${activeOrderId ? `&order_id=${encodeURIComponent(activeOrderId)}` : ""}${before ? `&before=${encodeURIComponent(before)}` : ""}`;
       const result = await auth.api(`/api/admin/messages?company_id=${encodeURIComponent(companyId)}${suffix}`);
       if (requestId !== threadRequestId) return;
-      selected = result.thread
-        || threads.find((thread) => String(thread.company_id) === String(companyId))
-        || { company_id: companyId, company_name: "Customer", status: "open" };
+      if (!older || !selected) {
+        selected = result.thread
+          || threads.find((thread) => String(thread.company_id) === String(companyId))
+          || { company_id: companyId, company_name: "Customer", status: "open" };
+      }
       messages = older ? [...(result.messages || []), ...messages] : (result.messages || []);
       page = { has_more: result.has_more === true, next_before: result.next_before || null };
       drawer.dataset.threadSelected = "true";
@@ -527,6 +560,162 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     }
   };
 
+  const renderNewChatSearch = ({ query = "", customers = null, loading = false, error = "" } = {}) => {
+    if (drawer.dataset.view !== "compose") return;
+    const users = Array.isArray(customers)
+      ? customers.filter((customer) => customer.id && customer.company_id)
+      : [];
+    let results = '<p class="site-support__new-chat-status">Search by customer name, email, or business.</p>';
+    if (loading) results = '<p class="site-support__new-chat-status" role="status">Loading customers…</p>';
+    else if (error) results = `<p class="site-support__new-chat-status site-support__error" role="alert">${escapeHtml(error)}</p>`;
+    else if (Array.isArray(customers) && users.length) {
+      results = users.map((customer) => {
+        const name = customer.full_name || customer.email || "Customer";
+        const companyStatus = String(customer.company_status || "customer").replaceAll("_", " ");
+        return `<button type="button" class="site-support__account-option" data-support-user-id="${escapeHtml(customer.id)}"><span><strong>${escapeHtml(name)}</strong><small>${escapeHtml(customer.email || "No email available")}</small></span><em>${escapeHtml(customer.company_name || "Customer account")} · ${escapeHtml(companyStatus)}</em></button>`;
+      }).join("");
+    } else if (Array.isArray(customers)) {
+      results = `<p class="site-support__new-chat-status">${query ? "No customers match that search." : "No customers are available."}</p>`;
+    }
+
+    view.innerHTML = `<section class="site-support__new-chat" aria-labelledby="siteSupportNewChatTitle">
+      <header class="site-support__new-chat-head"><p>New customer conversation</p><h3 id="siteSupportNewChatTitle">Choose a customer</h3><span>The selected person receives the message. Their company still shares one support history.</span></header>
+      <form class="site-support__account-search" role="search"><label for="siteSupportAccountSearch">Customer</label><div><input id="siteSupportAccountSearch" name="customer_search" type="search" value="${escapeHtml(query)}" autocomplete="off" placeholder="Name, email, or business…"><button type="submit">Search</button></div></form>
+      <div class="site-support__account-results" aria-live="polite">${results}</div>
+    </section>`;
+    const searchForm = view.querySelector(".site-support__account-search");
+    searchForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const input = searchForm.querySelector("input");
+      void loadNewChatUsers(input.value);
+    });
+    view.querySelectorAll("[data-support-user-id]").forEach((button) => button.addEventListener("click", () => {
+      void loadNewChatUser(button.dataset.supportUserId);
+    }));
+  };
+
+  const loadNewChatUsers = async (query = "") => {
+    const cleanQuery = String(query || "").trim();
+    const requestId = ++newChatRequestId;
+    renderNewChatSearch({ query: cleanQuery, loading: true });
+    try {
+      const endpoint = `/api/admin/customers?limit=20${cleanQuery ? `&q=${encodeURIComponent(cleanQuery)}` : ""}`;
+      const result = await auth.api(endpoint);
+      if (requestId !== newChatRequestId || drawer.dataset.view !== "compose") return;
+      renderNewChatSearch({ query: cleanQuery, customers: result.customers || [] });
+      requestAnimationFrame(() => view.querySelector("#siteSupportAccountSearch")?.focus());
+    } catch (requestError) {
+      if (requestId !== newChatRequestId || drawer.dataset.view !== "compose") return;
+      renderNewChatSearch({
+        query: cleanQuery,
+        error: requestError?.data?.message || "Could not load customers.",
+      });
+    }
+  };
+
+  const renderNewChatComposer = ({ profile, company, orders = [] } = {}) => {
+    if (drawer.dataset.view !== "compose" || !profile?.id || !company?.id) return;
+    const companyStatus = String(company.status || "customer").replaceAll("_", " ");
+    const orderOptions = orders.map((order) => {
+      const reference = String(order.order_number || order.id);
+      const status = String(order.status || "").replaceAll("_", " ");
+      return `<option value="${escapeHtml(order.id)}">Order ${escapeHtml(reference)}${status ? ` · ${escapeHtml(status)}` : ""}</option>`;
+    }).join("");
+
+    view.innerHTML = `<section class="site-support__new-chat" aria-labelledby="siteSupportNewChatTitle">
+      <header class="site-support__new-chat-head"><p>New customer conversation</p><h3 id="siteSupportNewChatTitle" tabindex="-1">Write first message</h3><span>Message enters same support thread customers use in their dashboard.</span></header>
+      <div class="site-support__new-chat-selected"><span><strong>${escapeHtml(profile.full_name || profile.email || "Customer")}</strong><small>${escapeHtml(profile.email || "No email available")} · ${escapeHtml(company.name || "Customer account")} · ${escapeHtml(companyStatus)}</small></span><button type="button" data-support-change-customer>Change customer</button></div>
+      <form class="site-support__new-chat-form">
+        <label for="siteSupportNewChatOrder">Order reference <small>Optional</small></label>
+        <select id="siteSupportNewChatOrder" name="order_id"><option value="">General account conversation</option>${orderOptions}</select>
+        <label for="siteSupportNewChatMessage">Message <small id="siteSupportNewChatHint">⌘/Ctrl + Enter sends</small></label>
+        <textarea id="siteSupportNewChatMessage" name="support_message" maxlength="4000" autocomplete="off" aria-describedby="siteSupportNewChatHint" required></textarea>
+        <div class="site-support__new-chat-actions"><span role="status" aria-live="polite"></span><button type="submit">Start chat</button></div>
+      </form>
+    </section>`;
+
+    view.querySelector("[data-support-change-customer]").addEventListener("click", () => {
+      void loadNewChatUsers("");
+    });
+    const form = view.querySelector(".site-support__new-chat-form");
+    const textarea = form.querySelector("textarea");
+    textarea.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return;
+      event.preventDefault();
+      form.requestSubmit();
+    });
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const body = textarea.value.trim();
+      const orderId = form.elements.order_id.value || null;
+      const send = form.querySelector('[type="submit"]');
+      const status = form.querySelector('[role="status"]');
+      if (!body || send.disabled) return;
+      send.disabled = true;
+      status.textContent = "Sending…";
+      const requestId = newChatRequestId;
+      try {
+        await auth.api("/api/admin/messages", {
+          method: "POST",
+          body: {
+            company_id: company.id,
+            recipient_user_id: profile.id,
+            body,
+            order_id: orderId,
+            start_thread: true,
+          },
+        });
+        if (requestId !== newChatRequestId || drawer.dataset.view !== "compose") return;
+        if (threadFilter !== "open") await setThreadFilter("open");
+        else {
+          threadsLoaded = false;
+          await loadThreads();
+        }
+        await openThread(company.id, { orderId });
+      } catch (requestError) {
+        if (requestId !== newChatRequestId || drawer.dataset.view !== "compose") return;
+        status.textContent = requestError?.data?.message || "Could not start chat.";
+        send.disabled = false;
+      }
+    });
+    view.scrollTop = 0;
+    requestAnimationFrame(() => {
+      const title = view.querySelector("#siteSupportNewChatTitle");
+      if (window.matchMedia("(max-width: 720px)").matches) title?.focus({ preventScroll: true });
+      else textarea.focus();
+    });
+  };
+
+  const loadNewChatUser = async (userId) => {
+    const requestId = ++newChatRequestId;
+    const status = view.querySelector(".site-support__new-chat-status");
+    if (status) status.textContent = "Loading customer…";
+    view.querySelectorAll("[data-support-user-id]").forEach((button) => { button.disabled = true; });
+    try {
+      const result = await auth.api(`/api/admin/users?detail=${encodeURIComponent(userId)}`);
+      if (requestId !== newChatRequestId || drawer.dataset.view !== "compose") return;
+      renderNewChatComposer(result);
+    } catch (requestError) {
+      if (requestId !== newChatRequestId || drawer.dataset.view !== "compose") return;
+      if (status) status.textContent = requestError?.data?.message || "Could not load this customer.";
+      view.querySelectorAll("[data-support-user-id]").forEach((button) => { button.disabled = false; });
+    }
+  };
+
+  const openNewChat = () => {
+    if (!canWrite) return;
+    threadRequestId += 1;
+    selected = null;
+    activeOrderId = null;
+    messages = [];
+    page = { has_more: false, next_before: null };
+    drawer.dataset.threadSelected = "false";
+    setView("compose");
+    renderNewChatSearch({ loading: true });
+    setOpen(true, { focus: view.querySelector("#siteSupportAccountSearch") });
+    void loadNewChatUsers("");
+  };
+
   list.addEventListener("click", (event) => {
     const retry = event.target.closest("[data-support-retry]");
     if (retry) {
@@ -547,6 +736,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   search.addEventListener("input", renderThreads);
   launcher.addEventListener("click", () => setOpen(drawer.hidden));
   close.addEventListener("click", () => setOpen(false));
+  newChat?.addEventListener("click", openNewChat);
   settingsToggle.addEventListener("click", () => setView(drawer.dataset.view === "settings" ? "inbox" : "settings"));
   back.addEventListener("click", () => {
     if (drawer.dataset.view === "settings") leaveSettings();
@@ -572,7 +762,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || drawer.hidden) return;
     if (drawer.dataset.view === "settings") leaveSettings();
-    else if (selected) clearThreadSelection();
+    else if (drawer.dataset.view === "compose" || selected) clearThreadSelection();
     else setOpen(false);
   });
   document.addEventListener("visibilitychange", () => {

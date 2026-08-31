@@ -36,3 +36,12 @@ test('Admin Orders surfaces existing support request queue without a parallel me
   assert.match(orders, /Open support requests/);
   assert.doesNotMatch(orders, /order_chat|order_messages/i);
 });
+
+test('Admin Orders load failures provide one inline retry path', () => {
+  const orders = read('js/admin/orders.js');
+
+  assert.match(orders, /data-retry-orders/);
+  assert.match(orders, /role="alert"/);
+  assert.match(orders, /delegate\(box, 'click', '\[data-retry-orders\]'/);
+  assert.match(orders, /renderOrders\(\{ refetch: true \}\)/);
+});

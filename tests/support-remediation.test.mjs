@@ -123,14 +123,12 @@ test('support polling is lightweight while closed, bounded while open, hidden-sa
   assert.equal(timers.size, 0);
 });
 
-test('inbound replies preserve buyer identity, reopen threads, honor staff prefs, and route to current support UI', () => {
-  const source = read('functions/_lib/resend-inbound.js');
-  assert.match(source, /userId:\s*member\.id/);
+test('inbound replies preserve participant identity and re-enter the shared delivery path', () => {
+  const source = read('functions/_lib/support-email.js');
+  assert.match(source, /sender_not_participant/);
   assert.match(source, /upsertInboundMessage/);
-  assert.match(source, /adminMessageRecipients\)\(sb,\s*alertKind,\s*env\)/);
-  // The alert is about a message, so it opens the inbox — not the notification
-  // preferences staff used to land on.
-  assert.match(source, /admin\.html#support`/);
+  assert.match(source, /deliverSupportMessageEmail/);
+  assert.match(source, /admin\.html#support/);
   assert.doesNotMatch(source, /#support-settings/);
   assert.doesNotMatch(source, /staffRecipients\(env\)/);
 });
@@ -225,6 +223,50 @@ test('phone support uses a list-to-conversation drill-down without redundant ope
   assert.match(styles, /\.site-support__drawer\[data-view="inbox"\]\[data-thread-selected="false"\] \.site-support__conversation \{ display:\s*none; \}/);
   assert.match(styles, /\.site-support__drawer\[data-view="inbox"\]\[data-thread-selected="true"\] \.site-support__list-pane \{ display:\s*none; \}/);
   assert.match(styles, /\.site-support__drawer\[data-view="inbox"\]\[data-thread-selected="true"\] \{ grid-template-rows:\s*minmax\(0, 1fr\); \}/);
+});
+
+test('support thread cards give customer and message copy the full list width', () => {
+  const styles = read('css/admin-support.css');
+
+  assert.match(styles, /\.site-support__thread \{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/);
+  assert.match(styles, /\.site-support__thread strong,\s*\.site-support__thread small \{[^}]*overflow-wrap:\s*anywhere;/);
+  assert.match(styles, /\.site-support__meta \{[^}]*display:\s*flex;[^}]*justify-content:\s*flex-end;/);
+});
+
+test('staff-started messages reopen the canonical thread and expose user/order references', () => {
+  const adminMessages = read('functions/api/admin/messages.js');
+  const users = read('functions/api/admin/users.js');
+
+  assert.match(adminMessages, /reopen:\s*body\.start_thread === true/);
+  assert.match(adminMessages, /recipient_user_id/);
+  assert.match(adminMessages, /hydrateSupportParticipants/);
+  assert.match(users, /select\('id,order_number,status,payment_method,total,currency,created_at,tracking_status'\)/);
+});
+
+test('writable staff can start a user chat linked to any current or past order', () => {
+  const support = read('js/admin-support.js');
+  const styles = read('css/admin-support.css');
+
+  assert.match(support, /data-support-new-chat/);
+  assert.match(support, /\/api\/admin\/customers\?limit=20/);
+  assert.match(support, /\/api\/admin\/users\?detail=/);
+  assert.match(support, /start_thread:\s*true/);
+  assert.match(support, /recipient_user_id:/);
+  assert.match(support, /order_id:/);
+  assert.match(support, /site-support__conversation-party/);
+  assert.match(styles, /\.site-support__new-chat/);
+  assert.match(styles, /\.site-support__account-results/);
+  assert.match(styles, /data-view="compose"/);
+  assert.doesNotMatch(support, /\/api\/admin\/(?:new-chat|support-threads)/);
+});
+
+test('phone new-chat composer preserves customer context instead of autofocus-scrolling to the message', () => {
+  const support = read('js/admin-support.js');
+
+  assert.match(support, /id="siteSupportNewChatTitle" tabindex="-1"/);
+  assert.match(support, /window\.matchMedia\("\(max-width: 720px\)"\)\.matches/);
+  assert.match(support, /title\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(support, /else textarea\.focus\(\)/);
 });
 
 test('buyer and staff inboxes page backward from the newest message', () => {

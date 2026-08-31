@@ -10,6 +10,7 @@ import { clientIp, rateLimit } from '../../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
 import { orderLifecycle } from '../../_lib/order-lifecycle.js';
 import { orderReference } from '../../_lib/order-integrations.js';
+import { deliverSupportMessageEmail } from '../../_lib/support-email.js';
 
 const BODY_MAX_BYTES = 8 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -56,6 +57,7 @@ export async function handleAccountOrderRequests({ request, env }, dependencies 
   const parseBody = dependencies.readBoundedJson || readBoundedJson;
   const getUser = dependencies.userFromRequest || userFromRequest;
   const getAdminClient = dependencies.adminClient || adminClient;
+  const deliverMessage = dependencies.deliverSupportMessageEmail || deliverSupportMessageEmail;
   const now = dependencies.now || Date.now;
 
   const { user } = await getUser(request, env);
@@ -132,10 +134,20 @@ export async function handleAccountOrderRequests({ request, env }, dependencies 
     });
   }
 
+  let emailDelivery = null;
+  if (result.message) {
+    try {
+      emailDelivery = await deliverMessage(env, sb, result.message);
+    } catch {
+      emailDelivery = { ok: false, retryable: true, error: 'support_email_delivery_failed' };
+    }
+  }
+
   return json(201, {
     ok: true,
     request: result.request,
     support_message: result.message,
+    email_delivery: emailDelivery,
     chat_linked: Boolean(result.chat_linked),
     message: type === 'cancel'
       ? 'Cancellation requested. We will confirm by email once it is processed.'

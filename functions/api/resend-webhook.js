@@ -12,6 +12,11 @@ function isoOrNull(value) {
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
 
+function messageIdOrNull(value) {
+  const messageId = String(value || '').trim();
+  return /^<[^<>\s]{1,510}>$/.test(messageId) ? messageId : null;
+}
+
 async function recipientDigests(values) {
   const addresses = [...new Set((Array.isArray(values) ? values : [values])
     .map((value) => String(value || '').trim().toLowerCase())
@@ -41,6 +46,7 @@ export async function deliveryEffect(event) {
     aggregate_id: resendId,
     payload: {
       resend_id: resendId,
+      message_id: messageIdOrNull(event?.data?.message_id),
       event_type: eventType,
       status,
       occurred_at: isoOrNull(event?.created_at),

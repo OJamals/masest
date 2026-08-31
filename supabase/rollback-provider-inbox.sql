@@ -19,6 +19,7 @@ $$;
 drop function if exists public.apply_shipstation_tracking_integration_effect(uuid, text);
 drop function if exists public.apply_resend_delivery_integration_effect(uuid, text);
 drop function if exists public.apply_qbo_change_integration_effect(uuid, text);
+drop function if exists public.upsert_resend_inbound_message(uuid, uuid, text, text, text, uuid, uuid);
 drop function if exists public.upsert_resend_inbound_message(uuid, uuid, text, text);
 drop function if exists public.provider_integration_dead_letters(text, integer, timestamptz, uuid);
 drop function if exists public.provider_integration_health();

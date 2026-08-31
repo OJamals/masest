@@ -56,7 +56,7 @@ export async function onRequestGet({ request, env }) {
   const members = (profiles || []).map((p) => ({ ...p, email: emails[p.id] || null }));
 
   const { data: orders } = await sb.from('orders')
-    .select('id,status,payment_method,total,currency,created_at')
+    .select('id,order_number,status,payment_method,total,currency,created_at')
     .eq('company_id', id).neq('status', 'cart').order('created_at', { ascending: false }).limit(50);
 
   let message_count = 0;

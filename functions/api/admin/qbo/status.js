@@ -19,7 +19,7 @@ export async function onRequestGet({ request, env }) {
   if (syncError) return json(500, { error: syncError.message || 'qbo_sync_status_failed' });
 
   const { data: qbo_failed_orders, error: failedError } = await sb.from('orders')
-    .select('id,created_at,total,currency,payment_method,qbo_error,qbo_attempts,qbo_next_attempt_at,companies(name)')
+    .select('id,created_at,total,currency,payment_method,qbo_error,qbo_attempts,qbo_next_attempt_at,companies!orders_company_id_fkey(name)')
     .eq('qbo_sync_status', 'error')
     .order('created_at', { ascending: false })
     .limit(10);

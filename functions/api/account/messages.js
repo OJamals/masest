@@ -1,9 +1,9 @@
 // /api/account/messages — support thread between the caller's company and MASEST staff.
 //   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer post
 //   POST { action: 'chat_presence', chat_open } → authenticated buyer chat state
-import { requireCompany, json, readBody, sendEmail, emailLayout, htmlEscape } from '../../_lib/supabase.js';
+import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
-import { adminMessageAlertKind, adminMessageRecipients } from '../../_lib/admin-message-notifications.js';
+import { deliverSupportMessageEmail } from '../../_lib/support-email.js';
 import {
   appendSupportMessage,
   hydrateSupportOrderContexts,
@@ -66,7 +66,8 @@ export async function onRequest({ request, env }) {
       return json(200, { support_chat_open: body.chat_open, support_chat_seen_at: seenAt });
     }
 
-    // Throttle customer messages. Staff receive these in the admin inbox; no email per post.
+    // Throttle customer messages. The durable chat row remains canonical; its
+    // counterpart email is delivered through the shared support-email module.
     const rl = await rateLimit(env, 'support-message', user.id || clientIp(request), { limit: 10, windowSec: 60 });
     if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
     const text = String(body.body || '').trim();
@@ -92,34 +93,18 @@ export async function onRequest({ request, env }) {
       return json(500, { error: 'server_error' });
     }
 
-    const alertKind = adminMessageAlertKind({
-      previousMessage: data.previous_sender_role ? { sender_role: data.previous_sender_role } : null,
-      threadStatus: data.prior_thread_status,
-    });
-    if (alertKind) {
-      const recipients = await adminMessageRecipients(sb, alertKind, env);
-      if (recipients.length) {
-        const firstRequest = alertKind === 'support_request';
-        await sendEmail(env, {
-          to: recipients,
-          subject: firstRequest ? `New support request from ${data.company_name || companyId}` : `New message from ${data.company_name || companyId}`,
-          html: emailLayout({
-            heading: firstRequest ? 'New support request' : 'New customer message',
-            bodyHtml: `<p>Company: ${htmlEscape(data.company_name || companyId)}</p><p>${htmlEscape(text.slice(0, 500))}</p>`,
-            // #support opens the support console over the admin console, on the
-            // conversation this alert is about — not on notification settings.
-            ctaText: 'Open customer messages',
-            ctaUrl: `${env.APP_URL || new URL(request.url).origin}/admin.html#support`,
-          }),
-          category: 'staff_alert',
-        });
-      }
+    let emailDelivery;
+    try {
+      emailDelivery = await deliverSupportMessageEmail({ ...env, APP_URL: env.APP_URL || new URL(request.url).origin }, sb, data);
+    } catch {
+      emailDelivery = { ok: false, retryable: true, error: 'support_email_delivery_failed' };
     }
 
     return json(201, {
       id: data.id,
       created_at: data.created_at,
       order_id: data.order_id || null,
+      email_delivery: emailDelivery,
       summary_synced: true,
     });
   }

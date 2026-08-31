@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { resolveSupportOrderId } from '../functions/_lib/support-messages.js';
+import {
+  resolveSupportOrderId,
+  resolveSupportRecipient,
+} from '../functions/_lib/support-messages.js';
 
 const ORDER_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -13,7 +16,7 @@ function orderLookup(result) {
       assert.equal(table, 'orders');
       return {
         select(columns) {
-          assert.equal(columns, 'id,order_number,status,company_id');
+          assert.equal(columns, 'id,order_number,status,company_id,user_id,customer_email');
           return this;
         },
         eq(column, value) {
@@ -43,7 +46,14 @@ test('general support messages do not query order ownership', async () => {
 });
 
 test('support order context resolves only inside the authenticated company', async () => {
-  const order = { id: ORDER_ID, order_number: 'MST-1042', status: 'paid', company_id: 'company-1' };
+  const order = {
+    id: ORDER_ID,
+    order_number: 'MST-1042',
+    status: 'paid',
+    company_id: 'company-1',
+    user_id: 'user-1',
+    customer_email: 'buyer@example.com',
+  };
   const { db, filters } = orderLookup({ data: order, error: null });
 
   const result = await resolveSupportOrderId(db, {
@@ -57,6 +67,8 @@ test('support order context resolves only inside the authenticated company', asy
   ]);
   assert.equal(result.ok, true);
   assert.equal(result.orderId, ORDER_ID);
+  assert.equal(result.recipientUserId, 'user-1');
+  assert.equal(result.recipientEmail, 'buyer@example.com');
   assert.deepEqual(result.order, {
     id: ORDER_ID,
     reference: 'MST-1042',
@@ -64,6 +76,90 @@ test('support order context resolves only inside the authenticated company', asy
     buyer_url: `/dashboard.html?order=${ORDER_ID}#orders`,
     admin_url: `/admin.html?order=${ORDER_ID}#orders`,
   });
+});
+
+test('support recipient resolves an exact company user with Auth email', async () => {
+  const filters = [];
+  const sb = {
+    from(table) {
+      assert.equal(table, 'profiles');
+      return {
+        select(columns) {
+          assert.equal(columns, 'id,full_name,notify_messages,support_chat_open,support_chat_seen_at');
+          return this;
+        },
+        eq(column, value) { filters.push([column, value]); return this; },
+        async maybeSingle() {
+          return {
+            data: {
+              id: 'user-1',
+              full_name: 'Morgan Buyer',
+              notify_messages: true,
+              support_chat_open: false,
+              support_chat_seen_at: null,
+            },
+            error: null,
+          };
+        },
+      };
+    },
+    auth: {
+      admin: {
+        getUserById: async (id) => ({ data: { user: { id, email: 'buyer@example.com' } } }),
+      },
+    },
+  };
+
+  const recipient = await resolveSupportRecipient(sb, {
+    companyId: 'company-1',
+    userId: 'user-1',
+  });
+
+  assert.deepEqual(filters, [['id', 'user-1'], ['company_id', 'company-1']]);
+  assert.deepEqual(recipient, {
+    id: 'user-1',
+    full_name: 'Morgan Buyer',
+    notify_messages: true,
+    support_chat_open: false,
+    support_chat_seen_at: null,
+    email: 'buyer@example.com',
+  });
+});
+
+test('support recipient falls back from an unlinked order email to a company member', async () => {
+  const profiles = [
+    { id: 'user-1', full_name: 'First Buyer' },
+    { id: 'user-2', full_name: 'Order Buyer' },
+  ];
+  const sb = {
+    from(table) {
+      assert.equal(table, 'profiles');
+      return {
+        select() { return this; },
+        eq(column, value) {
+          assert.deepEqual([column, value], ['company_id', 'company-1']);
+          return this;
+        },
+        limit(value) { assert.equal(value, 1000); return this; },
+        then(resolve) { return Promise.resolve({ data: profiles, error: null }).then(resolve); },
+      };
+    },
+    auth: {
+      admin: {
+        getUserById: async (id) => ({
+          data: { user: { id, email: id === 'user-2' ? 'order@example.com' : 'first@example.com' } },
+        }),
+      },
+    },
+  };
+
+  const recipient = await resolveSupportRecipient(sb, {
+    companyId: 'company-1',
+    email: ' ORDER@example.com ',
+  });
+
+  assert.equal(recipient.id, 'user-2');
+  assert.equal(recipient.email, 'order@example.com');
 });
 
 test('foreign or unknown support order context fails without disclosure', async () => {
@@ -123,9 +219,12 @@ test('buyer message route inserts only the resolved order id', () => {
 
 test('staff replies validate and retain active order context', () => {
   const source = readFileSync(new URL('../functions/api/admin/messages.js', import.meta.url), 'utf8');
+  const supportEmail = readFileSync(new URL('../functions/_lib/support-email.js', import.meta.url), 'utf8');
   assert.match(source, /resolveSupportOrderId\(sb,/);
   assert.match(source, /appendSupportMessage\(sb,/);
   assert.match(source, /orderId:\s*orderContext\.orderId/);
-  assert.match(source, /ctaUrl:\s*`\$\{appUrl\}\$\{messageLink\}`/);
+  assert.match(source, /resolveSupportRecipient\(sb,[\s\S]*orderContext\.recipientUserId/);
+  assert.match(source, /deliverSupportMessageEmail/);
+  assert.match(supportEmail, /dashboard\.html\?order=\$\{encodeURIComponent\(order\.id\)\}#messages/);
   assert.doesNotMatch(source, /from\('messages'\)\.insert/);
 });

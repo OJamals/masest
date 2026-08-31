@@ -13,7 +13,7 @@ import {
   technicalDocumentRequestNoteHtml,
 } from './order-email.js';
 import { orderReference } from './order-integrations.js';
-import { routeInboundMessageReply } from './resend-inbound.js';
+import { routeInboundMessageReply } from './support-email.js';
 import { computeRefund, qboFullDocumentRefund } from './refund.js';
 import { linkOrderProviderObject } from './order-integrations.js';
 import { getAccessToken, voidQboInvoice } from './qbo.js';
@@ -84,6 +84,7 @@ const PAYLOAD_KEYS = Object.freeze({
   quote_offer_email: new Set(['quote_id', 'email', 'product']),
   resend_delivery_projection: new Set([
     'resend_id',
+    'message_id',
     'event_type',
     'status',
     'occurred_at',

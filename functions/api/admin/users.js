@@ -45,7 +45,7 @@ async function companyConsole(sb, env, companyId) {
   if (!company) return { company: null, addresses: [], orders: [], payment_methods: [] };
   const [addrRes, ordRes] = await Promise.all([
     sb.from('addresses').select('id,type,line1,line2,city,state,zip,is_default').eq('company_id', companyId),
-    sb.from('orders').select('id,status,payment_method,total,currency,created_at,tracking_status').eq('company_id', companyId).neq('status', 'cart').order('created_at', { ascending: false }).limit(50),
+    sb.from('orders').select('id,order_number,status,payment_method,total,currency,created_at,tracking_status').eq('company_id', companyId).neq('status', 'cart').order('created_at', { ascending: false }).limit(50),
   ]);
   return { company, addresses: addrRes.data || [], orders: ordRes.data || [], payment_methods: await stripeCards(env, company.stripe_customer_id) };
 }

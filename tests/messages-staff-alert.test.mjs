@@ -4,21 +4,21 @@ import test from "node:test";
 
 const ACCOUNT = readFileSync(new URL("../functions/api/account/messages.js", import.meta.url), "utf8");
 const ADMIN = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
+const SUPPORT_EMAIL = readFileSync(new URL("../functions/_lib/support-email.js", import.meta.url), "utf8");
+const SUPPORT_MESSAGES = readFileSync(new URL("../functions/_lib/support-messages.js", import.meta.url), "utf8");
 
-test("buyer POST records chat presence and honors staff inbox presence", () => {
-  assert.match(ACCOUNT, /adminMessageAlertKind/);
-  assert.match(ACCOUNT, /adminMessageRecipients/);
+test("buyer POST records chat presence and uses shared support email delivery", () => {
+  assert.match(ACCOUNT, /deliverSupportMessageEmail/);
   assert.match(ACCOUNT, /action === 'chat_presence'/);
   assert.match(ACCOUNT, /support_chat_open/);
-  assert.match(ACCOUNT, /adminMessageRecipients\(sb, alertKind, env\)/);
+  assert.match(SUPPORT_EMAIL, /adminMessageAlertKind/);
+  assert.match(SUPPORT_EMAIL, /adminMessageRecipients/);
 });
 
-test("staff reply emails only a closed-chat user with an unanswered question", () => {
-  assert.match(ADMIN, /lastMessage/);
-  assert.match(ADMIN, /support_chat_open/);
-  assert.match(ADMIN, /shouldEmailClosedChatReply/);
-  assert.match(ADMIN, /emailsByIds/);
-  const latestQuery = ADMIN.match(/let lastMessageQuery[\s\S]*?maybeSingle\(\)/)?.[0] || "";
-  assert.doesNotMatch(latestQuery, /\.eq\('sender_role', 'buyer'\)/,
-    "latest-message lookup must see a prior staff reply and suppress duplicate email");
+test("staff messages target a company user and shared delivery honors buyer presence", () => {
+  assert.match(ADMIN, /recipient_user_id/);
+  assert.match(ADMIN, /deliverSupportMessageEmail/);
+  assert.match(SUPPORT_EMAIL, /shouldEmailSupportRecipient/);
+  assert.match(SUPPORT_MESSAGES, /support_chat_open/);
+  assert.match(SUPPORT_EMAIL, /emailsByIds/);
 });

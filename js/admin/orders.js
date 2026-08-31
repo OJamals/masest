@@ -695,6 +695,19 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     if (box) savedViews.mount(box);
   }
 
+  function orderLoadError(compact = false) {
+    const retry = '<button class="btn btn-ghost btn-sm" type="button" data-retry-orders>Try again</button>';
+    if (compact) {
+      return `<div class="adm-inline-actions" role="alert"><p class="adm-status" data-state="err">Could not load support requests.</p>${retry}</div>`;
+    }
+    return `<div class="empty-state" role="alert">
+      <i class="ph ph-warning empty-icon" aria-hidden="true"></i>
+      <div class="empty-title">Orders unavailable</div>
+      <div class="empty-body">The queue could not load. Your filters are unchanged.</div>
+      ${retry}
+    </div>`;
+  }
+
   async function renderOrders({ append = false, refetch = true } = {}) {
     const box = $('admOrders');
     ensureSavedViews();
@@ -727,14 +740,14 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         }
         state.loaded.add('orders');
       } catch {
-        if (!append) box.innerHTML = '<p class="adm-status" data-state="err">Could not load orders. Reload to retry.</p>';
+        if (!append) box.innerHTML = orderLoadError();
         return;
       }
     }
     const q = $('ordSearch').value.trim().toLowerCase();
     const orders = state.orders.filter((order) => rowMatchesQuery(order, q));
     const requestQueue = state.orderRequestsUnavailable
-      ? '<section class="admin-support-requests" aria-labelledby="adminSupportRequestsTitle"><div class="admin-support-requests__head"><div><span class="admin-kicker">Customer follow-up</span><h3 id="adminSupportRequestsTitle">Open support requests</h3></div></div><p class="adm-status" data-state="err">Could not load requests. Refresh Orders to retry.</p></section>'
+      ? `<section class="admin-support-requests" aria-labelledby="adminSupportRequestsTitle"><div class="admin-support-requests__head"><div><span class="admin-kicker">Customer follow-up</span><h3 id="adminSupportRequestsTitle">Open support requests</h3></div></div>${orderLoadError(true)}</section>`
       : (state.orderRequests || []).length
         ? `<section class="admin-support-requests" aria-labelledby="adminSupportRequestsTitle"><div class="admin-support-requests__head"><div><span class="admin-kicker">Customer follow-up</span><h3 id="adminSupportRequestsTitle">Open support requests</h3></div><b>${state.orderRequests.length}</b></div><div class="admin-support-request-list">${state.orderRequests.map((request) => {
           const order = (Array.isArray(request.orders) ? request.orders[0] : request.orders) || {};
@@ -1051,6 +1064,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
   function wireOrders() {
     const box = $('admOrders');
     if (!box) return;
+    delegate(box, 'click', '[data-retry-orders]', () => renderOrders({ refetch: true }));
     const createForm = $('ordCreateForm');
     if (createForm && !createForm.dataset.wired) {
       createForm.dataset.wired = '1';

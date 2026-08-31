@@ -279,6 +279,7 @@ export async function sendEmailResult(env, {
   category = null,
   idempotencyKey = null,
   replyTo = null,
+  emailHeaders = {},
   attachments = [],
   fetchImpl = globalThis.fetch,
   suppressionLoader = loadSuppressed,
@@ -308,24 +309,28 @@ export async function sendEmailResult(env, {
   // Always send multipart: a caller-supplied text wins, else derive one from the HTML.
   // text/plain improves spam scoring and serves plain-text clients + screen readers.
   const bodyText = text || htmlToText(html) || null;
-  const headers = { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' };
-  if (idempotencyKey) headers['Idempotency-Key'] = await providerIdempotencyHeader(idempotencyKey);
+  const requestHeaders = { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' };
+  if (idempotencyKey) requestHeaders['Idempotency-Key'] = await providerIdempotencyHeader(idempotencyKey);
+  const messageHeaders = Object.fromEntries(Object.entries(emailHeaders || {})
+    .filter(([key, value]) => /^[A-Za-z0-9-]{1,64}$/.test(key)
+      && typeof value === 'string' && value.length <= 4000 && !/[\r\n]/.test(value)));
   // Marketing categories carry a one-click List-Unsubscribe (token-signed, single recipient)
   // → suppresses only the 'marketing' stream, so the buyer keeps order/billing receipts.
   if (categoryStream(category) === 'marketing' && env.EMAIL_UNSUB_SECRET && toR.length === 1) {
     const target = toR[0];
     const tok = await unsubscribeToken(target, env.EMAIL_UNSUB_SECRET);
     const url = `${env.APP_URL || 'https://masest.co'}/api/email/unsubscribe?email=${encodeURIComponent(target)}&token=${tok}`;
-    headers['List-Unsubscribe'] = `<${url}>`;
-    headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+    messageHeaders['List-Unsubscribe'] = `<${url}>`;
+    messageHeaders['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
   }
   try {
     const r = await fetchImpl('https://api.resend.com/emails', {
       method: 'POST',
-      headers,
+      headers: requestHeaders,
       body: JSON.stringify({
         from, to: payloadTo, ...(bccR.length ? { bcc: bccR } : {}), subject, html,
         ...(bodyText ? { text: bodyText } : {}), ...(reply ? { reply_to: reply } : {}),
+        ...(Object.keys(messageHeaders).length ? { headers: messageHeaders } : {}),
         // Resend fetches `path` URLs itself; callers omit attachments when empty.
         ...(Array.isArray(attachments) && attachments.length ? { attachments } : {}),
       }),

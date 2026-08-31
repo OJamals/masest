@@ -100,15 +100,36 @@ async function companyIdForQuote(sb, { companyId, email }) {
   }
 }
 
+async function userIdForQuote(sb, { companyId, email }) {
+  const target = String(email || '').trim().toLowerCase();
+  if (!target || !companyId) return null;
+  try {
+    const { data } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const user = (data?.users || []).find((item) => String(item.email || '').toLowerCase() === target);
+    if (!user?.id) return null;
+    const { data: profile } = await sb.from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .eq('company_id', companyId)
+      .maybeSingle();
+    return profile?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
   const resolvedCompanyId = await companyIdForQuote(sb, { companyId, email: quote.email });
   if (!resolvedCompanyId) return { posted: false, reason: 'company_not_found' };
+  const recipientUserId = await userIdForQuote(sb, { companyId: resolvedCompanyId, email: quote.email });
+  if (!recipientUserId) return { posted: false, company_id: resolvedCompanyId, reason: 'user_not_found' };
 
   const messageBody = `Quote follow-up: ${text}`.slice(0, 4000);
   let message;
   try {
     message = await appendSupportMessage(sb, {
       companyId: resolvedCompanyId,
+      recipientUserId,
       senderRole: 'staff',
       body: messageBody,
       source: 'quote_followup',
@@ -120,6 +141,7 @@ async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
 
   await sb.from('notifications').insert({
     company_id: resolvedCompanyId,
+    user_id: recipientUserId,
     type: 'message',
     title: 'Quote follow-up posted',
     body: `A MASEST quote follow-up from ${actor} is ready in your message thread.`,

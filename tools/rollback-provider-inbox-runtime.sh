@@ -85,7 +85,6 @@ git restore --source="$BASE" -- \
 
 rm -f \
   functions/_lib/qbo-webhook.js \
-  functions/_lib/resend-inbound.js \
   functions/_lib/shipstation-tracking.js \
   functions/_lib/shipstation-tracking-ingest.js \
   functions/_lib/shipstation-webhook-auth.js \

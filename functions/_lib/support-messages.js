@@ -1,3 +1,5 @@
+import { emailsByIds } from './supabase.js';
+
 export const SUPPORT_PAGE_SIZE = 200;
 export const SUPPORT_PRESENCE_TTL_MS = 45_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -10,18 +12,62 @@ export async function resolveSupportOrderId(sb, { orderId, companyId } = {}) {
   }
 
   const { data, error } = await sb.from('orders')
-    .select('id,order_number,status,company_id')
+    .select('id,order_number,status,company_id,user_id,customer_email')
     .eq('id', id)
     .eq('company_id', companyId)
     .maybeSingle();
   if (error) return { ok: false, status: 500, error: 'server_error' };
   if (!data) return { ok: false, status: 404, error: 'order_not_found' };
-  return { ok: true, orderId: data.id, order: supportOrderContext(data) };
+  return {
+    ok: true,
+    orderId: data.id,
+    order: supportOrderContext(data),
+    recipientUserId: data.user_id || null,
+    recipientEmail: String(data.customer_email || '').trim().toLowerCase() || null,
+  };
+}
+
+const SUPPORT_RECIPIENT_SELECT = 'id,full_name,notify_messages,support_chat_open,support_chat_seen_at';
+
+async function recipientWithEmail(sb, profile) {
+  if (!profile?.id) return null;
+  const emailById = await emailsByIds(sb, [profile.id]);
+  return { ...profile, email: emailById[profile.id] || null };
+}
+
+export async function resolveSupportRecipient(sb, { companyId, userId = null, email = null } = {}) {
+  const targetCompanyId = String(companyId || '').trim();
+  const targetUserId = String(userId || '').trim();
+  const targetEmail = String(email || '').trim().toLowerCase();
+  if (!targetCompanyId) return null;
+
+  if (targetUserId) {
+    const { data, error } = await sb.from('profiles')
+      .select(SUPPORT_RECIPIENT_SELECT)
+      .eq('id', targetUserId)
+      .eq('company_id', targetCompanyId)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return recipientWithEmail(sb, data);
+  }
+
+  if (!targetEmail) return null;
+  const { data, error } = await sb.from('profiles')
+    .select(SUPPORT_RECIPIENT_SELECT)
+    .eq('company_id', targetCompanyId)
+    .limit(1000);
+  if (error) throw error;
+  const emailById = await emailsByIds(sb, (data || []).map((profile) => profile.id));
+  const profile = (data || []).find((candidate) => (
+    String(emailById[candidate.id] || '').trim().toLowerCase() === targetEmail
+  ));
+  return profile ? { ...profile, email: emailById[profile.id] } : null;
 }
 
 export async function appendSupportMessage(sb, {
   companyId,
   userId = null,
+  recipientUserId = null,
   senderRole,
   body,
   orderId = null,
@@ -31,6 +77,7 @@ export async function appendSupportMessage(sb, {
   const { data, error } = await sb.rpc('append_support_message', {
     p_company_id: companyId,
     p_user_id: userId,
+    p_recipient_user_id: recipientUserId,
     p_sender_role: senderRole,
     p_body: body,
     p_order_id: orderId,

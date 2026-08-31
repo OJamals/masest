@@ -9,6 +9,7 @@ const chrome = read("js/main/chrome.js");
 const css = read("css/customer-chat.css");
 const messages = read("functions/api/account/messages.js");
 const adminMessages = read("functions/api/admin/messages.js");
+const supportEmail = read("functions/_lib/support-email.js");
 const phase5 = read("supabase/schema-phase5.sql");
 const admin = read("js/admin.js");
 let BASE_URL = "";
@@ -115,12 +116,14 @@ test("customer chat posts to the authenticated message thread and receives staff
   assert.match(admin, /source === 'customer_chat'/);
 });
 
-test("customer chat records open/closed presence and delegates conditional staff alerts", () => {
+test("customer chat records presence and delegates counterpart email to shared support delivery", () => {
   assert.match(chat, /chat_presence/);
   assert.match(chat, /setChatPresence\(false\)/);
   assert.match(messages, /body\.action === 'chat_presence'/);
-  assert.match(messages, /adminMessageAlertKind/);
-  assert.match(adminMessages, /shouldEmailClosedChatReply/);
+  assert.match(messages, /deliverSupportMessageEmail/);
+  assert.match(adminMessages, /deliverSupportMessageEmail/);
+  assert.match(supportEmail, /adminMessageAlertKind/);
+  assert.match(supportEmail, /shouldEmailSupportRecipient/);
   assert.match(phase5, /support_chat_open boolean not null default false/);
   assert.match(phase5, /support_chat_seen_at timestamptz/);
 });

@@ -4,6 +4,38 @@
 
 begin;
 
+alter table public.messages
+  add column if not exists recipient_user_id uuid,
+  add column if not exists email_delivery_id text,
+  add column if not exists email_message_id text,
+  add column if not exists email_references text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.messages'::regclass
+      and conname = 'messages_recipient_user_id_fkey'
+  ) then
+    alter table public.messages
+      add constraint messages_recipient_user_id_fkey
+      foreign key (recipient_user_id)
+      references public.profiles (id)
+      on delete set null;
+  end if;
+end $$;
+
+create index if not exists messages_recipient_user_idx
+  on public.messages (recipient_user_id, created_at desc)
+  where recipient_user_id is not null;
+create unique index if not exists messages_email_delivery_id_idx
+  on public.messages (email_delivery_id)
+  where email_delivery_id is not null;
+create unique index if not exists messages_email_message_id_idx
+  on public.messages (email_message_id)
+  where email_message_id is not null;
+
 alter table public.companies
   add column if not exists support_last_order_id uuid;
 
@@ -67,6 +99,8 @@ create trigger messages_project_support_thread
 after insert on public.messages
 for each row execute function public.project_support_message();
 
+drop function if exists public.append_support_message(uuid, uuid, text, text, uuid, text, boolean);
+
 create or replace function public.append_support_message(
   p_company_id uuid,
   p_user_id uuid,
@@ -74,7 +108,8 @@ create or replace function public.append_support_message(
   p_body text,
   p_order_id uuid default null,
   p_source text default 'dashboard',
-  p_reopen boolean default null
+  p_reopen boolean default null,
+  p_recipient_user_id uuid default null
 ) returns jsonb
 language plpgsql
 security definer
@@ -116,6 +151,21 @@ begin
     raise exception 'support_user_company_mismatch';
   end if;
 
+  if p_sender_role = 'staff' and (
+    p_recipient_user_id is null or not exists (
+      select 1
+      from public.profiles
+      where id = p_recipient_user_id
+        and company_id = p_company_id
+    )
+  ) then
+    raise exception 'support_recipient_company_mismatch';
+  end if;
+
+  if p_sender_role = 'buyer' and p_recipient_user_id is not null then
+    raise exception 'support_buyer_recipient_invalid';
+  end if;
+
   if p_order_id is not null and not exists (
     select 1
     from public.orders
@@ -132,11 +182,12 @@ begin
    limit 1;
 
   insert into public.messages (
-    company_id, user_id, sender_role, body, order_id, source,
+    company_id, user_id, recipient_user_id, sender_role, body, order_id, source,
     read_by_staff, read_by_user
   ) values (
     p_company_id,
     case when p_sender_role = 'buyer' then p_user_id else null end,
+    case when p_sender_role = 'staff' then p_recipient_user_id else null end,
     p_sender_role::public.message_sender,
     v_body,
     p_order_id,
@@ -159,6 +210,8 @@ begin
     'id', v_message.id,
     'created_at', v_message.created_at,
     'company_id', v_message.company_id,
+    'user_id', v_message.user_id,
+    'recipient_user_id', v_message.recipient_user_id,
     'order_id', v_message.order_id,
     'sender_role', v_message.sender_role,
     'body', v_message.body,
@@ -170,9 +223,9 @@ begin
 end;
 $$;
 
-revoke all on function public.append_support_message(uuid, uuid, text, text, uuid, text, boolean) from public;
-revoke execute on function public.append_support_message(uuid, uuid, text, text, uuid, text, boolean) from anon, authenticated;
-grant execute on function public.append_support_message(uuid, uuid, text, text, uuid, text, boolean) to service_role;
+revoke all on function public.append_support_message(uuid, uuid, text, text, uuid, text, boolean, uuid) from public;
+revoke execute on function public.append_support_message(uuid, uuid, text, text, uuid, text, boolean, uuid) from anon, authenticated;
+grant execute on function public.append_support_message(uuid, uuid, text, text, uuid, text, boolean, uuid) to service_role;
 
 create or replace function public.create_order_support_request(
   p_order_id uuid,

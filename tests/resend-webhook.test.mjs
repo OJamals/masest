@@ -8,6 +8,7 @@ const event = {
   created_at: '2026-08-04T12:00:00Z',
   data: {
     email_id: 'email-123',
+    message_id: '<email-123@resend.dev>',
     to: ['buyer@example.com'],
     subject: 'Private order details',
   },
@@ -90,8 +91,9 @@ test('Resend bounce effects retain only impacted recipient digests', async () =>
   });
   assert.equal(effects.length, 1);
   assert.deepEqual(Object.keys(effects[0].payload).sort(), [
-    'event_type', 'occurred_at', 'recipient_digests', 'resend_id', 'status',
+    'event_type', 'message_id', 'occurred_at', 'recipient_digests', 'resend_id', 'status',
   ]);
+  assert.equal(effects[0].payload.message_id, '<email-123@resend.dev>');
   assert.match(effects[0].payload.recipient_digests[0], /^[a-f0-9]{64}$/);
   assert.equal(JSON.stringify(effects).includes('buyer@example.com'), false);
 });

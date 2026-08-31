@@ -141,6 +141,9 @@ test('schema makes receipts append-only and projections stale-safe', () => {
   assert.match(schema, /insert into public\.integration_receipts/i);
   assert.match(schema, /tracking_provider_occurred_at[\s\S]*stale_event/i);
   assert.match(schema, /provider_occurred_at[\s\S]*v_next_rank < v_current_rank/i);
+  assert.match(schema, /update public\.messages[\s\S]*email_message_id[\s\S]*email_delivery_id/i);
+  const inboundUpsert = schema.match(/create or replace function public\.upsert_resend_inbound_message[\s\S]*?grant execute on function public\.upsert_resend_inbound_message/i)?.[0] || '';
+  assert.match(inboundUpsert, /if v_inserted then[\s\S]*update public\.companies[\s\S]*end if/i);
   assert.match(schema, /create table if not exists public\.qbo_change_events/i);
   assert.match(schema, /on conflict \(realm_id, entity_name, entity_id\) do update[\s\S]*excluded\.provider_occurred_at >=/i);
   assert.match(schema, /revoke execute on function public\.ingest_provider_event[\s\S]*from anon, authenticated/i);

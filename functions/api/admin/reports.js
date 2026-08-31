@@ -15,7 +15,7 @@ export async function onRequestGet({ request, env }) {
   const { fromIso, toIso } = parseRange(params.get('from'), params.get('to'));
 
   let q = sb.from('orders')
-    .select('id,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,created_at,company_id,companies(name)')
+    .select('id,status,payment_method,subtotal,shipping,tax,total,currency,purchase_order_number,created_at,company_id,companies!orders_company_id_fkey(name)')
     .neq('status', 'cart');
   if (fromIso) q = q.gte('created_at', fromIso);
   if (toIso) q = q.lte('created_at', toIso);

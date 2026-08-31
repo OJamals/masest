@@ -1,6 +1,7 @@
 -- Durable provider receipts + local projections for ShipStation, Resend, and QBO.
 -- Apply after schema-integration-events.sql, schema-integration-effect-handlers.sql,
--- schema-shipstation.sql, schema-email.sql, and schema-email-stream.sql.
+-- schema-shipstation.sql, schema-email.sql, schema-email-stream.sql, and
+-- schema-unified-support-messages.sql.
 
 create table if not exists public.integration_receipts (
   id uuid primary key default gen_random_uuid(),
@@ -316,11 +317,16 @@ revoke all on function public.provider_integration_dead_letters(text, integer, t
 grant execute on function public.provider_integration_health() to service_role;
 grant execute on function public.provider_integration_dead_letters(text, integer, timestamptz, uuid) to service_role;
 
+drop function if exists public.upsert_resend_inbound_message(uuid, uuid, text, text);
+
 create or replace function public.upsert_resend_inbound_message(
   p_company_id uuid,
   p_user_id uuid,
   p_external_message_id text,
-  p_body text
+  p_body text,
+  p_sender_role text default 'buyer',
+  p_recipient_user_id uuid default null,
+  p_order_id uuid default null
 ) returns jsonb
 language plpgsql
 security definer
@@ -333,7 +339,8 @@ declare
   v_alert_kind text;
   v_inserted boolean := false;
 begin
-  if p_company_id is null or p_user_id is null
+  if p_company_id is null
+     or p_sender_role not in ('buyer', 'staff')
      or btrim(coalesce(p_external_message_id, '')) = ''
      or char_length(p_external_message_id) > 512
      or btrim(coalesce(p_body, '')) = ''
@@ -342,6 +349,29 @@ begin
   end if;
   select * into v_company from public.companies where id = p_company_id for update;
   if not found then raise exception 'resend_inbound_company_not_found'; end if;
+
+  if p_sender_role = 'buyer' and (
+    p_user_id is null or not exists (
+      select 1 from public.profiles
+       where id = p_user_id and company_id = p_company_id
+    )
+  ) then
+    raise exception 'resend_inbound_user_company_mismatch';
+  end if;
+  if p_sender_role = 'staff' and (
+    p_recipient_user_id is null or not exists (
+      select 1 from public.profiles
+       where id = p_recipient_user_id and company_id = p_company_id
+    )
+  ) then
+    raise exception 'resend_inbound_recipient_company_mismatch';
+  end if;
+  if p_order_id is not null and not exists (
+    select 1 from public.orders
+     where id = p_order_id and company_id = p_company_id
+  ) then
+    raise exception 'resend_inbound_order_company_mismatch';
+  end if;
 
   select * into v_message
     from public.messages
@@ -353,17 +383,25 @@ begin
      where company_id = p_company_id
      order by created_at desc, id desc
      limit 1;
-    v_alert_kind := case
-      when v_previous_sender is null or v_company.support_thread_status = 'complete'
-        then 'support_request'
+    v_alert_kind := case when p_sender_role = 'buyer' then case
+      when v_previous_sender is null or v_company.support_thread_status = 'complete' then 'support_request'
       else 'message'
-    end;
+    end else null end;
     insert into public.messages (
-      company_id, user_id, sender_role, body, source, external_message_id,
-      external_alert_kind, read_by_user, read_by_staff
+      company_id, user_id, recipient_user_id, sender_role, body, order_id, source,
+      external_message_id, external_alert_kind, read_by_user, read_by_staff
     ) values (
-      p_company_id, p_user_id, 'buyer', p_body, 'email_reply', p_external_message_id,
-      v_alert_kind, true, false
+      p_company_id,
+      case when p_sender_role = 'buyer' then p_user_id else null end,
+      case when p_sender_role = 'staff' then p_recipient_user_id else null end,
+      p_sender_role::public.message_sender,
+      p_body,
+      p_order_id,
+      'email_reply',
+      p_external_message_id,
+      v_alert_kind,
+      p_sender_role = 'buyer',
+      p_sender_role = 'staff'
     )
     on conflict do nothing
     returning * into v_message;
@@ -375,7 +413,9 @@ begin
        for update;
     end if;
   end if;
-  if v_message.id is null or v_message.company_id is distinct from p_company_id then
+  if v_message.id is null
+     or v_message.company_id is distinct from p_company_id
+     or v_message.sender_role::text is distinct from p_sender_role then
     raise exception 'resend_inbound_message_identity_collision';
   end if;
   if v_previous_sender is null then
@@ -387,22 +427,34 @@ begin
      order by created_at desc, id desc
      limit 1;
   end if;
-  v_alert_kind := coalesce(v_message.external_alert_kind, case
-    when v_previous_sender is null then 'support_request' else 'message' end);
+  v_alert_kind := case when v_message.sender_role::text = 'buyer' then
+    coalesce(v_message.external_alert_kind, case
+      when v_previous_sender is null then 'support_request' else 'message' end)
+    else null end;
 
-  update public.companies
-     set support_last_message_at = v_message.created_at,
-         support_last_message_body = v_message.body,
-         support_last_sender_role = 'buyer',
-         support_thread_status = 'open',
-         support_thread_completed_at = null,
-         support_thread_completed_by = null
-   where id = p_company_id
-     and (support_last_message_at is null or support_last_message_at <= v_message.created_at);
+  -- Only a newly accepted reply changes lifecycle state. Provider retries return
+  -- the existing row without reopening a conversation staff resolved later.
+  if v_inserted then
+    update public.companies
+       set support_thread_status = 'open',
+           support_thread_completed_at = null,
+           support_thread_completed_by = null
+     where id = p_company_id;
+  end if;
 
   return jsonb_build_object(
+    'id', v_message.id,
     'message_id', v_message.id,
     'created_at', v_message.created_at,
+    'company_id', v_message.company_id,
+    'user_id', v_message.user_id,
+    'recipient_user_id', v_message.recipient_user_id,
+    'sender_role', v_message.sender_role,
+    'body', v_message.body,
+    'order_id', v_message.order_id,
+    'email_delivery_id', v_message.email_delivery_id,
+    'email_message_id', v_message.email_message_id,
+    'email_references', v_message.email_references,
     'inserted', v_inserted,
     'previous_sender_role', v_previous_sender,
     'prior_thread_status', v_company.support_thread_status,
@@ -412,9 +464,9 @@ begin
 end;
 $$;
 
-revoke all on function public.upsert_resend_inbound_message(uuid, uuid, text, text) from public;
-revoke execute on function public.upsert_resend_inbound_message(uuid, uuid, text, text) from anon, authenticated;
-grant execute on function public.upsert_resend_inbound_message(uuid, uuid, text, text) to service_role;
+revoke all on function public.upsert_resend_inbound_message(uuid, uuid, text, text, text, uuid, uuid) from public;
+revoke execute on function public.upsert_resend_inbound_message(uuid, uuid, text, text, text, uuid, uuid) from anon, authenticated;
+grant execute on function public.upsert_resend_inbound_message(uuid, uuid, text, text, text, uuid, uuid) to service_role;
 
 create or replace function public.finish_integration_projection(
   p_effect_id uuid,
@@ -717,6 +769,8 @@ declare
   v_stale boolean;
   v_result jsonb;
   v_recipient_digests jsonb;
+  v_message_id text;
+  v_thread_linked boolean := false;
 begin
   select * into v_effect from public.integration_effects where id = p_effect_id for update;
   if not found or v_effect.status <> 'processing'
@@ -739,6 +793,15 @@ begin
   v_status := v_effect.payload ->> 'status';
   v_event_type := v_effect.payload ->> 'event_type';
   v_recipient_digests := coalesce(v_effect.payload -> 'recipient_digests', '[]'::jsonb);
+  v_message_id := nullif(btrim(coalesce(v_effect.payload ->> 'message_id', '')), '');
+  if v_message_id is not null
+     and v_message_id ~ '^<[^<>[:space:]]{1,510}>$' then
+    update public.messages
+       set email_message_id = v_message_id
+     where email_delivery_id = v_effect.payload ->> 'resend_id'
+       and (email_message_id is null or email_message_id = v_message_id)
+    returning true into v_thread_linked;
+  end if;
   select * into v_email
     from public.email_events
    where resend_id = v_effect.payload ->> 'resend_id'
@@ -785,6 +848,7 @@ begin
   v_result := jsonb_build_object(
     'found', true,
     'applied', not v_stale,
+    'thread_linked', v_thread_linked,
     'skipped', case when v_stale then 'stale_event' else null end
   );
   return public.finish_integration_projection(p_effect_id, p_worker_id, v_result);

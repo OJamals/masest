@@ -5,14 +5,15 @@ import { verifySvixSignature } from "../functions/_lib/email.js";
 
 const messagesSrc = readFileSync(new URL("../functions/api/account/messages.js", import.meta.url), "utf8");
 const adminMessagesSrc = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
+const supportEmailSrc = readFileSync(new URL("../functions/_lib/support-email.js", import.meta.url), "utf8");
 const emailSrc = readFileSync(new URL("../functions/_lib/email.js", import.meta.url), "utf8");
 
 test("support notification emails escape customer and staff-supplied body", () => {
-  assert.match(messagesSrc, /htmlEscape\(data\.company_name \|\| companyId\)/);
-  assert.match(messagesSrc, /htmlEscape\(text\.slice\(0, 500\)\)/);
-  assert.match(adminMessagesSrc, /import \{[^}]*htmlEscape[^}]*\} from '\.\.\/\.\.\/_lib\/supabase\.js'/);
-  assert.match(adminMessagesSrc, /\$\{htmlEscape\(text\)\}/);
-  assert.doesNotMatch(adminMessagesSrc, /<blockquote[^>]*>\$\{text\}/);
+  assert.match(messagesSrc, /deliverSupportMessageEmail/);
+  assert.match(adminMessagesSrc, /deliverSupportMessageEmail/);
+  assert.match(supportEmailSrc, /htmlEscape\(String\(message\.body\)\.slice\(0, 4000\)\)/);
+  assert.match(supportEmailSrc, /htmlEscape\(order\.reference \|\| order\.id\)/);
+  assert.doesNotMatch(supportEmailSrc, /<blockquote[^>]*>\$\{message\.body\}/);
 });
 
 test("Svix verifier uses a constant-time compare (no === short-circuit on the MAC)", () => {
