@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./playwright-test.mjs";
 import { CATALOG_ORDER } from "../js/main/catalog-data.js";
 import { startStaticTestServer } from "./test-static-server.mjs";
 

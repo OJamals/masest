@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { expect, test } from "@playwright/test";
+import { createMediaIsolation, expect, test } from "./playwright-test.mjs";
 import {
   STORY_PERFORMANCE_SAMPLE_COUNT,
   evaluateStoryPerformanceSamples,
@@ -501,6 +501,8 @@ test("no-JS mode keeps all four chapters and actions readable", async ({ browser
     javaScriptEnabled: false,
     viewport: { width: 390, height: 844 },
   });
+  const mediaIsolation = createMediaIsolation();
+  await mediaIsolation.install(context);
   const page = await context.newPage();
   try {
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
@@ -528,7 +530,11 @@ test("no-JS mode keeps all four chapters and actions readable", async ({ browser
     expect(state.actions).toContain("products/hcr");
     expect(state.actions).toContain("#storySummary");
   } finally {
-    await context.close();
+    try {
+      await context.close();
+    } finally {
+      mediaIsolation.assertNoUnexpected();
+    }
   }
 });
 

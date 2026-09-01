@@ -4,7 +4,7 @@
 // tabs with wrap-around. Guards the a11y fix in js/main/service-catalog.js.
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 const PORT = 4291;
 const BASE_URL = `http://127.0.0.1:${PORT}`;

@@ -69,24 +69,49 @@ is unchanged, so there is no spurious diff).
 
 ## Site image library
 
-Supabase Storage is the source of truth for public images.
+Cloudflare R2 is the source of truth for public content images. The bucket is
+`masest-site-images`, Pages Functions access it through the `CONTENT_IMAGES`
+binding, and public bytes use `https://media.masest.co`.
 `data/content/site-images.json` is the versioned integrity ledger. It preserves
 each stable `/img/...` logical alias plus its dimensions, MIME type, byte size,
 SHA-256, and reusable alt text. `npm run build:images` validates that ledger.
 
 The Content asset manager and every shared image picker merge those rows with
-the local manifest, preferring the CMS row for each logical alias. “Replace
-everywhere” overwrites the same managed Storage object, so its stable public URL
-does not change.
+the local manifest, preferring the CMS row for each logical alias. New uploads
+are optimized, written to R2 under `cms/...`, registered in Supabase metadata,
+and then attached through the preview-first “Replace everywhere” workflow.
 
 The normal `npm run build` rewrites known public-site image references to those
-stable CMS Storage URLs. Public image binaries are not duplicated in the
-repository or deployment.
+stable R2 URLs. Existing Supabase `content-assets` URLs are canonicalized to the
+same R2 object key during compilation. Public image binaries are not duplicated
+in the repository or Pages deployment.
+
+For the one-time copy, first create the bucket and `media.masest.co` custom
+domain, then bind the bucket to both Pages production and preview. Inventory is
+read-only unless `--execute` is present:
+
+```bash
+npm run migrate:content-images
+npm run migrate:content-images -- --execute
+CMS_MEDIA_BASE=https://media.masest.co/site npm run verify:cms-images
+```
+
+The migration preserves every `content-assets` object key, downloads each source
+object once, uploads immutable R2 bytes, and verifies public MIME type, byte size,
+SHA-256, and cache policy. The Supabase copy remains intact for rollback; do not
+delete it during cutover.
 
 Run `npm run verify:cms-images` to fetch every managed object and prove its
 response MIME type, byte size, and SHA-256 against the ledger. Add or replace
 images through the CMS asset manager; update the ledger in the same reviewed
 change when an object intentionally changes.
+
+`verify:cms-images` is a deliberate live, full-byte integrity audit. It downloads
+the total `byte_size` declared by the ledger and must not run in routine local or
+CI loops. Use `npm run build:images` for offline ledger validation. Browser QA
+also replaces both R2 and legacy Supabase managed images with local placeholders
+unless `MASEST_LIVE_MEDIA=1` is set outside CI. Reserve live bytes for reviewed
+image changes and release proof.
 
 ## Operational boundary
 

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./playwright-test.mjs";
 import { buildStripeCheckoutSessionParams, buyerEmailFromStripeSession } from "../functions/_lib/checkout-session.js";
 import { assembleCartMetadata, parseCartMetadata } from "../functions/_lib/order-shape.js";
 

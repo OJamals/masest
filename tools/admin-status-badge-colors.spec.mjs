@@ -6,7 +6,7 @@
 // Reuses the static-server + null-session admin harness from the other admin specs.
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 const PORT = 4272;
 const BASE_URL = `http://127.0.0.1:${PORT}`;

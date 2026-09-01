@@ -13,6 +13,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
+import { wrapBrowserWithMediaIsolation } from './test-media-isolation.mjs';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 const src = pathToFileURL(resolve(here, 'og-card.html')).href;
@@ -20,7 +22,7 @@ const out = resolve(root, 'img/og-card.png');
 
 const W = 1200, H = 630;
 
-const browser = await chromium.launch();
+const browser = wrapBrowserWithMediaIsolation(await chromium.launch());
 const page = await browser.newPage({
   viewport: { width: W, height: H },
   deviceScaleFactor: 2,

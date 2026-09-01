@@ -5,7 +5,7 @@
 // the settings are actually operable, which is the bug that moved them here.
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 const PORT = 4319;
 const BASE_URL = `http://127.0.0.1:${PORT}`;

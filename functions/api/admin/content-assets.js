@@ -14,9 +14,14 @@ import {
   createContentAssetReplacementService,
   withContentAssetReferences,
 } from "../../_lib/content-asset-replacement.js";
-import { canonicalPublicImageUrl } from "../../../js/image-url.js";
+import {
+  CONTENT_ASSET_PUBLIC_BASE,
+  canonicalContentAssetUrl,
+  canonicalPublicImageUrl,
+  contentAssetPublicUrl as publicContentAssetUrl,
+  managedContentAssetPath,
+} from "../../../js/image-url.js";
 
-const DEFAULT_CONTENT_ASSET_BUCKET = "content-assets";
 const DEFAULT_MAX_CONTENT_ASSET_BYTES = 6 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Map([
   ["image/avif", "avif"],
@@ -26,34 +31,43 @@ const ALLOWED_IMAGE_TYPES = new Map([
 ]);
 const ALLOWED_IMAGE_EXTENSIONS = new Set(["avif", "jpeg", "jpg", "png", "webp"]);
 
-function contentAssetBucket(env = {}) {
-  return String(env.CONTENT_ASSET_BUCKET || DEFAULT_CONTENT_ASSET_BUCKET).trim() || DEFAULT_CONTENT_ASSET_BUCKET;
-}
-
 function contentAssetMaxBytes(env = {}) {
   const configured = Number(env.CONTENT_ASSET_MAX_BYTES);
   if (!Number.isFinite(configured) || configured <= 0) return DEFAULT_MAX_CONTENT_ASSET_BYTES;
   return Math.min(configured, 25 * 1024 * 1024);
 }
 
-function encodeStoragePath(path) {
-  return String(path || "").split("/").map((part) => encodeURIComponent(part)).join("/");
+function contentAssetPublicBase(env = {}) {
+  return String(env.CONTENT_ASSET_PUBLIC_BASE || CONTENT_ASSET_PUBLIC_BASE).trim().replace(/\/+$/, "")
+    || CONTENT_ASSET_PUBLIC_BASE;
+}
+
+function managedAssetSourcePath(env, sourceUrl) {
+  const managedPath = managedContentAssetPath(sourceUrl, contentAssetPublicBase(env));
+  if (!managedPath) return "";
+  try {
+    const source = new URL(sourceUrl);
+    if (!source.hostname.endsWith(".supabase.co")) return managedPath;
+    const configured = new URL(String(env.SUPABASE_URL || ""));
+    return source.origin === configured.origin ? managedPath : "";
+  } catch {
+    return "";
+  }
 }
 
 function contentAssetPublicUrl(env, storagePath) {
-  const path = String(storagePath || "").trim();
-  if (!path) return "";
-  const publicPath = canonicalPublicImageUrl(path);
-  if (/^(https?:)?\/\//i.test(publicPath) || publicPath.startsWith("/")) {
-    return publicPath;
-  }
-  const base = String(env.SUPABASE_URL || "").replace(/\/+$/, "");
-  if (!base) return path;
-  return `${base}/storage/v1/object/public/${contentAssetBucket(env)}/${encodeStoragePath(path)}`;
+  const value = canonicalPublicImageUrl(storagePath);
+  if (!value) return "";
+  if (/^\/img\//i.test(value)) return canonicalContentAssetUrl(value, contentAssetPublicBase(env));
+  if (/^(?:https?:)?\/\//i.test(value) || value.startsWith("/")) return value;
+  return publicContentAssetUrl(value, contentAssetPublicBase(env));
 }
 
 export function assetPublicUrl(env, asset) {
   const sourceUrl = canonicalPublicImageUrl(asset?.source_url);
+  if (managedAssetSourcePath(env, sourceUrl) || /^\/img\//i.test(sourceUrl)) {
+    return canonicalContentAssetUrl(sourceUrl, contentAssetPublicBase(env));
+  }
   return sourceUrl || contentAssetPublicUrl(env, asset?.storage_path);
 }
 
@@ -66,16 +80,11 @@ export function siteStoragePath(storagePath) {
 
 export function managedStoragePath(env, asset) {
   const sourceUrl = String(asset?.source_url || "").trim();
-  const base = String(env.SUPABASE_URL || "").replace(/\/+$/, "");
-  const prefix = `${base}/storage/v1/object/public/${contentAssetBucket(env)}/`;
-  if (base && sourceUrl.startsWith(prefix)) {
-    try {
-      const path = sourceUrl.slice(prefix.length).split("/").map(decodeURIComponent).join("/");
-      if (path && !path.split("/").some((part) => !part || part === "." || part === "..")) return path;
-    } catch {
-      return "";
-    }
-  }
+  const managedPath = managedAssetSourcePath(env, sourceUrl);
+  if (managedPath) return managedPath;
+  const logicalPath = siteStoragePath(sourceUrl);
+  if (logicalPath) return logicalPath;
+  if (sourceUrl) return "";
   const storagePath = String(asset?.storage_path || "").trim();
   return storagePath && !storagePath.startsWith("/") && assetPublicUrl(env, asset) === contentAssetPublicUrl(env, storagePath)
     ? storagePath
@@ -143,15 +152,16 @@ function isManagedAsset(env, asset) {
 }
 
 async function deleteStoredAsset(env, storagePath) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return { ok: false, error: "storage_not_configured" };
-  const response = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${contentAssetBucket(env)}/${encodeStoragePath(storagePath)}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    },
-  });
-  return response.ok || response.status === 404 ? { ok: true } : { ok: false, error: "storage_delete_failed" };
+  if (!env.CONTENT_IMAGES || typeof env.CONTENT_IMAGES.delete !== "function") {
+    return { ok: false, error: "storage_not_configured" };
+  }
+  try {
+    await env.CONTENT_IMAGES.delete(storagePath);
+    return { ok: true };
+  } catch (error) {
+    reportInternalError("admin.content_assets.delete_storage", error);
+    return { ok: false, error: "storage_delete_failed" };
+  }
 }
 
 async function saveUploadedAsset({ request, env, repo, userId }) {
@@ -174,7 +184,7 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
 
   const alt = String(form.get("alt") || "").trim();
   if (!alt) return { status: 400, body: { error: "alt_required" } };
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!env.CONTENT_IMAGES || typeof env.CONTENT_IMAGES.put !== "function") {
     return { status: 500, body: { error: "storage_not_configured" } };
   }
   const optimized = await optimizeWithTinyPng(file, env);
@@ -204,21 +214,17 @@ async function saveUploadedAsset({ request, env, repo, userId }) {
   const stem = cleanFilePart(fileName.replace(/\.[^.]+$/, ""), "asset");
   const folder = cleanFilePart(form.get("folder"), "cms");
   const storagePath = `${folder}/${crypto.randomUUID()}-${stem}.${ext}`;
-  const bucket = contentAssetBucket(env);
 
-  const upload = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${bucket}/${encodeStoragePath(storagePath)}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      "content-type": type,
-      "x-upsert": "false",
-    },
-    body: optimized.body,
-  });
-  if (!upload.ok) {
-    const detail = await upload.text().catch(() => "");
-    reportInternalError("admin.content_assets.upload", detail || `HTTP ${upload.status}`);
+  try {
+    await env.CONTENT_IMAGES.put(storagePath, optimized.body, {
+      httpMetadata: {
+        contentType: type,
+        cacheControl: "public, max-age=31536000, immutable",
+      },
+      customMetadata: { sha256 },
+    });
+  } catch (error) {
+    reportInternalError("admin.content_assets.upload", error);
     return {
       status: 502,
       body: { error: "upload_failed" },

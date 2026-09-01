@@ -6,7 +6,7 @@
 // scrolled. initContentSnapshots() now re-runs initReveal() after injecting.
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 const PORT = 4231;
 const BASE_URL = `http://127.0.0.1:${PORT}`;

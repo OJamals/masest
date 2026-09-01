@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 // a11y guard: the commerce/shop pill controls suppress the default outline, so they need an
 // explicit :focus-visible ring or keyboard focus is invisible. Asserts the rules shipped and

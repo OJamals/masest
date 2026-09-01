@@ -27,16 +27,6 @@ test("homepage static preview does not call unavailable api functions", async ()
       const page = await browser.newPage({ viewport: { width: 1280, height: 820 } });
       const badApiResponses = [];
       const consoleErrors = [];
-      await page.route("https://*.supabase.co/storage/v1/object/public/content-assets/site/img/**", route =>
-        route.fulfill({
-          status: 200,
-          contentType: "image/png",
-          body: Buffer.from(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-            "base64",
-          ),
-        })
-      );
 
       page.on("response", response => {
         const url = response.url();
@@ -66,7 +56,7 @@ test("homepage static preview does not call unavailable api functions", async ()
       );
       assert.equal(proofImages.length, 2);
       assert.equal(proofImages.every(image =>
-        image.src.startsWith("https://mvfxzvkzcqmnwcoblvfc.supabase.co/") &&
+        image.src.startsWith("https://media.masest.co/site/") &&
         image.complete &&
         image.naturalWidth > 0 &&
         !image.hidden

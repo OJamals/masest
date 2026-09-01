@@ -5,9 +5,10 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { SITE_MEDIA_BASE } from "../js/image-url.js";
+
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const MANIFEST_PATH = resolve(ROOT, "data/content/site-images.json");
-const CONFIG_PATH = resolve(ROOT, "js/config.js");
 const MIME_TYPES = new Map([
   [".png", "image/png"],
   [".webp", "image/webp"],
@@ -48,13 +49,7 @@ export function validateManifest(manifest) {
 
 function cmsMediaBase() {
   const override = String(process.env.CMS_MEDIA_BASE || "").replace(/\/+$/, "");
-  if (override) return override;
-
-  const config = readFileSync(CONFIG_PATH, "utf8");
-  const supabaseUrl = config.match(/MASEST_SUPABASE_URL\s*=\s*['"]([^'"]+)['"]/)?.[1]?.replace(/\/+$/, "");
-  invariant(supabaseUrl, "CMS_MEDIA_BASE or MASEST_SUPABASE_URL is required");
-  const bucket = String(process.env.CONTENT_ASSET_BUCKET || "content-assets");
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/site`;
+  return override || SITE_MEDIA_BASE;
 }
 
 async function mapConcurrent(items, limit, worker) {

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./playwright-test.mjs";
 
 const PORT = 4186;
 const BASE_URL = `http://127.0.0.1:${PORT}`;

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 import { startStaticTestServer } from "./test-static-server.mjs";
 
 // The cart's ZIP-first shipping estimate. It answers "what will freight cost?" without

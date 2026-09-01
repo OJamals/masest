@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 import { PRODUCT_CATALOG_COPY } from "../js/main/catalog-data.js";
 
 const PORT = 4184;

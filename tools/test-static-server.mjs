@@ -4,6 +4,8 @@ import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+import { wrapBrowserWithMediaIsolation } from "./test-media-isolation.mjs";
+
 const MIME = {
   ".css": "text/css",
   ".gif": "image/gif",
@@ -29,9 +31,7 @@ export async function launchTestBrowser(options = {}) {
   }
 
   let closed = false;
-  return {
-    newContext: (...args) => browser.newContext(...args),
-    newPage: (...args) => browser.newPage(...args),
+  return wrapBrowserWithMediaIsolation(browser, {
     async close() {
       if (closed) return;
       closed = true;
@@ -41,7 +41,7 @@ export async function launchTestBrowser(options = {}) {
         await browserServer.kill();
       }
     },
-  };
+  });
 }
 
 export async function startStaticTestServer(rootDirectory) {

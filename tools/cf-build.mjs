@@ -7,7 +7,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 
-import { rewriteCmsImageReferences } from '../js/image-url.js';
+import { SITE_MEDIA_BASE, rewriteCmsImageReferences } from '../js/image-url.js';
 import { renderIndustryRedirects } from './build-industry-pages.mjs';
 import { validatePublicDocumentReview } from './public-document-policy.mjs';
 
@@ -19,14 +19,7 @@ const { industries: industryApplications } = JSON.parse(
 );
 const siteImagePaths = (siteImageManifest.assets || []).map((asset) => asset.public_url);
 const configuredMediaBase = String(process.env.CMS_MEDIA_BASE || '').trim().replace(/\/+$/, '');
-const publicSupabaseUrl = readFileSync('js/config.js', 'utf8')
-  .match(/window\.MASEST_SUPABASE_URL\s*=\s*['"]([^'"]+)['"]/)?.[1]
-  ?.replace(/\/+$/, '');
-if (!configuredMediaBase && !publicSupabaseUrl) {
-  throw new Error('CMS media base unavailable: set CMS_MEDIA_BASE or configure MASEST_SUPABASE_URL');
-}
-const cmsMediaBase = configuredMediaBase
-  || `${publicSupabaseUrl}/storage/v1/object/public/content-assets/site`;
+const cmsMediaBase = configuredMediaBase || SITE_MEDIA_BASE;
 const rewritableExtensions = new Set(['.css', '.html', '.js', '.json', '.xml']);
 const CRITICAL_FONT_PRELOAD = '<link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/satoshi/satoshi-01.woff2">';
 

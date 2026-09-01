@@ -88,12 +88,34 @@ site.
 Required Pages binding:
 
 - `EMAIL_SERVICE` — service binding to `masest-email-service`.
+- `CONTENT_IMAGES` — R2 bucket binding to `masest-site-images` in production and preview.
 
 The email Worker owns the restricted `EMAIL` Email Sending binding, idempotency
 Durable Object, lifecycle queue, and inbound Email Routing handler. Pages never
 receives a provider API key.
 
 After env var changes, run the `Verify` workflow on `main` so the new values bind.
+
+## Public content images
+
+Public CMS and site-library images live in the R2 bucket `masest-site-images`.
+The bucket custom domain is `https://media.masest.co`; do not use its development
+`r2.dev` URL in production content. Preserve object keys such as `site/img/...`
+and `cms/...` so legacy Supabase URLs can map without redirects or duplicate
+metadata.
+
+Configure the `CONTENT_IMAGES` R2 binding on both production and preview before
+deploying code that writes content assets. A binding change requires a new Pages
+deployment. Keep the Supabase `content-assets` objects during cutover. Rollback is
+a code revert plus a verified Pages redeploy; the original bytes remain available.
+
+Migration and full-byte verification:
+
+```bash
+npm run migrate:content-images
+npm run migrate:content-images -- --execute
+CMS_MEDIA_BASE=https://media.masest.co/site npm run verify:cms-images
+```
 
 ## Customer-message email replies
 

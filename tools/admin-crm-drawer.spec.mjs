@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 // Playwright contract spec for the CRM drawer panel (Task 5).
 // Boots admin.js past the Supabase sign-in gate using the same static-server +

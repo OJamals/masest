@@ -3,7 +3,7 @@
 import { spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 const PORT = 4273;
 const BASE_URL = `http://127.0.0.1:${PORT}`;

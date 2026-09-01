@@ -7,6 +7,7 @@ const CONTENT_ASSET_ENV = {
   SUPABASE_URL: "https://example.supabase.co",
   SUPABASE_ANON_KEY: "anon-key",
   SUPABASE_SERVICE_ROLE_KEY: "service-key",
+  CONTENT_ASSET_PUBLIC_BASE: "https://media.example.test",
   ADMIN_EMAILS: "owner@example.com",
 };
 
@@ -42,11 +43,24 @@ test("logical site aliases resolve to managed CMS objects without trusting exter
   const asset = { storage_path: logical, source_url: managedUrl };
 
   assert.equal(siteStoragePath(logical), "site/img/proof/cases/brewery.webp");
-  assert.equal(assetPublicUrl(env, asset), managedUrl);
+  assert.equal(assetPublicUrl(env, asset), "https://media.example.test/site/img/proof/cases/brewery.webp");
   assert.equal(managedStoragePath(env, asset), "site/img/proof/cases/brewery.webp");
   assert.equal(managedStoragePath(env, {
     storage_path: logical,
+    source_url: "https://media.example.test/site/img/proof/cases/brewery.webp",
+  }), "site/img/proof/cases/brewery.webp");
+  assert.equal(managedStoragePath(env, {
+    storage_path: logical,
     source_url: "https://untrusted.example/image.webp",
+  }), "");
+  const foreignSupabaseUrl = "https://attacker.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp";
+  assert.equal(assetPublicUrl(env, {
+    storage_path: logical,
+    source_url: foreignSupabaseUrl,
+  }), foreignSupabaseUrl);
+  assert.equal(managedStoragePath(env, {
+    storage_path: logical,
+    source_url: foreignSupabaseUrl,
   }), "");
 });
 
@@ -409,25 +423,102 @@ test("replace everywhere rejects stale impact then writes content through revisi
       "content_revisions",
       "audit_log",
     ]);
-    assert.equal(mutations[0].body.payload.image, nextUrl);
-    assert.equal(mutations[0].body.seo.og_image, nextUrl);
+    assert.equal(mutations[0].body.payload.image, "https://media.example.test/cms/new.webp");
+    assert.equal(mutations[0].body.seo.og_image, "https://media.example.test/cms/new.webp");
     assert.equal(mutations[1].body.version, 10);
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("asset endpoint accepts multipart upload into CMS asset storage", () => {
+test("asset endpoint accepts multipart upload into R2 CMS asset storage", () => {
   const source = readFileSync(new URL("../functions/api/admin/content-assets.js", import.meta.url), "utf8");
   assert.match(source, /request\.formData\(\)/);
-  assert.match(source, /CONTENT_ASSET_BUCKET/);
+  assert.match(source, /CONTENT_IMAGES/);
   assert.match(source, /CONTENT_ASSET_MAX_BYTES/);
-  assert.match(source, /storage\/v1\/object/);
+  assert.match(source, /CONTENT_IMAGES\.put/);
+  assert.match(source, /httpMetadata/);
+  assert.match(source, /cacheControl/);
+  assert.doesNotMatch(source, /fetch\(`\$\{env\.SUPABASE_URL\}\/storage\/v1\/object/);
   assert.match(source, /file_required/);
   assert.match(source, /unsupported_image_type/);
   assert.match(source, /asset_too_large/);
   assert.match(source, /storage_not_configured/);
   assert.match(source, /saveAsset/);
+});
+
+test("multipart upload writes optimized bytes and immutable metadata through the R2 binding", async () => {
+  const originalFetch = globalThis.fetch;
+  const optimizedBody = Buffer.from("optimized-image");
+  const storageCalls = [];
+  const databaseWrites = [];
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(String(input));
+    const method = String(init.method || input?.method || "GET").toUpperCase();
+    if (url.hostname === "api.tinify.com" && url.pathname === "/shrink") {
+      return new Response(null, {
+        status: 201,
+        headers: { Location: "https://api.tinify.com/result/optimized" },
+      });
+    }
+    if (url.hostname === "api.tinify.com" && url.pathname === "/result/optimized") {
+      return new Response(optimizedBody, { headers: { "Content-Type": "image/webp" } });
+    }
+    if (url.pathname === "/auth/v1/user") {
+      return Response.json({ user: { id: "owner-id", email: "owner@example.com" } });
+    }
+    if (url.pathname === "/rest/v1/content_assets" && method === "GET") {
+      return Response.json([]);
+    }
+    if (url.pathname === "/rest/v1/content_assets" && method === "POST") {
+      const body = JSON.parse(String(init.body || "{}"));
+      databaseWrites.push(body);
+      return Response.json(body);
+    }
+    throw new Error(`Unexpected request: ${method} ${url}`);
+  };
+
+  const form = new FormData();
+  form.append("alt", "Uploaded proof");
+  form.append("folder", "cms");
+  form.append("width", "1200");
+  form.append("height", "800");
+  form.append("file", new Blob([Buffer.from("original-image")], { type: "image/webp" }), "proof.webp");
+
+  try {
+    const response = await contentAssetsRequest({
+      request: new Request("https://masest.co/api/admin/content-assets", {
+        method: "POST",
+        headers: { authorization: "Bearer owner-token" },
+        body: form,
+      }),
+      env: {
+        ...CONTENT_ASSET_ENV,
+        TINIFY_API_KEY: "tinify-key",
+        CONTENT_IMAGES: {
+          async put(key, body, options) {
+            storageCalls.push({ key, body: Buffer.from(body), options });
+          },
+        },
+      },
+    });
+    const result = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(result.ok, true);
+    assert.equal(storageCalls.length, 1);
+    assert.match(storageCalls[0].key, /^cms\/[a-f0-9-]+-proof\.webp$/);
+    assert.deepEqual(storageCalls[0].body, optimizedBody);
+    assert.deepEqual(storageCalls[0].options.httpMetadata, {
+      contentType: "image/webp",
+      cacheControl: "public, max-age=31536000, immutable",
+    });
+    assert.match(storageCalls[0].options.customMetadata.sha256, /^[a-f0-9]{64}$/);
+    assert.equal(databaseWrites.length, 1);
+    assert.equal(databaseWrites[0].source_url, `https://media.example.test/${storageCalls[0].key}`);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("uploaded content images are optimized with TinyPNG before storage", () => {
@@ -449,6 +540,7 @@ test("uploaded content images are optimized with TinyPNG before storage", () => 
 test("permanent deletion requires confirmation and an archived asset before deleting storage", async () => {
   const originalFetch = globalThis.fetch;
   const calls = [];
+  const r2Deletes = [];
   let assetStatus = "available";
   globalThis.fetch = async (input, init = {}) => {
     const url = new URL(String(input));
@@ -466,9 +558,6 @@ test("permanent deletion requires confirmation and an archived asset before dele
         source_url: "https://example.supabase.co/storage/v1/object/public/content-assets/cms/test.webp",
       }]);
     }
-    if (url.pathname === "/storage/v1/object/content-assets/cms/test.webp" && method === "DELETE") {
-      return new Response(null, { status: 200 });
-    }
     if (url.pathname === "/rest/v1/content_assets" && method === "DELETE") {
       return new Response(null, { status: 204 });
     }
@@ -483,7 +572,12 @@ test("permanent deletion requires confirmation and an archived asset before dele
       method: "DELETE",
       headers: { authorization: "Bearer owner-token" },
     }),
-    env: CONTENT_ASSET_ENV,
+    env: {
+      ...CONTENT_ASSET_ENV,
+      CONTENT_IMAGES: {
+        async delete(storagePath) { r2Deletes.push(storagePath); },
+      },
+    },
   });
   const destructiveCalls = () => calls.filter(({ method }) => method === "DELETE");
 
@@ -492,16 +586,19 @@ test("permanent deletion requires confirmation and an archived asset before dele
     assert.equal(unconfirmed.status, 409);
     assert.deepEqual(await unconfirmed.json(), { error: "permanent_delete_confirmation_required" });
     assert.equal(destructiveCalls().length, 0);
+    assert.deepEqual(r2Deletes, []);
 
     const available = await request("&permanent=true");
     assert.equal(available.status, 409);
     assert.deepEqual(await available.json(), { error: "asset_must_be_archived" });
     assert.equal(destructiveCalls().length, 0);
+    assert.deepEqual(r2Deletes, []);
 
     assetStatus = "archived";
     const archived = await request("&permanent=true");
     assert.equal(archived.status, 200);
-    assert.equal(destructiveCalls().length, 2);
+    assert.equal(destructiveCalls().length, 1);
+    assert.deepEqual(r2Deletes, ["cms/test.webp"]);
     const audit = calls.find(({ url, method }) => url.pathname === "/rest/v1/audit_log" && method === "POST");
     assert.match(String(audit?.body), /content_asset\.deleted/);
   } finally {

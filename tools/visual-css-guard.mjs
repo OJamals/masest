@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+import { wrapBrowserWithMediaIsolation } from "./test-media-isolation.mjs";
+
 const ROOT = new URL("..", import.meta.url);
 const ROOT_PATH = fileURLToPath(ROOT);
 const BASE_URL = "http://127.0.0.1:4179";
@@ -149,7 +151,7 @@ async function capture(label) {
   const pageList = await pages();
   await withServer(async () => {
     for (const [mode, viewport] of Object.entries(MODES)) {
-      const browser = await chromium.launch();
+      const browser = wrapBrowserWithMediaIsolation(await chromium.launch());
       let context;
       try {
         context = await browser.newContext({ viewport, deviceScaleFactor: 1, reducedMotion: "reduce" });

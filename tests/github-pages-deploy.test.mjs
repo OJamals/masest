@@ -70,3 +70,15 @@ test("GitHub workflows use Node 24 action runtimes", () => {
   assert.match(verifyWorkflow, /actions\/download-artifact@v8/);
   assert.doesNotMatch(verifyWorkflow, /actions\/(?:upload|download)-artifact@v[1-6]/);
 });
+
+test("Pages deployment contract owns public images through one R2 binding and domain", () => {
+  const pages = read("CLOUDFLARE_PAGES.md");
+  const publishing = read("docs/CONTENT_PUBLISHING.md");
+
+  assert.match(pages, /CONTENT_IMAGES[^\n]+masest-site-images/);
+  assert.match(pages, /https:\/\/media\.masest\.co/);
+  assert.match(pages, /production and preview/);
+  assert.match(publishing, /Cloudflare R2 is the source of truth for public content images/);
+  assert.match(publishing, /npm run migrate:content-images -- --execute/);
+  assert.match(publishing, /Supabase copy remains intact/);
+});

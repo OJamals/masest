@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 // Playwright contract spec for the slice-2 deal pipeline (board + drawer).
 // Reuses the static-server + stubbed-API harness from admin-crm-drawer.spec.mjs:

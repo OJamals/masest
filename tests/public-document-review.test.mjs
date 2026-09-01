@@ -746,7 +746,7 @@ test("approved documents publish while technical sheets remain request-only", ()
     }
     assert.match(
       read("dist/industries/marine.html"),
-      /storage\/v1\/object\/public\/content-assets\/site\/img\/industries\/marine\/g1\.webp/,
+      /https:\/\/media\.masest\.co\/site\/img\/industries\/marine\/g1\.webp/,
       "owner-approved field context must publish through CMS media",
     );
     assert.equal(

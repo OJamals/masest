@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 // Gating guard for B2B signup: when Supabase email-confirmation is ON, signUp returns no
 // session, and account.html must NOT treat the user as logged in — it shows a "confirm your

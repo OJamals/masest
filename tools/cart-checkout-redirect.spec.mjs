@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 import { startStaticTestServer } from "./test-static-server.mjs";
 
 // End-to-end guard for the cart -> Stripe checkout hand-off. Stubs /api/products,

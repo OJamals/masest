@@ -5,7 +5,7 @@
 // Legacy href values never expose source documents. sort_order drives order; an
 // empty snapshot leaves the hardcoded cards intact.
 import { mkdirSync, readFileSync } from "node:fs";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 import { startStaticTestServer } from "./test-static-server.mjs";
 
 const DIR = "output/playwright/proof-cms";

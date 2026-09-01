@@ -7,6 +7,7 @@
     "build:content": "node tools/build-content.mjs",
     "build:images": "node tools/build-image-library.mjs",
     "verify:cms-images": "node tools/build-image-library.mjs --verify-cms",
+    "migrate:content-images": "node tools/migrate-content-assets-to-r2.mjs",
     "build:industries": "node tools/gen_industries.mjs && node tools/build-industry-pages.mjs",
     "build:blog": "node tools/build-blog.mjs",
     "build:comparisons": "node tools/gen_comparisons.mjs",

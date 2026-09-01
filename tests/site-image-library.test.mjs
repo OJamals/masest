@@ -10,8 +10,13 @@ import { normalizeContentEntry } from "../functions/_lib/content.js";
 import { normalizeStructuredPayload } from "../js/content-types.js";
 import { PRODUCTS } from "../js/main/catalog-data.js";
 import {
+  CONTENT_ASSET_PUBLIC_BASE,
+  SITE_MEDIA_BASE,
   canonicalPublicImageUrl,
+  canonicalContentAssetUrl,
   cmsPublicImageUrl,
+  contentAssetPublicUrl,
+  managedContentAssetPath,
   rewriteCmsImageReferences,
 } from "../js/image-url.js";
 
@@ -167,7 +172,7 @@ test("site and CMS assets merge into one searchable, de-duplicated library", asy
 });
 
 test("known site image references compile to stable CMS storage URLs", () => {
-  const base = "https://example.supabase.co/storage/v1/object/public/content-assets/site";
+  const base = "https://media.example.test/site";
   const brewery = "/img/proof/cases/brewery.webp";
   assert.equal(
     cmsPublicImageUrl("../img/proof/cases/brewery.webp?v=7", base),
@@ -180,16 +185,19 @@ test("known site image references compile to stable CMS storage URLs", () => {
     '<img src="/img/proof/cases/brewery.webp?v=7">',
     "background:url(../img/proof/cases/brewery.webp)",
     "https://masest.co/img/proof/cases/brewery.webp",
+    "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp?legacy=1",
     "/img/products/example.webp",
   ].join("\n");
   const compiled = rewriteCmsImageReferences(source, [brewery], base);
-  assert.equal(compiled.match(new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))?.length, 4);
+  assert.equal(compiled.match(new RegExp(base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))?.length, 5);
+  assert.match(compiled, new RegExp(`${base}/img/proof/cases/brewery\\.webp\\?legacy=1`));
+  assert.doesNotMatch(compiled, /supabase\.co\/storage\/v1\/object\/public\/content-assets/);
   assert.match(compiled, /\/img\/products\/example\.webp/);
   assert.doesNotMatch(compiled, /(?:^|[("'=\s])(?:\.\.\/|\/)?img\/proof\/cases\/brewery\.webp/m);
 });
 
 test("shared chrome keeps brand logos repository-local during CMS image compilation", () => {
-  const base = "https://example.supabase.co/storage/v1/object/public/content-assets/site";
+  const base = "https://media.example.test/site";
   const chrome = readFileSync(new URL("../js/main/chrome.js", import.meta.url), "utf8");
   const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
   const compiled = rewriteCmsImageReferences(
@@ -203,8 +211,35 @@ test("shared chrome keeps brand logos repository-local during CMS image compilat
   assert.match(compiled, /src="\/img\/masest-logo-ink\.png"/);
 });
 
+test("managed content images have one R2 URL owner and preserve legacy object paths", () => {
+  const legacy = "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp?v=7#result";
+
+  assert.equal(CONTENT_ASSET_PUBLIC_BASE, "https://media.masest.co");
+  assert.equal(SITE_MEDIA_BASE, "https://media.masest.co/site");
+  assert.equal(managedContentAssetPath(legacy), "site/img/proof/cases/brewery.webp");
+  assert.equal(
+    canonicalContentAssetUrl(legacy),
+    "https://media.masest.co/site/img/proof/cases/brewery.webp?v=7#result",
+  );
+  assert.equal(
+    canonicalContentAssetUrl("/img/proof/cases/brewery.webp"),
+    "https://media.masest.co/site/img/proof/cases/brewery.webp",
+  );
+  assert.equal(
+    canonicalContentAssetUrl("https://untrusted.example/image.webp"),
+    "https://untrusted.example/image.webp",
+  );
+  assert.equal(
+    contentAssetPublicUrl("cms/a b/image(1).webp"),
+    "https://media.masest.co/cms/a%20b/image(1).webp",
+  );
+  assert.equal(contentAssetPublicUrl("../private/image.webp"), "");
+  assert.equal(contentAssetPublicUrl("cms/image.webp", "javascript:alert(1)"), "");
+});
+
 test("image-library builder validates its ledger and verifies public CMS bytes", () => {
   const builder = readFileSync(new URL("../tools/build-image-library.mjs", import.meta.url), "utf8");
+  const compiler = readFileSync(new URL("../tools/cf-build.mjs", import.meta.url), "utf8");
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
   assert.match(pkg.scripts["verify:cms-images"], /build-image-library\.mjs --verify-cms/);
@@ -213,6 +248,9 @@ test("image-library builder validates its ledger and verifies public CMS bytes",
   assert.match(builder, /createHash\("sha256"\)/);
   assert.match(builder, /--verify-cms/);
   assert.doesNotMatch(builder, /SUPABASE_SERVICE_ROLE_KEY|x-upsert|--sync-cms/);
+  assert.match(builder, /SITE_MEDIA_BASE/);
+  assert.match(compiler, /SITE_MEDIA_BASE/);
+  assert.doesNotMatch(builder + compiler, /MASEST_SUPABASE_URL|storage\/v1\/object\/public\/content-assets\/site/);
 });
 
 test("CMS image verification retries bounded remote rate limits", async () => {

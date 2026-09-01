@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 import { startStaticTestServer } from "./test-static-server.mjs";
 
 // Guard for checkout error recovery on a blank/partial submit.

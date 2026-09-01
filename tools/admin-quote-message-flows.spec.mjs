@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 // E2e coverage for two staff-console write flows that were previously only static-guarded:
 //   1. Quote -> NET order conversion  (admin.js renderQuotes() -> POST /api/admin/quotes action=convert)

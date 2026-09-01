@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+import { wrapBrowserWithMediaIsolation } from "./test-media-isolation.mjs";
+
 const ROOT = new URL("..", import.meta.url);
 const ROOT_PATH = fileURLToPath(ROOT);
 const PORT = Number(process.env.VISUAL_AUDIT_PORT || 4317);
@@ -743,7 +745,7 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   const rows = [];
   await withServer(async () => {
-    const browser = await chromium.launch();
+    const browser = wrapBrowserWithMediaIsolation(await chromium.launch());
     try {
       for (const [mode, viewport] of Object.entries(VIEWPORTS)) {
         const publicContext = await newContext(browser, viewport, false);

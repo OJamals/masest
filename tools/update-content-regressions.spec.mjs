@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./playwright-test.mjs";
 import { startStaticTestServer } from "./test-static-server.mjs";
 
 let BASE_URL = "";

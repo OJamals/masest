@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./playwright-test.mjs";
 
 // Access-control guard for the staff console. With no staff session the admin API returns
 // 401, and admin.js must keep the app hidden behind the sign-in gate. The test also asserts

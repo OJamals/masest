@@ -9,7 +9,8 @@ MASEST is a static Cloudflare Pages commerce site with Pages Functions for serve
 - Admin console: `admin.html`, `js/admin.js`, split modules under `js/admin/*`, and guarded `/api/admin/*` functions.
 - Buyer dashboard: `dashboard.html`, `js/dashboard.js`, and `/api/account/*` functions.
 - CMS: `js/admin/content.js` with asset/revision modules, guarded `/api/admin/content*` functions,
-  Supabase content/storage tables, and build-time snapshots consumed by static public pages.
+  Supabase content metadata, Cloudflare R2 public image bytes, and build-time snapshots consumed by
+  static public pages.
 - Quote CRM: `/api/quote`, `/api/admin/quotes`, `/api/admin/crm/*`, the quote pipeline, contacts/tasks/timeline
   workspaces, buyer message handoff, and bounded server pagination for large admin directories.
 - External services: Stripe for checkout/payment portal, Resend for transactional email, QuickBooks via QBO sync functions, and Supabase for auth/data.
@@ -36,6 +37,11 @@ MASEST is a static Cloudflare Pages commerce site with Pages Functions for serve
 - `npm run smoke:cms`: optional focused Playwright content smoke.
 - `npm run qa:admin-assurance`: optional focused Node and Playwright admin assurance gate.
 - `npm run qa:remediation`: optional full Playwright remediation suite.
+- Browser QA must import `test` from `tools/playwright-test.mjs`; direct Chromium launchers must use
+  `wrapBrowserWithMediaIsolation()` from `tools/test-media-isolation.mjs`. Managed R2 images and legacy
+  Supabase Storage images resolve to a local placeholder by default; unexpected media requests fail closed.
+- Set `MASEST_LIVE_MEDIA=1` only for an intentional local full-media pass. CI always keeps media isolation
+  enabled so verification cannot consume production media egress or request quota.
 
 ## Feature Priorities
 
