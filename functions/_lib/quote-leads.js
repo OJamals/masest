@@ -269,13 +269,15 @@ export function createQuoteLeadLifecycle({
         })
         : null;
 
-      await sendFollowUp({ quote, nextStep, due, dueText, subject, actor });
       const thread = await handoff({
         quote,
         companyId,
         text: nextStep,
         actor: actor || 'staff',
       });
+      if (!thread.posted) {
+        await sendFollowUp({ quote, nextStep, due, dueText, subject, actor });
+      }
       const handoffNote = thread.posted
         ? `Buyer message thread updated (${thread.message_id || 'message'})`
         : `Buyer message thread not updated (${thread.reason || thread.error || 'no account match'})`;
