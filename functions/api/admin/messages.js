@@ -2,9 +2,8 @@
 //   GET → thread list · GET ?company_id= → full thread · PATCH → lifecycle · POST → reply
 import { adminClient, requireStaff, json, readBody, emailsByIds, internalServerError } from '../../_lib/supabase.js';
 import { staffCanWrite } from '../../_lib/authz.js';
-import { deliverSupportMessageEmail } from '../../_lib/support-email.js';
+import { publishSupportMessage } from '../../_lib/support-message-publisher.js';
 import {
-  appendSupportMessage,
   hydrateSupportOrderContexts,
   messagePage,
   resolveSupportOrderId,
@@ -224,9 +223,12 @@ export async function onRequest({ request, env }) {
       .maybeSingle();
     if (recipientError) return internalServerError('admin.messages.recipient_read', recipientError);
     if (!recipient) return json(404, { error: 'recipient_not_found' });
-    let data;
+    let publication;
     try {
-      data = await appendSupportMessage(sb, {
+      publication = await publishSupportMessage({
+        ...env,
+        APP_URL: env.APP_URL || new URL(request.url).origin,
+      }, sb, {
         companyId,
         recipientUserId,
         senderRole: 'staff',
@@ -238,6 +240,7 @@ export async function onRequest({ request, env }) {
     } catch (error) {
       return internalServerError('admin.messages.reply_insert', error);
     }
+    const { message: data, emailDelivery } = publication;
     const messageLink = orderContext.orderId
       ? `/dashboard.html?order=${encodeURIComponent(orderContext.orderId)}#messages`
       : '/dashboard.html#messages';
@@ -246,12 +249,6 @@ export async function onRequest({ request, env }) {
       body: text.slice(0, 140),
       link: messageLink,
     }).then(() => {}, () => {});
-    let emailDelivery;
-    try {
-      emailDelivery = await deliverSupportMessageEmail({ ...env, APP_URL: env.APP_URL || new URL(request.url).origin }, sb, data);
-    } catch {
-      emailDelivery = { ok: false, retryable: true, error: 'support_email_delivery_failed' };
-    }
     return json(201, {
       id: data.id,
       created_at: data.created_at,

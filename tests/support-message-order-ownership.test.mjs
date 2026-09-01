@@ -211,20 +211,23 @@ test('support order schema enforces the company relationship', () => {
 
 test('buyer message route inserts only the resolved order id', () => {
   const source = readFileSync(new URL('../functions/api/account/messages.js', import.meta.url), 'utf8');
+  const publisher = readFileSync(new URL('../functions/_lib/support-message-publisher.js', import.meta.url), 'utf8');
   assert.match(source, /resolveSupportOrderId\(sb,/);
-  assert.match(source, /appendSupportMessage\(sb,/);
+  assert.match(source, /publishSupportMessage\(/);
+  assert.match(publisher, /appendSupportMessage/);
   assert.match(source, /orderId:\s*orderContext\.orderId/);
   assert.doesNotMatch(source, /order_id:\s*body\.order_id/);
 });
 
 test('staff replies validate and retain active order context', () => {
   const source = readFileSync(new URL('../functions/api/admin/messages.js', import.meta.url), 'utf8');
+  const publisher = readFileSync(new URL('../functions/_lib/support-message-publisher.js', import.meta.url), 'utf8');
   const supportEmail = readFileSync(new URL('../functions/_lib/support-email.js', import.meta.url), 'utf8');
   assert.match(source, /resolveSupportOrderId\(sb,/);
-  assert.match(source, /appendSupportMessage\(sb,/);
+  assert.match(source, /publishSupportMessage\(/);
   assert.match(source, /orderId:\s*orderContext\.orderId/);
   assert.match(source, /resolveSupportRecipient\(sb,[\s\S]*orderContext\.recipientUserId/);
-  assert.match(source, /deliverSupportMessageEmail/);
+  assert.match(publisher, /deliverSupportMessageEmail/);
   assert.match(supportEmail, /dashboard\.html\?order=\$\{encodeURIComponent\(order\.id\)\}#messages/);
   assert.doesNotMatch(source, /from\('messages'\)\.insert/);
 });
