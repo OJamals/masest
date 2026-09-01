@@ -282,5 +282,9 @@ test("staff replies to a support thread with the expected payload", async ({ pag
   await reply.locator('button[type="submit"]').click();
   await replyResp;
 
-  expect(replyBody).toEqual({ company_id: "co-1", body: "Ships Friday via LTL freight." });
+  expect(replyBody).toEqual({
+    company_id: "co-1",
+    body: "Ships Friday via LTL freight.",
+    order_id: null,
+  });
 });
