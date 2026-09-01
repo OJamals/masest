@@ -58,7 +58,8 @@ test('migration adds the three notify_* columns', () => {
 
 test('send sites pass the matching category to honour prefs', () => {
   assert.match(read('functions/_lib/staff-order-operations.js'), /companyEmails\(sb, companyId, 'orders'\)/);
-  assert.match(read('functions/api/admin/messages.js'), /deliverSupportMessageEmail/);
+  assert.match(read('functions/api/admin/messages.js'), /publishSupportMessage/);
+  assert.match(read('functions/_lib/support-message-publisher.js'), /deliverSupportMessageEmail/);
   assert.match(read('functions/_lib/support-email.js'), /shouldEmailSupportRecipient/);
   assert.match(read('functions/_lib/message-notifications.js'), /notify_messages/);
   assert.match(read('functions/api/admin/offers.js'), /notify_offers/);
