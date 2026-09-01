@@ -38,6 +38,17 @@ export async function initCustomerChat() {
   if (document.getElementById("customerChat")) return;
 
   const root = pageRoot();
+  let pendingSupportOrder = null;
+  let openSupportOrder = null;
+  const handleSupportOrderRequest = (event) => {
+    const order = event.detail?.order || event.detail;
+    if (!order?.id) return;
+    if (openSupportOrder) openSupportOrder(order);
+    else pendingSupportOrder = order;
+  };
+  // Orders can render before auth capability lookup finishes. Listen before that
+  // await so an immediate "Message about this order" click cannot be lost.
+  document.addEventListener("masest:open-support-order", handleSupportOrderRequest);
   let authModule;
   const auth = async () => {
     authModule ||= import(window.MASEST?.authModule || "./auth.js?v=20260711w");
@@ -48,6 +59,7 @@ export async function initCustomerChat() {
     if (await session.getToken()) {
       const account = await session.me();
       if (account?.can_admin) {
+        document.removeEventListener("masest:open-support-order", handleSupportOrderRequest);
         const { initAdminSupport } = await import("./admin-support.js?v=20260830h");
         initAdminSupport({ auth: session, root, staff: account.staff });
         return;
@@ -299,6 +311,14 @@ export async function initCustomerChat() {
     await refresh();
     (authenticated ? body : guestAction).focus();
   };
+  openSupportOrder = (order) => {
+    setOrderContext(order);
+    void open();
+  };
+  if (pendingSupportOrder) {
+    openSupportOrder(pendingSupportOrder);
+    pendingSupportOrder = null;
+  }
 
   toggle.addEventListener("click", () => panel.hidden ? void open() : setOpen(false));
   close.addEventListener("click", () => setOpen(false));
@@ -323,12 +343,6 @@ export async function initCustomerChat() {
   document.addEventListener("masest:auth", () => { if (!panel.hidden) void refresh(); });
   document.addEventListener("masest:session-expired", () => { if (!panel.hidden) showGuest(); });
   document.addEventListener("cart:updated", () => { if (!panel.hidden) void updateQuoteHref(); });
-  document.addEventListener("masest:open-support-order", (event) => {
-    const order = event.detail?.order || event.detail;
-    if (!order?.id) return;
-    setOrderContext(order);
-    void open();
-  });
   document.addEventListener("masest:support-route", syncRouteVisibility);
   document.addEventListener(OBSTRUCTION_EVENT, scheduleDockAvoidance);
   window.addEventListener("hashchange", syncRouteVisibility);

@@ -87,6 +87,45 @@ test("dashboard restores floating chat after leaving the full message inbox", as
   });
 });
 
+test("order chat requests emitted during auth startup open after chat mounts", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.route("**/js/auth.js*", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/javascript",
+      body: `
+        let ready = false;
+        export async function getToken() {
+          if (!ready) await new Promise((resolve) => {
+            window.__releaseChatAuth = () => { ready = true; resolve(); };
+          });
+          return "test-token";
+        }
+        export async function me() { return { can_admin: false }; }
+        export async function api() { return { messages: [], order_scope: { id: "order-race", reference: "MST-RACE" } }; }
+      `,
+    }));
+    try {
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => typeof window.__releaseChatAuth === "function");
+      await page.evaluate(() => {
+        document.dispatchEvent(new CustomEvent("masest:open-support-order", {
+          detail: { order: { id: "order-race", reference: "MST-RACE", status: "paid" } },
+        }));
+        window.__releaseChatAuth();
+      });
+
+      await page.locator(".customer-chat__panel").waitFor({ state: "visible", timeout: 3_000 });
+      assert.equal(await page.locator("[data-customer-chat-order]").textContent(), "order MST-RACE");
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  });
+});
+
 test("customer chat has its own icon and a bounded popup layout", () => {
   assert.match(chat, /class="customer-chat__icon"/);
   assert.match(chat, /<svg[^>]*viewBox=/);
