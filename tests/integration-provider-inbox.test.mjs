@@ -12,6 +12,10 @@ import { verifyShipStationSignature } from '../functions/_lib/shipstation-webhoo
 const schema = readFileSync(new URL('../supabase/schema-provider-inbox.sql', import.meta.url), 'utf8');
 const unifiedSupportSchema = readFileSync(new URL('../supabase/schema-unified-support-messages.sql', import.meta.url), 'utf8');
 const cloudflareEmailMigration = readFileSync(new URL('../supabase/migrate-cloudflare-email-service-2026-08-31.sql', import.meta.url), 'utf8');
+const inboundReferenceRegexMigration = readFileSync(
+  new URL('../supabase/migrate-email-inbound-reference-regex-2026-09-01.sql', import.meta.url),
+  'utf8',
+);
 const verificationTool = readFileSync(new URL('../tools/verify-provider-inbox.mjs', import.meta.url), 'utf8');
 const rollback = readFileSync(new URL('../supabase/rollback-provider-inbox.sql', import.meta.url), 'utf8');
 
@@ -155,6 +159,34 @@ test('schema makes receipts append-only and projections stale-safe', () => {
   assert.doesNotMatch(healthFn, /'resend'/i);
   assert.match(cloudflareEmailMigration, /create or replace function public\.provider_integration_health\(\)[\s\S]*values \('stripe'::text\), \('shipstation'\), \('quickbooks'\)/i);
   assert.match(schema, /revoke execute on function public\.ingest_provider_event[\s\S]*from anon, authenticated/i);
+});
+
+test('inbound email reference regex stays within PostgreSQL repetition limits', () => {
+  for (const [name, sql] of [
+    ['canonical support schema', unifiedSupportSchema],
+    ['Cloudflare email migration', cloudflareEmailMigration],
+  ]) {
+    const inboundUpsert = sql.match(
+      /create or replace function public\.upsert_email_inbound_message[\s\S]*?grant execute on function public\.upsert_email_inbound_message/i,
+    )?.[0] || '';
+    const repetitionCounts = [...inboundUpsert.matchAll(/\{(\d+)(?:,(\d+))?\}/g)]
+      .flatMap((match) => match.slice(1))
+      .filter(Boolean)
+      .map(Number);
+
+    assert.ok(inboundUpsert, `${name} must define inbound email upsert`);
+    assert.ok(
+      repetitionCounts.every((count) => count <= 255),
+      `${name} uses a PostgreSQL-incompatible repetition count`,
+    );
+  }
+  assert.match(inboundReferenceRegexMigration, /pg_get_functiondef/i);
+  assert.match(inboundReferenceRegexMigration, /unexpected_email_inbound_reference_regex/i);
+  assert.match(
+    inboundReferenceRegexMigration,
+    /v_new_pattern constant text := '[^']*\{1,255\}[^']*\{0,255\}[^']*'/i,
+  );
+  assert.match(inboundReferenceRegexMigration, /execute replace\(v_definition, v_old_pattern, v_new_pattern\)/i);
 });
 
 test('provider inbox operations no longer restore or verify retired Resend paths', () => {

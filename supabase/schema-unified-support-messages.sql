@@ -265,7 +265,7 @@ begin
   end if;
   if p_email_references is not null and (
     char_length(p_email_references) > 8192
-    or p_email_references !~ '^(<[^<>[:space:]]{1,510}>)([[:space:]]+<[^<>[:space:]]{1,510}>)*$'
+    or p_email_references !~ '^(<[^<>[:space:]]{1,255}[^<>[:space:]]{0,255}>)([[:space:]]+<[^<>[:space:]]{1,255}[^<>[:space:]]{0,255}>)*$'
   ) then
     raise exception 'invalid_email_inbound_references';
   end if;
