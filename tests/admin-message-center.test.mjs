@@ -15,6 +15,20 @@ test('admin alert kinds separate first support requests from follow-ups', () => 
   });
 });
 
+test('staff support email alerts default on while retaining explicit opt-out', () => {
+  const settings = read('functions/api/admin/message-settings.js');
+  const schema = read('supabase/schema-phase5.sql');
+  const migration = read('supabase/migrate-admin-support-email-defaults-2026-09-01.sql');
+  assert.match(settings, /ADMIN_MESSAGE_PREF_COLUMNS\.map\(\(column\) => \[column, true\]\)/);
+  assert.match(schema, /notify_admin_support_requests boolean not null default true/);
+  assert.match(schema, /notify_admin_messages boolean not null default true/);
+  assert.match(schema, /alter column notify_admin_support_requests set default true/);
+  assert.match(schema, /alter column notify_admin_messages set default true/);
+  assert.match(migration, /where is_staff = true/);
+  assert.match(migration, /notify_admin_support_requests = true/);
+  assert.match(migration, /notify_admin_messages = true/);
+});
+
 test('admin message recipients exclude active inboxes and revoked staff', async () => {
   const now = Date.parse('2026-07-11T05:00:00.000Z');
   const profiles = [

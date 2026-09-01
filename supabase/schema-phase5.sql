@@ -21,9 +21,12 @@ alter table public.profiles add column if not exists is_staff boolean not null d
 -- Customer chat presence: staff replies email only after the question author closes chat.
 alter table public.profiles add column if not exists support_chat_open boolean not null default false;
 alter table public.profiles add column if not exists support_chat_seen_at timestamptz;
--- Per-staff opt-in controls for support inbox email alerts.
-alter table public.profiles add column if not exists notify_admin_support_requests boolean not null default false;
-alter table public.profiles add column if not exists notify_admin_messages boolean not null default false;
+-- Default-on per-staff controls. Staff can opt out; active-inbox presence still
+-- suppresses duplicate follow-up email while the support console is open.
+alter table public.profiles add column if not exists notify_admin_support_requests boolean not null default true;
+alter table public.profiles add column if not exists notify_admin_messages boolean not null default true;
+alter table public.profiles alter column notify_admin_support_requests set default true;
+alter table public.profiles alter column notify_admin_messages set default true;
 alter table public.profiles add column if not exists support_inbox_seen_at timestamptz;
 -- A company owns one durable support thread. Buyer activity reopens a completed thread.
 alter table public.companies add column if not exists support_thread_status text not null default 'open';

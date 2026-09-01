@@ -1,9 +1,9 @@
-// /api/admin/message-settings — per-staff opt-in for support inbox email alerts.
+// /api/admin/message-settings — default-on, per-staff support email preferences.
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import { ADMIN_MESSAGE_PREF_COLUMNS, sanitizeAdminMessagePrefs } from '../../_lib/admin-message-notifications.js';
 
 const COLUMNS = ADMIN_MESSAGE_PREF_COLUMNS.join(',');
-const DEFAULTS = Object.fromEntries(ADMIN_MESSAGE_PREF_COLUMNS.map((column) => [column, false]));
+const DEFAULTS = Object.fromEntries(ADMIN_MESSAGE_PREF_COLUMNS.map((column) => [column, true]));
 
 export async function onRequestGet({ request, env }) {
   const { user, staff } = await requireStaff(request, env);
