@@ -27,9 +27,11 @@ test('interactive customer directory uses bounded RPC and page-only email resolu
   assert.doesNotMatch(endpoint, /select\('id,full_name,phone,role,company_id'\)[\s\S]*return json\(200, \{ customers \}\)/);
 });
 
-test('directory SQL searches server-side and exposes a stable paged total', () => {
+test('directory SQL searches profile, company, and Auth email server-side', () => {
   const migration = read('supabase/schema-admin-customer-directory.sql');
   assert.match(migration, /create or replace function public\.admin_customer_directory/);
+  assert.match(migration, /security definer/);
+  assert.match(migration, /exists\s*\([\s\S]*from auth\.users u[\s\S]*u\.id = p\.id[\s\S]*u\.email[\s\S]*ilike/);
   assert.match(migration, /count\(\*\) over\(\)/);
   assert.match(migration, /order by lower\(coalesce\(m\.company_name/);
   assert.match(migration, /grant execute on function public\.admin_customer_directory/);
