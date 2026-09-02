@@ -401,7 +401,7 @@ export async function api(path, options = {}) {
   if (pathname.startsWith("/api/account/invoices")) return { invoices: [{ id: "inv-1", created_at: "2026-07-01", status: "open", total: 1840, currency: "usd" }], summary: { net_terms_days: 30, net_outstanding: 1840, credit_available: 4160, unlimited: false } };
   if (pathname.startsWith("/api/account/team")) return { members: fixtures.contacts, invites: [{ id: "invite-1", email: "long-distribution-list@acme-industrial.example" }] };
   if (pathname.startsWith("/api/account/programs")) return { program: { status: "active", tier: "Regional maintenance", renewal_at: "2027-01-01" } };
-  if (pathname.startsWith("/api/account/notification-prefs")) return { notify_orders: true, notify_messages: true, notify_offers: false };
+  if (pathname.startsWith("/api/account/notification-prefs")) return { transactional_email_enabled: true, transactional_email_required: true, marketing_email_enabled: false, notify_messages: true };
   if (pathname.startsWith("/api/account/billing-portal")) return { url: "about:blank" };
   return {};
 }

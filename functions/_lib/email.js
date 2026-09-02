@@ -1,4 +1,7 @@
 // functions/_lib/email.js — pure email helpers (unit-tested by execution).
+import { categoryStream } from './email-policy.js';
+
+export { EMAIL_CATEGORY_POLICY, MARKETING_CATEGORIES, categoryPolicy, categoryStream } from './email-policy.js';
 
 // Derive a readable text/plain alternative from a branded HTML email body. Multipart
 // mail (text + html) scores better with spam filters and serves plain-text clients and
@@ -34,14 +37,6 @@ export function htmlToText(html) {
 export function filterSuppressed(recipients, suppressedSet) {
   if (!Array.isArray(recipients)) return [];
   return recipients.filter((addr) => !suppressedSet.has(String(addr).toLowerCase()));
-}
-
-// Categories a recipient may opt out of without losing transactional mail. Everything
-// else (order, billing, team, staff alerts, lead auto-reply) is transactional.
-export const MARKETING_CATEGORIES = new Set(['lead_followup', 'lead_followup_reminder', 'offer', 'review_request', 'blog_newsletter', 'newsletter']);
-
-export function categoryStream(category) {
-  return MARKETING_CATEGORIES.has(String(category)) ? 'marketing' : 'transactional';
 }
 
 // Per-stream suppression filter. `suppressionMap` is Map<emailLower, Set<stream>>.

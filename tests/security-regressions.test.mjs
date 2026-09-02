@@ -55,6 +55,7 @@ test("emailLayout escapes CTA text and blocks unsafe CTA URLs", () => {
 test("admin notifications escape staff-controlled email text", () => {
   const staffOperations = read("functions/_lib/staff-order-operations.js");
   const offers = read("functions/api/admin/offers.js");
+  const emailTemplate = read("functions/_lib/email-template.js");
   // The dynamic `extra` body can carry staff input (e.g. a manual NET settlement
   // reference). Both notification paths must escape it before it reaches the email.
   assert.match(staffOperations, /bodyHtml: `<p>\$\{htmlEscape\(extra \|\|/, "notifyCompany must escape extra");
@@ -63,7 +64,8 @@ test("admin notifications escape staff-controlled email text", () => {
   const orderEmail = read("functions/_lib/order-email.js");
   assert.match(orderEmail, /htmlEscape\(extra \|\| `Your order is now/, "shipmentEmailHtml must escape extra");
   assert.match(staffOperations, /shipmentEmailHtml\(order, label, extra\)/, "tracking email must use the escaping builder");
-  assert.match(offers, /htmlEscape\(title\)/);
+  assert.match(offers, /heading:\s*title/);
+  assert.match(emailTemplate, /const safeHeading = escapeHtml\(heading\)/);
   assert.match(offers, /htmlEscape\(String\(body\.body \|\| ''\)\)/);
 });
 

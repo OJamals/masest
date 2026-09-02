@@ -84,15 +84,23 @@ site.
 - `EMAIL_INGRESS_SECRET`
 - `KLAVIYO_PRIVATE_KEY`
 - `KLAVIYO_LIST_ID`
+- `KLAVIYO_TEST_LIST_ID` — dedicated staff-only audience for newsletter test sends
+- `KLAVIYO_FROM_EMAIL=noreply@send.masest.co`
+- `KLAVIYO_FROM_LABEL=MASEST · VertKleen`
+- `KLAVIYO_REPLY_TO=dev@masest.co`
+- `KLAVIYO_FLOW_METRIC_OFFER`
+- `KLAVIYO_FLOW_METRIC_REVIEW_REQUEST`
 
 Required Pages binding:
 
 - `EMAIL_SERVICE` — service binding to `masest-email-service`.
 - `CONTENT_IMAGES` — R2 bucket binding to `masest-site-images` in production and preview.
 
-The email Worker owns the restricted `EMAIL` Email Sending binding, idempotency
-Durable Object, lifecycle queue, and inbound Email Routing handler. Pages never
-receives a provider API key.
+Email Worker owns restricted `EMAIL` binding, idempotency Durable Object,
+lifecycle queue, and inbound Email Routing handler for service/transactional mail,
+including requested quote follow-ups. Pages holds Klaviyo private key only for
+promotional offers, newsletters, nurture, review solicitations, subscriptions,
+flows, and campaigns.
 
 After env var changes, run the `Verify` workflow on `main` so the new values bind.
 

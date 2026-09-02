@@ -55,7 +55,7 @@ test("dashboard panels protect form and notification text from clipping", () => 
   assert.match(html, /\.dash-tab \.pill\s*\{[^}]*position:\s*absolute[^}]*top:\s*-[^;}]+[^}]*right:\s*-[^;}]+/, "dashboard notification bubbles should sit outside tab button chrome");
   assert.match(html, /\.dash-tab \.pill\[hidden\]\s*\{\s*display:\s*none/, "dashboard zero-count notification bubbles should stay hidden");
   assert.match(html, /\.notif-body > \*/, "notification content should wrap inside card width");
-  assert.match(html, /\.notif-prefs\s*\{[^}]*display:\s*flex/, "notification preferences should use a reusable layout class");
+  assert.match(html, /\.notif-prefs\s*\{[^}]*display:\s*grid/, "notification preferences should use a reusable stacked layout class");
   assert.match(html, /class="notif-pref-label"/, "notification preference labels should use reusable classes");
   assert.match(html, /\.dash-pager/, "dashboard pagers should use reusable spacing classes");
   assert.match(html, /@media \(max-width: 820px\)[\s\S]*\.dash-sidebar \.dash-tabs\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/, "mobile dashboard nav should expose every section in a compact grid");

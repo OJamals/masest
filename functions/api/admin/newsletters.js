@@ -1,143 +1,149 @@
-// /api/admin/newsletters — staff CRUD + durable queue creation for admin newsletters.
-// The secret-gated sweep materializes due campaigns, then runs the bounded shared
-// delivery worker. send_now only composes/materializes and returns before transport.
-import { adminClient, requireStaff, json, readBody, sendEmail, allUserEmails } from '../../_lib/supabase.js';
-import { klaviyoListProfiles } from '../../_lib/klaviyo.js';
-import { renderNewsletterEmail, resolveAudience, nextRunAt, dueNewsletters } from '../../_lib/newsletter.js';
+// /api/admin/newsletters — staff campaign composer + Klaviyo campaign lifecycle.
+// Supabase stores composition and provider identity only. Klaviyo owns recipients,
+// consent, fanout, suppression, and delivery; no per-recipient local queue remains active.
+import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import {
-  createSupabaseDeliveryStore,
-  getDeliverySource,
-  materializeDeliverySource,
-  runSupabaseDeliveryWorker,
-} from '../../_lib/newsletter-delivery.js';
+  getKlaviyoCampaignStatus,
+  klaviyoSubscribe,
+  publishKlaviyoCampaign,
+} from '../../_lib/klaviyo.js';
+import { htmlToText } from '../../_lib/email.js';
+import { renderNewsletterEmail, nextRunAt, dueNewsletters } from '../../_lib/newsletter.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
-async function resolveNewsletterAudience(env, sb, n) {
-  const populations = Array.isArray(n.audience?.populations) ? n.audience.populations : [];
-  const [usersMap, leads, importedRes] = await Promise.all([
-    populations.includes('users') ? allUserEmails(sb, { strict: true }) : Promise.resolve(new Map()),
-    populations.includes('leads')
-      ? klaviyoListProfiles(env, env.KLAVIYO_LIST_ID, { strict: true })
-      : Promise.resolve([]),
-    populations.includes('imported')
-      ? sb.from('newsletter_recipients').select('email').eq('subscribed', true)
-      : Promise.resolve({ data: [] }),
-  ]);
-  if (importedRes.error) throw new Error('newsletter_imported_audience_failed');
-  return resolveAudience({
-    populations,
-    users: [...usersMap.values()],
-    leads,
-    imported: (importedRes.data || []).map((r) => r.email),
-  }).sort();
+const COMPLETE_PROVIDER_STATES = new Set(['complete', 'sent']);
+const SENDABLE_NEWSLETTER_STATES = ['draft', 'scheduled', 'failed'];
+
+export async function claimNewsletter(sb, id, allowedStatuses = SENDABLE_NEWSLETTER_STATES) {
+  const statuses = [...new Set(allowedStatuses)].filter((status) => typeof status === 'string' && status);
+  if (!id || !statuses.length) return { newsletter: null, error: new Error('newsletter_claim_invalid') };
+  const { data, error } = await sb.from('newsletters')
+    .update({
+      status: 'queueing',
+      provider_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .in('status', statuses)
+    .select('*')
+    .maybeSingle();
+  return { newsletter: data || null, error: error || null };
 }
 
-function newsletterSourceId(n, scheduled) {
-  if (!scheduled || n.schedule?.mode !== 'recurring') return String(n.id);
-  const occurrence = n.schedule?.next_run_at || n.schedule?.send_at;
-  return occurrence ? `${n.id}@${occurrence}` : String(n.id);
-}
-
-async function queueNewsletter(env, sb, n, { scheduled = false } = {}) {
-  const sourceId = newsletterSourceId(n, scheduled);
-  const existing = await getDeliverySource(sb, 'newsletter', sourceId);
-  if (existing.error) return { error: 'ledger_unavailable' };
-
-  let queued = {
-    created: false,
-    total: Number(existing.source?.total_count) || 0,
-    error: null,
-  };
-  if (!existing.source) {
-    let audience;
-    try {
-      audience = await resolveNewsletterAudience(env, sb, n);
-    } catch {
-      return { error: 'audience_unavailable' };
-    }
-    const { subject, html } = renderNewsletterEmail(n);
-    const next = scheduled ? nextRunAt(n.schedule, Date.now()) : null;
-    queued = await materializeDeliverySource(sb, {
-      sourceType: 'newsletter',
-      sourceId,
-      parentId: n.id,
-      subject,
-      html,
-      category: 'newsletter',
-      metadata: {
-        ...(next ? { next_schedule: { ...n.schedule, next_run_at: next } } : {}),
-      },
-      emails: audience,
-    });
-  }
-  if (queued.error) return { error: 'ledger_unavailable' };
-
-  const summary = {
-    total: queued.total,
-    pending: queued.total,
-    processing: 0,
-    retry: 0,
-    sent: 0,
-    suppressed: 0,
-    dead: 0,
-    terminal: 0,
-    complete: queued.total === 0,
-  };
-  const { error } = await sb.from('newsletters').update({
+function campaignPatch(result) {
+  return {
+    provider: 'klaviyo',
+    provider_campaign_id: result.campaignId,
+    provider_message_id: result.messageId,
+    provider_template_id: result.templateId,
+    provider_status: result.status || 'queued',
+    provider_error: null,
     status: 'sending',
-    recipient_count: 0,
-    delivery_source_id: sourceId,
-    delivery_summary: summary,
     updated_at: new Date().toISOString(),
-  }).eq('id', n.id);
-  if (error) return { error: 'newsletter_queue_update_failed' };
+  };
+}
 
-  if (!queued.created || queued.total === 0) {
-    try {
-      await createSupabaseDeliveryStore(sb).reconcile('newsletter', sourceId);
-    } catch {
-      return { error: 'newsletter_reconcile_failed' };
-    }
+async function publishNewsletter(env, sb, newsletter, { scheduled = false, listId } = {}) {
+  const { subject, html } = renderNewsletterEmail(newsletter);
+  const result = await publishKlaviyoCampaign(env, {
+    name: `MASEST newsletter · ${newsletter.id || subject}`,
+    subject,
+    previewText: subject,
+    html,
+    text: htmlToText(html),
+    listId: listId || env.KLAVIYO_LIST_ID,
+  });
+  if (!result.ok) {
+    await sb.from('newsletters').update({
+      provider: 'klaviyo',
+      status: 'failed',
+      provider_status: 'failed_to_queue',
+      provider_error: result.error || 'klaviyo_campaign_failed',
+      updated_at: new Date().toISOString(),
+    }).eq('id', newsletter.id).eq('status', 'queueing');
+    return { error: result.error || 'klaviyo_campaign_failed', retryable: result.retryable === true };
   }
-  return { source_id: sourceId, created: queued.created, total: queued.total };
+
+  const patch = campaignPatch(result);
+  if (scheduled && newsletter.schedule?.mode === 'recurring') {
+    patch.schedule = {
+      ...newsletter.schedule,
+      next_run_at: nextRunAt(newsletter.schedule, Date.now()),
+    };
+  }
+  const { error } = await sb.from('newsletters').update(patch).eq('id', newsletter.id);
+  if (error) return { error: 'newsletter_provider_identity_save_failed', retryable: true };
+  return {
+    queued: true,
+    provider: 'klaviyo',
+    campaign_id: result.campaignId,
+    provider_status: result.status,
+  };
+}
+
+async function reconcileNewsletter(env, sb, newsletter) {
+  const result = await getKlaviyoCampaignStatus(env, newsletter.provider_campaign_id);
+  if (!result.ok) return { id: newsletter.id, ok: false, error: result.error, retryable: result.retryable === true };
+  const providerStatus = result.status;
+  const patch = { provider_status: providerStatus, updated_at: new Date().toISOString() };
+  if (COMPLETE_PROVIDER_STATES.has(providerStatus)) {
+    patch.sent_at = new Date().toISOString();
+    patch.status = newsletter.schedule?.mode === 'recurring' ? 'scheduled' : 'sent';
+  } else if (providerStatus.startsWith('cancel')) {
+    patch.status = 'failed';
+    patch.provider_error = providerStatus;
+  }
+  const { error } = await sb.from('newsletters').update(patch).eq('id', newsletter.id);
+  return { id: newsletter.id, ok: !error, provider_status: providerStatus, error: error?.message };
+}
+
+async function reconcileProviderSends(env, sb) {
+  const { data, error } = await sb.from('newsletters')
+    .select('id,status,schedule,provider_campaign_id,provider_status')
+    .eq('status', 'sending')
+    .not('provider_campaign_id', 'is', null)
+    .limit(100);
+  if (error) return { failed: true, error: 'provider_reconcile_load_failed' };
+  const results = [];
+  for (const newsletter of data || []) results.push(await reconcileNewsletter(env, sb, newsletter));
+  return { failed: false, results };
 }
 
 async function sweepDue(env) {
   const sb = adminClient(env);
+  const reconciled = await reconcileProviderSends(env, sb);
+  if (reconciled.failed) return json(503, { error: reconciled.error, retryable: true });
+
   const { data, error } = await sb.from('newsletters').select('*').eq('status', 'scheduled');
   if (error) return json(503, { error: 'unavailable' });
   const due = dueNewsletters(data || [], Date.now());
   const queued = [];
   const failed = [];
-  for (const n of due) {
-    const result = await queueNewsletter(env, sb, n, { scheduled: true });
-    if (result.error) failed.push({ id: n.id, error: result.error });
-    else queued.push({ id: n.id, ...result });
+  for (const candidate of due) {
+    const claim = await claimNewsletter(sb, candidate.id, ['scheduled']);
+    if (claim.error) {
+      failed.push({ id: candidate.id, error: 'newsletter_claim_failed', retryable: true });
+      continue;
+    }
+    const newsletter = claim.newsletter;
+    if (!newsletter) continue;
+    const result = await publishNewsletter(env, sb, newsletter, { scheduled: true });
+    if (result.error) failed.push({ id: newsletter.id, ...result });
+    else queued.push({ id: newsletter.id, ...result });
   }
-  let worker;
-  try {
-    worker = {
-      newsletter: await runSupabaseDeliveryWorker(env, sb, { sourceType: 'newsletter' }),
-      blog_post: await runSupabaseDeliveryWorker(env, sb, { sourceType: 'blog_post' }),
-    };
-  } catch (workerError) {
-    return json(503, {
-      error: 'newsletter_worker_failed',
-      retryable: true,
-      queued,
-      failed,
-      detail: String(workerError).slice(0, 200),
-    });
-  }
-  return json(failed.length ? 503 : 200, { ok: !failed.length, queued, failed, worker });
+  return json(failed.length ? 503 : 200, {
+    ok: !failed.length,
+    queued,
+    failed,
+    reconciled: reconciled.results,
+  });
 }
 
 export async function onRequest({ request, env }) {
   const body = request.method === 'POST' ? await readBody(request) : {};
 
-  // Cron sweep — secret-gated, no staff session (documented non-staff pre-guard gate).
   if (body.action === 'sweep_due') {
     if (!env.NEWSLETTER_CRON_SECRET
       || !timingSafeEqual(request.headers.get('x-newsletter-cron-secret'), env.NEWSLETTER_CRON_SECRET)) {
@@ -157,13 +163,17 @@ export async function onRequest({ request, env }) {
       const { data } = await sb.from('newsletters').select('*').eq('id', id).maybeSingle();
       return json(200, { newsletter: data || null });
     }
-    const { data, error } = await sb.from('newsletters').select('id,subject,source,status,schedule,recipient_count,delivery_summary,sent_at,updated_at').order('updated_at', { ascending: false }).limit(200);
-    // A missing-relation error means the newsletter schema hasn't been applied yet —
-    // signal that so the admin UI shows a clear setup notice instead of a blank editor
-    // whose Save/Send would fail cryptically.
-    const setup_ready = !error;
-    const { data: settings } = await sb.from('newsletter_settings').select('auto_send_latest_blog').eq('id', 1).maybeSingle();
-    return json(200, { newsletters: data || [], settings: settings || { auto_send_latest_blog: false }, setup_ready });
+    const { data, error } = await sb.from('newsletters')
+      .select('id,subject,source,status,schedule,recipient_count,provider,provider_campaign_id,provider_status,provider_error,sent_at,updated_at')
+      .order('updated_at', { ascending: false }).limit(200);
+    const { data: settings } = await sb.from('newsletter_settings')
+      .select('auto_send_latest_blog').eq('id', 1).maybeSingle();
+    return json(200, {
+      newsletters: data || [],
+      settings: settings || { auto_send_latest_blog: false },
+      setup_ready: !error,
+      provider: 'klaviyo',
+    });
   }
 
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
@@ -183,7 +193,7 @@ export async function onRequest({ request, env }) {
       body_md: String(body.body_md || ''),
       source: body.source === 'blog_post' ? 'blog_post' : 'compose',
       blog_slug: body.blog_slug ? String(body.blog_slug).slice(0, 120) : null,
-      audience: body.audience && typeof body.audience === 'object' ? body.audience : { populations: [], recipient_tags: [] },
+      audience: { provider: 'klaviyo', list: 'KLAVIYO_LIST_ID' },
       updated_at: new Date().toISOString(),
     };
     if (!row.subject) return json(400, { error: 'subject_required' });
@@ -192,56 +202,85 @@ export async function onRequest({ request, env }) {
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true, id: body.id });
     }
-    const { data, error } = await sb.from('newsletters').insert({ ...row, created_by: user.id, status: 'draft' }).select('id').single();
+    const { data, error } = await sb.from('newsletters')
+      .insert({ ...row, created_by: user.id, status: 'draft' }).select('id').single();
     if (error) return json(500, { error: error.message });
     return json(200, { ok: true, id: data.id });
   }
 
   if (action === 'delete') {
     if (!body.id) return json(400, { error: 'id_required' });
+    const { data: current } = await sb.from('newsletters').select('status').eq('id', body.id).maybeSingle();
+    if (current?.status === 'sending' || current?.status === 'queueing') {
+      return json(409, { error: 'campaign_in_flight' });
+    }
     await sb.from('newsletters').delete().eq('id', body.id);
     return json(200, { ok: true });
   }
 
   if (action === 'schedule') {
     if (!body.id) return json(400, { error: 'id_required' });
-    const s = body.schedule || {};
-    const mode = s.mode === 'recurring' ? 'recurring' : 'once';
+    const input = body.schedule || {};
+    const mode = input.mode === 'recurring' ? 'recurring' : 'once';
     const schedule = mode === 'recurring'
-      ? { mode, interval_days: Math.max(1, Number(s.interval_days) || 14), next_run_at: s.send_at || new Date().toISOString() }
-      : { mode, send_at: s.send_at || new Date().toISOString(), next_run_at: s.send_at || new Date().toISOString() };
-    // Never re-schedule a newsletter that is mid-dispatch, or it could re-arm and re-send.
-    const { error } = await sb.from('newsletters').update({ status: 'scheduled', schedule, updated_at: new Date().toISOString() }).eq('id', body.id).neq('status', 'sending');
+      ? { mode, interval_days: Math.max(1, Number(input.interval_days) || 14), next_run_at: input.send_at || new Date().toISOString() }
+      : { mode, send_at: input.send_at || new Date().toISOString(), next_run_at: input.send_at || new Date().toISOString() };
+    const { data: scheduled, error } = await sb.from('newsletters')
+      .update({ status: 'scheduled', schedule, provider_error: null, updated_at: new Date().toISOString() })
+      .eq('id', body.id)
+      .in('status', ['draft', 'scheduled', 'sent', 'failed', 'canceled'])
+      .select('id')
+      .maybeSingle();
     if (error) return json(500, { error: error.message });
+    if (!scheduled) return json(409, { error: 'campaign_in_flight' });
     return json(200, { ok: true, schedule });
   }
 
   if (action === 'cancel') {
     if (!body.id) return json(400, { error: 'id_required' });
-    // Don't yank a send that is already in flight back to draft (would let a fresh
-    // send_now re-claim and dispatch it a second time).
-    await sb.from('newsletters').update({ status: 'draft', updated_at: new Date().toISOString() }).eq('id', body.id).neq('status', 'sending');
+    await sb.from('newsletters').update({ status: 'draft', updated_at: new Date().toISOString() })
+      .eq('id', body.id).eq('status', 'scheduled');
     return json(200, { ok: true });
   }
 
   if (action === 'test_send') {
     const to = String(body.to || user.email || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return json(400, { error: 'invalid_test_email' });
+    if (!env.KLAVIYO_TEST_LIST_ID) return json(503, { error: 'klaviyo_test_list_not_configured' });
+    const subscribed = await klaviyoSubscribe(env, to, env.KLAVIYO_TEST_LIST_ID, {
+      source: 'admin_newsletter_test',
+    });
+    if (!subscribed.ok) return json(502, { error: 'klaviyo_test_recipient_failed' });
     const { subject, html } = renderNewsletterEmail({ subject: body.subject, body_md: body.body_md });
-    const ok = await sendEmail(env, { to: [to], subject: `[TEST] ${subject}`, html, category: 'newsletter' });
-    return json(ok ? 200 : 502, { ok });
+    const queued = await publishKlaviyoCampaign(env, {
+      name: `MASEST newsletter test · ${to}`,
+      subject: `[TEST] ${subject}`,
+      previewText: subject,
+      html,
+      text: htmlToText(html),
+      listId: env.KLAVIYO_TEST_LIST_ID,
+    });
+    return json(queued.ok ? 202 : 502, queued.ok
+      ? { ok: true, queued: true, provider: 'klaviyo', campaign_id: queued.campaignId }
+      : { ok: false, error: queued.error || 'klaviyo_test_send_failed' });
   }
 
   if (action === 'send_now') {
     if (!body.id) return json(400, { error: 'id_required' });
-    const { data: n } = await sb.from('newsletters').select('*').eq('id', body.id).maybeSingle();
-    if (!n) return json(404, { error: 'not_found' });
-    if (n.status === 'sent') return json(409, { error: 'already_sent' });
-    const queued = await queueNewsletter(env, sb, n);
-    if (queued.error) return json(503, { error: queued.error, retryable: true });
-    // Transport runs only in the secret-gated cron worker. Returning 202 proves the
-    // staff request ends after durable queue creation, before any recipient fanout.
-    return json(202, { ok: true, queued: true, ...queued });
+    const claim = await claimNewsletter(sb, body.id);
+    if (claim.error) return json(503, { error: 'newsletter_claim_failed', retryable: true });
+    const newsletter = claim.newsletter;
+    if (!newsletter) {
+      const { data: current, error } = await sb.from('newsletters')
+        .select('status').eq('id', body.id).maybeSingle();
+      if (error) return json(503, { error: 'newsletter_state_load_failed', retryable: true });
+      if (!current) return json(404, { error: 'not_found' });
+      if (current.status === 'sent') return json(409, { error: 'already_sent' });
+      return json(409, { error: 'campaign_in_flight' });
+    }
+    const queued = await publishNewsletter(env, sb, newsletter);
+    if (queued.error) return json(503, { error: queued.error, retryable: queued.retryable });
+    return json(202, { ok: true, ...queued });
   }
 
   return json(400, { error: 'bad_action' });

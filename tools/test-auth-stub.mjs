@@ -79,6 +79,13 @@ export function authStubModule({ canAdmin = true } = {}) {
   return `
 const fixtures = ${JSON.stringify(fixtures)};
 const okSession = { access_token: "stub-token", user: { id: "u-1", email: fixtures.account.email } };
+let notificationPrefs = {
+  transactional_email_enabled: true,
+  transactional_email_required: true,
+  marketing_email_enabled: false,
+  notify_messages: true,
+  marketing_sync: "synced",
+};
 export const supabase = { auth: {
   async getSession() { return { data: { session: okSession }, error: null }; },
   async signOut() {}, async signInWithPassword() { return { data: { session: okSession }, error: null }; },
@@ -95,7 +102,7 @@ export async function orders() { return fixtures.orders; }
 export async function catalog() { return []; }
 export async function getToken() { return "stub-token"; }
 export async function apiBlob() { return new Blob([""], { type: "application/pdf" }); }
-export async function api(path) {
+export async function api(path, options = {}) {
   const p = new URL(path, window.location.origin).pathname;
   if (p.startsWith("/api/admin/stats")) return fixtures.stats;
   if (p.startsWith("/api/admin/search")) return { q: "", groups: [], total: 0 };
@@ -118,8 +125,8 @@ export async function api(path) {
   if (p.startsWith("/api/admin/reviews")) return { reviews: fixtures.reviews, total: 1, has_more: false };
   if (p.startsWith("/api/admin/messages")) return { threads: [], messages: fixtures.messages };
   if (p.startsWith("/api/admin/message-settings")) return { notify_support_requests: true, notify_messages: false };
-  if (p.startsWith("/api/admin/newsletters")) return { campaigns: [], drafts: [], settings: {}, recipients: [], total: 0, has_more: false };
-  if (p.startsWith("/api/admin/recipients")) return { recipients: [], total: 0, has_more: false };
+  if (p.startsWith("/api/admin/newsletters")) return { newsletters: [], settings: { auto_send_latest_blog: false }, setup_ready: true, id: "nl-stub", campaign_id: "campaign-stub" };
+  if (p.startsWith("/api/admin/recipients")) return { recipients: [], counts: { subscribers: 12, imported: 0 }, total: 0, has_more: false };
   if (p.startsWith("/api/admin/offers")) return { offers: [] };
   if (p.startsWith("/api/admin/content")) return { entries: [], types: [], total: 0, has_more: false };
   if (p.startsWith("/api/admin/traffic")) return { totals: {}, funnel: [], campaigns: [], days: [], recent: [] };
@@ -138,7 +145,12 @@ export async function api(path) {
   if (p.startsWith("/api/account/company")) return { company: fixtures.account.company };
   if (p.startsWith("/api/account/invoices")) return { invoices: [] };
   if (p.startsWith("/api/account/team")) return { members: [], invites: [] };
-  if (p.startsWith("/api/account/notification-prefs")) return { notify_orders: true, notify_messages: true, notify_offers: false };
+  if (p.startsWith("/api/account/notification-prefs")) {
+    if (String(options.method || "GET").toUpperCase() === "PATCH") {
+      notificationPrefs = { ...notificationPrefs, ...(options.body || {}), transactional_email_enabled: true, transactional_email_required: true };
+    }
+    return { ...notificationPrefs };
+  }
   if (p.startsWith("/api/account/billing-portal")) return { url: "about:blank" };
   return {};
 }

@@ -109,8 +109,18 @@ create table if not exists public.offers (
   created_by     text,                                                    -- staff email
   recipients     int not null default 0,                                  -- how many got it
   emailed        boolean not null default false,
+  email_provider text,
+  email_status   text not null default 'not_requested',
+  email_queued_count int not null default 0,
+  email_failed_count int not null default 0,
   created_at     timestamptz not null default now()
 );
+
+alter table public.offers
+  add column if not exists email_provider text,
+  add column if not exists email_status text not null default 'not_requested',
+  add column if not exists email_queued_count int not null default 0,
+  add column if not exists email_failed_count int not null default 0;
 
 -- ---------- page_views: first-party traffic (privacy-light; no PII, no cookies) ----------
 create table if not exists public.page_views (

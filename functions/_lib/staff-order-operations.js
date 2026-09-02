@@ -202,6 +202,7 @@ async function notifyCompany(sb, env, request, companyId, label, extra, order = 
       ctaText: 'View your order',
       ctaUrl: `${appUrl}/dashboard.html#orders`,
     }),
+    category: 'order',
   });
   return emails;
 }

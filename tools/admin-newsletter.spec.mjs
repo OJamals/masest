@@ -59,7 +59,7 @@ async function bootAsOwner(page, requests) {
   await page.route("**/api/admin/recipients", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify({ counts: { users: 1, leads: 0, imported: 0 }, recipients: [] }),
+    body: JSON.stringify({ counts: { subscribers: 1, imported: 0 }, recipients: [] }),
   }));
   await page.route("**/api/admin/newsletters**", async (route) => {
     const request = route.request();
@@ -115,7 +115,7 @@ async function bootAsOwner(page, requests) {
     await route.fulfill({
       status: 202,
       contentType: "application/json",
-      body: JSON.stringify({ ok: true, queued: true, total: 1 }),
+      body: JSON.stringify({ ok: true, queued: true, campaign_id: "campaign-1" }),
     });
   });
 }
@@ -130,7 +130,7 @@ test("sending an already-sent newsletter creates a new campaign before queueing"
 
   await expect(page.locator("dialog.confirm-dialog")).toContainText("already sent");
   await page.locator('dialog.confirm-dialog button[value="confirm"]').click();
-  await expect(page.locator("dialog.confirm-dialog")).toContainText("about 1 recipients");
+  await expect(page.locator("dialog.confirm-dialog")).toContainText("about 1 current subscribers");
   await page.locator('dialog.confirm-dialog button[value="confirm"]').click();
 
   await expect.poll(() => requests.filter((request) => request.action === "send_now").length).toBe(1);
@@ -138,5 +138,5 @@ test("sending an already-sent newsletter creates a new campaign before queueing"
   const send = requests.find((request) => request.action === "send_now");
   expect(save).not.toHaveProperty("id");
   expect(send).toMatchObject({ action: "send_now", id: "resend-2" });
-  await expect(page.locator("#nlStatus")).toContainText("Queued 1 recipients");
+  await expect(page.locator("#nlStatus")).toContainText("Queued in Klaviyo (campaign-1)");
 });

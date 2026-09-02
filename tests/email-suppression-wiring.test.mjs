@@ -21,7 +21,9 @@ test("supabase lib imports the pure email helpers", () => {
 });
 
 test("lib exposes recordSuppression + updateEmailStatus", () => {
-  assert.match(SRC, /export async function recordSuppression\(/);
+  const record = SRC.match(/export async function recordSuppression[\s\S]*?\n}\n\n\/\/ Remove only/)?.[0] || '';
+  assert.match(record, /const \{ error \} = await adminClient\(env\)\.from\('email_suppressions'\)/);
+  assert.match(record, /return !error/);
   assert.match(SRC, /export async function updateEmailStatus\(/);
 });
 
@@ -31,8 +33,9 @@ test("sendEmail supports bcc (offer broadcast privacy)", () => {
 
 const OFFERS = readFileSync(new URL("../functions/api/admin/offers.js", import.meta.url), "utf8");
 
-test("offers remain on the canonical gateway and are blocked from transactional sending", () => {
-  assert.match(OFFERS, /sendEmailResult\(/, "offers must call the canonical email gateway");
+test("offers use the canonical Klaviyo marketing gateway", () => {
+  assert.match(OFFERS, /queueMarketingEmail\(/, "offers must call the canonical marketing gateway");
   assert.match(OFFERS, /category:\s*'offer'/, "offers must tag category 'offer'");
+  assert.doesNotMatch(OFFERS, /sendEmail(?:Result)?\(/, "offers must not enter Cloudflare transactional sending");
   assert.doesNotMatch(OFFERS, /api\.resend\.com/, "offers must not call a retired provider directly");
 });

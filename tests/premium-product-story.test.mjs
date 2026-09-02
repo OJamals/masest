@@ -14,9 +14,11 @@ test("home page opens directly into the verified field-job scrolly story", () =>
   assert.match(html, /<div class="story" id="story"/, "home should open directly into the field-job story");
   assert.equal((html.match(/class="story-object"/g) || []).length, 1, "story should keep one persistent visual object");
   assert.deepEqual(
-    [...html.matchAll(/data-scene="(diagnose|burden|switch|prove)"/g)].map((match) => match[1]),
-    ["diagnose", "burden", "switch", "prove"],
+    [...html.matchAll(/data-scene="(kitchen-grease|cip-vessel|labelle-fermenter|shower-track|airboat-panel|pool-cartridge)"/g)].map((match) => match[1]),
+    ["kitchen-grease", "cip-vessel", "labelle-fermenter", "shower-track", "airboat-panel", "pool-cartridge"],
   );
+  assert.match(html, /class="story-object__range" type="range"/);
+  assert.doesNotMatch(html, /supabase\.co\/storage\/v1\/object/i);
   assert.doesNotMatch(css, /\.premium-story-hero\b/, "removed intro scene should not leave active styling behind");
   assert.doesNotMatch(css, /\.replacement-console\b/, "removed replacement console should not leave active styling behind");
 });

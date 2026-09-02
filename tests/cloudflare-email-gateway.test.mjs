@@ -78,6 +78,30 @@ test('Cloudflare transactional gateway fails closed when unbound and rejects mar
   assert.equal(marketing.retryable, false);
 });
 
+test('Cloudflare transactional gateway rejects missing or unknown categories', async () => {
+  let calls = 0;
+  const env = {
+    EMAIL_SERVICE: service(async () => {
+      calls += 1;
+      return Response.json({ ok: true, providerMessageId: 'should-not-send' });
+    }),
+  };
+  const base = {
+    to: ['buyer@example.com'],
+    subject: 'Unclassified message',
+    html: '<p>Unclassified</p>',
+    suppressionLoader: async () => new Map(),
+  };
+  const missing = await sendEmailResult(env, base);
+  const unknown = await sendEmailResult(env, { ...base, category: 'future_campaign' });
+
+  assert.equal(missing.error, 'email_category_required');
+  assert.equal(unknown.error, 'email_category_required');
+  assert.equal(missing.retryable, false);
+  assert.equal(unknown.retryable, false);
+  assert.equal(calls, 0);
+});
+
 test('private gateway preserves retry classification and stable idempotency', async () => {
   const keys = [];
   const env = {

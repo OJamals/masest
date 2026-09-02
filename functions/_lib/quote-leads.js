@@ -275,26 +275,30 @@ export function createQuoteLeadLifecycle({
         text: nextStep,
         actor: actor || 'staff',
       });
+      let emailQueued = Boolean(thread.email_delivery?.ok);
       if (!thread.posted) {
-        await sendFollowUp({ quote, nextStep, due, dueText, subject, actor });
+        emailQueued = Boolean(await sendFollowUp({ quote, nextStep, due, dueText, subject, actor }));
       }
       const handoffNote = thread.posted
         ? `Buyer message thread updated (${thread.message_id || 'message'})`
         : `Buyer message thread not updated (${thread.reason || thread.error || 'no account match'})`;
+      const deliveryNote = thread.posted
+        ? `Follow-up posted in customer thread${emailQueued ? ' and email queued' : ''}`
+        : `Follow-up ${emailQueued ? 'email queued' : 'not delivered'}`;
       const notes = [
         quote.notes,
-        `Follow-up sent by ${actor || 'staff'}: ${nextStep}`,
+        `${deliveryNote} by ${actor || 'staff'}: ${nextStep}`,
         handoffNote,
       ].filter(Boolean).join('\n');
       const updated = await store.updateFollowUp(id, {
         status: quote.status === 'closed' ? quote.status : 'contacted',
         handled_at: now().toISOString(),
         handled_by: actor || null,
-        next_step: 'Follow-up sent',
+        next_step: emailQueued || thread.posted ? 'Follow-up queued' : 'Follow-up needs retry',
         due_at: due || null,
         notes: notes.slice(0, 4000),
       });
-      return { ok: true, quote: updated };
+      return { ok: emailQueued || thread.posted, quote: updated, email_queued: emailQueued, thread_posted: thread.posted };
     } catch (error) {
       return failure(error);
     }
@@ -342,22 +346,26 @@ export function createQuoteLeadLifecycle({
           })
           : 'now';
         const hasBuyerEmail = Boolean(quote.email);
-        const sent = await sendDueNotice({
+        const sent = Boolean(await sendDueNotice({
           quote,
           label,
           nextStep,
           dueText,
           hasBuyerEmail,
-        });
+        }));
+        if (!sent) {
+          results.push({ id: quote.id, ok: false, emailed: false, error: 'email_not_queued' });
+          continue;
+        }
         if (hasBuyerEmail) buyer_reminders += 1;
         else staff_alerts += 1;
 
-        const note = `Automated due follow-up by ${actor}: ${hasBuyerEmail ? 'buyer reminder' : 'staff alert'} ${sent ? 'sent' : 'attempted'} for ${nextStep}`;
+        const note = `Automated due follow-up by ${actor}: ${hasBuyerEmail ? 'buyer reminder' : 'staff alert'} queued for ${nextStep}`;
         const updateError = await store.updateDueQuote(quote.id, {
           status: quote.status === 'new' ? 'contacted' : quote.status,
           handled_at: nowIso,
           handled_by: actor,
-          next_step: hasBuyerEmail ? 'Automated reminder sent' : 'Staff alert sent',
+          next_step: hasBuyerEmail ? 'Automated reminder queued' : 'Staff alert queued',
           due_at: plusDays(hasBuyerEmail ? 2 : 1, at),
           notes: appendNote(quote.notes, note),
         });

@@ -31,7 +31,7 @@ test('renderBlogEmail: hero, title, excerpt, escaped CTA to the live post', () =
   });
   assert.equal(url, 'https://masest.co/blog/hmis-000-explained');
   assert.match(subject, /New from MASEST: What HMIS 0-0-0 Means/);
-  assert.match(html, /https:\/\/masest\.co\/img\/blog\/hmis-000-explained\.webp/);
+  assert.match(html, /https:\/\/media\.masest\.co\/site\/img\/blog\/hmis-000-explained\.webp/);
   assert.match(html, /What HMIS 0-0-0 Means/);
   assert.match(html, /Lower hazard\./);
   assert.match(html, /Read the full post/);
@@ -46,9 +46,11 @@ test('renderBlogEmail: escapes HTML in title/excerpt (no injection)', () => {
   assert.ok(subject.includes('<script>')); // subject is plain-text (Resend), not HTML
 });
 
-test('renderBlogEmail: no hero -> no img tag', () => {
+test('renderBlogEmail: no hero keeps only the shared R2 logo', () => {
   const { html } = renderBlogEmail({ slug: 'x', title: 'T', excerpt: 'e', hero: '' });
-  assert.ok(!html.includes('<img'));
+  const images = html.match(/<img\b[^>]*>/g) || [];
+  assert.equal(images.length, 1);
+  assert.match(images[0], /https:\/\/media\.masest\.co\/site\/img\/masest-logo\.png/);
 });
 
 test('klaviyoListProfiles: paginates links.next, dedupes, lowercases', async () => {

@@ -1,7 +1,7 @@
 /*
- * MASEST landing cleaner guide
- * Native page scroll remains the input. GSAP only maps desktop scroll progress
- * to four small scene renderers. Compact screens use IntersectionObserver.
+ * MASEST landing field-result story.
+ * Native page scroll selects six R2-backed image pairs. GSAP maps desktop
+ * scene progress to the reveal; a native range input can override every pair.
  */
 (function () {
   "use strict";
@@ -12,62 +12,70 @@
   var acts = Array.prototype.slice.call(story.querySelectorAll(".act"));
   var railLinks = Array.prototype.slice.call(story.querySelectorAll(".rail-btn"));
   var storyActions = story.querySelector(".story-actions");
+  var actionContext = story.querySelector(".story-actions__match small");
+  var actionProduct = story.querySelector(".story-actions__match b");
+  var shopAction = story.querySelector(".story-actions__shop");
+  var trialAction = story.querySelector(".story-actions__trial");
+  var objectCard = story.querySelector(".story-object__card");
+  var comparisonMedia = story.querySelector(".story-object__media");
+  var beforeImage = story.querySelector(".story-object__before");
+  var afterImage = story.querySelector(".story-object__after img");
+  var comparisonRange = story.querySelector(".story-object__range");
   var objectStatus = story.querySelector(".story-object__status");
+  var objectTitle = story.querySelector("#storyObjectTitle");
+  var objectDetail = story.querySelector("#storyObjectDetail");
+  var productImage = story.querySelector(".story-object__product img");
+  var productName = story.querySelector(".story-object__product b");
   var mediaQuery = window.matchMedia("(max-width: 760px)");
   var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   var reduce = motionQuery.matches;
   var compact = mediaQuery.matches;
   var activeState = null;
   var scrollFrame = 0;
+  var mediaRequest = 0;
   var teardownMode = function () {};
+  var imageLoads = new Map();
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
 
-  function setVisualState(config) {
-    if (objectStatus && objectStatus.textContent !== config.status) {
-      objectStatus.textContent = config.status;
-    }
+  function number(value, fallback) {
+    var parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
   }
 
-  function renderDiagnose(progress) {
-    setVisualState({
-      status: "Check the buildup"
-    });
+  function imageConfig(dataset, prefix) {
+    return {
+      src: dataset[prefix + "Src"],
+      width: number(dataset[prefix + "Width"], 1),
+      height: number(dataset[prefix + "Height"], 1),
+      position: dataset[prefix + "Position"] || "50% 50%",
+      scale: number(dataset[prefix + "Scale"], 1),
+      rotate: number(dataset[prefix + "Rotate"], 0)
+    };
   }
 
-  function renderBurden(progress) {
-    setVisualState({
-      status: "36 hours · rust still present"
-    });
-  }
-
-  function renderSwitch(progress) {
-    setVisualState({
-      status: "Test VertKleen HCR"
-    });
-  }
-
-  function renderProve(progress) {
-    var p = clamp(progress, 0, 1);
-    setVisualState({
-      status: p > .84 ? "Result" : "Inspect the result"
-    });
-  }
-
-  var SCENE_DEFS = [
-    { id: "diagnose", label: "Diagnose", render: renderDiagnose },
-    { id: "burden", label: "Measure the burden", render: renderBurden },
-    { id: "switch", label: "Match the cleaner", render: renderSwitch },
-    { id: "prove", label: "Prove the result", render: renderProve }
-  ];
-
-  function sceneDefinition(id) {
-    for (var i = 0; i < SCENE_DEFS.length; i += 1) {
-      if (SCENE_DEFS[i].id === id) return SCENE_DEFS[i];
-    }
-    return SCENE_DEFS[0];
+  function sceneConfig(act) {
+    var dataset = act.dataset;
+    return {
+      id: dataset.scene,
+      before: imageConfig(dataset, "before"),
+      after: imageConfig(dataset, "after"),
+      title: dataset.objectTitle,
+      detail: dataset.objectDetail,
+      status: dataset.status,
+      actionContext: dataset.actionContext,
+      product: {
+        name: dataset.productName,
+        short: dataset.productShort,
+        href: dataset.productHref,
+        trialHref: dataset.trialHref,
+        src: dataset.productSrc,
+        width: number(dataset.productWidth, 1),
+        height: number(dataset.productHeight, 1)
+      }
+    };
   }
 
   var states = acts.map(function (act, index) {
@@ -86,17 +94,128 @@
       act: act,
       index: index,
       p: 0,
-      sceneDef: sceneDefinition(act.dataset.scene),
+      config: sceneConfig(act),
+      manualReveal: null,
       elements: Array.prototype.slice.call(act.querySelectorAll("[data-at]")),
       focusables: focusables,
       timeline: null
     };
   });
 
-  function renderScene(st) {
-    var sceneDef = st.sceneDef;
-    sceneDef.render(st.p, st);
+  function stateById(id) {
+    for (var i = 0; i < states.length; i += 1) {
+      if (states[i].config.id === id) return states[i];
+    }
+    return states[0];
   }
+
+  function preloadImage(src) {
+    if (!src) return Promise.resolve(false);
+    if (imageLoads.has(src)) return imageLoads.get(src);
+    var load = new Promise(function (resolveLoad) {
+      var image = new Image();
+      image.decoding = "async";
+      image.onload = function () { resolveLoad(true); };
+      image.onerror = function () { resolveLoad(false); };
+      image.src = src;
+      if (image.complete && image.naturalWidth) resolveLoad(true);
+    });
+    imageLoads.set(src, load);
+    return load;
+  }
+
+  function setImage(image, config) {
+    if (!image || !config.src) return;
+    if (image.getAttribute("src") !== config.src) image.setAttribute("src", config.src);
+    image.setAttribute("width", String(config.width));
+    image.setAttribute("height", String(config.height));
+  }
+
+  function applySceneStyles(st) {
+    var config = st.config;
+    comparisonMedia.style.setProperty("--story-before-position", config.before.position);
+    comparisonMedia.style.setProperty("--story-before-scale", String(config.before.scale));
+    comparisonMedia.style.setProperty("--story-after-position", config.after.position);
+    comparisonMedia.style.setProperty("--story-after-scale", String(config.after.scale));
+    comparisonMedia.style.setProperty("--story-after-rotate", config.after.rotate + "deg");
+  }
+
+  function applySceneMetadata(st) {
+    var config = st.config;
+    objectStatus.textContent = config.status;
+    objectTitle.textContent = config.title;
+    objectDetail.textContent = config.detail;
+    productName.textContent = config.product.name;
+    actionContext.textContent = config.actionContext;
+    actionProduct.textContent = config.product.name;
+    shopAction.href = config.product.href;
+    shopAction.textContent = "Shop " + config.product.short;
+    shopAction.setAttribute("aria-label", "Shop " + config.product.name);
+    trialAction.href = config.product.trialHref;
+    trialAction.setAttribute("aria-label", "Try " + config.product.name + " on my cleaning job");
+  }
+
+  function activateSceneMedia(st) {
+    var request = ++mediaRequest;
+    var config = st.config;
+    applySceneStyles(st);
+    applySceneMetadata(st);
+    objectCard.classList.add("is-swapping");
+
+    Promise.all([
+      preloadImage(config.before.src),
+      preloadImage(config.after.src),
+      preloadImage(config.product.src)
+    ]).then(function (loaded) {
+      if (request !== mediaRequest || activeState !== st) return;
+      if (!loaded[0] || !loaded[1]) {
+        objectCard.classList.remove("is-swapping");
+        objectCard.classList.add("has-media-error");
+        return;
+      }
+      setImage(beforeImage, config.before);
+      setImage(afterImage, config.after);
+      if (loaded[2]) setImage(productImage, config.product);
+      objectCard.classList.remove("has-media-error");
+      window.requestAnimationFrame(function () {
+        if (request === mediaRequest) objectCard.classList.remove("is-swapping");
+      });
+    });
+  }
+
+  function preloadNextScene(st) {
+    var next = states[st.index + 1];
+    if (!next) return;
+    var preload = function () {
+      preloadImage(next.config.before.src);
+      preloadImage(next.config.after.src);
+      preloadImage(next.config.product.src);
+    };
+    if ("requestIdleCallback" in window) window.requestIdleCallback(preload, { timeout: 1200 });
+    else window.setTimeout(preload, 240);
+  }
+
+  function automaticReveal(progress) {
+    return 8 + clamp(progress, 0, 1) * 84;
+  }
+
+  function setReveal(value) {
+    var reveal = Math.round(clamp(number(value, 50), 0, 100));
+    comparisonMedia.style.setProperty("--story-reveal", reveal + "%");
+    comparisonRange.value = String(reveal);
+    comparisonRange.setAttribute("aria-valuetext", reveal + "% after image revealed");
+  }
+
+  function renderScene(st) {
+    var reveal = st.manualReveal === null ? automaticReveal(st.p) : st.manualReveal;
+    setReveal(reveal);
+  }
+
+  comparisonRange.addEventListener("input", function () {
+    if (!activeState) return;
+    activeState.manualReveal = clamp(number(comparisonRange.value, 50), 0, 100);
+    renderScene(activeState);
+  });
 
   function restoreFocusable(element) {
     if (element.dataset.storyOriginalTabindex) {
@@ -151,10 +270,15 @@
 
   function activateState(st, desktop) {
     if (!st) return;
+    var changed = activeState !== st;
     activeState = st;
-    story.dataset.activeScene = st.sceneDef.id;
+    story.dataset.activeScene = st.config.id;
     updateRail(st);
     if (desktop) syncDesktopAccessibility(st);
+    if (changed) {
+      activateSceneMedia(st);
+      preloadNextScene(st);
+    }
     renderScene(st);
   }
 
@@ -227,9 +351,9 @@
     states.forEach(function (st) {
       st.act.classList.add("is-mobile-visible");
     });
-    activeState = states[states.length - 1];
-    story.dataset.activeScene = "prove";
-    renderProve(1);
+    states[0].p = .5;
+    activeState = null;
+    activateState(states[0], false);
   }
 
   function initCompactStory() {
@@ -238,6 +362,7 @@
     resetStoryPresentation();
     states[0].act.classList.add("is-mobile-visible");
     states[0].p = 0;
+    activeState = null;
     activateState(states[0], false);
 
     var disposed = false;
@@ -350,6 +475,7 @@
       st.timeline = timeline;
     });
 
+    activeState = null;
     activateState(stateAtViewport(), true);
 
     var resizeTimer = 0;
@@ -422,11 +548,14 @@
   }
 
   window.__MASESTStory = {
-    scenes: SCENE_DEFS.map(function (scene) { return scene.id; }),
-    active: function () { return activeState ? activeState.sceneDef.id : null; },
+    scenes: states.map(function (st) { return st.config.id; }),
+    active: function () { return activeState ? activeState.config.id : null; },
     render: function (sceneId, progress) {
-      sceneDefinition(sceneId).render(clamp(progress, 0, 1));
-    }
+      var st = stateById(sceneId);
+      st.p = clamp(progress, 0, 1);
+      activateState(st, false);
+    },
+    reveal: function () { return Number(comparisonRange.value); }
   };
 
   initStoryPresence();

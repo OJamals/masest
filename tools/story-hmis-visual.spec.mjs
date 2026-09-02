@@ -1,42 +1,92 @@
-import { spawn } from "node:child_process";
 import { createMediaIsolation, expect, test } from "./playwright-test.mjs";
+import { startStaticTestServer } from "./test-static-server.mjs";
 import {
   STORY_PERFORMANCE_SAMPLE_COUNT,
   evaluateStoryPerformanceSamples,
 } from "./story-performance-budget.mjs";
 
-const PORT = 4194;
-const BASE_URL = `http://127.0.0.1:${PORT}`;
+let BASE_URL = "";
+const STORY_SCENES = [
+  {
+    id: "kitchen-grease",
+    rail: "01Kitchen",
+    before: "/site/img/proof/story/kitchen-grease-before-202609.webp",
+    after: "/site/img/proof/story/kitchen-grease-after-202609.webp",
+    product: "/site/img/products/crhd-food-beverage-studio.webp",
+    shop: "products/crhd",
+    trialProduct: "VertKleen%20CRHD",
+    status: "Baked-on grease to exposed steel",
+  },
+  {
+    id: "cip-vessel",
+    rail: "02CIP vessel",
+    before: "/site/img/proof/story/cip-vessel-before-202609.webp",
+    after: "/site/img/proof/story/cip-vessel-after-202609.webp",
+    product: "/site/img/products/cip-cr-studio.webp",
+    shop: "products/cr",
+    trialProduct: "VertKleen%20CR",
+    status: "Vessel residue removed",
+  },
+  {
+    id: "labelle-fermenter",
+    rail: "03Fermenter",
+    before: "/site/img/proof/story/labelle-fermenter-before-202609.webp",
+    after: "/site/img/proof/story/labelle-fermenter-after-202609.webp",
+    product: "/site/img/products/cip-cr-studio.webp",
+    shop: "products/cr",
+    trialProduct: "VertKleen%20CR",
+    status: "Fermenter ring removed",
+  },
+  {
+    id: "shower-track",
+    rail: "04Calcium",
+    before: "/site/img/proof/story/shower-track-before-202609.webp",
+    after: "/site/img/proof/story/shower-track-after-202609.webp",
+    product: "/site/img/products/descaler-studio.webp",
+    shop: "products/descaler",
+    trialProduct: "VertKleen%20Descaler",
+    status: "Calcium line removed",
+  },
+  {
+    id: "airboat-panel",
+    rail: "05Aluminum",
+    before: "/site/img/proof/story/airboat-panel-before-202609.webp",
+    after: "/site/img/proof/story/airboat-panel-after-202609.webp",
+    product: "/site/img/products/alumibrite-studio.webp",
+    shop: "products/alumibrite",
+    trialProduct: "VertKleen%20AlumiBrite",
+    status: "Aluminum finish restored",
+  },
+  {
+    id: "pool-cartridge",
+    rail: "06Filter",
+    before: "/site/img/proof/story/pool-cartridge-before-202609.webp",
+    after: "/site/img/proof/story/pool-cartridge-after-202609.webp",
+    product: "/site/img/products/cip-hcr-studio.webp",
+    shop: "products/hcr",
+    trialProduct: "VertKleen%20HCR",
+    status: "Filter pleats visibly cleaner",
+  },
+];
 
-let server;
+let staticSite;
 
 test.beforeAll(async () => {
-  server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], {
-    cwd: new URL("..", import.meta.url).pathname,
-    stdio: "ignore",
-  });
-
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const response = await fetch(`${BASE_URL}/index.html`).catch(() => null);
-    if (response?.ok) return;
-    await new Promise((resolve) => setTimeout(resolve, 125));
-  }
-  throw new Error("static server did not start");
+  staticSite = await startStaticTestServer(new URL("..", import.meta.url));
+  BASE_URL = staticSite.baseUrl;
 });
 
-test.afterAll(() => {
-  if (!server) return;
-  server.kill();
-  server.unref();
-  server = null;
+test.afterAll(async () => {
+  await staticSite?.close();
 });
 
 async function openStory(page) {
   const errors = [];
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
   page.on("response", (response) => {
-    const path = new URL(response.url()).pathname;
-    const storyCritical = /\/(?:css\/story\.css|js\/story\.js|vendor\/gsap\/|img\/blog\/cases\/hcr-brevard-|img\/updates\/vertkleen-hvac-hcr-5gal)/.test(path);
+    const url = new URL(response.url());
+    const storyCritical = /\/(?:css\/story\.css|js\/story\.js|vendor\/gsap\/)/.test(url.pathname)
+      || (url.hostname === "media.masest.co" && /\/site\/img\/(?:proof\/story|products)\//.test(url.pathname));
     if (storyCritical && response.status() >= 400) {
       errors.push(`response ${response.status()}: ${response.url()}`);
     }
@@ -56,7 +106,7 @@ async function scrollAct(page, actNumber, progress = .5) {
   await page.waitForTimeout(500);
 }
 
-test("story boots cleanly with one verified visual object and four scene renderers", async ({ page }) => {
+test("story boots cleanly with one verified visual object and six scene renderers", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const errors = await openStory(page);
 
@@ -71,6 +121,9 @@ test("story boots cleanly with one verified visual object and four scene rendere
       images: images.map((image) => ({
         complete: image.complete,
         naturalWidth: image.naturalWidth,
+        declaredWidth: Number(image.getAttribute("width")),
+        declaredHeight: Number(image.getAttribute("height")),
+        host: new URL(image.currentSrc || image.src).hostname,
         source: new URL(image.currentSrc || image.src).pathname,
       })),
     };
@@ -78,17 +131,39 @@ test("story boots cleanly with one verified visual object and four scene rendere
 
   expect(errors).toEqual([]);
   expect(state.ready).toBe(true);
-  expect(state.acts).toEqual(["diagnose", "burden", "switch", "prove"]);
+  expect(state.acts).toEqual([
+    "kitchen-grease",
+    "cip-vessel",
+    "labelle-fermenter",
+    "shower-track",
+    "airboat-panel",
+    "pool-cartridge",
+  ]);
   expect(state.objects).toBe(1);
   expect(state.rendererScenes).toEqual(state.acts);
   expect(state.images).toHaveLength(3);
+  expect(state.images.map((image) => image.host)).toEqual([
+    "media.masest.co",
+    "media.masest.co",
+    "media.masest.co",
+  ]);
+  expect(state.images.map((image) => image.source)).toEqual([
+    "/site/img/proof/story/kitchen-grease-before-202609.webp",
+    "/site/img/proof/story/kitchen-grease-after-202609.webp",
+    "/site/img/products/crhd-food-beverage-studio.webp",
+  ]);
   for (const image of state.images) {
     expect(image.complete, JSON.stringify(state.images)).toBe(true);
-    expect(image.naturalWidth, JSON.stringify(state.images)).toBeGreaterThan(500);
+    expect(image.declaredWidth, JSON.stringify(state.images)).toBeGreaterThanOrEqual(671);
+    expect(image.declaredHeight, JSON.stringify(state.images)).toBeGreaterThanOrEqual(473);
+    expect(
+      image.naturalWidth === 1 || image.naturalWidth === image.declaredWidth,
+      JSON.stringify(state.images),
+    ).toBe(true);
   }
 });
 
-test("desktop story uses a compact 4.2-to-4.8 viewport scroll road", async ({ page }) => {
+test("desktop story uses a compact six-scene scroll road", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
 
@@ -102,9 +177,10 @@ test("desktop story uses a compact 4.2-to-4.8 viewport scroll road", async ({ pa
     };
   });
 
-  expect(geometry.viewports, JSON.stringify(geometry)).toBeGreaterThanOrEqual(4.2);
-  expect(geometry.viewports, JSON.stringify(geometry)).toBeLessThanOrEqual(4.81);
-  expect(geometry.actViewports).toEqual([1.25, 1.2, 1.15, 1.2]);
+  expect(geometry.viewports, JSON.stringify(geometry)).toBeGreaterThanOrEqual(6.5);
+  expect(geometry.viewports, JSON.stringify(geometry)).toBeLessThanOrEqual(7.1);
+  expect(geometry.actViewports).toHaveLength(6);
+  expect(geometry.actViewports.every((height) => height >= 1.1 && height <= 1.2), JSON.stringify(geometry)).toBe(true);
   expect(geometry.pageOverflow).toBe(0);
 });
 
@@ -113,13 +189,13 @@ test("same story object remains pinned while scene state and chapter navigation 
   await openStory(page);
 
   const samples = [];
-  for (const [act, progress] of [[1, .58], [2, .58], [3, .62], [4, .94]]) {
-    await scrollAct(page, act, progress);
+  for (let index = 0; index < STORY_SCENES.length; index += 1) {
+    await scrollAct(page, index + 1, .58);
     samples.push(await page.evaluate(() => {
       const story = document.getElementById("story");
       const object = story.querySelector(".story-object");
       const box = object.getBoundingClientRect();
-      const after = story.querySelector(".story-object__after");
+      const media = story.querySelector(".story-object__media");
       const product = story.querySelector(".story-object__product");
       return {
         scene: story.dataset.activeScene,
@@ -127,25 +203,113 @@ test("same story object remains pinned while scene state and chapter navigation 
         objectConnected: object.isConnected,
         objectTop: Math.round(box.top),
         objectWidth: Math.round(box.width),
-        reveal: Number(getComputedStyle(after).opacity) * 100,
+        reveal: Number.parseFloat(getComputedStyle(media).getPropertyValue("--story-reveal")),
         product: Number(getComputedStyle(product).opacity),
         status: story.querySelector(".story-object__status")?.textContent.trim(),
+        before: new URL(story.querySelector(".story-object__before").currentSrc).pathname,
+        after: new URL(story.querySelector(".story-object__after img").currentSrc).pathname,
+        productSource: new URL(product.querySelector("img").currentSrc).pathname,
       };
     }));
   }
 
-  expect(samples.map((sample) => sample.scene)).toEqual(["diagnose", "burden", "switch", "prove"]);
-  expect(samples.map((sample) => sample.current)).toEqual(["01Diagnose", "02Burden", "03Switch", "04Prove"]);
+  expect(samples.map((sample) => sample.scene)).toEqual(STORY_SCENES.map((scene) => scene.id));
+  expect(samples.map((sample) => sample.current)).toEqual(STORY_SCENES.map((scene) => scene.rail));
   expect(samples.every((sample) => sample.objectConnected)).toBe(true);
   expect(new Set(samples.map((sample) => sample.objectTop)).size).toBe(1);
   expect(new Set(samples.map((sample) => sample.objectWidth)).size).toBe(1);
-  expect(samples[0].reveal).toBe(0);
-  expect(samples[1].reveal).toBe(0);
-  expect(samples[2].reveal).toBeGreaterThan(5);
-  expect(samples[2].product).toBeGreaterThan(.5);
-  expect(samples[3].reveal).toBeGreaterThan(85);
-  expect(samples[3].product).toBe(1);
-  expect(samples[3].status).toBe("Result");
+  expect(samples.every((sample) => sample.reveal > 35 && sample.reveal < 80), JSON.stringify(samples)).toBe(true);
+  expect(samples.every((sample) => sample.product === 1)).toBe(true);
+  expect(samples.map((sample) => sample.status)).toEqual(STORY_SCENES.map((scene) => scene.status));
+  for (let index = 0; index < samples.length; index += 1) {
+    expect(samples[index].before).toBe(STORY_SCENES[index].before);
+    expect(samples[index].after).toBe(STORY_SCENES[index].after);
+    expect(samples[index].productSource).toBe(STORY_SCENES[index].product);
+  }
+});
+
+test("story requests only R2 media and preloads at most the next comparison", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const requests = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await openStory(page);
+  await page.waitForTimeout(500);
+
+  const storyPaths = () => [...new Set(requests
+    .map((raw) => new URL(raw))
+    .filter((url) => url.pathname.startsWith("/site/img/proof/story/"))
+    .map((url) => url.pathname))];
+  const initial = storyPaths();
+  const firstTwo = new Set(STORY_SCENES.slice(0, 2).flatMap((scene) => [scene.before, scene.after]));
+  expect(initial).toEqual(expect.arrayContaining([STORY_SCENES[0].before, STORY_SCENES[0].after]));
+  expect(initial.every((path) => firstTwo.has(path)), JSON.stringify(initial)).toBe(true);
+
+  for (let act = 1; act <= STORY_SCENES.length; act += 1) await scrollAct(page, act, .52);
+
+  expect(storyPaths().sort()).toEqual(
+    STORY_SCENES.flatMap((scene) => [scene.before, scene.after]).sort(),
+  );
+  const managedMedia = requests
+    .map((raw) => new URL(raw))
+    .filter((url) => /\/storage\/v1\/object\/|\/site\/img\//.test(url.pathname));
+  expect(managedMedia.some((url) => url.hostname.endsWith(".supabase.co")), managedMedia.map(String).join("\n")).toBe(false);
+  expect(managedMedia
+    .filter((url) => url.pathname.startsWith("/site/img/proof/story/"))
+    .every((url) => url.hostname === "media.masest.co")).toBe(true);
+});
+
+test("native range overrides scroll reveal per scene and remains reversible", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  await scrollAct(page, 1, .42);
+
+  const range = page.locator(".story-object__range");
+  await range.fill("73");
+  const overridden = await page.evaluate(() => ({
+    scene: document.getElementById("story").dataset.activeScene,
+    value: document.querySelector(".story-object__range").value,
+    valueText: document.querySelector(".story-object__range").getAttribute("aria-valuetext"),
+    reveal: getComputedStyle(document.querySelector(".story-object__media"))
+      .getPropertyValue("--story-reveal").trim(),
+  }));
+  expect(overridden).toEqual({
+    scene: "kitchen-grease",
+    value: "73",
+    valueText: "73% after image revealed",
+    reveal: "73%",
+  });
+
+  await scrollAct(page, 2, .32);
+  const nextReveal = await range.inputValue();
+  expect(nextReveal).not.toBe("73");
+
+  await scrollAct(page, 1, .32);
+  expect(await range.inputValue()).toBe("73");
+});
+
+test("pool-cartridge after frame applies the requested 45-degree clockwise turn", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  await scrollAct(page, 6, .52);
+  await page.waitForFunction((path) => (
+    new URL(document.querySelector(".story-object__after img").currentSrc).pathname === path
+  ), STORY_SCENES[5].after);
+
+  const state = await page.evaluate(() => {
+    const media = document.querySelector(".story-object__media");
+    const after = document.querySelector(".story-object__after img");
+    return {
+      scene: document.getElementById("story").dataset.activeScene,
+      rotate: getComputedStyle(media).getPropertyValue("--story-after-rotate").trim(),
+      transform: getComputedStyle(after).transform,
+      source: new URL(after.currentSrc).pathname,
+    };
+  });
+
+  expect(state.scene).toBe("pool-cartridge");
+  expect(state.rotate).toBe("45deg");
+  expect(state.transform).toMatch(/^matrix\(/);
+  expect(state.source).toBe(STORY_SCENES[5].after);
 });
 
 test("desktop chapter rail keeps unclipped labels clear of step numbers", async ({ page }) => {
@@ -180,7 +344,7 @@ test("desktop chapter rail clears the active copy column", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
 
-  for (let act = 1; act <= 4; act += 1) {
+  for (let act = 1; act <= STORY_SCENES.length; act += 1) {
     await scrollAct(page, act, .52);
     const spacing = await page.evaluate(() => {
       const active = document.querySelector('.rail-btn[aria-current="step"] span')
@@ -231,8 +395,9 @@ test("persistent product actions remain visible and correctly routed in every sc
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
 
-  for (let act = 1; act <= 4; act += 1) {
-    await scrollAct(page, act, .52);
+  for (let index = 0; index < STORY_SCENES.length; index += 1) {
+    const expected = STORY_SCENES[index];
+    await scrollAct(page, index + 1, .52);
     const action = await page.locator(".story-actions").evaluate((nav) => {
       const box = nav.getBoundingClientRect();
       const shop = nav.querySelector(".story-actions__shop");
@@ -248,8 +413,8 @@ test("persistent product actions remain visible and correctly routed in every sc
     expect(action.top).toBeGreaterThanOrEqual(58);
     expect(action.bottom).toBeLessThanOrEqual(112);
     expect(action.visible).toBe("visible");
-    expect(action.shop).toBe("products/hcr");
-    expect(action.trial).toContain("product=VertKleen%20HCR");
+    expect(action.shop).toBe(expected.shop);
+    expect(action.trial).toContain(`product=${expected.trialProduct}`);
   }
 });
 
@@ -308,12 +473,16 @@ for (const width of [320, 390, 430]) {
         const rect = element.getBoundingClientRect();
         return { left: rect.left, right: rect.right, width: rect.width };
       });
+      const status = story.querySelector(".story-object__status").getBoundingClientRect();
+      const range = story.querySelector(".story-object__range").getBoundingClientRect();
       return {
         ready: story.classList.contains("story-ready"),
         mobileReady: story.classList.contains("story-mobile-ready"),
         overflow: document.documentElement.scrollWidth - viewportWidth,
         viewportWidth,
         boxes,
+        statusBottom: status.bottom,
+        rangeTop: range.top,
       };
     });
 
@@ -321,6 +490,7 @@ for (const width of [320, 390, 430]) {
     expect(layout.ready).toBe(false);
     expect(layout.mobileReady).toBe(true);
     expect(layout.overflow).toBe(0);
+    expect(layout.statusBottom, JSON.stringify(layout)).toBeLessThanOrEqual(layout.rangeTop + 1);
     for (const box of layout.boxes) {
       expect(box.left, JSON.stringify(layout)).toBeGreaterThanOrEqual(-1);
       expect(box.right, JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewportWidth + 1);
@@ -328,12 +498,32 @@ for (const width of [320, 390, 430]) {
   });
 }
 
+test("compact chapter entry keeps active copy below the sticky proof card", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openStory(page);
+  await scrollAct(page, 3, 0);
+
+  const layout = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    const object = story.querySelector(".story-object__card").getBoundingClientRect();
+    const copy = story.querySelector('.act[data-act="3"] .act-content').getBoundingClientRect();
+    return {
+      active: story.dataset.activeScene,
+      objectBottom: Math.round(object.bottom),
+      copyTop: Math.round(copy.top),
+    };
+  });
+
+  expect(layout.active).toBe("labelle-fermenter");
+  expect(layout.copyTop, JSON.stringify(layout)).toBeGreaterThanOrEqual(layout.objectBottom + 16);
+});
+
 test("compact native-scroll chapters reveal in both directions", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openStory(page);
 
   const scenes = [];
-  for (const act of [1, 2, 3, 4, 2]) {
+  for (const act of [1, 2, 3, 4, 5, 6, 2]) {
     await page.locator(`.story .act[data-act="${act}"]`).evaluate((element) => {
       element.scrollIntoView({ block: "center" });
     });
@@ -345,8 +535,16 @@ test("compact native-scroll chapters reveal in both directions", async ({ page }
     })));
   }
 
-  expect(scenes.map((sample) => sample.active)).toEqual(["diagnose", "burden", "switch", "prove", "burden"]);
-  expect(scenes.at(-1).visibleActs).toEqual(expect.arrayContaining([1, 2, 3, 4]));
+  expect(scenes.map((sample) => sample.active)).toEqual([
+    "kitchen-grease",
+    "cip-vessel",
+    "labelle-fermenter",
+    "shower-track",
+    "airboat-panel",
+    "pool-cartridge",
+    "cip-vessel",
+  ]);
+  expect(scenes.at(-1).visibleActs).toEqual(expect.arrayContaining([1, 2, 3, 4, 5, 6]));
 });
 
 test("mobile cleaner comparison becomes complete conventional-versus-VertKleen cards", async ({ page }) => {
@@ -438,7 +636,7 @@ test("desktop focusability follows the visible chapter", async ({ page }) => {
   expect(switched).toEqual({ act1: -1, act3: 0, act1Hidden: "true", act3Hidden: "false" });
 });
 
-test("skip-story control lands on the visible four-step summary", async ({ page }) => {
+test("skip-story control lands on the visible six-result summary", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
   await page.locator(".story-skip").click();
@@ -459,7 +657,7 @@ test("skip-story control lands on the visible four-step summary", async ({ page 
   expect(landing.top).toBeLessThan(100);
   expect(landing.bottom).toBeGreaterThan(landing.top);
   expect(landing.visible).toBe("visible");
-  expect(landing.steps).toBe(4);
+  expect(landing.steps).toBe(6);
 });
 
 test("missing GSAP exposes complete static content and final proof", async ({ page }) => {
@@ -473,7 +671,9 @@ test("missing GSAP exposes complete static content and final proof", async ({ pa
       ready: story.classList.contains("story-ready"),
       mobileReady: story.classList.contains("story-mobile-ready"),
       scene: story.dataset.activeScene,
-      reveal: Number(getComputedStyle(story.querySelector(".story-object__after")).opacity) * 100,
+      reveal: Number.parseFloat(
+        getComputedStyle(story.querySelector(".story-object__after")).getPropertyValue("--story-reveal")
+      ),
       acts: [...story.querySelectorAll(":scope > .act")].map((act) => ({
         ariaHidden: act.getAttribute("aria-hidden"),
         height: act.getBoundingClientRect().height,
@@ -486,9 +686,10 @@ test("missing GSAP exposes complete static content and final proof", async ({ pa
   expect(errors).toEqual([]);
   expect(fallback.ready).toBe(false);
   expect(fallback.mobileReady).toBe(false);
-  expect(fallback.scene).toBe("prove");
-  expect(fallback.reveal).toBeGreaterThan(99);
-  expect(fallback.href).toBe("products/hcr");
+  expect(fallback.scene).toBe("kitchen-grease");
+  expect(fallback.reveal).toBeGreaterThanOrEqual(49);
+  expect(fallback.reveal).toBeLessThanOrEqual(51);
+  expect(fallback.href).toBe("products/crhd");
   for (const act of fallback.acts) {
     expect(act.ariaHidden).toBeNull();
     expect(act.height).toBeGreaterThan(200);
@@ -496,7 +697,7 @@ test("missing GSAP exposes complete static content and final proof", async ({ pa
   }
 });
 
-test("no-JS mode keeps all four chapters and actions readable", async ({ browser }) => {
+test("no-JS mode keeps all six chapters, pairs, and actions readable", async ({ browser }) => {
   const context = await browser.newContext({
     javaScriptEnabled: false,
     viewport: { width: 390, height: 844 },
@@ -517,17 +718,19 @@ test("no-JS mode keeps all four chapters and actions readable", async ({ browser
           visibility: getComputedStyle(act.querySelector(".act-content")).visibility,
         })),
         actions: [...story.querySelectorAll('a[href]')].map((link) => link.getAttribute("href")),
+        fallbackPairs: story.querySelectorAll(".story-fallback-pair").length,
       };
     });
     expect(state.ready).toBe(false);
     expect(state.overflow).toBe(0);
-    expect(state.acts).toHaveLength(4);
+    expect(state.acts).toHaveLength(6);
+    expect(state.fallbackPairs).toBe(6);
     for (const act of state.acts) {
       expect(act.heading).toBeTruthy();
       expect(act.opacity).toBe("1");
       expect(act.visibility).toBe("visible");
     }
-    expect(state.actions).toContain("products/hcr");
+    expect(state.actions).toContain("products/crhd");
     expect(state.actions).toContain("#storySummary");
   } finally {
     try {
@@ -575,21 +778,26 @@ test("reduced motion produces a complete, non-overlapping static story", async (
 test("reverse scroll restores prior scene state", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
-  await scrollAct(page, 4, .9);
+  await scrollAct(page, 6, .9);
   const end = await page.evaluate(() => ({
     scene: document.getElementById("story").dataset.activeScene,
-    reveal: Number(getComputedStyle(document.querySelector(".story-object__after")).opacity) * 100,
+    reveal: Number.parseFloat(
+      getComputedStyle(document.querySelector(".story-object__media")).getPropertyValue("--story-reveal")
+    ),
   }));
   await scrollAct(page, 2, .45);
   const reversed = await page.evaluate(() => ({
     scene: document.getElementById("story").dataset.activeScene,
-    reveal: Number(getComputedStyle(document.querySelector(".story-object__after")).opacity) * 100,
+    reveal: Number.parseFloat(
+      getComputedStyle(document.querySelector(".story-object__media")).getPropertyValue("--story-reveal")
+    ),
   }));
 
-  expect(end.scene).toBe("prove");
+  expect(end.scene).toBe("pool-cartridge");
   expect(end.reveal).toBeGreaterThan(80);
-  expect(reversed.scene).toBe("burden");
-  expect(reversed.reveal).toBeLessThan(15);
+  expect(reversed.scene).toBe("cip-vessel");
+  expect(reversed.reveal).toBeGreaterThan(25);
+  expect(reversed.reveal).toBeLessThan(70);
 });
 
 test("720px compact layout covers a 200-percent desktop zoom equivalent", async ({ page }) => {
@@ -633,8 +841,8 @@ test("live 200-percent zoom crossing reconfigures the story without hidden chapt
   expect(await storyState()).toMatchObject({
     ready: true,
     mobileReady: false,
-    hiddenActs: 3,
-    storyTriggers: 4,
+    hiddenActs: 5,
+    storyTriggers: 6,
     overflow: 0,
   });
 
@@ -653,8 +861,8 @@ test("live 200-percent zoom crossing reconfigures the story without hidden chapt
   expect(await storyState()).toMatchObject({
     ready: true,
     mobileReady: false,
-    hiddenActs: 3,
-    storyTriggers: 4,
+    hiddenActs: 5,
+    storyTriggers: 6,
     overflow: 0,
   });
 });

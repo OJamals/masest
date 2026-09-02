@@ -2,7 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseImportEmails, onRequest as recipientsRoute } from '../functions/api/admin/recipients.js';
-import { onRequest as newslettersRoute } from '../functions/api/admin/newsletters.js';
+import {
+  claimNewsletter,
+  onRequest as newslettersRoute,
+} from '../functions/api/admin/newsletters.js';
+import { claimBlogNewsletter } from '../functions/api/admin/blog-newsletter.js';
 
 const originalFetch = globalThis.fetch;
 
@@ -26,6 +30,8 @@ const staffEnv = {
   SUPABASE_URL: 'https://supabase.test',
   SUPABASE_ANON_KEY: 'anon-key',
   SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+  KLAVIYO_PRIVATE_KEY: 'klaviyo-key',
+  KLAVIYO_LIST_ID: 'marketing-list',
 };
 
 function staffReq(method, body = {}, onParse = () => {}) {
@@ -60,6 +66,12 @@ function mockStaffFetch(role) {
       const method = init.method || 'GET';
       return method === 'GET' ? Response.json([]) : new Response(null, { status: 201 });
     }
+    if (url.includes('a.klaviyo.com/api/lists/')) {
+      return Response.json({ data: [], links: { next: null } });
+    }
+    if (url.includes('a.klaviyo.com/api/profile-subscription-bulk-create-jobs/')) {
+      return new Response(null, { status: 202 });
+    }
     throw new Error(`Unexpected fetch: ${url}`);
   };
 }
@@ -69,7 +81,7 @@ test('recipients: 401 for anonymous', async () => {
   assert.equal(res.status, 401);
 });
 
-test('recipients: read_only retains GET counts and population access', async () => {
+test('recipients: read_only retains Klaviyo count and import-audit access', async () => {
   mockStaffFetch('read_only');
   let parseCalls = 0;
   const res = await recipientsRoute({
@@ -80,7 +92,7 @@ test('recipients: read_only retains GET counts and population access', async () 
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), {
     recipients: [],
-    counts: { users: 0, leads: 0, imported: 0 },
+    counts: { subscribers: 0, imported: 0 },
   });
   assert.equal(parseCalls, 0);
 });
@@ -145,17 +157,100 @@ test('newsletters: sweep_due 401 when no secret configured', async () => {
   assert.equal(res.status, 401);
 });
 
-test('newsletters: send_now returns 202 after materialization and never invokes transport', () => {
+test('claimNewsletter: atomically moves one allowed row to queueing', async () => {
+  const calls = [];
+  const claimed = { id: 'newsletter-1', status: 'queueing', subject: 'Claimed' };
+  const sb = {
+    from(table) {
+      calls.push(['from', table]);
+      return {
+        update(patch) {
+          calls.push(['update', patch]);
+          return {
+            eq(column, value) {
+              calls.push(['eq', column, value]);
+              return {
+                in(statusColumn, statuses) {
+                  calls.push(['in', statusColumn, statuses]);
+                  return {
+                    select(columns) {
+                      calls.push(['select', columns]);
+                      return {
+                        async maybeSingle() {
+                          calls.push(['maybeSingle']);
+                          return { data: claimed, error: null };
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+
+  const result = await claimNewsletter(sb, 'newsletter-1', ['draft', 'scheduled']);
+
+  assert.deepEqual(result, { newsletter: claimed, error: null });
+  assert.deepEqual(calls[0], ['from', 'newsletters']);
+  assert.equal(calls[1][0], 'update');
+  assert.equal(calls[1][1].status, 'queueing');
+  assert.deepEqual(calls.slice(2), [
+    ['eq', 'id', 'newsletter-1'],
+    ['in', 'status', ['draft', 'scheduled']],
+    ['select', '*'],
+    ['maybeSingle'],
+  ]);
+});
+
+test('claimBlogNewsletter: primary-key insert claims one post before provider work', async () => {
+  let inserted = null;
+  const sb = {
+    from(table) {
+      assert.equal(table, 'blog_newsletter_sends');
+      return {
+        async insert(row) {
+          inserted = row;
+          return { error: null };
+        },
+      };
+    },
+  };
+
+  assert.deepEqual(await claimBlogNewsletter(sb, 'new-post'), { claimed: true, error: null });
+  assert.equal(inserted.slug, 'new-post');
+  assert.equal(inserted.provider, 'klaviyo');
+  assert.equal(inserted.provider_status, 'queueing');
+  assert.equal(inserted.sent_at, null);
+});
+
+test('claimBlogNewsletter: duplicate primary key is an already-claimed no-op', async () => {
+  const sb = {
+    from() {
+      return { insert: async () => ({ error: { code: '23505' } }) };
+    },
+  };
+
+  assert.deepEqual(await claimBlogNewsletter(sb, 'new-post'), { claimed: false, error: null });
+});
+
+test('newsletters: send_now queues one Klaviyo campaign without local recipient fanout', () => {
   const source = readFileSync(new URL('../functions/api/admin/newsletters.js', import.meta.url), 'utf8');
   const start = source.indexOf("if (action === 'send_now')");
   const end = source.indexOf("return json(400, { error: 'bad_action' })", start);
   const sendNow = source.slice(start, end);
-  assert.match(sendNow, /await queueNewsletter\(env, sb, n\)/);
+  assert.match(sendNow, /await claimNewsletter\(sb, body\.id/);
+  assert.match(sendNow, /await publishNewsletter\(env, sb, newsletter\)/);
   assert.match(sendNow, /return json\(202,/);
-  assert.doesNotMatch(sendNow, /sendEmail|runSupabaseDeliveryWorker/);
+  assert.doesNotMatch(sendNow, /sendEmail|runSupabaseDeliveryWorker|materializeDeliverySource/);
+  assert.match(source, /publishKlaviyoCampaign/);
+  assert.match(source, /provider_campaign_id/);
   const ui = readFileSync(new URL('../js/admin/newsletter.js', import.meta.url), 'utf8');
-  assert.match(ui, /Queued \$\{Number\(res\.total \|\| 0\)\.toLocaleString\(\)\} recipients for delivery/);
-  assert.doesNotMatch(ui, /Sent to \$\{res\.sent\} of \$\{res\.audience\}/);
+  assert.match(ui, /Queued in Klaviyo \(\$\{res\.campaign_id \|\| 'campaign created'\}\)\./);
+  assert.doesNotMatch(ui, /Queued \$\{Number\(res\.total/);
   const adminEntry = readFileSync(new URL('../js/admin.js', import.meta.url), 'utf8');
   // Derived from the deployed entry so a release bump stays a one-line change.
   const release = readFileSync(new URL('../admin.html', import.meta.url), 'utf8').match(/js\/admin\.js\?v=(\d{8}[a-z])/)?.[1];
@@ -163,9 +258,14 @@ test('newsletters: send_now returns 202 after materialization and never invokes 
   assert.match(adminEntry, new RegExp(`\\./admin/newsletter\\.js\\?v=${release}`));
 });
 
-test('blog sweep materializes recipient rows and performs no request-time fanout', () => {
+test('blog sweep queues Klaviyo campaigns and persists provider identity', () => {
   const source = readFileSync(new URL('../functions/api/admin/blog-newsletter.js', import.meta.url), 'utf8');
-  assert.match(source, /materializeDeliverySource\(sb,/);
-  assert.match(source, /return json\(202,/);
-  assert.doesNotMatch(source, /sendEmail|for \(const email/);
+  const claimAt = source.indexOf('await claimBlogNewsletter(sb, post.slug)');
+  const publishAt = source.indexOf('await publishKlaviyoCampaign(env, {');
+  assert.ok(claimAt >= 0 && claimAt < publishAt, 'blog post must be claimed before provider work');
+  assert.match(source, /publishKlaviyoCampaign/);
+  assert.match(source, /getKlaviyoCampaignStatus/);
+  assert.match(source, /provider_campaign_id/);
+  assert.match(source, /return json\(failed\.length \? 503 : 202,/);
+  assert.doesNotMatch(source, /materializeDeliverySource|sendEmail|for \(const email/);
 });

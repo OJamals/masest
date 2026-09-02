@@ -22,7 +22,9 @@ test('private service payload carries stable identity, thread headers, and optio
 });
 
 test('marketing cannot leak through the transactional Cloudflare stream', () => {
-  assert.match(src, /categoryStream\(category\) === 'marketing'/);
+  assert.match(src, /const policy = categoryPolicy\(category\)/);
+  assert.match(src, /email_category_required/);
+  assert.match(src, /policy\.stream === 'marketing'/);
   assert.match(src, /marketing_provider_required/);
   assert.match(src, /stream: 'transactional'/);
 });

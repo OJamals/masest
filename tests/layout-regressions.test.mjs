@@ -135,7 +135,7 @@ export async function api(path, options = {}) {
   if (pathname.startsWith("/api/account/company")) return { company: fixtures.account.company };
   if (pathname.startsWith("/api/account/invoices")) return { invoices: [] };
   if (pathname.startsWith("/api/account/team")) return { members: [], invites: [] };
-  if (pathname.startsWith("/api/account/notification-prefs")) return { notify_orders: true, notify_messages: true, notify_offers: false };
+  if (pathname.startsWith("/api/account/notification-prefs")) return { transactional_email_enabled: true, transactional_email_required: true, marketing_email_enabled: false, notify_messages: true };
   if (pathname.startsWith("/api/account/billing-portal")) return { url: "about:blank" };
   return {};
 }

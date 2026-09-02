@@ -15,7 +15,21 @@ alter table public.blog_newsletter_sends
   add column if not exists delivery_source_id text,
   add column if not exists delivery_total int not null default 0,
   add column if not exists suppressed_count int not null default 0,
-  add column if not exists dead_count int not null default 0;
+  add column if not exists dead_count int not null default 0,
+  add column if not exists queued_at timestamptz,
+  add column if not exists provider text,
+  add column if not exists provider_campaign_id text,
+  add column if not exists provider_message_id text,
+  add column if not exists provider_template_id text,
+  add column if not exists provider_status text,
+  add column if not exists provider_error text;
+
+alter table public.blog_newsletter_sends alter column sent_at drop not null;
+alter table public.blog_newsletter_sends alter column sent_at drop default;
+
+create index if not exists blog_newsletter_provider_campaign_idx
+  on public.blog_newsletter_sends (provider, provider_campaign_id)
+  where provider_campaign_id is not null;
 
 grant select, insert, update on public.blog_newsletter_sends to service_role;
 

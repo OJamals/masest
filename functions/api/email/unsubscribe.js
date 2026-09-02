@@ -4,6 +4,7 @@
 // buyer keeps order/billing receipts. Both require a valid HMAC token tied to the email.
 import { htmlEscape, recordSuppression } from '../../_lib/supabase.js';
 import { verifyUnsubscribeToken } from '../../_lib/email.js';
+import { klaviyoUnsubscribe } from '../../_lib/klaviyo.js';
 
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -33,9 +34,23 @@ export async function onRequestGet({ request, env }) {
     <button type="submit" style="background:#0e7c86;color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:600;cursor:pointer">Unsubscribe</button></form>`);
 }
 
-export async function onRequestPost({ request, env }) {
-  const { email, ok } = await resolve(request, env);
-  if (!ok) return html(INVALID, 400);
-  await recordSuppression(env, email, 'unsubscribe', 'marketing');
-  return html('<p>Done — you’ve been unsubscribed from MASEST marketing emails. Order and billing notices will still reach you.</p>');
+export function createUnsubscribePostHandler({
+  record = recordSuppression,
+  unsubscribe = klaviyoUnsubscribe,
+} = {}) {
+  return async function unsubscribePost({ request, env }) {
+    const { email, ok } = await resolve(request, env);
+    if (!ok) return html(INVALID, 400);
+    const saved = await record(env, email, 'unsubscribe', 'marketing');
+    if (!saved) {
+      return html('<p>We could not save this preference. Please retry in a moment.</p>', 503);
+    }
+    const synced = await unsubscribe(env, email, env.KLAVIYO_LIST_ID);
+    if (!synced.ok) {
+      return html('<p>Your preference was saved locally, but marketing provider sync is pending. Please retry in a moment.</p>', 503);
+    }
+    return html('<p>Done — you’ve been unsubscribed from MASEST marketing emails. Order and billing notices will still reach you.</p>');
+  };
 }
+
+export const onRequestPost = createUnsubscribePostHandler();

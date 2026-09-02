@@ -1,6 +1,6 @@
 // Newsletter platform: pure helpers (render, audience resolution, schedule math)
 // shared by the admin endpoints + the cron sweep. I/O is injected by callers.
-import { emailLayout, htmlEscape } from './supabase.js';
+import { emailLayout } from './supabase.js';
 // Shared browser+node renderer so the admin preview and the server send match exactly.
 import { renderNewsletterBody } from '../../js/newsletter-render.js';
 
@@ -13,7 +13,12 @@ export { renderNewsletterBody };
 export function renderNewsletterEmail(newsletter = {}) {
   const subject = String(newsletter.subject || 'The VertKleen Briefing').slice(0, 180);
   const bodyHtml = renderNewsletterBody(newsletter.body_md);
-  const html = emailLayout({ heading: htmlEscape(subject), bodyHtml });
+  const html = emailLayout({
+    stream: 'marketing',
+    heading: subject,
+    preheader: subject,
+    bodyHtml,
+  });
   return { subject, html };
 }
 
