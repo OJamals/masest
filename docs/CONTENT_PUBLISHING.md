@@ -40,7 +40,7 @@ changes:
 #    Use ONE content source:
 SUPABASE_DB_URL='postgresql://…pooler…:5432/postgres' npm run publish:content
 #    — or the REST path —
-SUPABASE_URL='https://…supabase.co' SUPABASE_SERVICE_ROLE_KEY='…' npm run publish:content
+SUPABASE_URL='https://…supabase.co' SUPABASE_PUBLISHABLE_KEY='sb_publishable_…' npm run publish:content
 
 # 2. Review the diff.
 git diff data/content/
@@ -58,7 +58,10 @@ is unchanged, so there is no spurious diff).
 
 - `SUPABASE_DB_URL` (or `CONTENT_DB_URL`) uses a direct Postgres/pooler
   connection and needs the `pg` driver (a devDependency — `npm install` pulls
-  it in). The REST path needs no extra dependency.
+  it in). The REST path needs no extra dependency. Its publishable key can read
+  only published rows and the seven snapshot fields allowed by RLS + column
+  grants; it cannot write content or read draft/internal fields. Legacy
+  `SUPABASE_ANON_KEY` remains accepted for local transition only.
 - Only `status = 'published'` entries are exported; drafts never reach the live
   snapshot.
 - `npm run build:content` regenerates snapshots via the REST path only;

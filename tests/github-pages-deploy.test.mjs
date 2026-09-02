@@ -30,7 +30,8 @@ test("medicux main pushes verify before deploying the existing Pages project", (
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
   assert.match(workflow, /repository_dispatch:\s+types: \[site-content-published\]/);
   assert.match(workflow, /SUPABASE_URL: \$\{\{ secrets\.SUPABASE_URL \}\}/);
-  assert.match(workflow, /SUPABASE_SERVICE_ROLE_KEY: \$\{\{ secrets\.SUPABASE_SERVICE_ROLE_KEY \}\}/);
+  assert.match(workflow, /SUPABASE_PUBLISHABLE_KEY: \$\{\{ secrets\.SUPABASE_PUBLISHABLE_KEY \}\}/);
+  assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(workflow, /run: npm run build:content/);
   assert.match(
     workflow,
@@ -55,6 +56,8 @@ test("automated content commits explicitly dispatch the verified medicux deploym
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/);
   assert.match(workflow, /gh workflow run verify\.yml --repo medicux\/masest --ref main -f blog_newsletter=true/);
   assert.doesNotMatch(workflow, /sleep 75|Email new posts to the newsletter list/);
+  assert.match(workflow, /SUPABASE_PUBLISHABLE_KEY: \$\{\{ secrets\.SUPABASE_PUBLISHABLE_KEY \}\}/);
+  assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY/);
 });
 
 test("GitHub workflows use Node 24 action runtimes", () => {

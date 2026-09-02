@@ -40,7 +40,7 @@ Required `medicux/masest` Actions secrets:
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_PUBLISHABLE_KEY` — snapshot read only; restricted by `content_entries` RLS + column grants
 - `BLOG_NEWSLETTER_SECRET`
 - `NEWSLETTER_CRON_SECRET`
 

@@ -14,6 +14,7 @@ const OUT_DIR = process.env.CONTENT_EXPORT_OUT_DIR || join(ROOT, "data/content")
 // the pooler, and CONTENT_EXPORT_SOURCE) so regenerated files are byte-stable
 // regardless of which path produced them.
 export const ENTRY_ORDER_SQL = "status='published' order by type asc, slug asc";
+export const PUBLIC_CONTENT_COLUMNS = "type,slug,title,status,locale,payload,seo";
 
 function writeJson(path, value) {
   const text = `${JSON.stringify(value, null, 2)}\n`;
@@ -133,13 +134,20 @@ export async function loadEntries() {
   if (process.env.CONTENT_EXPORT_SOURCE) return JSON.parse(process.env.CONTENT_EXPORT_SOURCE);
 
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url && !key) return null;
+  if (!url) throw new Error("SUPABASE_URL is required when a content snapshot key is configured");
+  if (!key) {
+    throw new Error(
+      "SUPABASE_PUBLISHABLE_KEY is required for REST snapshot reads " +
+      "(legacy SUPABASE_ANON_KEY is also accepted); SUPABASE_SERVICE_ROLE_KEY is intentionally unsupported",
+    );
+  }
 
   const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data, error } = await sb
     .from("content_entries")
-    .select("*")
+    .select(PUBLIC_CONTENT_COLUMNS)
     .eq("status", "published")
     .order("type", { ascending: true })
     .order("slug", { ascending: true });
