@@ -1,0 +1,48 @@
+name: Admin staging E2E
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-staging-e2e
+  cancel-in-progress: false
+
+jobs:
+  authenticated_admin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: admin-staging-e2e
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify authenticated admin against staging
+        env:
+          ADMIN_E2E_ENABLE: staging-only
+          ADMIN_E2E_BASE_URL: ${{ secrets.ADMIN_E2E_BASE_URL }}
+          ADMIN_E2E_SUPABASE_URL: ${{ secrets.ADMIN_E2E_SUPABASE_URL }}
+          ADMIN_E2E_SUPABASE_ANON_KEY: ${{ secrets.ADMIN_E2E_SUPABASE_ANON_KEY }}
+          ADMIN_E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.ADMIN_E2E_SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run qa:admin-staging-e2e
+
+      - name: Upload failure screenshot
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: admin-staging-e2e-failure
+          path: test-results/admin-staging-e2e.png
+          if-no-files-found: ignore
+          retention-days: 3
