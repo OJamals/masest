@@ -269,6 +269,13 @@ test('phone new-chat composer preserves customer context instead of autofocus-sc
   assert.match(support, /else textarea\.focus\(\)/);
 });
 
+test('phone new-chat composer uses the full drawer instead of an empty split row', () => {
+  const styles = read('css/admin-support.css');
+
+  assert.match(styles, /\.site-support__drawer\[data-view="compose"\] \{[^}]*grid-template-rows:\s*minmax\(0, 1fr\);/);
+  assert.match(styles, /\.site-support__drawer\[data-view="compose"\] \.site-support__conversation \{[^}]*grid-row:\s*1;/);
+});
+
 test('buyer and staff inboxes page backward from the newest message', () => {
   const account = read('functions/api/account/messages.js');
   const admin = read('functions/api/admin/messages.js');

@@ -33,6 +33,11 @@ test('metric rows render as links and are routed by a delegated handler', () => 
   assert.match(html, /a\.dash-row-route/);
 });
 
+test('overview rendering tolerates a hash change before stats bootstrap completes', () => {
+  const renderStats = admin.match(/function renderStats\(stats = \{\}\) \{[\s\S]*?\n\}/)?.[0] || '';
+  assert.match(renderStats, /stats \|\|= \{\}/);
+});
+
 test('the fulfillment queue filter selects the rows the Overview counts', () => {
   // A lifecycle view, not a status value: open, not yet delivered — the same
   // predicate as orderLifecycle().requires_fulfillment.

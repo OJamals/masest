@@ -174,6 +174,54 @@ test("at phone width support moves from the full inbox to a full conversation", 
   await expect(conversation).toBeHidden();
 });
 
+test("at phone width new chat uses the full drawer and keeps order/message fields reachable", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.route("**/api/admin/customers?*", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      customers: [{
+        id: "u1",
+        company_id: "c1",
+        full_name: "Avery Buyer",
+        email: "avery@example.test",
+        company_name: "Acme HVAC",
+        company_status: "approved",
+      }],
+    }),
+  }));
+  await page.route("**/api/admin/users?*", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      profile: { id: "u1", full_name: "Avery Buyer", email: "avery@example.test" },
+      company: { id: "c1", name: "Acme HVAC", status: "approved" },
+      orders: [{ id: "o1", order_number: "VK-1001", status: "delivered" }],
+    }),
+  }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${BASE_URL}/admin.html#support`);
+
+  await page.locator("[data-support-new-chat]").click();
+  await expect(page.locator('[data-support-user-id="u1"]')).toBeVisible();
+  await page.locator('[data-support-user-id="u1"]').click();
+  await expect(page.locator("#siteSupportNewChatOrder")).toHaveValue("");
+  await expect(page.locator("#siteSupportNewChatMessage")).toBeVisible();
+
+  const layout = await page.locator(".site-support__drawer").evaluate((drawer) => {
+    const conversation = drawer.querySelector(".site-support__conversation");
+    const drawerBox = drawer.getBoundingClientRect();
+    const conversationBox = conversation.getBoundingClientRect();
+    return {
+      drawerHeight: drawerBox.height,
+      conversationHeight: conversationBox.height,
+      unusedBottom: drawerBox.bottom - conversationBox.bottom,
+    };
+  });
+  expect(layout.conversationHeight).toBeGreaterThan(layout.drawerHeight - 3);
+  expect(layout.unusedBottom).toBeLessThan(3);
+});
+
 test("Overview's unread count opens the inbox without leaving Overview", async ({ page }) => {
   await bootAsStaff(page);
   await page.goto(`${BASE_URL}/admin.html#overview`);

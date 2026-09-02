@@ -258,6 +258,8 @@
   .site-support__drawer[data-view="inbox"][data-thread-selected="true"] .site-support__list-pane { display: none; }
   .site-support__drawer[data-view="inbox"][data-thread-selected="true"] .site-support__conversation { display: grid; grid-row: 1; }
   .site-support__drawer[data-view="inbox"][data-thread-selected="true"] [data-support-back] { display: grid; }
+  .site-support__drawer[data-view="compose"] { grid-template-rows: minmax(0, 1fr); }
+  .site-support__drawer[data-view="compose"] .site-support__conversation { grid-row: 1; }
   /* The whole reason settings moved in here: at phone width a thread list above
      them leaves a strip too short to use. Desktop keeps both panes. */
   .site-support__drawer[data-view="settings"] .site-support__list-pane { display: none; }
