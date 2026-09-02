@@ -244,6 +244,30 @@ test("service catalog deep link clears the sticky navigation", async ({ page }) 
   );
 });
 
+test("program portfolio deep links clear the sticky navigation", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
+  for (const targetId of ["consolidation", "pilot"]) {
+    await page.goto(`${BASE_URL}/programs.html#${targetId}`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => document.fonts.ready);
+    await page.locator(`#${targetId}`).evaluate((node) => {
+      node.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+
+    const navBox = await page.locator(".nav").boundingBox();
+    const targetBox = await page.locator(`#${targetId}`).boundingBox();
+
+    expect(navBox).not.toBeNull();
+    expect(targetBox).not.toBeNull();
+    expect(targetBox?.y, `${targetId} top edge`).toBeGreaterThanOrEqual(
+      (navBox?.y || 0) + (navBox?.height || 0) + 12,
+    );
+  }
+});
+
 test("service search finds offerings across categories and restores selected category", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/services.html#service-consulting-services`, { waitUntil: "domcontentloaded" });
