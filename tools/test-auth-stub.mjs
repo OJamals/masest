@@ -32,6 +32,57 @@ const companies = [
   { id: 'co-2', name: 'Northline Facilities', status: 'pending', net_terms_days: 0, credit_limit: 0, tax_exempt: false, price_tier: 'standard', created_at: '2026-06-10T00:00:00Z', profiles: [] },
 ];
 
+const prospects = [
+  {
+    id: '6fd360e3-2475-48c9-a8f1-f2e180f3f6f1',
+    name: 'Great Lakes Mechanical Services',
+    segment: 'HVAC / Refrigeration',
+    address: '2250 Industrial Drive',
+    city: 'Detroit',
+    state: 'MI',
+    postal_code: '48207',
+    location: 'Detroit, MI',
+    general_email: 'service@greatlakes.example',
+    phone: '313-555-0142',
+    website: 'https://greatlakes.example',
+    status: 'researching',
+    priority: 'high',
+    marketing_consent: 'unknown',
+    outreach_status: 'unreviewed',
+    linked_company_id: 'co-1',
+    linked_company: { id: 'co-1', name: 'Acme HVAC and Water Systems', status: 'approved' },
+    retention_review_at: '2027-09-02',
+    source_record_count: 3,
+    contacts: [{
+      id: '2153285c-f929-4189-a4f9-2afc3a5de58f',
+      name: 'Jordan Lee',
+      title: 'Service Operations Manager',
+      email: 'jordan@greatlakes.example',
+      phone: '313-555-0148',
+      marketing_consent: 'unknown',
+      outreach_status: 'unreviewed',
+      needs_verification: true,
+      retention_review_at: '2027-09-02',
+    }],
+  },
+  {
+    id: '7397611e-92c8-472b-8a2a-70cce219d349',
+    name: 'Northstar Facility Engineering',
+    segment: 'Facilities / Property Management',
+    city: 'Grand Rapids',
+    state: 'MI',
+    status: 'new',
+    priority: 'normal',
+    marketing_consent: 'unknown',
+    outreach_status: 'unreviewed',
+    linked_company_id: null,
+    linked_company: null,
+    retention_review_at: '2027-09-02',
+    source_record_count: 1,
+    contacts: [],
+  },
+];
+
 const stats = {
   revenue: 411820,
   orders: { total: 214, byStatus: { paid: 61, fulfilled: 118, net_open: 22 } },
@@ -55,7 +106,7 @@ const stats = {
     { id: 1, label: 'Account approvals', value: 1, href: '#companies', priority: 'high' },
     { id: 2, label: 'New quote requests', value: 4, href: '#quotes', priority: 'urgent' },
   ],
-  staff_context: { role: 'owner', email: 'staff@example.test', can_write: true, capabilities: ['admin.write', 'order.write', 'product.write', 'company.credit', 'integration.configure'] },
+  staff_context: { role: 'owner', email: 'staff@example.test', can_write: true, capabilities: ['admin.write', 'order.write', 'product.write', 'company.credit', 'integration.configure', 'prospect.write', 'prospect.delete'] },
 };
 
 const messages = [
@@ -74,7 +125,7 @@ const reviews = [
 export function authStubModule({ canAdmin = true } = {}) {
   const fixtures = {
     account: { ...account, can_admin: canAdmin, staff: canAdmin ? account.staff : null },
-    orders, quotes, companies, stats, messages, reviews,
+    orders, quotes, companies, prospects, stats, messages, reviews,
   };
   return `
 const fixtures = ${JSON.stringify(fixtures)};
@@ -103,7 +154,8 @@ export async function catalog() { return []; }
 export async function getToken() { return "stub-token"; }
 export async function apiBlob() { return new Blob([""], { type: "application/pdf" }); }
 export async function api(path, options = {}) {
-  const p = new URL(path, window.location.origin).pathname;
+  const requestUrl = new URL(path, window.location.origin);
+  const p = requestUrl.pathname;
   if (p.startsWith("/api/admin/stats")) return fixtures.stats;
   if (p.startsWith("/api/admin/search")) return { q: "", groups: [], total: 0 };
   if (p.startsWith("/api/admin/automation")) return { jobs: [
@@ -131,6 +183,30 @@ export async function api(path, options = {}) {
   if (p.startsWith("/api/admin/content")) return { entries: [], types: [], total: 0, has_more: false };
   if (p.startsWith("/api/admin/traffic")) return { totals: {}, funnel: [], campaigns: [], days: [], recent: [] };
   if (p.startsWith("/api/admin/reports")) return { revenue: 0, tax: 0, orders: 0, paid_orders: 0, average_order_value: 0 };
+  if (p.startsWith("/api/admin/crm/prospects")) {
+    const method = String(options.method || "GET").toUpperCase();
+    const id = requestUrl.searchParams.get("id") || options.body?.id;
+    const prospect = fixtures.prospects.find((entry) => entry.id === id);
+    if (method === "PATCH") {
+      if (!prospect) return { error: "not_found" };
+      Object.assign(prospect, options.body || {});
+      return { ok: true, prospect };
+    }
+    if (id) return prospect ? { prospect } : { error: "not_found" };
+    const q = String(requestUrl.searchParams.get("q") || "").toLowerCase();
+    const status = requestUrl.searchParams.get("status");
+    const priority = requestUrl.searchParams.get("priority");
+    const filtered = fixtures.prospects.filter((entry) => (
+      (!q || [entry.name, entry.segment, entry.city, entry.state].some((value) => String(value || "").toLowerCase().includes(q)))
+      && (!status || entry.status === status)
+      && (!priority || entry.priority === priority)
+    ));
+    return {
+      prospects: filtered.map((entry) => ({ ...entry, contacts: undefined, linked_company: undefined, contact_count: entry.contacts.length })),
+      total: filtered.length,
+      has_more: false,
+    };
+  }
   if (p.startsWith("/api/admin/crm")) return { tasks: [], contacts: [], notes: [], pipeline: [], total: 0, has_more: false };
   if (p.startsWith("/api/admin/integrations") || p.startsWith("/api/admin/integration-effects")) return { providers: [], dead_letters: [], counts: {} };
   if (p.startsWith("/api/admin/shipstation")) return { configured: false, carriers: [] };

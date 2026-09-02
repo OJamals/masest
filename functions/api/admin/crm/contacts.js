@@ -1,25 +1,31 @@
 // /api/admin/crm/contacts — staff CRM contact records on a company (slice 4).
 // Multiple named contacts per account with role/title/email/phone + one primary.
-import { adminClient, internalServerError, json, readBody, requireStaff } from '../../../_lib/supabase.js';
+import { adminClient, internalServerError, json, requireStaff } from '../../../_lib/supabase.js';
 import { staffCanWrite } from '../../../_lib/authz.js';
 import { recordAudit } from '../../../_lib/audit.js';
+import { RequestBodyTooLargeError, readBoundedJson } from '../../../_lib/request-body.js';
 import {
   contactRow,
   contactPatch,
   createCrmContactModule,
   createSupabaseCrmContactStore,
   CONTACT_ROLES,
+  MAX_CONTACT_IMPORT_BYTES,
 } from '../../../_lib/crm-contacts.js';
 import { parsePage, pageEnvelope } from '../../../_lib/paginate.js';
 
 const SELECT = 'id,company_id,name,role,title,email,phone,is_primary,notes,created_by,created_at,updated_at';
+const CONTACT_REQUEST_MAX_BYTES = MAX_CONTACT_IMPORT_BYTES * 2 + 64 * 1024;
 
 function mutationResponse(result) {
   if (result.ok || result.needs_migration) return json(200, result);
+  if (['csv_too_large', 'row_limit_exceeded'].includes(result.error)) {
+    return json(413, { error: result.error, limit: result.limit, total: result.total, max_bytes: result.max_bytes });
+  }
   if (result.error === 'duplicate_email') {
     return json(409, { error: result.error, message: result.message });
   }
-  if (['company_required', 'no_rows', 'invalid_merge', 'different_company'].includes(result.error)) {
+  if (['company_required', 'invalid_csv', 'no_rows', 'invalid_merge', 'different_company'].includes(result.error)) {
     return json(400, { error: result.error });
   }
   if (result.error === 'not_found') return json(404, { error: result.error });
@@ -82,11 +88,28 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
-    const body = await readBody(request);
+    let body;
+    try {
+      body = await readBoundedJson(request, CONTACT_REQUEST_MAX_BYTES);
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return json(413, { error: 'csv_too_large', max_bytes: MAX_CONTACT_IMPORT_BYTES });
+      }
+      return json(400, { error: 'bad_request' });
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, { error: 'bad_request' });
     const contacts = createCrmContactModule({
       store: createSupabaseCrmContactStore(sb),
       audit: (entry) => recordAudit(sb, { user, ...entry }),
     });
+
+    if (body.action === 'preview_import') {
+      return mutationResponse(await contacts.previewCsv({
+        companyId: body.company_id,
+        csv: body.csv,
+        actor: user.email || null,
+      }));
+    }
 
     if (body.action === 'import') {
       return mutationResponse(await contacts.importCsv({

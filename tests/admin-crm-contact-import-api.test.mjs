@@ -11,6 +11,24 @@ test('import action delegates its full workflow to the CRM Contact module', () =
   assert.match(src, /contacts\.importCsv\(\{\s*companyId: body\.company_id,\s*csv: body\.csv,\s*actor: user\.email \|\| null/);
 });
 
+test('preview action uses the same CRM Contact module without importing', () => {
+  assert.match(src, /body\.action === 'preview_import'/);
+  assert.match(src, /contacts\.previewCsv\(\{\s*companyId: body\.company_id,\s*csv: body\.csv,\s*actor: user\.email \|\| null/);
+});
+
+test('oversized contact imports fail with payload-too-large', () => {
+  assert.match(src, /\['csv_too_large', 'row_limit_exceeded'\]\.includes\(result\.error\)/);
+  assert.match(src, /json\(413, \{ error: result\.error, limit: result\.limit, total: result\.total, max_bytes: result\.max_bytes \}\)/);
+  assert.match(src, /RequestBodyTooLargeError, readBoundedJson/);
+  assert.match(src, /await readBoundedJson\(request, CONTACT_REQUEST_MAX_BYTES\)/);
+  assert.match(src, /error instanceof RequestBodyTooLargeError/);
+  assert.doesNotMatch(src, /request\.headers\.get\('content-length'\)/);
+});
+
+test('invalid CSV types remain client errors', () => {
+  assert.match(src, /'invalid_csv'/);
+});
+
 test('route no longer owns import parsing, deduplication, or persistence', () => {
   assert.doesNotMatch(src, /parseContactsCsv/);
   assert.doesNotMatch(src, /prepareContactImportRows/);

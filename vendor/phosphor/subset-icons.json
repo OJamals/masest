@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 260,
-  "usedCount": 151,
+  "count": 261,
+  "usedCount": 152,
   "bufferCount": 109,
   "icons": [
     {
@@ -992,6 +992,11 @@
     {
       "name": "shield-plus",
       "cp": "E706",
+      "src": "used"
+    },
+    {
+      "name": "shield-warning",
+      "cp": "E412",
       "src": "used"
     },
     {

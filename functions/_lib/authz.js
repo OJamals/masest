@@ -34,6 +34,8 @@ const STAFF_CAPABILITIES = {
   "company.credit": ["owner", "finance"],
   "promotion.write": ["owner", "finance"],
   "company.view_as": ["owner", "finance", "support"],
+  "prospect.write": ["owner", "finance", "support"],
+  "prospect.delete": ["owner"],
   "product.write": ["owner"],
   "content.assets": ["owner"],
   "content.publish": ["owner"],

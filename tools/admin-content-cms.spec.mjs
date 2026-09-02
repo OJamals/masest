@@ -940,7 +940,7 @@ test("blog_post form renders all field editors + live markdown preview", async (
   await expect(imagePicker.locator("[data-shared-image-preview-alt]")).toHaveValue("Blog descaling without acid preview");
   await imagePicker.locator("[data-shared-image-confirm]").click();
   await expect(imagePicker).toHaveCount(0);
-  await expect(postBodyOutput).toHaveValue(/!\[Blog descaling without acid preview\]\(\/img\/blog\/descaling-without-acid\.webp\)/);
+  await expect(postBodyOutput).toHaveValue(/!\[Blog descaling without acid preview\]\(https:\/\/media\.masest\.co\/site\/img\/blog\/descaling-without-acid\.webp\)/);
 
   await scrollContentPanelIntoView(page);
   await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-content-blog-post-desktop.png` });

@@ -148,6 +148,21 @@
 - **Lead score / Priority**  
   Internal urgency classifier used by lead handling workflows.
 
+- **Prospect Organization**
+  A pre-account sales target in `public.prospect_organizations`. It is not a
+  **Company**, has no Buyer access, and cannot receive customer-account or support
+  behavior. Conversion is explicit through `linked_company_id`.
+
+- **Prospect Contact**
+  A named person researched for one Prospect Organization in
+  `public.prospect_contacts`. It is not a Buyer account or an account-owned
+  `crm_contacts` row. Imported consent is `unknown` and outreach is `unreviewed`.
+
+- **Prospect import batch**
+  An immutable source/manifest identity plus aggregate counts for one controlled
+  Prospect roster import. `prospect_source_records` preserves non-PII lineage from
+  each source record to its Prospect Organization and optional Prospect Contact.
+
 - **Team**  
   People joined under one company and managed via `/api/account/team` (`profiles` with the same `company_id`).
 
@@ -193,4 +208,7 @@
   after Company approval and credit review; Buyers cannot self-serve NET checkout.
 - Never overwrite a referenced content asset in place. Upload, preview the exact reference
   diff, confirm the unchanged impact hash, and preserve rollback through content revisions.
+- Never import a Prospect Organization into `companies`, a Prospect Contact into
+  `profiles` / `crm_contacts`, or either into a newsletter audience. A Prospect becomes a
+  customer only through an explicit Company link; unknown consent never authorizes bulk mail.
 - `admin` means at least two concepts in code; always qualify whether it is **company admin** or **platform staff**.

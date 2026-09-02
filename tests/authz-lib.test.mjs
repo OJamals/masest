@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseAdminEmails, isStaffEmail } from "../functions/_lib/authz.js";
+import { parseAdminEmails, isStaffEmail, staffCan } from "../functions/_lib/authz.js";
 
 // Pins the platform-staff allow-list decision extracted from requireStaff()
 // (functions/_lib/supabase.js) so it can be unit-tested without a live auth
@@ -42,4 +42,15 @@ test("isStaffEmail rejects blank/missing email", () => {
   assert.equal(isStaffEmail(null, env), false);
   assert.equal(isStaffEmail(undefined, env), false);
   assert.equal(isStaffEmail("  ", env), false);
+});
+
+test("prospect workflow writes are staff-writer actions and erasure is owner-only", () => {
+  for (const role of ["owner", "finance", "support"]) {
+    assert.equal(staffCan(role, "prospect.write"), true);
+  }
+  assert.equal(staffCan("read_only", "prospect.write"), false);
+  assert.equal(staffCan("owner", "prospect.delete"), true);
+  for (const role of ["finance", "support", "read_only"]) {
+    assert.equal(staffCan(role, "prospect.delete"), false);
+  }
 });

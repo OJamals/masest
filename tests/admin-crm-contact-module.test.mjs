@@ -128,3 +128,92 @@ test('CRM Contact module imports CSV with existing and in-file duplicate protect
     detail: { inserted: 1, skipped: 2, skipped_duplicates: 2 },
   }]);
 });
+
+test('CRM Contact module previews an import without writing or auditing', async () => {
+  const store = memoryContactStore({
+    contacts: [{ id: 1, company_id: 'company-1', name: 'Existing', email: 'existing@example.com' }],
+  });
+  const audits = [];
+  const contacts = createCrmContactModule({
+    store,
+    audit: async (entry) => { audits.push(entry); },
+  });
+
+  const result = await contacts.previewCsv({
+    companyId: 'company-1',
+    actor: 'owner@masest.com',
+    csv: [
+      'name,email,role',
+      'Existing Again,existing@example.com,procurement',
+      'New Buyer,new@example.com,plant_manager',
+      'Broken,bad-email,engineering',
+    ].join('\n'),
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    preview: true,
+    total: 3,
+    ready: 1,
+    skipped: 2,
+    skipped_duplicates: 1,
+    skipped_by_reason: { invalid_email: 1, duplicate_email: 1 },
+    errors: [
+      { row: 3, error: 'invalid_email' },
+      { row: 1, error: 'duplicate_email', email: 'existing@example.com' },
+    ],
+  });
+  assert.equal(store.state.contacts.length, 1);
+  assert.deepEqual(audits, []);
+});
+
+test('CRM Contact module reports rows missing names instead of hiding them', async () => {
+  const store = memoryContactStore();
+  const contacts = createCrmContactModule({ store });
+
+  const result = await contacts.previewCsv({
+    companyId: 'company-1',
+    csv: 'name,email\n,missing@example.com\nNamed,named@example.com',
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    preview: true,
+    total: 2,
+    ready: 1,
+    skipped: 1,
+    skipped_duplicates: 0,
+    skipped_by_reason: { name_required: 1 },
+    errors: [{ row: 1, error: 'name_required' }],
+  });
+});
+
+test('CRM Contact module rejects non-string CSV payloads', async () => {
+  const store = memoryContactStore();
+  const contacts = createCrmContactModule({ store });
+
+  assert.deepEqual(await contacts.previewCsv({
+    companyId: 'company-1',
+    csv: { name: 'not-csv' },
+  }), { ok: false, error: 'invalid_csv' });
+  assert.deepEqual(store.state.contacts, []);
+});
+
+test('CRM Contact module rejects oversized row batches instead of silently truncating', async () => {
+  const store = memoryContactStore();
+  const contacts = createCrmContactModule({ store });
+  const rows = Array.from({ length: 501 }, (_, index) => `Buyer ${index},buyer${index}@example.com`);
+
+  const result = await contacts.previewCsv({
+    companyId: 'company-1',
+    csv: ['name,email', ...rows].join('\n'),
+  });
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: 'row_limit_exceeded',
+    limit: 500,
+    total: 501,
+  });
+  assert.deepEqual(store.state.contacts, []);
+});

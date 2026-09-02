@@ -18,6 +18,9 @@ export const ROLE_LABELS = {
   other: 'Other',
 };
 
+export const MAX_CONTACT_IMPORT_ROWS = 500;
+export const MAX_CONTACT_IMPORT_BYTES = 512 * 1024;
+
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export function validRole(role) {
@@ -114,7 +117,7 @@ function splitCsvLine(line) {
 
 // Parse a contacts CSV into row objects {name,role,title,email,phone}. Detects a header
 // row (any recognized column name) and maps by it; otherwise treats columns positionally
-// in CSV_COLS order. Rows without a name are dropped. Pure — unit-tested.
+// in CSV_COLS order. Keeps incomplete rows so validation can report every skipped row.
 export function parseContactsCsv(text) {
   const lines = String(text || '').split(/\r\n|\r|\n/).filter((l) => l.trim() !== '');
   if (!lines.length) return [];
@@ -127,7 +130,7 @@ export function parseContactsCsv(text) {
     const cells = splitCsvLine(lines[i]);
     const row = {};
     cells.forEach((val, idx) => { const key = map[idx]; if (key) row[key] = String(val).trim(); });
-    if (row.name) out.push(row);
+    out.push(row);
   }
   return out;
 }
@@ -179,6 +182,12 @@ function storageFailure(error) {
   return { ok: false, error: 'storage_error', message: error?.message || 'crm_contact_storage_failed' };
 }
 
+function importErrorCounts(errors = []) {
+  const counts = {};
+  for (const entry of errors) counts[entry.error] = (counts[entry.error] || 0) + 1;
+  return counts;
+}
+
 export function createCrmContactModule({
   store,
   audit = async () => {},
@@ -186,13 +195,37 @@ export function createCrmContactModule({
 } = {}) {
   if (!store) throw new Error('crm_contact_store_required');
 
-  async function importCsv({ companyId, csv, actor } = {}) {
+  async function planCsv({ companyId, csv, actor } = {}) {
     const targetCompanyId = String(companyId || '').trim();
     if (!targetCompanyId) return { ok: false, error: 'company_required' };
-    const parsed = parseContactsCsv(csv || '');
-    if (!parsed.length) return { ok: false, error: 'no_rows' };
+    if (typeof csv !== 'string') return { ok: false, error: 'invalid_csv' };
+    const source = csv;
+    const receivedBytes = new TextEncoder().encode(source).byteLength;
+    if (receivedBytes > MAX_CONTACT_IMPORT_BYTES) {
+      return {
+        ok: false,
+        error: 'csv_too_large',
+        max_bytes: MAX_CONTACT_IMPORT_BYTES,
+        received_bytes: receivedBytes,
+      };
+    }
 
-    const prepared = prepareContactImportRows(parsed, { companyId: targetCompanyId, actor });
+    const parsed = parseContactsCsv(source);
+    if (!parsed.length) return { ok: false, error: 'no_rows' };
+    if (parsed.length > MAX_CONTACT_IMPORT_ROWS) {
+      return {
+        ok: false,
+        error: 'row_limit_exceeded',
+        limit: MAX_CONTACT_IMPORT_ROWS,
+        total: parsed.length,
+      };
+    }
+
+    const prepared = prepareContactImportRows(parsed, {
+      companyId: targetCompanyId,
+      actor,
+      limit: MAX_CONTACT_IMPORT_ROWS,
+    });
     const errors = [...prepared.errors];
     let existingEmails;
     try {
@@ -221,10 +254,39 @@ export function createCrmContactModule({
     });
     const rows = entries.map((entry) => entry.row);
     const duplicateSkips = errors.filter((entry) => entry.error === 'duplicate_email').length;
+    return {
+      ok: true,
+      targetCompanyId,
+      total: parsed.length,
+      rows,
+      errors,
+      duplicateSkips,
+    };
+  }
+
+  async function previewCsv(input = {}) {
+    const plan = await planCsv(input);
+    if (!plan.ok) return plan;
+    return {
+      ok: true,
+      preview: true,
+      total: plan.total,
+      ready: plan.rows.length,
+      skipped: plan.errors.length,
+      skipped_duplicates: plan.duplicateSkips,
+      skipped_by_reason: importErrorCounts(plan.errors),
+      errors: plan.errors.slice(0, 10),
+    };
+  }
+
+  async function importCsv(input = {}) {
+    const plan = await planCsv(input);
+    if (!plan.ok) return plan;
+
     let inserted = 0;
-    if (rows.length) {
+    if (plan.rows.length) {
       try {
-        inserted = (await store.insertContacts(rows)).length;
+        inserted = (await store.insertContacts(plan.rows)).length;
       } catch (error) {
         if (isCrmContactUniqueConflict(error)) {
           return {
@@ -240,15 +302,19 @@ export function createCrmContactModule({
     await audit({
       action: 'crm.contact_import',
       targetType: 'company',
-      targetId: targetCompanyId,
-      detail: { inserted, skipped: errors.length, skipped_duplicates: duplicateSkips },
+      targetId: plan.targetCompanyId,
+      detail: {
+        inserted,
+        skipped: plan.errors.length,
+        skipped_duplicates: plan.duplicateSkips,
+      },
     });
     return {
       ok: true,
       inserted,
-      skipped: errors.length,
-      skipped_duplicates: duplicateSkips,
-      errors: errors.slice(0, 10),
+      skipped: plan.errors.length,
+      skipped_duplicates: plan.duplicateSkips,
+      errors: plan.errors.slice(0, 10),
     };
   }
 
@@ -288,7 +354,7 @@ export function createCrmContactModule({
     }
   }
 
-  return { importCsv, merge };
+  return { previewCsv, importCsv, merge };
 }
 
 export function createSupabaseCrmContactStore(sb) {

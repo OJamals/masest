@@ -3,8 +3,9 @@
 // slice; sub-views are filled by later plans. Mirrors the createQuotesTab shape
 // (#36 per-tab split). Shared primitives ($, api, state, admSkeleton, admEmpty)
 // are injected; esc/delegate come from util.js.
-import { esc, delegate, dateTime as date } from '../util.js?v=20260902b';
-import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260902b';
+import { esc, delegate, dateTime as date } from '../util.js?v=20260902c';
+import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260902c';
+import { createCrmProspects } from './crm-prospects.js?v=20260902c';
 
 const DIR_ROLES = [
   ['', 'All roles'],
@@ -19,7 +20,7 @@ const DIR_ROLES = [
 ];
 
 export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager, refreshStats }) {
-  const SUBTABS = [['tasks', 'Follow-ups'], ['contacts', 'People']];
+  const SUBTABS = [['tasks', 'Follow-ups'], ['contacts', 'People'], ['prospects', 'Prospects']];
   const TASK_SCOPES = [['open', 'All open'], ['mine', 'Assigned to me'], ['overdue', 'Overdue']];
   const initialParams = new URLSearchParams(location.search);
   const initialView = initialParams.get('crm_view');
@@ -29,15 +30,21 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
   state.crmTaskAssignee ||= initialParams.get('crm_task_assignee') || '';
   state.crmContactQ ||= initialParams.get('crm_q') || '';
   state.crmContactRole ||= initialParams.get('crm_role') || '';
+  state.crmProspectQ ||= initialParams.get('crm_prospect_q') || '';
+  state.crmProspectStatus ||= initialParams.get('crm_prospect_status') || '';
+  state.crmProspectPriority ||= initialParams.get('crm_prospect_priority') || '';
 
   function syncWorkspaceUrl() {
     const params = new URLSearchParams(location.search);
     const values = {
-      crm_view: state.crmView === 'contacts' ? 'contacts' : '',
+      crm_view: ['contacts', 'prospects'].includes(state.crmView) ? state.crmView : '',
       crm_task_scope: state.crmTaskScope && state.crmTaskScope !== 'open' ? state.crmTaskScope : '',
       crm_task_assignee: state.crmTaskAssignee || '',
       crm_q: state.crmContactQ || '',
       crm_role: state.crmContactRole || '',
+      crm_prospect_q: state.crmProspectQ || '',
+      crm_prospect_status: state.crmProspectStatus || '',
+      crm_prospect_priority: state.crmProspectPriority || '',
     };
     Object.entries(values).forEach(([key, value]) => value ? params.set(key, value) : params.delete(key));
     const query = params.toString();
@@ -53,7 +60,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
         <div>
           <p class="adm-eyebrow">CRM</p>
           <h2>People &amp; follow-ups</h2>
-          <p class="muted">Follow up on open work, then jump straight into the account, quote, or contact that needs attention.</p>
+          <p class="muted">Follow up on open work, find customer records, and review pre-account prospects without mixing those identities.</p>
         </div>
       </div>
       <div class="crm-tabs" role="group" aria-label="CRM sections">
@@ -68,6 +75,15 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
   let inboxTasks = [];
   let viewLoadId = 0;
   let portalLoadId = 0;
+  const prospects = createCrmProspects({
+    api,
+    state,
+    admSkeleton,
+    admEmpty,
+    admListPager,
+    openSubject,
+    syncWorkspaceUrl,
+  });
 
   function taskRow(t) {
     const overdue = t.due_at && new Date(t.due_at) < new Date();
@@ -290,6 +306,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     });
     const body = box.querySelector('[data-crm-ws-body]');
     if (view === 'contacts') renderContacts(body);
+    else if (view === 'prospects') prospects.render(body);
     else renderTasks(body);
   }
 
@@ -304,6 +321,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
   function wireCrm() {
     const box = $('admCrm');
     if (!box) return;
+    prospects.wire(box);
     delegate(box, 'click', '[data-crm-ws-tab]', (event, btn) => showView(btn.dataset.crmWsTab));
     delegate(box, 'click', '[data-inbox-scope]', (event, btn) => {
       state.crmTaskScope = btn.dataset.inboxScope;

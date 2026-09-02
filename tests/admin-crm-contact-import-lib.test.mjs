@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  MAX_CONTACT_IMPORT_BYTES,
   contactEmailKey,
   parseContactsCsv,
   prepareContactImportRows,
@@ -29,10 +30,12 @@ test('honors quoted fields with embedded commas + escaped quotes', () => {
   assert.equal(rows[1].name, 'Quote "Q"');
 });
 
-test('drops rows without a name + blank lines', () => {
+test('keeps nonblank rows without a name so import preview can report them', () => {
   const rows = parseContactsCsv('name,email\n,nobody@acme.co\n\nJane,jane@acme.co');
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].name, 'Jane');
+  assert.deepEqual(rows, [
+    { name: '', email: 'nobody@acme.co' },
+    { name: 'Jane', email: 'jane@acme.co' },
+  ]);
 });
 
 test('empty input yields no rows', () => {
@@ -74,4 +77,8 @@ test('prepareContactImportRows preserves validation errors with source row numbe
   assert.deepEqual(result.rows.map((row) => row.name), ['Bob']);
   assert.deepEqual(result.emailKeys, ['bob@acme.co']);
   assert.deepEqual(result.errors, [{ row: 1, error: 'invalid_email' }]);
+});
+
+test('contact import byte limit is explicit and bounded', () => {
+  assert.equal(MAX_CONTACT_IMPORT_BYTES, 512 * 1024);
 });

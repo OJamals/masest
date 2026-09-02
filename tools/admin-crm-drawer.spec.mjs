@@ -51,6 +51,12 @@ async function bootAsStaff(page) {
   await page.route("**/api/admin/stats", (route) => route.fulfill({
     status: 200, contentType: "application/json", body: JSON.stringify({}),
   }));
+  await page.route("**/api/admin/messages**", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ messages: [], unread: 0 }),
+  }));
+  await page.route("**/api/admin/users**", (route) => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify({ users: [], total: 0, has_more: false }),
+  }));
 }
 
 const json = (body) => ({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
@@ -125,4 +131,89 @@ test("company drawer shows CRM tabs and posts a note", async ({ page }) => {
     kind: "call",
     body: "Called about NET terms",
   });
+});
+
+test("contact CSV import previews and requires confirmation before writing", async ({ page }) => {
+  await bootAsStaff(page);
+  const consoleProblems = [];
+  const networkProblems = [];
+  page.on("console", (message) => {
+    if (["error", "warning"].includes(message.type())) consoleProblems.push(`${message.type()}: ${message.text()}`);
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) networkProblems.push(`${response.status()} ${response.url()}`);
+  });
+
+  await page.route("**/api/admin/companies**", (route) =>
+    route.fulfill(json({ companies: [COMPANY], total: 1, has_more: false })));
+  await page.route("**/api/admin/company**", (route) =>
+    route.fulfill(json({ company: COMPANY, members: [], invites: [], orders: [], message_count: 0 })));
+  await page.route("**/api/admin/crm/timeline**", (route) => route.fulfill(json({ timeline: [] })));
+  await page.route("**/api/admin/crm/tasks**", (route) => route.fulfill(json({ tasks: [] })));
+  await page.route("**/api/admin/crm/notes**", (route) => route.fulfill(json({ notes: [] })));
+
+  const actions = [];
+  let imported = false;
+  await page.route("**/api/admin/crm/contacts**", (route) => {
+    const req = route.request();
+    if (req.method() === "GET") {
+      return route.fulfill(json({
+        contacts: imported
+          ? [{ id: 1, name: "Jane Buyer", email: "jane@example.com", role: "procurement" }]
+          : [],
+      }));
+    }
+    const body = JSON.parse(req.postData() || "{}");
+    actions.push(body.action);
+    if (body.action === "preview_import") {
+      return route.fulfill(json({
+        ok: true,
+        preview: true,
+        total: 2,
+        ready: 1,
+        skipped: 1,
+        skipped_duplicates: 1,
+        skipped_by_reason: { duplicate_email: 1 },
+        errors: [],
+      }));
+    }
+    if (body.action === "import") {
+      imported = true;
+      return route.fulfill(json({ ok: true, inserted: 1, skipped: 1, skipped_duplicates: 1, errors: [] }));
+    }
+    return route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "unexpected_action" }) });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#companies`, { waitUntil: "domcontentloaded" });
+  const businesses = page.getByRole("button", { name: "Businesses & approvals" });
+  await expect(async () => {
+    if ((await businesses.getAttribute("aria-pressed")) !== "true") await businesses.click();
+    await expect(businesses).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
+  }).toPass({ timeout: 15000 });
+  await page.locator('[data-open-company="co-1"]').click();
+  await page.locator('.crm-panel [data-crm-tab="contacts"]').click();
+
+  const input = page.locator('[data-crm-contact-import]');
+  const csv = { name: "contacts.csv", mimeType: "text/csv", buffer: Buffer.from("name,email\nJane Buyer,jane@example.com\nDuplicate,old@example.com") };
+  await input.setInputFiles(csv);
+  await expect(page.locator(".confirm-dialog-msg")).toContainText("Import 1 of 2 contacts into this account?");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect.poll(() => actions).toEqual(["preview_import"]);
+
+  await input.setInputFiles(csv);
+  await expect(page.locator(".confirm-dialog-msg")).toContainText("does not subscribe anyone to marketing email");
+  await expect(page.locator(".confirm-dialog-msg")).toContainText("1 duplicate email");
+  await expect(page.getByRole("button", { name: "Import contacts" })).toBeFocused();
+  if (process.env.MASEST_QA_SCREENSHOT_DIR) {
+    await page.screenshot({ path: `${process.env.MASEST_QA_SCREENSHOT_DIR}/crm-contact-import-preview-desktop.png`, fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: `${process.env.MASEST_QA_SCREENSHOT_DIR}/crm-contact-import-preview-mobile.png`, fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 720 });
+  }
+  await page.keyboard.press("Enter");
+  await expect.poll(() => actions).toEqual(["preview_import", "preview_import", "import"]);
+  await expect(page.locator('[data-crm-body] .adm-status[data-state="ok"]')).toContainText("Imported 1, skipped 1.");
+  await expect(page.locator('[data-crm-contact-history="1"]')).toBeVisible();
+  expect(networkProblems).toEqual([]);
+  expect(consoleProblems).toEqual([]);
 });

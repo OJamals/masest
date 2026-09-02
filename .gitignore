@@ -28,6 +28,8 @@ advisor-plans/
 .wrangler/
 test-results/
 output/
+# Local generated reports and QA captures; may contain customer/contact data.
+outputs/
 playwright-report/
 blob-report/
 .playwright/

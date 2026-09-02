@@ -6,9 +6,18 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf
 const siteImages = new Map(
   JSON.parse(read("data/content/site-images.json")).assets.map((asset) => [asset.public_url, asset]),
 );
+const ignoredHtmlDirectories = new Set([
+  "_local",
+  "backups",
+  "dist",
+  "node_modules",
+  "output",
+  "outputs",
+  "supabase",
+]);
 const htmlFiles = readdirSync(new URL("../", import.meta.url), { recursive: true })
   .filter((path) => path.endsWith(".html"))
-  .filter((path) => !/^(?:dist|backups|_local|supabase|node_modules)\//.test(path));
+  .filter((path) => !path.split("/").some((segment) => ignoredHtmlDirectories.has(segment)));
 const jsFiles = readdirSync(new URL("../js/", import.meta.url), { recursive: true })
   .filter((path) => path.endsWith(".js"))
   .map((path) => `js/${path}`);

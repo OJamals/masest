@@ -372,6 +372,19 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
 .adm-tools.crm-contact-search .adm-select { max-width: none; }
 .crm-dir-heading { margin: 18px 0 8px; font-size: .95rem; }
 .crm-dir-heading .muted { font-weight: 400; }
+.adm-tools.crm-prospect-tools { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(140px, .35fr) minmax(140px, .35fr) auto; align-items: end; margin-bottom: 10px; }
+.adm-tools.crm-prospect-tools .adm-search,
+.adm-tools.crm-prospect-tools .adm-select { max-width: none; }
+.crm-prospect-policy { margin: 0 0 12px; }
+.crm-prospect-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.crm-prospect-card { align-items: center; }
+.crm-prospect-consent { display: flex; align-items: center; gap: 5px; margin-top: 5px; color: var(--status-warning-ink); font-size: .78rem; font-weight: 650; }
+.crm-prospect-detail { display: grid; gap: 14px; padding: 0; }
+.crm-prospect-detail .crm-section-head h3 { margin-top: 8px; }
+.crm-prospect-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.crm-prospect-detail-grid > div { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--border, #e5e7eb); border-radius: 8px; background: var(--surface, #fff); min-width: 0; }
+.crm-prospect-detail-grid b { overflow-wrap: anywhere; }
+.crm-prospect-update { display: grid; grid-template-columns: minmax(160px, .5fr) minmax(160px, .5fr) auto minmax(120px, 1fr); gap: 8px; align-items: end; }
 @media (max-width: 640px) {
   .crm-ws { gap: 10px; }
   .crm-ws-head,
@@ -387,6 +400,9 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
   .crm-note-form,
   .crm-task-form { grid-template-columns: 1fr; }
   .adm-tools.crm-contact-search { grid-template-columns: 1fr; }
+  .adm-tools.crm-prospect-tools,
+  .crm-prospect-detail-grid,
+  .crm-prospect-update { grid-template-columns: 1fr; }
   .crm-inline-fields { grid-template-columns: 1fr; }
   .crm-task { grid-template-columns: auto minmax(0, 1fr); }
   .crm-task .badge,

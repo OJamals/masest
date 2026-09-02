@@ -3,11 +3,22 @@
 // three from /api/admin/crm/*. Kept out of companies.js so that file stays focused
 // (#36 split rule). Skeleton/empty helpers are injected; esc/date/confirmDialog come
 // from util.js, matching the other per-tab modules.
-import { esc, dateTime as date, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260902b';
+import { esc, dateTime as date, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260902c';
 
 const KINDS = [['note', 'Note'], ['call', 'Call'], ['email', 'Email'], ['meeting', 'Meeting']];
 const CONTACT_ROLES = [['procurement', 'Procurement'], ['plant_manager', 'Plant Manager'], ['maintenance', 'Maintenance'], ['engineering', 'Engineering'], ['operations', 'Operations'], ['accounts_payable', 'Accounts Payable'], ['executive', 'Executive'], ['other', 'Other']];
 const roleLabel = (r) => (CONTACT_ROLES.find(([v]) => v === r) || ['', r])[1] || r;
+
+function contactImportSkipSummary(preview = {}) {
+  const skipped = Number(preview.skipped) || 0;
+  const counts = preview.skipped_by_reason || {};
+  const reasons = [
+    counts.name_required ? `${counts.name_required} missing ${counts.name_required === 1 ? 'name' : 'names'}` : '',
+    counts.invalid_email ? `${counts.invalid_email} invalid ${counts.invalid_email === 1 ? 'email' : 'emails'}` : '',
+    counts.duplicate_email ? `${counts.duplicate_email} duplicate ${counts.duplicate_email === 1 ? 'email' : 'emails'}` : '',
+  ].filter(Boolean);
+  return `${skipped} ${skipped === 1 ? 'row' : 'rows'}${reasons.length ? ` (${reasons.join(', ')})` : ''}`;
+}
 
 export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
   const errRow = (msg) => `<p class="adm-status" data-state="err" data-crm-err>${esc(msg || 'Could not load. Retry.')}</p>`;
@@ -154,7 +165,7 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
       <summary>Import contacts from CSV</summary>
       <div>
         <button class="btn btn-ghost btn-sm crm-contact-import-trigger" type="button" data-crm-contact-import-btn>Choose CSV</button><input type="file" accept=".csv,text/csv" data-crm-contact-import hidden>
-        <span class="muted crm-contact-import-help">columns: name, role, title, email, phone</span>
+        <span class="muted crm-contact-import-help">columns: name, role, title, email, phone · one account per file · up to 500 rows / 512 KiB · preview required</span>
       </div>
     </details>`;
     return composer + importBar + list;
@@ -357,14 +368,48 @@ export function createCrmPanel({ $, api, admSkeleton, admEmpty }) {
     panel.addEventListener('change', async (event) => {
       const imp = event.target.closest('[data-crm-contact-import]');
       if (!imp || !imp.files || !imp.files[0]) return;
-      const res = await runMutation(imp, 'contacts', async () => {
-        const csv = await imp.files[0].text();
-        return api('/api/admin/crm/contacts', {
+      const file = imp.files[0];
+      imp.disabled = true;
+      try {
+        if (file.size > 512 * 1024) {
+          showErr(body, 'CSV is larger than 512 KiB. Split it into smaller account-specific files.');
+          return;
+        }
+        const csv = await file.text();
+        const preview = await api('/api/admin/crm/contacts', {
+          method: 'POST', body: { action: 'preview_import', company_id: subjectId, csv },
+        });
+        if (preview.needs_migration) {
+          showErr(body, 'CRM contacts are not configured. Apply supabase/schema-crm-contacts.sql, then retry.');
+          return;
+        }
+        const skippedSummary = contactImportSkipSummary(preview);
+        if (!preview.ready) {
+          showErr(body, `No new contacts to import. ${skippedSummary} would be skipped.`);
+          return;
+        }
+        const confirmed = await confirmDialog(
+          `Import ${preview.ready} of ${preview.total} contacts into this account? ${skippedSummary} will be skipped. This does not subscribe anyone to marketing email.`,
+          { confirmText: 'Import contacts' },
+        );
+        if (!confirmed) return;
+        const res = await api('/api/admin/crm/contacts', {
           method: 'POST', body: { action: 'import', company_id: subjectId, csv },
         });
-      });
-      if (res) body.insertAdjacentHTML('afterbegin', `<p class="adm-status" data-state="ok">Imported ${res.inserted}, skipped ${res.skipped}.</p>`);
-      imp.value = '';
+        await load(body, subjectType, subjectId, 'contacts');
+        body.insertAdjacentHTML('afterbegin', `<p class="adm-status" data-state="ok">Imported ${res.inserted}, skipped ${res.skipped}.</p>`);
+      } catch (err) {
+        const code = err.data?.error;
+        const message = code === 'row_limit_exceeded'
+          ? `CSV has ${err.data?.total || 'more than 500'} rows. Split it into files of 500 rows or fewer.`
+          : code === 'csv_too_large'
+            ? 'CSV is larger than 512 KiB. Split it into smaller account-specific files.'
+            : code;
+        showErr(body, message);
+      } finally {
+        imp.disabled = false;
+        imp.value = '';
+      }
     });
 
     panel.addEventListener('click', (event) => {
