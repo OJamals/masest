@@ -162,13 +162,38 @@ test("site and CMS assets merge into one searchable, de-duplicated library", asy
   });
 
   assert.deepEqual(merged.map((asset) => asset.public_url), [
-    "https://example.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/brewery.webp",
+    "https://media.masest.co/site/img/proof/cases/brewery.webp",
   ]);
   assert.equal(merged[0].alt, "CMS-authored brewery proof");
   assert.equal(merged[0].source, "cms");
   assert.equal(formatAssetBytes(1024), "1 KB");
   assert.equal(formatAssetBytes(239_674), "234.1 KB");
   assert.equal(formatAssetBytes(null), "");
+});
+
+test("admin image picker serves site-library images from the Cloudflare R2 domain", async () => {
+  const { assetUrl, mergeSiteImageAssets } = await import("../js/admin/site-image-library.js");
+  const assets = mergeSiteImageAssets({
+    siteAssets: [{
+      storage_path: "/img/products/hcr-studio.webp",
+      public_url: "/img/products/hcr-studio.webp",
+      alt: "VertKleen HCR product",
+      status: "available",
+      source: "site",
+    }],
+    cmsAssets: [{
+      storage_path: "site/img/products/cr-studio.webp",
+      public_url: "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/products/cr-studio.webp",
+      alt: "VertKleen CR product",
+      status: "available",
+    }],
+  });
+
+  assert.deepEqual(assets.map((asset) => asset.public_url), [
+    "https://media.masest.co/site/img/products/cr-studio.webp",
+    "https://media.masest.co/site/img/products/hcr-studio.webp",
+  ]);
+  assert.equal(assetUrl(assets[0]), "https://media.masest.co/site/img/products/cr-studio.webp");
 });
 
 test("known site image references compile to stable CMS storage URLs", () => {

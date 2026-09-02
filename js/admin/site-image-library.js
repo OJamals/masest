@@ -1,4 +1,4 @@
-import { canonicalPublicImageUrl } from "../image-url.js?v=20260901b";
+import { canonicalContentAssetUrl, canonicalPublicImageUrl } from "../image-url.js?v=20260902a";
 
 export const SITE_IMAGE_MANIFEST_URL = "/data/content/site-images.json";
 const MAX_UPLOAD_EDGE = 2560;
@@ -46,7 +46,7 @@ export async function prepareImageUpload(file) {
 }
 
 function normalizedAsset(asset = {}, source = "site") {
-  const publicUrl = canonicalPublicImageUrl(asset.public_url || asset.source_url || asset.storage_path);
+  const publicUrl = canonicalContentAssetUrl(asset.public_url || asset.source_url || asset.storage_path);
   if (!publicUrl) return null;
   return {
     ...asset,
@@ -84,7 +84,7 @@ function searchableAssetText(asset) {
 }
 
 export function assetUrl(asset = {}) {
-  return canonicalPublicImageUrl(asset.public_url || asset.source_url || asset.storage_path);
+  return canonicalContentAssetUrl(asset.public_url || asset.source_url || asset.storage_path);
 }
 
 export function formatAssetBytes(value) {

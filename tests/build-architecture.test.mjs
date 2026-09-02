@@ -20,6 +20,7 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/admin-content-workspace.spec.mjs",
     "tools/admin-support-entrypoints.spec.mjs",
     "tools/admin-crm-workspace.spec.mjs",
+    "tools/admin-newsletter.spec.mjs",
     "tools/blog-index.spec.mjs",
   ];
   const verifyCore = "npm run check && npm test && npm run build && npm run verify:site && npm run qa:workspace-regressions && npm run qa:commerce-smoke && npm run qa:ui-critical:interaction";

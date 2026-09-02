@@ -1,6 +1,10 @@
 // /api/admin/products - staff catalog, stock, media, and variant management.
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import { staffCan } from '../../_lib/authz.js';
+import {
+  canonicalizeProductMedia,
+  canonicalizeProductMediaUrl,
+} from '../../_lib/product-media.js';
 
 const BASE_COLUMNS = [
   'sku',
@@ -77,7 +81,10 @@ async function selectProducts(sb) {
     }
   }
   if (error) throw error;
-  return { products: data || [], mediaReady: true };
+  return {
+    products: (data || []).map((product) => canonicalizeProductMedia(product)),
+    mediaReady: true,
+  };
 }
 
 function nullableString(value) {
@@ -116,6 +123,7 @@ export function normalizeProduct(input) {
   for (const key of ['image_url', 'photo_alt', 'hmis', 'group_key']) {
     if (row[key] !== undefined) row[key] = nullableString(row[key]);
   }
+  if (row.image_url) row.image_url = canonicalizeProductMediaUrl(row.image_url) || null;
   // Checkboxes arrive as booleans from the row editor, but strings/numbers via the raw
   // API. Map the common truthy/falsy forms explicitly and REJECT anything ambiguous — a
   // silently-dropped hazmat flag is a compliance risk, so we error rather than guess.

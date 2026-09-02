@@ -60,7 +60,7 @@ test("platform staff can browse, search, and select existing public-site images"
 
   await expect.poll(() => page.evaluate(() => window.__imagePickerResult)).not.toBeNull();
   const result = await page.evaluate(() => window.__imagePickerResult);
-  expect(result.url).toMatch(/^\/img\//);
+  expect(result.url).toMatch(/^https:\/\/media\.masest\.co\/site\/img\//);
   expect(result.alt).toBeTruthy();
 });
 

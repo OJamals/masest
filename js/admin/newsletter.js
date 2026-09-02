@@ -4,15 +4,15 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260901b';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260902a';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260901b';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260901b';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260901b';
+} from './rich-editor.js?v=20260902a';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260902a';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260902a';
 
 const SECTIONS = [
   ['compose', 'Compose'],
@@ -460,9 +460,10 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
   async function saveDraft() {
     const subject = $('nlSubject').value.trim();
     if (!subject) { setStatus('Enter a subject.', 'err'); return null; }
+    const cloningSentCampaign = editorEntry?.status === 'sent';
     const body = {
       action: 'save',
-      id: editingId || undefined,
+      id: cloningSentCampaign ? undefined : editingId || undefined,
       subject,
       body_md: $('nlBody').value,
       source: $('nlSource').value === 'blog_post' ? 'blog_post' : 'compose',
@@ -474,9 +475,14 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       const res = await api('/api/admin/newsletters', { method: 'POST', body });
       editingId = res.id;
       $('nlId').value = res.id;
-      editorEntry = { ...editorEntry, ...body, id: res.id };
-      setStatus('Draft saved.', 'ok');
+      editorEntry = {
+        ...editorEntry,
+        ...body,
+        id: res.id,
+        status: cloningSentCampaign ? 'draft' : editorEntry?.status,
+      };
       await renderNewsletter({ refetch: true });
+      setStatus('Draft saved.', 'ok');
       return res.id;
     } catch (err) {
       setStatus(err.data?.error || 'Could not save the draft. Retry.', 'err');
@@ -523,8 +529,8 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       if (!id) return;
       setStatus('Queueing delivery…');
       const res = await api('/api/admin/newsletters', { method: 'POST', body: { action: 'send_now', id } });
-      setStatus(`Queued ${Number(res.total || 0).toLocaleString()} recipients for delivery.`, 'ok');
       await renderNewsletter({ refetch: true });
+      setStatus(`Queued ${Number(res.total || 0).toLocaleString()} recipients for delivery.`, 'ok');
     } catch (err) {
       const map = { already_sent: 'This newsletter was already sent.', send_in_progress: 'A send is already in progress for this newsletter.' };
       setStatus(map[err.data?.error] || err.data?.error || 'Could not send the newsletter. Retry.', 'err');
