@@ -473,6 +473,7 @@ export function initQuoteForm() {
   } else if (pre && contextSummary) {
     const requestLabel = {
       audit: "Chemical audit request",
+      program: "Program request",
       sample: "Sample request",
       technical: "Document request",
     }[params.get("type")] || "Quote request";
@@ -491,7 +492,7 @@ export function initQuoteForm() {
   const typeInput = form.querySelector('[name="type"]');
   const groups = [...form.querySelectorAll("[data-intent-group]")];
   const choices = [...form.querySelectorAll(".cta-choice")];
-  const INTENTS = ["quote", "audit", "sample", "technical", "distributor"];
+  const INTENTS = ["quote", "audit", "program", "sample", "technical", "distributor"];
   const TASK_DETAIL_INTENTS = new Set(QUOTE_TASK_DETAIL_INTENTS);
   const taskDetails = document.getElementById("quoteTaskDetails");
   let hasTaskDetailPrefill = false;
@@ -639,6 +640,10 @@ export function initQuoteForm() {
       timeline: "Timeline", system: "System / asset", audit_timeframe: "Preferred timeframe",
       samples: "Sample products", ship_to: "Ship-to address", company_type: "Company type",
       territory: "Territory / region",
+      program_assets: "Sites, vehicles, or technicians", pilot_size: "First pilot scope",
+      current_sku_count: "Current chemical count", monthly_usage: "Estimated monthly usage",
+      preferred_packs: "Preferred packs", current_vendor: "Current supplier or program",
+      program_services: "Program services",
       ...Object.fromEntries(QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label])),
       message: "Notes", source: "Source"
     };

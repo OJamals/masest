@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 235,
+  "count": 237,
   "assets": [
     {
       "storage_path": "/img/before-after/cr-after.webp",
@@ -2699,6 +2699,34 @@
       "height": 1125,
       "byte_size": 206892,
       "sha256": "028e7da3438584967e0eef99e410a37d273187b88a778c9999006c3832b26f5d",
+      "mime_type": "image/webp",
+      "category": "proof",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/proof/cases/sportfisher-intake-after-202608.webp",
+      "public_url": "/img/proof/cases/sportfisher-intake-after-202608.webp",
+      "filename": "sportfisher-intake-after-202608.webp",
+      "alt": "Sportfisher raw-water intake grate after Scale Buster treatment and rinse",
+      "width": 1200,
+      "height": 820,
+      "byte_size": 474278,
+      "sha256": "bfe491bdfdabf9857901ba25101ae30463476ce338975b6e6aa3f3325c3b12fa",
+      "mime_type": "image/webp",
+      "category": "proof",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/proof/cases/sportfisher-intake-before-202608.webp",
+      "public_url": "/img/proof/cases/sportfisher-intake-before-202608.webp",
+      "filename": "sportfisher-intake-before-202608.webp",
+      "alt": "Sportfisher raw-water intake grate before Scale Buster treatment",
+      "width": 1200,
+      "height": 820,
+      "byte_size": 414558,
+      "sha256": "280125b38e465774abd640056f5dbab66a830ac1eeb1101f465bddc911605d5c",
       "mime_type": "image/webp",
       "category": "proof",
       "status": "available",

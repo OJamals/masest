@@ -252,6 +252,32 @@
       "seo": {}
     },
     {
+      "slug": "sportfisher-raw-water-intake",
+      "title": "Sportfisher raw-water intake descaling",
+      "kind": "marine",
+      "chips": [
+        "Scale Buster",
+        "1:1 mix",
+        "24-hour soak",
+        "No scrubbing"
+      ],
+      "image": "img/proof/cases/sportfisher-intake-before-202608.webp",
+      "result": "On one 68-foot sportfisher field record, a raw-water intake grate received a 1:1 Scale Buster mix for a 24-hour soak. No scrubbing or scraping was used before rinse; the published before-and-after photos show the perforations after rinsing.",
+      "source": "Source: documented field record, August 2026",
+      "eyebrow": "Marine · Result",
+      "image_h": 820,
+      "image_w": 1200,
+      "image_alt": "Sportfisher raw-water intake grate before Scale Buster treatment",
+      "narrative": "This result records a single August 2026 cleaning of one raw-water intake grate. Scale Buster is a cleaner, not an antifouling coating, and leaves no protective film. Results vary with deposit type, thickness, water chemistry, dilution, and dwell time. Verify material compatibility and disposal requirements before use.",
+      "sort_order": 16,
+      "image_after": "img/proof/cases/sportfisher-intake-after-202608.webp",
+      "image_after_h": 820,
+      "image_after_w": 1200,
+      "image_after_alt": "Sportfisher raw-water intake grate after Scale Buster treatment and rinse",
+      "publication_scope": "Published result summary",
+      "seo": {}
+    },
+    {
       "slug": "uf-shands-drone-wash",
       "title": "Drone-applied exterior cleaning",
       "kind": "facility",

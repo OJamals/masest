@@ -17,7 +17,7 @@ test("request-details toggle governs only shared + quote extras, never intent gr
 });
 
 test("intent-core fields keep their data-req so applyIntent can require them", () => {
-  for (const id of ["fSystem", "fShipTo", "fCompanyType", "fTerritory"]) {
+  for (const id of ["fSystem", "fProgramAssets", "fPilotSize", "fShipTo", "fCompanyType", "fTerritory"]) {
     const tag = contact.match(new RegExp(`<(?:input|select|textarea)[^>]*id="${id}"[^>]*>`));
     assert.ok(tag, `${id} present`);
     assert.match(tag[0], /data-req/, `${id} keeps data-req`);
