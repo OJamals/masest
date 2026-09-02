@@ -1,7 +1,7 @@
-// Shared Klaviyo client — single place for the subscription-bulk-create-jobs POST and the
-// industry -> nurture-list resolution. Used by newsletter.js (general list) and quote.js
-// (per-industry lead nurture). Best-effort: missing config is a no-op, never a throw.
-const REVISION = '2024-10-15';
+// Shared Klaviyo marketing client. Subscription, events, templates, campaigns, and
+// campaign lifecycle live here; Cloudflare Email Service remains transactional-only.
+export const KLAVIYO_REVISION = '2026-07-15';
+export const KLAVIYO_CAMPAIGN_CREATE_REVISION = '2026-07-15.pre';
 
 // Normalized industry label (from the quote form) -> env var holding that list's ID.
 const INDUSTRY_LIST_ENV = {
@@ -18,6 +18,54 @@ const INDUSTRY_LIST_ENV = {
 };
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+function apiHeaders(key, revision = KLAVIYO_REVISION) {
+  return {
+    Authorization: `Klaviyo-API-Key ${key}`,
+    revision,
+    'content-type': 'application/json',
+    accept: 'application/vnd.api+json',
+  };
+}
+
+async function klaviyoRequest(env, path, {
+  method = 'GET',
+  body,
+  fetchImpl = globalThis.fetch,
+  revision = KLAVIYO_REVISION,
+} = {}) {
+  const key = env?.KLAVIYO_PRIVATE_KEY;
+  if (!key || typeof fetchImpl !== 'function') {
+    return { ok: false, skipped: true, error: 'klaviyo_not_configured', retryable: false };
+  }
+  try {
+    const response = await fetchImpl(`https://a.klaviyo.com${path}`, {
+      method,
+      headers: apiHeaders(key, revision),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const status = Number(response?.status) || 0;
+    const payload = typeof response?.json === 'function'
+      ? await response.json().catch(() => null)
+      : null;
+    const ok = status >= 200 && status < 300;
+    const providerError = payload?.errors?.[0];
+    return {
+      ok,
+      status,
+      body: payload,
+      retryable: !ok && (status === 429 || status >= 500),
+      error: ok ? null : String(providerError?.code || providerError?.title || `klaviyo_http_${status || 'unknown'}`).slice(0, 160),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      network: true,
+      retryable: true,
+      error: String(error?.message || 'klaviyo_network_failure').slice(0, 160),
+    };
+  }
+}
 
 export function normalizeIndustry(industry) {
   return String(industry || '')
@@ -44,14 +92,14 @@ function cleanProfileProperties(properties = {}) {
 
 // Subscribe one email to a Klaviyo list. Best-effort: skips (no throw) when the private
 // key, list, or a valid email is missing. Returns { ok, skipped?, status? }.
-export async function klaviyoSubscribe(env, email, listId, properties = {}) {
+export async function klaviyoSubscribe(env, email, listId, properties = {}, { fetchImpl = globalThis.fetch } = {}) {
   const key = env.KLAVIYO_PRIVATE_KEY;
   if (!key || !listId || !EMAIL_RE.test(String(email || ''))) {
     return { ok: false, skipped: true };
   }
   const profileProperties = cleanProfileProperties(properties);
   const attributes = {
-    email,
+    email: String(email).trim().toLowerCase(),
     ...(Object.keys(profileProperties).length ? { properties: profileProperties } : {}),
     subscriptions: { email: { marketing: { consent: 'SUBSCRIBED' } } },
   };
@@ -69,17 +117,101 @@ export async function klaviyoSubscribe(env, email, listId, properties = {}) {
       relationships: { list: { data: { type: 'list', id: listId } } },
     },
   };
-  const resp = await globalThis.fetch('https://a.klaviyo.com/api/profile-subscription-bulk-create-jobs/', {
-    method: 'POST',
-    headers: {
-      Authorization: `Klaviyo-API-Key ${key}`,
-      revision: REVISION,
-      'content-type': 'application/json',
-      accept: 'application/json',
-    },
-    body: JSON.stringify(payload),
+  const result = await klaviyoRequest(env, '/api/profile-subscription-bulk-create-jobs/', {
+    method: 'POST', body: payload, fetchImpl,
   });
-  return { ok: resp.status === 202, status: resp.status };
+  return result.ok
+    ? { ok: result.status === 202, status: result.status }
+    : { ok: false, ...(result.skipped ? { skipped: true } : {}), ...(result.status ? { status: result.status } : {}), ...(!result.status && result.error ? { error: result.error } : {}) };
+}
+
+// Unsubscribe one profile from marketing on a list. Local suppression remains the
+// fail-closed source while this async Klaviyo job is accepted.
+export async function klaviyoUnsubscribe(env, email, listId, { fetchImpl = globalThis.fetch } = {}) {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!env?.KLAVIYO_PRIVATE_KEY || !listId || !EMAIL_RE.test(normalized)) {
+    return { ok: false, skipped: true };
+  }
+  const payload = {
+    data: {
+      type: 'profile-subscription-bulk-delete-job',
+      attributes: {
+        profiles: { data: [{ type: 'profile', attributes: { email: normalized } }] },
+      },
+      relationships: { list: { data: { type: 'list', id: listId } } },
+    },
+  };
+  const result = await klaviyoRequest(env, '/api/profile-subscription-bulk-delete-jobs/', {
+    method: 'POST', body: payload, fetchImpl,
+  });
+  return result.ok
+    ? { ok: result.status === 202, status: result.status }
+    : { ok: false, ...(result.skipped ? { skipped: true } : {}), ...(result.status ? { status: result.status } : {}), ...(result.error ? { error: result.error } : {}) };
+}
+
+function normalizedEmails(emails, max = 1000) {
+  return [...new Set((Array.isArray(emails) ? emails : [])
+    .map((email) => String(email || '').trim().toLowerCase())
+    .filter((email) => EMAIL_RE.test(email)))].slice(0, max);
+}
+
+export async function klaviyoSubscribeMany(
+  env,
+  emails,
+  listId,
+  properties = {},
+  { fetchImpl = globalThis.fetch } = {},
+) {
+  const clean = normalizedEmails(emails);
+  if (!env?.KLAVIYO_PRIVATE_KEY || !listId || !clean.length) return { ok: false, skipped: true, count: 0 };
+  const profileProperties = cleanProfileProperties(properties);
+  const result = await klaviyoRequest(env, '/api/profile-subscription-bulk-create-jobs/', {
+    method: 'POST',
+    fetchImpl,
+    body: {
+      data: {
+        type: 'profile-subscription-bulk-create-job',
+        attributes: {
+          profiles: {
+            data: clean.map((email) => ({
+              type: 'profile',
+              attributes: {
+                email,
+                ...(Object.keys(profileProperties).length ? { properties: profileProperties } : {}),
+                subscriptions: { email: { marketing: { consent: 'SUBSCRIBED' } } },
+              },
+            })),
+          },
+        },
+        relationships: { list: { data: { type: 'list', id: listId } } },
+      },
+    },
+  });
+  return { ok: result.ok && result.status === 202, status: result.status, count: clean.length, error: result.error || undefined };
+}
+
+export async function klaviyoUnsubscribeMany(
+  env,
+  emails,
+  listId,
+  { fetchImpl = globalThis.fetch } = {},
+) {
+  const clean = normalizedEmails(emails);
+  if (!env?.KLAVIYO_PRIVATE_KEY || !listId || !clean.length) return { ok: false, skipped: true, count: 0 };
+  const result = await klaviyoRequest(env, '/api/profile-subscription-bulk-delete-jobs/', {
+    method: 'POST',
+    fetchImpl,
+    body: {
+      data: {
+        type: 'profile-subscription-bulk-delete-job',
+        attributes: {
+          profiles: { data: clean.map((email) => ({ type: 'profile', attributes: { email } })) },
+        },
+        relationships: { list: { data: { type: 'list', id: listId } } },
+      },
+    },
+  });
+  return { ok: result.ok && result.status === 202, status: result.status, count: clean.length, error: result.error || undefined };
 }
 
 // List the subscribed email addresses on a Klaviyo list. Paginates via links.next.
@@ -104,7 +236,7 @@ export async function klaviyoListProfiles(
     let resp;
     try {
       resp = await fetchImpl(url, {
-        headers: { Authorization: `Klaviyo-API-Key ${key}`, revision: REVISION, accept: 'application/json' },
+        headers: { Authorization: `Klaviyo-API-Key ${key}`, revision: KLAVIYO_REVISION, accept: 'application/vnd.api+json' },
       });
     } catch (error) {
       if (strict) throw new Error('klaviyo_profiles_network_failure', { cause: error });
@@ -154,22 +286,162 @@ export function buildEventPayload({ email, metric, properties = {}, value } = {}
 // Record a server-side metric event in Klaviyo. NOTE: an event does NOT send email — it only
 // triggers a send if the owner has built a Klaviyo flow on that metric. Best-effort: skips
 // (no throw) without a private key, metric name, or valid email.
-export async function klaviyoTrack(env, { email, metric, properties, value } = {}) {
+export async function klaviyoTrack(env, { email, metric, properties, value, fetchImpl = globalThis.fetch } = {}) {
   const key = env.KLAVIYO_PRIVATE_KEY;
   if (!key || !metric || !EMAIL_RE.test(String(email || ''))) return { ok: false, skipped: true };
-  try {
-    const resp = await globalThis.fetch('https://a.klaviyo.com/api/events/', {
-      method: 'POST',
-      headers: {
-        Authorization: `Klaviyo-API-Key ${key}`,
-        revision: REVISION,
-        'content-type': 'application/json',
-        accept: 'application/json',
-      },
-      body: JSON.stringify(buildEventPayload({ email, metric, properties, value })),
-    });
-    return { ok: resp.status === 202 || resp.status === 200, status: resp.status };
-  } catch {
-    return { ok: false, error: true };
+  const result = await klaviyoRequest(env, '/api/events/', {
+    method: 'POST',
+    body: buildEventPayload({ email: String(email).trim().toLowerCase(), metric, properties, value }),
+    fetchImpl,
+  });
+  if (result.ok) return { ok: [200, 202].includes(result.status), status: result.status };
+  return { ok: false, ...(result.status ? { status: result.status } : {}), error: result.error || true };
+}
+
+function campaignFailure(step, result) {
+  return {
+    ok: false,
+    provider: 'klaviyo',
+    step,
+    retryable: result?.retryable === true,
+    ...(result?.status ? { status: result.status } : {}),
+    error: result?.error || `klaviyo_${step}_failed`,
+  };
+}
+
+function marketingIdentity(env) {
+  return {
+    fromEmail: String(env.KLAVIYO_FROM_EMAIL || 'noreply@send.masest.co').trim(),
+    fromLabel: String(env.KLAVIYO_FROM_LABEL || 'MASEST · VertKleen').trim(),
+    replyTo: String(env.KLAVIYO_REPLY_TO || env.EMAIL_REPLY_TO || 'dev@masest.co').trim(),
+  };
+}
+
+// Build and queue one list campaign. Success means Klaviyo accepted its async send job;
+// it never claims final delivery. Call getKlaviyoCampaignStatus for reconciliation.
+export async function publishKlaviyoCampaign(env, {
+  name,
+  subject,
+  previewText = '',
+  html,
+  text = '',
+  listId = env?.KLAVIYO_LIST_ID,
+  smartSending = false,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  if (!env?.KLAVIYO_PRIVATE_KEY || !listId) {
+    return { ok: false, provider: 'klaviyo', retryable: false, error: 'klaviyo_campaign_not_configured' };
   }
+  if (!String(html || '').includes('{% unsubscribe %}')) {
+    return { ok: false, provider: 'klaviyo', retryable: false, error: 'marketing_unsubscribe_required' };
+  }
+  const campaignName = String(name || subject || 'MASEST campaign').trim().slice(0, 255);
+  const cleanSubject = String(subject || '').trim().slice(0, 255);
+  if (!cleanSubject) return { ok: false, provider: 'klaviyo', retryable: false, error: 'campaign_subject_required' };
+
+  const template = await klaviyoRequest(env, '/api/templates', {
+    method: 'POST',
+    fetchImpl,
+    body: {
+      data: {
+        type: 'template',
+        attributes: {
+          name: `${campaignName} · ${new Date().toISOString()}`.slice(0, 255),
+          editor_type: 'CODE',
+          html: String(html),
+          text: String(text || ''),
+        },
+      },
+    },
+  });
+  const templateId = String(template.body?.data?.id || '');
+  if (!template.ok || !templateId) return campaignFailure('create_template', template);
+
+  const identity = marketingIdentity(env);
+  // Create Campaign remains beta until Klaviyo's 2026-10-15 GA revision.
+  // Source: https://developers.klaviyo.com/en/reference/create_campaign_beta
+  const campaign = await klaviyoRequest(env, '/api/campaigns', {
+    method: 'POST',
+    fetchImpl,
+    revision: KLAVIYO_CAMPAIGN_CREATE_REVISION,
+    body: {
+      data: {
+        type: 'campaign',
+        attributes: {
+          name: campaignName,
+          audiences: { included: [String(listId)] },
+          send_strategy: { method: 'immediate' },
+          send_options: { use_smart_sending: Boolean(smartSending) },
+          'campaign-messages': {
+            data: [{
+              type: 'campaign-message',
+              attributes: {
+                definition: {
+                  channel: 'email',
+                  label: cleanSubject,
+                  content: {
+                    subject: cleanSubject,
+                    preview_text: String(previewText || '').slice(0, 255),
+                    from_email: identity.fromEmail,
+                    from_label: identity.fromLabel,
+                    reply_to_email: identity.replyTo,
+                  },
+                },
+              },
+            }],
+          },
+        },
+      },
+    },
+  });
+  const campaignId = String(campaign.body?.data?.id || '');
+  if (!campaign.ok || !campaignId) return campaignFailure('create_campaign', campaign);
+
+  const relationship = await klaviyoRequest(
+    env,
+    `/api/campaigns/${encodeURIComponent(campaignId)}/relationships/campaign-messages`,
+    { fetchImpl },
+  );
+  const messageId = String(relationship.body?.data?.[0]?.id || '');
+  if (!relationship.ok || !messageId) return campaignFailure('load_message', relationship);
+
+  const assigned = await klaviyoRequest(env, '/api/campaign-message-assign-template', {
+    method: 'POST',
+    fetchImpl,
+    body: {
+      data: {
+        type: 'campaign-message',
+        id: messageId,
+        relationships: { template: { data: { type: 'template', id: templateId } } },
+      },
+    },
+  });
+  if (!assigned.ok) return campaignFailure('assign_template', assigned);
+
+  const send = await klaviyoRequest(env, '/api/campaign-send-jobs', {
+    method: 'POST',
+    fetchImpl,
+    body: { data: { type: 'campaign-send-job', id: campaignId } },
+  });
+  if (!send.ok || send.status !== 202) return campaignFailure('queue_send', send);
+  return {
+    ok: true,
+    queued: true,
+    provider: 'klaviyo',
+    campaignId,
+    messageId,
+    templateId,
+    status: String(send.body?.data?.attributes?.status || 'queued').toLowerCase(),
+  };
+}
+
+export async function getKlaviyoCampaignStatus(env, campaignId, { fetchImpl = globalThis.fetch } = {}) {
+  if (!campaignId) return { ok: false, error: 'campaign_id_required' };
+  const result = await klaviyoRequest(env, `/api/campaign-send-jobs/${encodeURIComponent(campaignId)}`, { fetchImpl });
+  if (!result.ok) return campaignFailure('get_send_status', result);
+  return {
+    ok: true,
+    campaignId: String(campaignId),
+    status: String(result.body?.data?.attributes?.status || 'unknown').toLowerCase(),
+  };
 }

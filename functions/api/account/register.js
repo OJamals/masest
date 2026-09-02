@@ -8,6 +8,15 @@
 //
 // Body: { profile: { full_name?, phone? } }   (company fields are ignored if sent)
 import { adminClient, userFromRequest, json, readBody } from '../../_lib/supabase.js';
+import { klaviyoSubscribe } from '../../_lib/klaviyo.js';
+
+async function syncDefaultMarketing(env, user, existing) {
+  if (existing?.marketing_email_enabled === false) return 'disabled';
+  const result = await klaviyoSubscribe(env, user.email, env.KLAVIYO_LIST_ID, {
+    source: 'account_registration',
+  });
+  return result.ok ? 'queued' : 'pending';
+}
 
 export async function onRequestPost({ request, env }) {
   const { user } = await userFromRequest(request, env);
@@ -19,7 +28,7 @@ export async function onRequestPost({ request, env }) {
 
   // Block double-registration into a company (idempotent if already linked).
   const { data: existing } = await sb
-    .from('profiles').select('id,company_id,role').eq('id', user.id).maybeSingle();
+    .from('profiles').select('id,company_id,role,marketing_email_enabled').eq('id', user.id).maybeSingle();
   if (existing?.company_id) {
     return json(409, { error: 'already_registered', company_id: existing.company_id });
   }
@@ -47,7 +56,8 @@ export async function onRequestPost({ request, env }) {
     const { error: jErr } = await write;
     if (jErr) { console.error('register_join_failed', jErr.message); return json(500, { error: 'server_error' }); }
     await sb.from('company_invites').update({ status: 'accepted' }).eq('id', invite.id);
-    return json(201, { account_ready: true, company_id: invite.company_id, joined: true, message: 'You’ve joined your team. Account ready.' });
+    const marketing_sync = await syncDefaultMarketing(env, user, existing);
+    return json(201, { account_ready: true, company_id: invite.company_id, joined: true, marketing_sync, message: 'You’ve joined your team. Account ready.' });
   }
 
   // User-only path (the default): finish registration without a business. The account is
@@ -62,9 +72,11 @@ export async function onRequestPost({ request, env }) {
     : sb.from('profiles').insert({ id: user.id, company_id: null, role: 'buyer', ...row });
   const { error: pErr } = await write;
   if (pErr) { console.error('register_profile_failed', pErr.message); return json(500, { error: 'server_error' }); }
+  const marketing_sync = await syncDefaultMarketing(env, user, existing);
   return json(201, {
     account_ready: true,
     needs_business: true,
+    marketing_sync,
     message: 'Account created. Set up a business profile from your dashboard when you’re ready to unlock B2B ordering.',
   });
 }

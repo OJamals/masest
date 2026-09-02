@@ -192,12 +192,14 @@ function quoteLeadLifecycle({ sb, env }) {
         source,
       },
     }),
-    sendFollowUp: ({ quote, nextStep, dueText, subject, actor }) => sendEmail(env, {
+    sendFollowUp: ({ quote, nextStep, due, dueText, subject, actor }) => sendTrackedLeadEmail(env, {
       to: [quote.email],
       subject: subject || 'MASEST quote follow-up',
       category: 'lead_followup',
+      idempotencyKey: `quote-followup/${quote.id}/${due || 'manual'}`,
       html: emailLayout({
         heading: `Follow-up for ${htmlEscape(quote.company || quote.name || 'your request')}`,
+        preheader: nextStep,
         bodyHtml: `<p>${htmlEscape(nextStep)}</p>${dueText ? `<p><b>Target follow-up:</b> ${htmlEscape(dueText)} ET</p>` : ''}`,
         ctaText: 'Reply to MASEST',
         ctaUrl: `mailto:${actor || 'matthew@masest.co'}`,
@@ -208,8 +210,10 @@ function quoteLeadLifecycle({ sb, env }) {
       to: [quote.email],
       subject: 'MASEST quote follow-up reminder',
       category: 'lead_followup_reminder',
+      idempotencyKey: `quote-followup-reminder/${quote.id}/${quote.due_at || dueText}`,
       html: emailLayout({
         heading: `Follow-up for ${htmlEscape(label)}`,
+        preheader: nextStep,
         bodyHtml: `<p>${htmlEscape(nextStep)}</p><p>This follow-up was due ${htmlEscape(dueText)} ET.</p>`,
         ctaText: 'Reply to MASEST',
         ctaUrl: 'mailto:matthew@masest.co',

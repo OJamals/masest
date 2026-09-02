@@ -174,8 +174,12 @@
   .notif-time { font-size: .78rem; }
   .notif-link { font-weight: 700; }
   .pay-copy { margin-bottom: 16px; }
-  .notif-prefs { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 10px; }
-  .notif-pref-label { display: inline-flex; gap: 6px; align-items: center; }
+  .notif-prefs { display: grid; gap: 12px; align-items: start; margin-bottom: 10px; }
+  .notif-prefs > .muted,
+  .notif-prefs > .dash-status { margin: 0; }
+  .notif-pref-label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; width: 100%; }
+  .notif-pref-label input { margin-top: .22em; }
+  .notif-pref-copy { min-width: 0; line-height: 1.45; }
   .dash-pager { text-align: center; margin-top: 12px; }
   .dash-stat-skeleton-main { height: 1.8em; margin: .15em 0 .55em; }
   .dash-order-skeleton { height: 60px; margin-bottom: 10px; }
@@ -391,6 +395,7 @@
 }
   @media (max-width: 640px) {
     .msg { max-width: 92%; }
+    #notifPrefs { padding-right: 54px; }
     .dash-row,
     .dash-order-summary,
     .dash-card-toolbar {
@@ -553,7 +558,7 @@
             <details class="dash-disclosure">
               <summary>Message settings</summary>
               <div class="dash-disclosure-body">
-                <label class="notif-pref-label"><input id="msgEmailUpdates" type="checkbox"> Email me when the MASEST team replies</label>
+                <label class="notif-pref-label"><input id="msgEmailUpdates" type="checkbox"><span class="notif-pref-copy">Email me when the MASEST team replies</span></label>
                 <p class="muted">Replies always appear here. When reply-by-email is configured, replying directly to a MASEST message email adds your response to this thread too.</p>
                 <p class="dash-status" id="msgEmailStatus" role="status" aria-live="polite"></p>
               </div>
@@ -571,10 +576,11 @@
               <summary>Email preferences</summary>
               <div class="dash-disclosure-body">
                 <form onsubmit="return false" id="notifPrefs" class="notif-prefs" aria-label="Email notification preferences">
-                  <span class="muted">Email me about:</span>
-                  <label class="notif-pref-label"><input type="checkbox" data-pref="notify_orders"> Order updates</label>
-                  <label class="notif-pref-label"><input type="checkbox" data-pref="notify_messages"> Messages</label>
-                  <label class="notif-pref-label"><input type="checkbox" data-pref="notify_offers"> Offers</label>
+                  <span class="muted">Choose which optional email you receive. Required service email stays on.</span>
+                  <label class="notif-pref-label"><input id="transactionalEmailRequired" type="checkbox" checked disabled><span class="notif-pref-copy">Transactional email <span class="muted">— orders, billing, account security, and service notices (required)</span></span></label>
+                  <label class="notif-pref-label"><input type="checkbox" data-pref="marketing_email_enabled"><span class="notif-pref-copy">Marketing email &amp; newsletters <span class="muted">— product news, field guidance, and offers</span></span></label>
+                  <label class="notif-pref-label"><input type="checkbox" data-pref="notify_messages"><span class="notif-pref-copy">Support reply alerts <span class="muted">— chat replies also remain in your dashboard</span></span></label>
+                  <p class="dash-status" id="notifPrefsStatus" role="status" aria-live="polite"></p>
                 </form>
               </div>
             </details>

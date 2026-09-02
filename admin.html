@@ -154,6 +154,7 @@
   .adm-textarea { min-height: 120px; resize: vertical; }
   .adm-form-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; }
   .adm-form-grid label { display: grid; gap: 5px; color: var(--ink-soft); font-size: .82rem; font-weight: 700; }
+  .adm-form-grid > [hidden] { display: none; }
   .adm-form-grid .wide { grid-column: span 2; }
   .adm-form-grid .full { grid-column: 1 / -1; }
   .adm-form-grid > .btn { justify-self: start; max-width: 100%; }
@@ -1035,7 +1036,7 @@
             <label>Mode <select id="npMode" name="mode" class="adm-select"><option value="buy">Buy</option><option value="quote">Quote</option></select></label>
             <label>Price <input id="npPrice" name="price" class="adm-input" value="Managed in Pricing" readonly aria-describedby="catalogPriceGovernance"></label>
             <label>Stock <input id="npStock" name="stock" class="adm-input" type="number" min="0" step="1"></label>
-            <label class="wide">Photo URL <input id="npImageUrl" name="image_url" class="adm-input" type="url" autocomplete="off" spellcheck="false" placeholder="img/products/example.webp…"></label>
+            <label class="wide">Photo URL <input id="npImageUrl" name="image_url" class="adm-input" type="url" autocomplete="off" spellcheck="false" placeholder="https://media.masest.co/site/img/products/example.webp…"></label>
             <label class="wide">Photo alt <input id="npPhotoAlt" name="image_alt" class="adm-input" autocomplete="off" placeholder="VertKleen HCR bottle…"></label>
             <button class="btn btn-primary" type="submit">Save product</button>
           </form>

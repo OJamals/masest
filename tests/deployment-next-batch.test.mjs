@@ -35,19 +35,20 @@ test('business creation is one guarded database transaction', () => {
   assert.match(migration, /grant execute on function public\.create_company_for_user\(uuid, jsonb\) to service_role/i);
 });
 
-test('newsletter deliveries recover expired leases and derive durable completion from ledger state', () => {
+test('newsletter campaigns persist Klaviyo identity and reconcile provider state', () => {
   const endpoint = read('functions/api/admin/newsletters.js');
-  const helper = read('functions/_lib/newsletter-delivery.js');
+  const provider = read('functions/_lib/klaviyo.js');
   const schema = read('supabase/schema-newsletters.sql');
-  assert.match(helper, /DELIVERY_LEASE_SECONDS/);
-  assert.match(helper, /runSupabaseDeliveryWorker/);
-  assert.match(endpoint, /materializeDeliverySource/);
+  assert.match(endpoint, /publishKlaviyoCampaign/);
+  assert.match(endpoint, /getKlaviyoCampaignStatus/);
+  assert.match(endpoint, /provider_campaign_id/);
+  assert.match(endpoint, /status:\s*'sending'/);
   assert.match(endpoint, /return json\(202/);
-  assert.match(schema, /state = 'processing' and delivery\.lease_expires_at <= now\(\)/);
-  assert.match(schema, /for update skip locked/i);
-  assert.match(schema, /newsletter_delivery_summary/);
-  assert.match(schema, /count\(\*\) = count\(\*\) filter \(where state in \('sent', 'suppressed', 'dead'\)\)/);
   assert.match(endpoint, /json\(503/);
+  assert.doesNotMatch(endpoint, /materializeDeliverySource|runSupabaseDeliveryWorker/);
+  assert.match(provider, /KLAVIYO_CAMPAIGN_CREATE_REVISION/);
+  assert.match(schema, /add column if not exists provider_campaign_id text/);
+  assert.match(schema, /newsletters_provider_campaign_idx/);
 });
 
 test('admin user directory fetches bounded pages and joins only page records', () => {

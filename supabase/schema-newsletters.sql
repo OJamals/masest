@@ -8,7 +8,7 @@ create table if not exists public.newsletters (
   body_md text not null default '',
   source text not null default 'compose',        -- 'compose' | 'blog_post'
   blog_slug text,
-  status text not null default 'draft',           -- draft|scheduled|sending|sent|canceled
+  status text not null default 'draft',           -- draft|scheduled|sending|sent|failed|canceled
   audience jsonb not null default '{"populations":[],"recipient_tags":[]}'::jsonb,
   schedule jsonb not null default '{}'::jsonb,     -- {mode, send_at, interval_days, next_run_at}
   recipient_count int not null default 0,
@@ -48,7 +48,17 @@ grant select, insert, update on public.newsletter_settings to service_role;
 -- path. No production migration or scheduler change is performed by this file.
 alter table public.newsletters
   add column if not exists delivery_source_id text,
-  add column if not exists delivery_summary jsonb not null default '{}'::jsonb;
+  add column if not exists delivery_summary jsonb not null default '{}'::jsonb,
+  add column if not exists provider text,
+  add column if not exists provider_campaign_id text,
+  add column if not exists provider_message_id text,
+  add column if not exists provider_template_id text,
+  add column if not exists provider_status text,
+  add column if not exists provider_error text;
+
+create index if not exists newsletters_provider_campaign_idx
+  on public.newsletters (provider, provider_campaign_id)
+  where provider_campaign_id is not null;
 
 create table if not exists public.newsletter_delivery_sources (
   source_type text not null check (source_type in ('newsletter', 'blog_post')),

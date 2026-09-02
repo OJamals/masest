@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { extname, join, relative, sep } from "node:path";
 import test from "node:test";
 
 import { verifyCmsImages } from "../tools/build-image-library.mjs";
@@ -29,6 +29,47 @@ const APPROVED_REPRESENTATIVE_IMAGES = [
     .map((product) => product.application_image?.split("/").at(-1))
     .filter(Boolean)),
 ];
+const PUBLIC_TEXT_EXTENSIONS = new Set([".css", ".html", ".js", ".json", ".xml"]);
+const PUBLIC_SOURCE_DENY = [
+  /^(?:functions|cloudflare|supabase|tools|tests|factory|artifacts|node_modules|dist|tmp)(?:\/|$)/,
+  /^(?:audit-[^/]+|audits?|masest\.co-audit)(?:\/|$)/,
+  /^(?:\.github|\.vscode|docs\/research)(?:\/|$)/,
+  /^data\/(?:company-identity|approved-label-release|public-document-review|update-media-review|update-bundle-review|industry-applications)\.json$/,
+  /^data\/(?:catalog|products)\.seed\.json$/,
+  /^data\/vertkleen-website-publish-2026-v4\.1\.json$/,
+  /^img\/clients\//,
+  /^img\/proof\/carib-brewery-table\.webp$/i,
+];
+
+function publishedSourceFiles(directory = ROOT) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    const publicPath = relative(ROOT, path).replaceAll(sep, "/");
+    if (PUBLIC_SOURCE_DENY.some((pattern) => pattern.test(publicPath))) return [];
+    if (entry.isDirectory()) return publishedSourceFiles(path);
+    if (!PUBLIC_TEXT_EXTENSIONS.has(extname(path).toLowerCase())) return [];
+    if (publicPath === "data/content/site-images.json") return [];
+    return [path];
+  });
+}
+
+function publishedLocalImagePaths() {
+  const paths = new Set();
+  const pattern = /(?:https?:\/\/(?:www\.)?masest\.co)?(?:(?:\.\.\/)+|\.\/|\/)?img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)/gi;
+
+  for (const path of publishedSourceFiles()) {
+    const source = readFileSync(path, "utf8");
+    for (const match of source.matchAll(pattern)) {
+      if (/media\.masest\.co\/site$/i.test(source.slice(Math.max(0, match.index - 40), match.index))) continue;
+      let logical = match[0];
+      if (/^https?:/i.test(logical)) logical = new URL(logical).pathname;
+      logical = canonicalPublicImageUrl(logical);
+      if (!/^\/img\//i.test(logical)) continue;
+      if (existsSync(join(ROOT, logical.slice(1)))) paths.add(logical);
+    }
+  }
+  return [...paths].sort();
+}
 
 function contentImagePaths(value, field = "", paths = []) {
   if (Array.isArray(value)) {
@@ -84,10 +125,10 @@ test("CMS image manifest exposes managed content images with reusable metadata",
   const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
   assert.equal(manifest.count, manifest.assets.length);
   assert.equal(new Set(manifest.assets.map((asset) => asset.storage_path)).size, manifest.assets.length);
-  assert.equal(
-    manifest.assets.some((asset) => /\/masest-logo(?:-ink)?\.png$/.test(asset.public_url)),
-    false,
-    "brand chrome belongs to the repository, not the CMS image library",
+  assert.deepEqual(
+    manifest.assets.filter((asset) => /\/masest-logo(?:-ink)?\.png$/.test(asset.public_url)).map((asset) => asset.public_url).sort(),
+    ["/img/masest-logo-ink.png", "/img/masest-logo.png"],
+    "brand source files stay local while published bytes come from R2",
   );
   for (const asset of manifest.assets || []) {
     assert.match(asset.public_url, /^\/img\//);
@@ -98,10 +139,18 @@ test("CMS image manifest exposes managed content images with reusable metadata",
     assert.ok(Number.isInteger(asset.height) && asset.height > 0, `${asset.public_url} should include height`);
     assert.ok(Number.isInteger(asset.byte_size) && asset.byte_size > 0, `${asset.public_url} should include byte size`);
     assert.match(asset.sha256, /^[a-f0-9]{64}$/, `${asset.public_url} should include SHA-256`);
-    assert.match(asset.mime_type, /^image\/(?:png|webp)$/);
+    assert.match(asset.mime_type, /^image\/(?:png|svg\+xml|webp)$/);
     assert.equal(asset.status, "available");
     assert.equal(asset.source, "site");
   }
+});
+
+test("every published local image source is registered for R2 compilation", () => {
+  const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
+  const managed = new Set(manifest.assets.map((asset) => asset.public_url));
+  const missing = publishedLocalImagePaths().filter((path) => !managed.has(path));
+
+  assert.deepEqual(missing, []);
 });
 
 test("approved representative scenes use managed-image paths", () => {
@@ -196,7 +245,7 @@ test("known site image references compile to stable CMS storage URLs", () => {
   assert.doesNotMatch(compiled, /(?:^|[("'=\s])(?:\.\.\/|\/)?img\/proof\/cases\/brewery\.webp/m);
 });
 
-test("shared chrome keeps brand logos repository-local during CMS image compilation", () => {
+test("shared chrome compiles brand logos to R2 while retaining local source files", () => {
   const base = "https://media.example.test/site";
   const chrome = readFileSync(new URL("../js/main/chrome.js", import.meta.url), "utf8");
   const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
@@ -206,9 +255,9 @@ test("shared chrome keeps brand logos repository-local during CMS image compilat
     base,
   );
 
-  assert.doesNotMatch(compiled, new RegExp(`${base}/img/masest-logo(?:-ink)?\\.png`));
-  assert.match(compiled, /src="\/img\/masest-logo\.png"/);
-  assert.match(compiled, /src="\/img\/masest-logo-ink\.png"/);
+  assert.match(compiled, new RegExp(`${base}/img/masest-logo\\.png`));
+  assert.match(compiled, new RegExp(`${base}/img/masest-logo-ink\\.png`));
+  assert.doesNotMatch(compiled, /src="\/img\/masest-logo(?:-ink)?\.png"/);
 });
 
 test("managed content images have one R2 URL owner and preserve legacy object paths", () => {
@@ -250,6 +299,10 @@ test("image-library builder validates its ledger and verifies public CMS bytes",
   assert.doesNotMatch(builder, /SUPABASE_SERVICE_ROLE_KEY|x-upsert|--sync-cms/);
   assert.match(builder, /SITE_MEDIA_BASE/);
   assert.match(compiler, /SITE_MEDIA_BASE/);
+  assert.match(compiler, /unresolvedLocalImageReferences/);
+  assert.match(compiler, /if \(\/\^\\\/img\\\/\/i\.test\(logical\)\) unresolved\.add\(logical\)/);
+  assert.doesNotMatch(compiler, /test\(logical\)\s*&&\s*existsSync/);
+  assert.match(compiler, /\^img\\\//, "Pages artifact must not copy image binaries after R2 compilation");
   assert.doesNotMatch(builder + compiler, /MASEST_SUPABASE_URL|storage\/v1\/object\/public\/content-assets\/site/);
 });
 

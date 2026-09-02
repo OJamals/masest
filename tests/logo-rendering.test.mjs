@@ -36,7 +36,7 @@ function referencedLogoPaths() {
   return [...paths].sort();
 }
 
-test("every referenced MASEST logo has a local source fallback", () => {
+test("every referenced MASEST logo has a local source and an R2 ledger entry", () => {
   assert.deepEqual(referencedLogoPaths(), [...EXPECTED_LOGOS].sort());
   const manifest = JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8"));
   const cmsPaths = new Set(manifest.assets.map((asset) => asset.public_url));
@@ -45,7 +45,7 @@ test("every referenced MASEST logo has a local source fallback", () => {
     const file = new URL(`..${publicPath}`, import.meta.url);
     assert.equal(existsSync(file), true, `${publicPath} should exist for raw static rendering`);
     assert.ok(statSync(file).size > 0, `${publicPath} should not be empty`);
-    assert.equal(cmsPaths.has(publicPath), false, `${publicPath} should remain outside the CMS image library`);
+    assert.equal(cmsPaths.has(publicPath), true, `${publicPath} should compile to R2 for published delivery`);
   }
 });
 

@@ -1,9 +1,9 @@
 /*
  * MASEST landing story
- * Four direct cleaner-selection steps. One persistent visual object.
+ * Six true before/after results. One persistent comparison object.
  * Desktop: scroll-scrubbed GSAP story.
  * Compact: sticky object + IntersectionObserver chapter reveals.
- * Reduced motion / no library / no JS: complete static document.
+ * Reduced motion / no library / no JS: complete readable document.
  */
 
 .story {
@@ -240,8 +240,8 @@
 }
 
 /*
- * Persistent story object. Its negative bottom margin lets all four acts pass
- * behind the same DOM node instead of swapping unrelated scene illustrations.
+ * Persistent story object. Its negative bottom margin lets all six acts pass
+ * behind one comparison control while its R2-backed image pair changes.
  */
 .story-object {
   position: sticky;
@@ -282,9 +282,15 @@
 }
 
 .story-object__media {
+  --story-reveal: 8%;
+  --story-before-position: 50% 50%;
+  --story-before-scale: 1;
+  --story-after-position: 50% 50%;
+  --story-after-scale: 1;
+  --story-after-rotate: 0deg;
   position: relative;
   overflow: hidden;
-  aspect-ratio: 1.42 / 1;
+  aspect-ratio: 1.18 / 1;
   min-height: 0;
   background: #101416;
 }
@@ -301,25 +307,30 @@
 .story-object__before,
 .story-object__after img {
   object-fit: cover;
+  transition: opacity .18s var(--ease-out);
 }
 
 .story-object__before {
-  object-position: center 54%;
+  object-position: var(--story-before-position);
+  transform: scale(var(--story-before-scale));
 }
 
 .story-object__after {
   z-index: 2;
   overflow: hidden;
-  opacity: 0;
-  transition: opacity .85s var(--ease-out);
-  will-change: opacity;
+  clip-path: inset(0 0 0 calc(100% - var(--story-reveal)));
+  transition: clip-path .14s linear;
+  will-change: clip-path;
 }
 
-.story[data-active-scene="switch"] .story-object__after { opacity: .08; }
-.story[data-active-scene="prove"] .story-object__after { opacity: 1; }
-
 .story-object__after img {
-  object-position: 52% 51%;
+  object-position: var(--story-after-position);
+  transform: rotate(var(--story-after-rotate)) scale(var(--story-after-scale));
+}
+
+.story-object__card.is-swapping .story-object__before,
+.story-object__card.is-swapping .story-object__after img {
+  opacity: .34;
 }
 
 .story-object__media::after {
@@ -333,8 +344,43 @@
     linear-gradient(to right, rgba(5, 9, 10, .12), transparent 24%);
 }
 
+.story-object__label {
+  position: absolute;
+  top: 12px;
+  z-index: 7;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: #fff;
+  background: rgba(7, 11, 12, .8);
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  transition: opacity .35s var(--ease-out);
+}
+
+.story-object__label--before {
+  left: 12px;
+}
+
+.story-object__label--after {
+  right: 12px;
+  opacity: 1;
+}
+
 .story-object__divider {
-  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--story-reveal);
+  z-index: 6;
+  width: 2px;
+  opacity: .92;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .18);
+  transform: translateX(-1px);
+  transition: left .14s linear;
 }
 
 .story-object__scan {
@@ -395,19 +441,19 @@
   box-shadow: 0 0 0 3px rgba(226, 165, 99, .16);
 }
 
-.story-object__target--rust {
+.story-object__target--film {
   top: 24%;
   left: 17%;
 }
 
-.story-object__target--scale {
+.story-object__target--channels {
   right: 14%;
   bottom: 25%;
 }
 
 .story-object__status {
   position: absolute;
-  bottom: 14px;
+  bottom: 52px;
   left: 14px;
   z-index: 7;
   display: inline-flex;
@@ -423,6 +469,65 @@
   font-weight: 700;
   letter-spacing: .05em;
   text-transform: uppercase;
+}
+
+.story-object__range {
+  appearance: none;
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  left: 12px;
+  z-index: 9;
+  width: calc(100% - 24px);
+  height: 38px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+
+.story-object__range::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .62);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .44);
+}
+
+.story-object__range::-webkit-slider-thumb {
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  margin-top: -15px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background:
+    linear-gradient(90deg, transparent 44%, #0e1719 44% 48%, transparent 48% 52%, #0e1719 52% 56%, transparent 56%),
+    var(--story-accent-strong);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .42);
+}
+
+.story-object__range::-moz-range-track {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .62);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .44);
+}
+
+.story-object__range::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--story-accent-strong);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .42);
+}
+
+.story-object__range:focus-visible {
+  outline: 3px solid var(--story-accent-strong);
+  outline-offset: 3px;
 }
 
 .story-object__status::before {
@@ -476,33 +581,29 @@
   align-items: center;
   justify-content: flex-end;
   gap: 9px;
-  opacity: 0;
-  transform: translateX(12px);
+  opacity: 1;
+  transform: none;
   transition:
     opacity .45s var(--ease-out),
     transform .45s var(--ease-out);
-}
-
-.story[data-active-scene="switch"] .story-object__product,
-.story[data-active-scene="prove"] .story-object__product {
-  opacity: 1;
-  transform: none;
 }
 
 .story-object__product img {
   width: 28px;
   height: 42px;
   border-radius: 3px;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   box-shadow: 0 5px 15px rgba(0, 0, 0, .25);
 }
 
-/* Four deliberate scroll chapters: 125 + 120 + 115 + 120 = 480vh. */
-.story .act[data-act="1"] { height: 125vh; }
-.story .act[data-act="2"] { height: 120vh; }
-.story .act[data-act="3"] { height: 115vh; }
-.story .act[data-act="4"] { height: 120vh; }
+/* Six deliberate scroll chapters; each pair gets a full reveal interval. */
+.story .act[data-act="1"] { height: 118vh; }
+.story .act[data-act="2"] { height: 110vh; }
+.story .act[data-act="3"] { height: 110vh; }
+.story .act[data-act="4"] { height: 110vh; }
+.story .act[data-act="5"] { height: 110vh; }
+.story .act[data-act="6"] { height: 118vh; }
 
 .story .act {
   position: relative;
@@ -807,6 +908,20 @@
 .story:not(.story-ready) [data-at] {
   opacity: 1;
   transform: none;
+}
+
+/* Missing JS/library fallback: show both source frames instead of freezing on one. */
+.story:not(.story-ready):not(.story-mobile-ready) .story-object__after {
+  --story-reveal: 50%;
+}
+
+.story:not(.story-ready):not(.story-mobile-ready) .story-object__divider {
+  left: 50%;
+  opacity: .9;
+}
+
+.story:not(.story-ready):not(.story-mobile-ready) .story-object__label {
+  opacity: 1;
 }
 
 /* Static summary: visible by design, not an accessibility-only duplicate. */
@@ -1188,7 +1303,21 @@
   }
 
   .story-object__media {
-    aspect-ratio: 2.75 / 1;
+    aspect-ratio: 2.05 / 1;
+  }
+
+  .story-object__label {
+    top: 8px;
+    padding: 4px 7px;
+    font-size: .5rem;
+  }
+
+  .story-object__label--before {
+    left: 8px;
+  }
+
+  .story-object__label--after {
+    right: 8px;
   }
 
   .story-object__target {
@@ -1196,22 +1325,26 @@
     font-size: .56rem;
   }
 
-  .story-object__target--rust {
+  .story-object__target--film {
     top: 18%;
     left: 11%;
   }
 
-  .story-object__target--scale {
+  .story-object__target--channels {
     right: 9%;
     bottom: 18%;
   }
 
   .story-object__status {
-    bottom: 9px;
+    bottom: 47px;
     left: 9px;
+    max-width: calc(100% - 18px);
     min-height: 22px;
     padding: 4px 8px;
+    overflow: hidden;
     font-size: .53rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .story-object__footer {
@@ -1252,7 +1385,8 @@
   }
 
   .story-mobile-ready .stage {
-    padding-top: clamp(150px, 47vw, 310px);
+    /* Reserve sticky card height plus a readable gap across phone and iPad widths. */
+    padding-top: calc(48.8vw + 132px);
   }
 
   .act-content {
@@ -1498,7 +1632,7 @@
     padding-inline: 16px;
   }
 
-  .story-object__target--scale {
+  .story-object__target--channels {
     display: none;
   }
 
@@ -1558,13 +1692,17 @@
   }
 
   .story-object__after {
-    opacity: 1;
+    --story-reveal: 50%;
   }
 
-  .story-object__divider,
   .story-object__scan,
   .story-object__target {
     display: none;
+  }
+
+  .story-object__divider {
+    left: 50%;
+    opacity: .9;
   }
 
   .story-object__product {

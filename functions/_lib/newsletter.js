@@ -13,7 +13,12 @@ export { renderNewsletterBody };
 export function renderNewsletterEmail(newsletter = {}) {
   const subject = String(newsletter.subject || 'The VertKleen Briefing').slice(0, 180);
   const bodyHtml = renderNewsletterBody(newsletter.body_md);
-  const html = emailLayout({ heading: htmlEscape(subject), bodyHtml });
+  const html = emailLayout({
+    stream: 'marketing',
+    heading: htmlEscape(subject),
+    preheader: subject,
+    bodyHtml,
+  });
   return { subject, html };
 }
 

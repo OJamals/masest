@@ -28,6 +28,14 @@ test('POST one-click with a valid token confirms the unsubscribe', async () => {
   assert.match(await res.text(), /unsubscribed/i);
 });
 
+test('unsubscribe endpoint syncs marketing opt-out to local suppression + Klaviyo', () => {
+  const src = new URL('../functions/api/email/unsubscribe.js', import.meta.url);
+  return import('node:fs/promises').then(({ readFile }) => readFile(src, 'utf8')).then((body) => {
+    assert.match(body, /recordSuppression\(env, email, 'unsubscribe', 'marketing'\)/);
+    assert.match(body, /klaviyoUnsubscribe\(env, email, env\.KLAVIYO_LIST_ID/);
+  });
+});
+
 test('POST rejects a token bound to a different email (no arbitrary suppression)', async () => {
   const tok = await unsubscribeToken('a@b.co', env.EMAIL_UNSUB_SECRET);
   const res = await onRequestPost({ request: req('attacker@evil.co', tok, 'POST'), env });

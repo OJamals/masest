@@ -1,9 +1,18 @@
 // Blog newsletter: render the "new post" email + pure helpers for the send sweep.
-// Sending itself goes through _lib/supabase.js sendEmail (per-recipient), which
-// handles suppression, per-recipient List-Unsubscribe, and email_event logging.
+// Klaviyo owns consent, suppression, unsubscribe state, fanout, and delivery.
 import { emailLayout, htmlEscape } from './supabase.js';
 
 const BASE = 'https://masest.co';
+const MEDIA_BASE = 'https://media.masest.co/site';
+
+function mediaUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^https:\/\/media\.masest\.co\//i.test(raw)) return raw;
+  const local = raw.replace(/^https?:\/\/(?:www\.)?masest\.co\//i, '').replace(/^\/+/, '');
+  if (/^https?:\/\//i.test(local)) return '';
+  return `${MEDIA_BASE}/${local}`;
+}
 
 // Normalize a published content_entries blog_post row into a flat post object.
 export function postFromEntry(row = {}) {
@@ -36,9 +45,9 @@ export function renderBlogEmail(post = {}) {
   const author = String(post.author || '');
   const date = String(post.date || '');
   const url = `${BASE}/blog/${slug}`;
-  const heroPath = String(post.hero || '').replace(/^\/+/, '');
-  const hero = heroPath
-    ? `<img src="${htmlEscape(`${BASE}/${heroPath}`)}" alt="${htmlEscape(post.hero_alt || title)}" width="524" style="width:100%;max-width:524px;height:auto;border-radius:10px;margin:0 0 18px;display:block">`
+  const heroUrl = mediaUrl(post.hero);
+  const hero = heroUrl
+    ? `<img src="${htmlEscape(heroUrl)}" alt="${htmlEscape(post.hero_alt || title)}" width="524" style="width:100%;max-width:524px;height:auto;border-radius:10px;margin:0 0 18px;display:block">`
     : '';
   const eyebrow = category
     ? `<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#0e7c86;font-weight:700;margin:0 0 6px">${htmlEscape(category)}</div>`
@@ -48,7 +57,9 @@ export function renderBlogEmail(post = {}) {
     + `${byline ? `<div style="color:#667;font-size:13px;margin:0 0 14px">${byline}</div>` : ''}`
     + `<p style="margin:0 0 8px">${htmlEscape(excerpt)}</p>`;
   const html = emailLayout({
+    stream: 'marketing',
     heading: htmlEscape(title),
+    preheader: excerpt || title,
     bodyHtml,
     ctaText: 'Read the full post',
     ctaUrl: url,

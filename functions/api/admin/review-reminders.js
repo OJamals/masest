@@ -1,6 +1,8 @@
 // functions/api/admin/review-reminders.js — secret-guarded post-delivery review nudge.
 // Secret-gated automation-only route; no staff session required.
-import { adminClient, json, readBody, sendEmail } from '../../_lib/supabase.js';
+import { adminClient, emailLayout, htmlEscape, json, readBody } from '../../_lib/supabase.js';
+import { htmlToText } from '../../_lib/email.js';
+import { queueMarketingEmail } from '../../_lib/marketing-email.js';
 import { reviewToken, REMINDER_DELAY_DAYS } from '../../_lib/reviews.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
@@ -51,7 +53,7 @@ export async function onRequestPost({ request, env }) {
       .limit(batch);
     if (error) return json(500, { error: 'load_failed' });
 
-    let sent = 0;
+    let queued = 0;
     const secret = reviewSecret(env);
     for (const o of orders || []) {
       const email = String(o.customer_email || '').toLowerCase();
@@ -66,19 +68,33 @@ export async function onRequestPost({ request, env }) {
           url: `${appUrl}/review.html?order=${enc(o.id)}&sku=${enc(item.sku)}&email=${enc(email)}&token=${tok}`,
         });
       }
-      // Stamp first so a send failure or suppression never re-queues this order.
-      await sb.from('orders').update({ review_reminded_at: new Date().toISOString() }).eq('id', o.id);
-      if (!links.length) continue;
-      // sendEmail() resolves a boolean (r.ok / false), not a { ok } object — verified
-      // against _lib/supabase.js.
-      const ok = await sendEmail(env, {
-        to: [email], subject: 'How did your MASEST order work out?',
-        html: reminderHtml(links), category: 'review_request',
-        idempotencyKey: `review-reminder:${o.id}`,
+      if (!links.length) {
+        await sb.from('orders').update({ review_reminded_at: new Date().toISOString() }).eq('id', o.id);
+        continue;
+      }
+      const subject = 'How did your MASEST order work out?';
+      const html = emailLayout({
+        stream: 'marketing',
+        heading: 'How did your order work out?',
+        preheader: 'Share a quick VertKleen product review.',
+        bodyHtml: reminderHtml(links),
+        ctaText: links.length === 1 ? `Review ${htmlEscape(links[0].name)}` : undefined,
+        ctaUrl: links.length === 1 ? links[0].url : undefined,
       });
-      if (ok) sent += 1;
+      const delivery = await queueMarketingEmail(env, {
+        category: 'review_request',
+        email,
+        subject,
+        html,
+        text: htmlToText(html),
+        idempotencyKey: `review-reminder:${o.id}`,
+        properties: { order_id: o.id, review_links: links },
+      });
+      if (!delivery.ok) continue;
+      await sb.from('orders').update({ review_reminded_at: new Date().toISOString() }).eq('id', o.id);
+      queued += 1;
     }
     run.processed = (orders || []).length;
-    return json(200, { ok: true, processed: (orders || []).length, sent });
+    return json(200, { ok: true, processed: (orders || []).length, queued });
   });
 }

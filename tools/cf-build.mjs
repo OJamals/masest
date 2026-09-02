@@ -7,7 +7,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 
-import { SITE_MEDIA_BASE, rewriteCmsImageReferences } from '../js/image-url.js';
+import { canonicalPublicImageUrl, SITE_MEDIA_BASE, rewriteCmsImageReferences } from '../js/image-url.js';
 import { renderIndustryRedirects } from './build-industry-pages.mjs';
 import { validatePublicDocumentReview } from './public-document-policy.mjs';
 
@@ -21,11 +21,24 @@ const siteImagePaths = (siteImageManifest.assets || []).map((asset) => asset.pub
 const configuredMediaBase = String(process.env.CMS_MEDIA_BASE || '').trim().replace(/\/+$/, '');
 const cmsMediaBase = configuredMediaBase || SITE_MEDIA_BASE;
 const rewritableExtensions = new Set(['.css', '.html', '.js', '.json', '.xml']);
+const LOCAL_SITE_IMAGE_PATTERN = /https?:\/\/(?:www\.)?masest\.co\/img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)|(?<![a-z0-9_./-])(?:(?:\.\.\/)+|\.\/|\/)?img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)/gi;
 const CRITICAL_FONT_PRELOAD = '<link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/satoshi/satoshi-01.woff2">';
 
 function ensureCriticalFontPreload(html) {
   if (/rel=["']preload["'][^>]+satoshi-01\.woff2/i.test(html)) return html;
   return html.replace(/<head(\s[^>]*)?>/i, (head) => `${head}\n${CRITICAL_FONT_PRELOAD}`);
+}
+
+function unresolvedLocalImageReferences(content) {
+  const unresolved = new Set();
+  for (const match of String(content || '').matchAll(LOCAL_SITE_IMAGE_PATTERN)) {
+    const raw = match[0];
+    const logical = /^https?:/i.test(raw)
+      ? new URL(raw).pathname
+      : canonicalPublicImageUrl(raw);
+    if (/^\/img\//i.test(logical)) unresolved.add(logical);
+  }
+  return [...unresolved].sort();
 }
 
 // Anything matching a deny pattern is kept out of the published static root.
@@ -41,8 +54,8 @@ const DENY = [
   /^data\/update-media-review\.json$/,
   /^data\/update-bundle-review\.json$/,
   /^data\/industry-applications\.json$/,
-  /^img\/clients\//,
-  /^img\/proof\/carib-brewery-table\.webp$/i,
+  // Image binaries remain local source assets, but Pages delivers every published image from R2.
+  /^img\//,
   // Internal catalog and pricing sources — never public client assets.
   /^data\/(catalog|products)\.seed\.json$/,
   /^data\/vertkleen-website-publish-2026-v4\.1\.json$/,
@@ -65,6 +78,10 @@ for (const f of files) {
     const source = readFileSync(f, 'utf8');
     let compiled = rewriteCmsImageReferences(source, siteImagePaths, cmsMediaBase);
     if (extname(f).toLowerCase() === '.html') compiled = ensureCriticalFontPreload(compiled);
+    const unresolvedImages = unresolvedLocalImageReferences(compiled);
+    if (unresolvedImages.length) {
+      throw new Error(`cf-build: ${f} has image references missing from data/content/site-images.json: ${unresolvedImages.join(', ')}`);
+    }
     writeFileSync(dest, compiled);
     if (compiled !== source) rewritten++;
   } else {

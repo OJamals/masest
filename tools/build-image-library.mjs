@@ -11,6 +11,7 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const MANIFEST_PATH = resolve(ROOT, "data/content/site-images.json");
 const MIME_TYPES = new Map([
   [".png", "image/png"],
+  [".svg", "image/svg+xml"],
   [".webp", "image/webp"],
 ]);
 
@@ -28,7 +29,7 @@ export function validateManifest(manifest) {
     const path = String(asset?.storage_path || "");
     const extension = path.slice(path.lastIndexOf(".")).toLowerCase();
 
-    invariant(/^\/img\/[^?#]+\.(?:png|webp)$/.test(path), `${path || "(missing path)"} has an invalid storage path`);
+    invariant(/^\/img\/[^?#]+\.(?:png|svg|webp)$/.test(path), `${path || "(missing path)"} has an invalid storage path`);
     invariant(asset.public_url === path, `${path} must use the same stable public alias`);
     invariant(!paths.has(path), `${path} is duplicated`);
     invariant(asset.filename === path.split("/").at(-1), `${path} has the wrong filename`);

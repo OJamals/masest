@@ -11,6 +11,7 @@ import {
 } from './commerce-context.js';
 
 export { CommerceContextError } from './commerce-context.js';
+export { emailLayout } from './email-template.js';
 
 // Service-role client — bypasses RLS. SERVER ONLY. Never return its key or use client-side.
 export function adminClient(env) {
@@ -178,18 +179,19 @@ export async function allUserEmails(sb, { pageSize = 1000, maxPages = 100, stric
   return out;
 }
 
-// Notification preference columns (#19). category → profiles boolean column.
+// Optional notification preferences. Required transactional mail has no opt-out.
 const NOTIFY_PREF_COLUMN = {
-  orders: 'notify_orders',
-  offers: 'notify_offers',
+  offers: 'marketing_email_enabled',
   messages: 'notify_messages',
 };
+
+const EDITABLE_EMAIL_PREFS = ['marketing_email_enabled', 'notify_messages'];
 
 // Keep only the known boolean preference flags from an arbitrary patch body.
 export function sanitizeNotificationPrefs(body) {
   const out = {};
   const src = body || {};
-  for (const col of Object.values(NOTIFY_PREF_COLUMN)) {
+  for (const col of EDITABLE_EMAIL_PREFS) {
     if (typeof src[col] === 'boolean') out[col] = src[col];
   }
   return out;
@@ -266,6 +268,19 @@ export async function recordSuppression(env, email, reason, stream = 'all') {
     await adminClient(env).from('email_suppressions')
       .upsert({ email: String(email).toLowerCase(), reason, stream }, { onConflict: 'email,stream' });
   } catch { /* advisory */ }
+}
+
+// Remove only one explicit suppression stream. Used when an authenticated user opts
+// marketing back in; hard bounce/complaint rows ('all') are never cleared here.
+export async function clearSuppression(env, email, stream = 'marketing') {
+  if (!email || stream === 'all') return false;
+  try {
+    const { error } = await adminClient(env).from('email_suppressions')
+      .delete().eq('email', String(email).trim().toLowerCase()).eq('stream', stream);
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 async function emailIdempotencyKey(value) {
@@ -378,45 +393,6 @@ export async function sendEmailResult(env, {
 
 export async function sendEmail(env, options) {
   return (await sendEmailResult(env, options)).ok;
-}
-
-// Shared branded email shell. Callers pass already-escaped/safe heading + bodyHtml
-// (escape user input with htmlEscape first). Matches the order-confirmation design.
-function safeEmailHref(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  if (raw.startsWith('/')) return htmlEscape(raw);
-  try {
-    const url = new URL(raw);
-    if (url.protocol === 'https:' || url.protocol === 'http:' || url.protocol === 'mailto:') return htmlEscape(url.toString());
-  } catch {
-    return '';
-  }
-  return '';
-}
-
-export function emailLayout({ heading = '', bodyHtml = '', ctaText, ctaUrl } = {}) {
-  const href = safeEmailHref(ctaUrl);
-  const cta = ctaText && href
-    ? `<div style="margin:24px 0 0"><a href="${href}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">${htmlEscape(ctaText)}</a></div>`
-    : '';
-  return `
-  <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
-    <div style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
-      <div style="background:#0e7c86;padding:20px 28px">
-        <span style="color:#fff;font-size:18px;font-weight:800;letter-spacing:.04em">MASEST &middot; VertKleen</span>
-      </div>
-      <div style="padding:28px;color:#223;font-size:15px;line-height:1.55">
-        ${heading ? `<h1 style="margin:0 0 14px;font-size:20px;color:#15171c">${heading}</h1>` : ''}
-        ${bodyHtml}
-        ${cta}
-      </div>
-      <div style="background:#0b0d12;padding:18px 28px;color:#8a93a0;font-size:11px;line-height:1.7">
-        MASEST &middot; VertKleen industrial &amp; HVAC chemistry<br>
-        <a href="mailto:matthew@masest.co" style="color:#8a93a0">matthew@masest.co</a> &middot; (813) 406-3852
-      </div>
-    </div>
-  </div>`;
 }
 
 // Minimal HTML escape for interpolating user/staff text into email bodies.

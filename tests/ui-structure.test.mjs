@@ -340,50 +340,56 @@ test("about page routes buyers before service breadth", () => {
   assert.match(css, /\.about-services-disclosure summary b[\s\S]*white-space: normal/);
 });
 
-test("scrolly close proves one field result around the persistent equipment object", () => {
+test("scrolly close proves the pool-cartridge result around the persistent comparator", () => {
   const home = read("index.html");
   const story = read("js/story.js");
-  const proofAct = home.match(/<section class="act" id="story-scene-4"[\s\S]*?<\/section>/)?.[0] || "";
+  const proofAct = home.match(/<section class="act" id="story-scene-6"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.ok(proofAct, "expected final proof scene");
   assert.match(home, /class="story-object"/);
   assert.match(proofAct, /class="proof-stats"/);
-  assert.match(proofAct, /30 minutes/);
-  assert.match(proofAct, /Garden hose/);
-  assert.match(proofAct, /No scrubbing/);
-  assert.match(proofAct, /blog\/hcr-brevard-hvac-rust-case-study/);
+  assert.match(proofAct, /45&deg; turn/);
+  assert.match(proofAct, /Same media/);
+  assert.match(proofAct, /VertKleen HCR/);
+  assert.match(proofAct, /docs\/sds\/vertkleen-hcr-pool-filter\.pdf/);
   assert.doesNotMatch(proofAct, /class="ledger-row"/);
   assert.doesNotMatch(proofAct, /story-deferred-img|data-story-src/);
   assert.doesNotMatch(home, /<link rel="preload" as="image" href="img\/field\//);
   assert.doesNotMatch(story, /prewarmSaviorProofImages|data-story-src/);
 });
 
-test("scrolly cleaner guide uses four named scenes", () => {
+test("scrolly field story uses six named scenes", () => {
   const index = read("index.html");
 
-  assert.match(index, /data-active-scene="diagnose"/);
-  assert.match(index, /id="story-scene-1" data-act="1" data-scene="diagnose"/);
-  assert.match(index, /id="story-scene-2" data-act="2" data-scene="burden"/);
-  assert.match(index, /id="story-scene-3" data-act="3" data-scene="switch"/);
-  assert.match(index, /id="story-scene-4" data-act="4" data-scene="prove"/);
-  assert.equal((index.match(/<section class="act"/g) || []).length, 4);
-  assert.doesNotMatch(index, /data-act="5"/);
-  assert.equal((index.match(/class="rail-btn"/g) || []).length, 4);
+  assert.match(index, /data-active-scene="kitchen-grease"/);
+  for (const [act, scene] of [
+    [1, "kitchen-grease"],
+    [2, "cip-vessel"],
+    [3, "labelle-fermenter"],
+    [4, "shower-track"],
+    [5, "airboat-panel"],
+    [6, "pool-cartridge"],
+  ]) {
+    assert.match(index, new RegExp(`id="story-scene-${act}" data-act="${act}" data-scene="${scene}"`));
+  }
+  assert.equal((index.match(/<section class="act"/g) || []).length, 6);
+  assert.doesNotMatch(index, /data-act="7"/);
+  assert.equal((index.match(/class="rail-btn"/g) || []).length, 6);
 });
 
-test("scrolly chapter rail provides four direct chapter links", () => {
+test("scrolly chapter rail provides six direct result links", () => {
   const index = read("index.html");
   const rail = index.match(/<nav class="story-rail"[\s\S]*?<\/nav>/)?.[0] || "";
 
   assert.ok(rail, "expected story rail markup");
-  assert.match(rail, /aria-label="Cleaner selection steps"/);
+  assert.match(rail, /aria-label="Before and after field results"/);
   assert.match(rail, /href="#story-scene-1" aria-current="step"/);
-  for (const scene of [1, 2, 3, 4]) assert.match(rail, new RegExp(`href="#story-scene-${scene}"`));
+  for (const scene of [1, 2, 3, 4, 5, 6]) assert.match(rail, new RegExp(`href="#story-scene-${scene}"`));
   assert.doesNotMatch(rail, /aria-hidden="true"/);
-  assert.equal((rail.match(/class="rail-btn"/g) || []).length, 4);
+  assert.equal((rail.match(/class="rail-btn"/g) || []).length, 6);
 });
 
-test("scrolly story exposes a visible skip target and four-step summary", () => {
+test("scrolly story exposes a visible skip target and six-result summary", () => {
   const index = read("index.html");
   const summary = index.match(/<section class="story-summary"[\s\S]*?<\/section>/)?.[0] || "";
 
@@ -392,62 +398,63 @@ test("scrolly story exposes a visible skip target and four-step summary", () => 
   assert.doesNotMatch(summary, /\bsr-only\b/);
   assert.match(summary, /aria-labelledby="storySummaryTitle"/);
   assert.match(summary, /id="storySummaryTitle"/);
-  assert.match(summary, /<b>Diagnose\.<\/b>/);
-  assert.match(summary, /<b>Measure the burden\.<\/b>/);
-  assert.match(summary, /<b>Match the cleaner\.<\/b>/);
-  assert.match(summary, /<b>Prove the result\.<\/b>/);
+  for (const label of ["Kitchen grease", "CIP vessel", "Fermenter ring", "Shower track", "Airboat panel", "Pool cartridge"]) {
+    assert.match(summary, new RegExp(`<b>${label}\\.<\\/b>`));
+  }
+  assert.equal((summary.match(/<li>/g) || []).length, 6);
 });
 
-test("scrolly opener diagnoses the exact job and exposes immediate actions", () => {
+test("scrolly opener shows the exact kitchen pair and immediate CRHD actions", () => {
   const index = read("index.html");
   const storyCss = read("css/story.css");
   const actOne = index.match(/<section class="act" id="story-scene-1"[\s\S]*?<\/section>/)?.[0] || "";
   const actOneCopy = actOne.replace(/<[^>]+>/g, "");
 
-  assert.match(actOneCopy, /Show us the mess/);
-  assert.match(actOneCopy, /rust and mineral buildup/);
+  assert.match(actOneCopy, /Baked-on grease\. Bare stainless after/);
+  assert.match(actOneCopy, /same kitchen-line surface before and after cleaning/i);
   assert.match(actOne, /class="story-evidence"/);
-  assert.match(actOneCopy, /Compare the same surface/);
-  assert.match(actOne, /aria-label="Shop VertKleen HCR"/);
-  assert.match(actOne, /aria-label="Try VertKleen HCR on my cleaning job"/);
+  assert.match(actOneCopy, /Follow the lower seam and the grease line/);
+  assert.match(actOne, /aria-label="Shop VertKleen CRHD"/);
+  assert.match(actOne, /href="proof#commercial-kitchen-crhd"/);
   assert.match(storyCss, /\.story-evidence/);
 });
 
-test("scrolly burden scene and persistent object keep field condition labels readable", () => {
+test("scrolly vessel scene and persistent comparator keep condition labels readable", () => {
   const index = read("index.html");
   const storyCss = read("css/story.css");
   const actTwo = index.match(/<section class="act" id="story-scene-2"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.match(index, /story-object__target--rust[^>]*>[\s\S]*Rust/);
-  assert.match(index, /story-object__target--scale[^>]*>[\s\S]*Mineral buildup/);
-  assert.match(actTwo, /class="burden-chain"/);
-  assert.match(actTwo, /36 hours/);
-  assert.match(actTwo, /Rust remained/);
-  assert.match(actTwo, /More work/);
-  assert.match(storyCss, /\.burden-chain/);
-  assert.match(storyCss, /@media \(max-width: 760px\)[\s\S]*\.burden-chain/);
+  assert.match(index, /story-object__label--before[^>]*>Before/);
+  assert.match(index, /story-object__label--after[^>]*>After/);
+  assert.match(index, /class="story-object__range" type="range"/);
+  assert.match(actTwo, /class="proof-stats"/);
+  assert.match(actTwo, /Same vessel/);
+  assert.match(actTwo, /CR clean/);
+  assert.match(actTwo, /Steel finish/);
+  assert.match(storyCss, /\.story-object__range/);
+  assert.match(storyCss, /@media \(max-width: 760px\)[\s\S]*\.story-object__media/);
 });
 
 test("scrolly story state remains available to responsive chrome", () => {
   const storyJs = read("js/story.js");
   const storyCss = read("css/story.css");
 
-  assert.match(storyJs, /story\.dataset\.activeScene = st\.sceneDef\.id/);
+  assert.match(storyJs, /story\.dataset\.activeScene = st\.config\.id/);
   assert.match(storyJs, /story-in-view/);
   assert.doesNotMatch(storyCss, /crisp-client|crisp-chatbox/);
 });
 
-test("scrolly act 3 makes one product switch and defers full comparison below", () => {
+test("scrolly act 3 shows an aligned fermenter result and defers full comparison below", () => {
   const index = read("index.html");
   const actThree = index.match(/<section class="act" id="story-scene-3"[\s\S]*?<\/section>/)?.[0] || "";
   const guide = index.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
 
   assert.ok(actThree, "expected act three scrolly section");
   assert.ok(guide, "expected deferred full cleaner comparison");
-  assert.match(actThree, /class="switch-card"/);
-  assert.match(actThree, /Instead of[\s\S]*<b>CLR<\/b>/);
-  assert.match(actThree, />Test<\/span>[\s\S]*<b>VertKleen HCR<\/b>/);
-  assert.match(actThree, /href="#compareAllCleaners"/);
+  assert.match(actThree, /data-product-name="VertKleen CR"/);
+  assert.match(actThree, /class="story-evidence"/);
+  assert.match(actThree, /vessel curve and port remain fixed/i);
+  assert.match(actThree, /href="proof#brewery-cip-trials"/);
   assert.doesNotMatch(actThree, /class="ledger-row"/);
   assert.match(guide, /class="replacement-ledger"/);
   assert.equal((guide.match(/class="ledger-row"/g) || []).length, 4);
@@ -515,20 +522,20 @@ assert.match(cartJs, /cart:updated/);
 assert.match(cartJs, /safeReadCart/);
 });
 
-test("scrolly Scene 2 uses a compact cause-and-cost burden chain", () => {
+test("scrolly Scene 2 uses compact vessel-result evidence", () => {
   const home = read("index.html");
   const storyJs = read("js/story.js");
   const storyCss = read("css/story.css");
 
   const actTwo = home.match(/<section class="act" id="story-scene-2"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.match(actTwo, /class="burden-chain"/);
-  assert.match(actTwo, /Thirty-six cleaning hours, rust still present, and more work needed to finish/);
-  assert.equal((actTwo.match(/ph-arrow-right/g) || []).length, 2);
+  assert.match(actTwo, /class="proof-stats"/);
+  assert.match(actTwo, /Matched vessel interiors show the residue field before CR/);
+  assert.equal((actTwo.match(/ph-arrow-right/g) || []).length, 1);
   assert.doesNotMatch(actTwo, /<svg|<canvas|pipe-diagram/);
-  assert.match(storyJs, /function renderBurden/);
-  assert.match(storyJs, /36 hours · rust still present/);
-  assert.match(storyCss, /\.burden-chain/);
+  assert.match(storyJs, /function sceneConfig/);
+  assert.match(storyJs, /function automaticReveal/);
+  assert.match(storyCss, /\.proof-stats/);
 });
 
 test("story homepage avoids the nav-injection + fallback-reflow CLS", () => {
@@ -549,14 +556,15 @@ test("story homepage avoids the nav-injection + fallback-reflow CLS", () => {
   assert.match(storyJs, /classList\.remove\("story-ready"\)/);
 });
 
-test("scrolly Scene 3 keeps matched-product HMIS copy readable", () => {
+test("scrolly Scene 3 keeps the matched fermenter pair and product readable", () => {
   const home = read("index.html");
   const scene = home.match(/<section class="act" id="story-scene-3"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.ok(scene, "expected Scene 3 product match");
-  assert.match(scene, /class="switch-card"/);
-  assert.match(scene, /aria-label="HMIS health 0, flammability 0, reactivity 0"/);
-  assert.match(scene, /HMIS 0&#8209;0&#8209;0/);
-  assert.match(scene, /apply, dwell, rinse, inspect/);
+  assert.ok(scene, "expected Scene 3 fermenter match");
+  assert.match(scene, /data-product-name="VertKleen CR"/);
+  assert.match(scene, /labelle-fermenter-before-202609\.webp/);
+  assert.match(scene, /labelle-fermenter-after-202609\.webp/);
+  assert.match(scene, /Geometry stays recognizable/);
+  assert.match(scene, /Drag across the ring/);
   assert.doesNotMatch(scene, /data-out/);
 });

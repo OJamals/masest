@@ -57,6 +57,6 @@ test('checkout keeps address rationale and mobile escape/trust cues', () => {
 });
 
 test('homepage keeps the field-job headline intact', () => {
-  assert.match(home, /<h1 class="act-h" id="storyAct1Title"[^>]*>Show us the mess\. We&rsquo;ll match the cleaner\.<\/h1>/);
-  assert.doesNotMatch(home, /Show us the mess[\s\S]{0,80}<br/);
+  assert.match(home, /<h1 class="act-h" id="storyAct1Title"[^>]*>Baked-on grease\. Bare stainless after\.<\/h1>/);
+  assert.doesNotMatch(home, /Baked-on grease[\s\S]{0,80}<br/);
 });

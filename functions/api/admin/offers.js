@@ -1,6 +1,8 @@
 // /api/admin/offers — staff broadcasts. GET → past sends · POST → in-app notification fan-out
 // (+ optional marketing email when a compliant marketing provider is configured).
-import { adminClient, requireStaff, json, readBody, emailLayout, sendEmailResult, htmlEscape, emailsByIds } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody, emailLayout, htmlEscape, emailsByIds } from '../../_lib/supabase.js';
+import { htmlToText } from '../../_lib/email.js';
+import { queueMarketingEmail } from '../../_lib/marketing-email.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 
 const AUDIENCES = ['all', 'approved', 'pending', 'company'];
@@ -28,9 +30,9 @@ async function targetCompanies(sb, audience, companyId) {
 
 async function memberEmails(sb, companyIds) {
   if (!companyIds.length) return [];
-  // Honour per-user offer opt-out (notify_offers === false).
-  const { data: profiles } = await sb.from('profiles').select('id,notify_offers').in('company_id', companyIds);
-  const ids = (profiles || []).filter((p) => p.notify_offers !== false).map((p) => p.id);
+  // Offers are marketing; only explicitly enabled recipients remain eligible.
+  const { data: profiles } = await sb.from('profiles').select('id,marketing_email_enabled').in('company_id', companyIds);
+  const ids = (profiles || []).filter((p) => p.marketing_email_enabled !== false).map((p) => p.id);
   if (!ids.length) return [];
   const byId = await emailsByIds(sb, ids);
   return [...new Set(Object.values(byId))];
@@ -68,42 +70,68 @@ export async function onRequest({ request, env }) {
       body: bodyText.slice(0, 1000) || null, link: ctaUrl || '/products.html',
     }))).then(() => {}, () => {});
 
-    let emailed = false;
+    const { data: offer } = await sb.from('offers').insert({
+      title, body: bodyText || null, cta_url: ctaUrl || null,
+      audience, company_id: audience === 'company' ? body.company_id : null,
+      created_by: user.email || null, recipients: companyIds.length, emailed: false,
+      email_provider: body.send_email ? 'klaviyo' : null,
+      email_status: body.send_email ? 'queueing' : 'not_requested',
+    }).select('id').single();
+
+    let emailQueued = 0;
+    let emailFailed = 0;
     let emailError = null;
     if (body.send_email) {
       const emails = await memberEmails(sb, companyIds);
       if (emails.length) {
         const html = emailLayout({
+          stream: 'marketing',
           heading: htmlEscape(title),
+          preheader: bodyText || title,
           bodyHtml: `<p>${htmlEscape(String(body.body || ''))}</p>`,
           ctaText: ctaUrl ? 'View' : undefined,
           ctaUrl: ctaUrl || undefined,
         });
-        const delivery = await sendEmailResult(env, {
-          to: emails.slice(0, 1),
-          bcc: emails.slice(1),
-          subject: title,
-          html,
-          category: 'offer',
-        });
-        emailed = delivery.ok === true;
-        emailError = emailed ? null : delivery.error || 'marketing_delivery_failed';
+        for (let offset = 0; offset < emails.length; offset += 5) {
+          const results = await Promise.all(emails.slice(offset, offset + 5).map((email) => queueMarketingEmail(env, {
+            category: 'offer',
+            email,
+            subject: title,
+            html,
+            text: htmlToText(html),
+            idempotencyKey: `offer/${offer?.id || 'unknown'}/${email}`,
+            properties: { offer_id: offer?.id || '', cta_url: ctaUrl || '', audience },
+          })));
+          emailQueued += results.filter((result) => result.ok).length;
+          emailFailed += results.filter((result) => !result.ok).length;
+          emailError ||= results.find((result) => !result.ok)?.error || null;
+        }
       } else {
         emailError = 'no_email_recipients';
       }
     }
 
-    const { data: offer } = await sb.from('offers').insert({
-      title, body: bodyText || null, cta_url: ctaUrl || null,
-      audience, company_id: audience === 'company' ? body.company_id : null,
-      created_by: user.email || null, recipients: companyIds.length, emailed,
-    }).select('id').single();
+    const emailStatus = !body.send_email ? 'not_requested'
+      : emailQueued && !emailFailed ? 'queued'
+        : emailQueued ? 'partially_queued'
+          : 'failed';
+    if (offer?.id) {
+      await sb.from('offers').update({
+        email_status: emailStatus,
+        email_queued_count: emailQueued,
+        email_failed_count: emailFailed,
+      }).eq('id', offer.id);
+    }
 
     return json(201, {
       ok: true,
       id: offer?.id,
       recipients: companyIds.length,
-      emailed,
+      emailed: false,
+      email_queued: emailQueued > 0,
+      email_queued_count: emailQueued,
+      email_failed_count: emailFailed,
+      email_status: emailStatus,
       email_error: emailError,
     });
   }

@@ -10,9 +10,9 @@ const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<sectio
 const summary = home.match(/<section class="story-summary"[^>]*id="storySummary"[\s\S]*?<\/section>/)?.[0] || "";
 const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
 
-test("four scenes expose coherent headings and region structure", () => {
-  assert.match(story, /role="region" aria-label="Choose a VertKleen cleaner in four steps"/);
-  for (let act = 1; act <= 4; act += 1) {
+test("six comparisons expose coherent headings and region structure", () => {
+  assert.match(story, /role="region" aria-label="Six VertKleen before and after field results"/);
+  for (let act = 1; act <= 6; act += 1) {
     assert.match(story, new RegExp(`<section class="act[^"]*"[^>]*id="story-scene-${act}"[^>]*data-act="${act}"[^>]*aria-labelledby="storyAct${act}Title"`));
     assert.match(story, new RegExp(`id="storyAct${act}Title"`));
   }
@@ -23,13 +23,13 @@ test("four scenes expose coherent headings and region structure", () => {
 test("story has a visible escape, meaningful chapter navigation, and persistent actions", () => {
   assert.match(story, /class="story-skip" href="#storySummary"/);
   assert.doesNotMatch(story, /story-skip[^>]*sr-only/);
-  assert.match(story, /<nav class="story-rail" aria-label="Cleaner selection steps">/);
-  for (let act = 1; act <= 4; act += 1) {
+  assert.match(story, /<nav class="story-rail" aria-label="Before and after field results">/);
+  for (let act = 1; act <= 6; act += 1) {
     assert.match(story, new RegExp(`class="rail-btn" href="#story-scene-${act}"`));
   }
-  assert.match(story, /<nav class="story-actions" aria-label="VertKleen HCR actions">/);
-  assert.match(story, /class="story-actions__shop" href="products\/hcr"/);
-  assert.match(story, /class="story-actions__trial" href="contact\?type=sample&amp;product=VertKleen%20HCR"/);
+  assert.match(story, /<nav class="story-actions" aria-label="Active VertKleen result actions">/);
+  assert.match(story, /class="story-actions__shop" href="products\/crhd"/);
+  assert.match(story, /class="story-actions__trial" href="contact\?type=sample&amp;product=VertKleen%20CRHD"/);
 });
 
 test("chapter rail avoids animated horizontal rules through labels", () => {
@@ -48,10 +48,10 @@ test("full comparison remains a semantic table and becomes complete stacked card
   assert.doesNotMatch(storyCss, /\.replacement-ledger\s*\{[^}]*min-width:\s*7\d\dpx/s);
 });
 
-test("visible summary matches the four visual scenes", () => {
+test("visible summary matches the six visual scenes", () => {
   assert.ok(summary, "expected visible story summary");
-  assert.equal((summary.match(/<li>/g) || []).length, 4);
-  for (const phrase of ["Diagnose", "Measure the burden", "Match the cleaner", "Prove the result"]) {
+  assert.equal((summary.match(/<li>/g) || []).length, 6);
+  for (const phrase of ["Kitchen grease", "CIP vessel", "Fermenter ring", "Shower track", "Airboat panel", "Pool cartridge"]) {
     assert.match(summary, new RegExp(phrase));
   }
 });
@@ -66,10 +66,14 @@ test("reduced-motion, missing-library, no-JS, and ordinary mobile expose complet
   assert.match(storyCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("actions, field proof, and media retain accessible names", () => {
-  assert.match(story, /aria-label="Shop VertKleen HCR"/);
-  assert.match(story, /aria-label="Try VertKleen HCR on my cleaning job"/);
-  assert.match(story, /class="story-object" aria-hidden="true"/);
+test("actions, field proof, and draggable comparison retain accessible names", () => {
+  assert.match(story, /aria-label="Shop VertKleen CRHD"/);
+  assert.match(story, /aria-label="Try VertKleen CRHD on my cleaning job"/);
+  assert.match(story, /class="story-object__card" role="group" aria-labelledby="storyObjectTitle storyObjectDetail"/);
+  assert.match(story, /class="story-object__range"[^>]*aria-labelledby="storyCompareLabel storyObjectTitle"/);
+  assert.match(story, /class="story-object__range"[^>]*name="storyComparisonReveal"/);
+  assert.match(story, /id="storyCompareLabel">Reveal cleaned result/);
+  assert.doesNotMatch(story, /class="story-object" aria-hidden="true"/);
   assert.doesNotMatch(story, /<canvas\b/);
   assert.doesNotMatch(story, /<img(?![^>]*\salt=")[^>]*>/);
 });

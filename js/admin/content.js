@@ -459,7 +459,7 @@ function assetPickerTemplate({ embedded = false } = {}) {
       </div>
       <div id="contentAssetRegister" class="adm-content-register">
         <label>Existing path or URL
-          <input id="contentAssetPath" name="asset_path" autocomplete="off" class="adm-input" type="text" placeholder="e.g. img/proof/cases/tank.webp…">
+          <input id="contentAssetPath" name="asset_path" autocomplete="off" class="adm-input" type="text" placeholder="e.g. https://media.masest.co/site/img/proof/cases/tank.webp…">
         </label>
         <label>Alt text
           <input id="contentAssetPathAlt" name="asset_alt" autocomplete="off" class="adm-input" type="text" placeholder="e.g. Technician cleaning a stainless tank…">

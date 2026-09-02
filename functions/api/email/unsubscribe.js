@@ -4,6 +4,7 @@
 // buyer keeps order/billing receipts. Both require a valid HMAC token tied to the email.
 import { htmlEscape, recordSuppression } from '../../_lib/supabase.js';
 import { verifyUnsubscribeToken } from '../../_lib/email.js';
+import { klaviyoUnsubscribe } from '../../_lib/klaviyo.js';
 
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -37,5 +38,6 @@ export async function onRequestPost({ request, env }) {
   const { email, ok } = await resolve(request, env);
   if (!ok) return html(INVALID, 400);
   await recordSuppression(env, email, 'unsubscribe', 'marketing');
+  await klaviyoUnsubscribe(env, email, env.KLAVIYO_LIST_ID);
   return html('<p>Done — you’ve been unsubscribed from MASEST marketing emails. Order and billing notices will still reach you.</p>');
 }

@@ -7,15 +7,22 @@ import { sanitizeNotificationPrefs, companyEmails } from '../functions/_lib/supa
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
 // ---- sanitizeNotificationPrefs ----
-test('sanitizeNotificationPrefs keeps only known boolean flags', () => {
+test('sanitizeNotificationPrefs keeps only optional marketing + support flags', () => {
   assert.deepEqual(
-    sanitizeNotificationPrefs({ notify_orders: false, notify_offers: true, notify_messages: true, role: 'admin', notify_x: true }),
-    { notify_orders: false, notify_offers: true, notify_messages: true },
+    sanitizeNotificationPrefs({
+      transactional_email_enabled: false,
+      marketing_email_enabled: false,
+      notify_orders: false,
+      notify_offers: true,
+      notify_messages: true,
+      role: 'admin',
+    }),
+    { marketing_email_enabled: false, notify_messages: true },
   );
 });
 
 test('sanitizeNotificationPrefs drops non-boolean / partial input', () => {
-  assert.deepEqual(sanitizeNotificationPrefs({ notify_orders: 'yes', notify_offers: 1 }), {});
+  assert.deepEqual(sanitizeNotificationPrefs({ marketing_email_enabled: 'yes', notify_messages: 1 }), {});
   assert.deepEqual(sanitizeNotificationPrefs({ notify_messages: false }), { notify_messages: false });
   assert.deepEqual(sanitizeNotificationPrefs({}), {});
   assert.deepEqual(sanitizeNotificationPrefs(null), {});
@@ -29,10 +36,10 @@ function fakeSb(profiles) {
   };
 }
 
-test('companyEmails(category) excludes members who opted out of that category', async () => {
+test('companyEmails keeps required order recipients despite legacy order opt-out', async () => {
   const sb = fakeSb([{ id: 'a', notify_orders: true }, { id: 'b', notify_orders: false }, { id: 'c' }]);
   const out = await companyEmails(sb, 'co', 'orders');
-  assert.deepEqual(out.sort(), ['a@x.com', 'c@x.com'], 'opted-out b excluded; missing pref defaults in');
+  assert.deepEqual(out.sort(), ['a@x.com', 'b@x.com', 'c@x.com']);
 });
 
 test('companyEmails with no category returns all members (back-compat)', async () => {
@@ -49,21 +56,25 @@ test('notification-prefs endpoint exposes GET + PATCH using sanitizeNotification
   assert.match(src, /sanitizeNotificationPrefs\(/);
 });
 
-test('migration adds the three notify_* columns', () => {
+test('migration adds default-on marketing preference and preserves support preference', () => {
   const sql = read('supabase/schema-notification-prefs.sql');
-  for (const col of ['notify_orders', 'notify_offers', 'notify_messages']) {
-    assert.match(sql, new RegExp(`add column if not exists ${col} boolean not null default true`, 'i'));
-  }
+  assert.match(sql, /add column if not exists marketing_email_enabled boolean not null default true/i);
+  assert.match(sql, /add column if not exists notify_messages boolean not null default true/i);
+  assert.match(sql, /set marketing_email_enabled = false[\s\S]+where notify_offers = false/i);
 });
 
-test('send sites pass the matching category to honour prefs', () => {
+test('send sites keep orders mandatory and use marketing preference for offers', () => {
   assert.match(read('functions/_lib/staff-order-operations.js'), /companyEmails\(sb, companyId, 'orders'\)/);
   assert.match(read('functions/api/admin/messages.js'), /deliverSupportMessageEmail/);
   assert.match(read('functions/_lib/support-email.js'), /shouldEmailSupportRecipient/);
   assert.match(read('functions/_lib/message-notifications.js'), /notify_messages/);
-  assert.match(read('functions/api/admin/offers.js'), /notify_offers/);
+  assert.match(read('functions/api/admin/offers.js'), /marketing_email_enabled/);
 });
 
-test('dashboard exposes notification preference toggles', () => {
+test('dashboard exposes immutable transactional + optional marketing settings', () => {
+  const html = read('dashboard.html');
+  assert.match(html, /transactionalEmailRequired/);
+  assert.match(html, /checked disabled/);
+  assert.match(html, /data-pref="marketing_email_enabled"/);
   assert.match(read('js/dashboard.js'), /notification-prefs/);
 });

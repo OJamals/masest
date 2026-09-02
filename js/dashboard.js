@@ -992,6 +992,7 @@ function wireNotifications() {
 // Email notification preference toggles (#19). Load current state, persist on change.
 async function wireNotificationPrefs() {
   const boxes = [...document.querySelectorAll('#notifPrefs [data-pref]')];
+  const status = $('notifPrefsStatus');
   if (!boxes.length) return;
   try {
     const prefs = await api('/api/account/notification-prefs');
@@ -1010,8 +1011,21 @@ async function wireNotificationPrefs() {
   }
   boxes.forEach((b) => b.addEventListener('change', async () => {
     b.disabled = true;
-    try { await api('/api/account/notification-prefs', { method: 'PATCH', body: { [b.dataset.pref]: b.checked } }); }
-    catch { b.checked = !b.checked; }
+    if (status) { status.textContent = 'Saving…'; status.dataset.state = 'busy'; }
+    try {
+      const prefs = await api('/api/account/notification-prefs', { method: 'PATCH', body: { [b.dataset.pref]: b.checked } });
+      b.checked = prefs[b.dataset.pref] !== false;
+      if (status) {
+        status.textContent = prefs.marketing_sync === 'pending'
+          ? 'Preference saved. Provider sync will retry.'
+          : 'Email preferences saved.';
+        status.dataset.state = 'ok';
+      }
+      if (b.dataset.pref === 'notify_messages' && $('msgEmailUpdates')) $('msgEmailUpdates').checked = b.checked;
+    } catch {
+      b.checked = !b.checked;
+      if (status) { status.textContent = 'Could not save email preferences. Try again.'; status.dataset.state = 'err'; }
+    }
     b.disabled = false;
   }));
 }

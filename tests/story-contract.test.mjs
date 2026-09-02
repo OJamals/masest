@@ -10,60 +10,63 @@ const storyVisualSpec = read("tools/story-hmis-visual.spec.mjs");
 const storyPerformanceBudget = read("tools/story-performance-budget.mjs");
 const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<section class="story-summary/)?.[0] || "";
 const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
-const acts = [...story.matchAll(/<section class="act[^"]*"[^>]*data-act="(\d)"[^>]*data-scene="([^"]+)"/g)];
+const acts = [...story.matchAll(/<section class="act[^"]*"[^>]*data-act="(\d+)"[^>]*data-scene="([^"]+)"/g)];
 
-test("homepage cleaner guide uses four named steps", () => {
+test("homepage story uses six named field-result scenes", () => {
   assert.ok(story, "expected homepage story");
   assert.deepEqual(acts.map((match) => [match[1], match[2]]), [
-    ["1", "diagnose"],
-    ["2", "burden"],
-    ["3", "switch"],
-    ["4", "prove"],
+    ["1", "kitchen-grease"],
+    ["2", "cip-vessel"],
+    ["3", "labelle-fermenter"],
+    ["4", "shower-track"],
+    ["5", "airboat-panel"],
+    ["6", "pool-cartridge"],
   ]);
-  assert.equal((story.match(/class="rail-btn"/g) || []).length, 4);
-  assert.doesNotMatch(story, /data-act="5"/);
+  assert.equal((story.match(/class="rail-btn"/g) || []).length, 6);
+  assert.doesNotMatch(story, /data-act="7"/);
 });
 
-test("one persistent equipment object carries condition, product, and result evidence", () => {
+test("one persistent comparator carries each true pair and active product", () => {
   assert.equal((story.match(/class="story-object"/g) || []).length, 1);
-  assert.match(story, /img\/blog\/cases\/hcr-brevard-before\.webp/);
-  assert.match(story, /img\/blog\/cases\/hcr-brevard-after\.webp/);
-  assert.match(story, /img\/updates\/vertkleen-hvac-hcr-5gal\.webp/);
-  assert.match(story, /Rust \+ mineral buildup/);
-  assert.match(story, /VertKleen HCR/);
+  assert.match(story, /class="story-object__range" type="range" name="storyComparisonReveal" min="0" max="100" value="50"/);
+  assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-before-202609\.webp/);
+  assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-after-202609\.webp/);
+  assert.match(story, /media\.masest\.co\/site\/img\/products\/crhd-food-beverage-studio\.webp/);
+  assert.match(story, /Commercial-kitchen grease/);
+  assert.match(story, /VertKleen CRHD/);
+  assert.match(story, /story-object__label--before[^>]*>Before</);
+  assert.match(story, /story-object__label--after[^>]*>After</);
+  assert.equal((story.match(/data-before-src="https:\/\/media\.masest\.co\/site\/img\/proof\/story\//g) || []).length, 6);
+  assert.equal((story.match(/data-after-src="https:\/\/media\.masest\.co\/site\/img\/proof\/story\//g) || []).length, 6);
+  assert.doesNotMatch(story, /supabase\.co\/storage\/v1\/object/i);
 });
 
-test("first scene directly diagnoses the cleaning need and exposes two actions", () => {
+test("first scene explains the real aligned surface and exposes CRHD actions", () => {
   const actOne = story.match(/<section class="act[^"]*"[^>]*data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.match(actOne, /Show us the mess\. We(?:&rsquo;|’)ll match the cleaner\./);
-  assert.match(actOne, /Cleaning rust and mineral buildup from stainless HVAC equipment\?/);
-  assert.match(actOne, /Compare the same surface\./);
-  assert.match(actOne, /class="btn btn-primary" href="products\/hcr"[^>]*>Shop HCR<\/a>/);
-  assert.match(actOne, /class="btn btn-ghost" href="contact\?type=sample&amp;product=VertKleen%20HCR"[^>]*>Try it on my job<\/a>/);
+  assert.match(actOne, /Baked-on grease\. Bare stainless after\./);
+  assert.match(actOne, /same kitchen-line surface before and after cleaning/i);
+  assert.match(actOne, /Follow the lower seam and the grease line/i);
+  assert.match(actOne, /class="btn btn-primary" href="products\/crhd"[^>]*>Shop CRHD<\/a>/);
+  assert.match(actOne, /href="proof#commercial-kitchen-crhd"/);
   assert.doesNotMatch(actOne, /story-shortcuts|reel-slide/);
 });
 
-test("second scene directly counts time and repeat work", () => {
-  const actTwo = story.match(/<section class="act[^"]*"[^>]*data-act="2"[\s\S]*?<\/section>/)?.[0] || "";
-
-  assert.match(actTwo, /36 hours/);
-  assert.match(actTwo, /leaves rust behind/i);
-  assert.match(actTwo, /repeat work needed to finish/i);
-  assert.match(actTwo, /class="burden-chain"/);
-  assert.doesNotMatch(actTwo, /pipe-diagram|Scale narrows pipes|Legionella/);
-});
-
-test("third scene tells the buyer what to test and defers the full ledger", () => {
-  const actThree = story.match(/<section class="act[^"]*"[^>]*data-act="3"[\s\S]*?<\/section>/)?.[0] || "";
-
-  assert.match(actThree, /Switch the cleaner\. Finish the job\./);
-  assert.match(actThree, /class="switch-card"/);
-  assert.match(actThree, /Instead of/);
-  assert.match(actThree, />Test</);
-  assert.match(actThree, /VertKleen HCR/);
-  assert.match(actThree, /0&#8209;0&#8209;0/);
-  assert.doesNotMatch(actThree, /replacement-ledger|\$115,000|workplace injury/i);
+test("all six scenes identify product, alignment cue, and evidence route", () => {
+  const expectations = [
+    ["1", "VertKleen CRHD", "lower seam", "proof#commercial-kitchen-crhd"],
+    ["2", "VertKleen CR", "Same vessel", "proof#brewery-cip-trials"],
+    ["3", "VertKleen CR", "vessel curve and port", "proof#brewery-cip-trials"],
+    ["4", "VertKleen Descaler", "glass edge", "products/descaler"],
+    ["5", "VertKleen AlumiBrite", "top fasteners", "proof#airboat-alumibrite"],
+    ["6", "VertKleen HCR", "45&deg; clockwise", "docs/sds/vertkleen-hcr-pool-filter.pdf"],
+  ];
+  for (const [act, product, cue, href] of expectations) {
+    const scene = story.match(new RegExp(`<section class="act[^"]*"[^>]*data-act="${act}"[\\s\\S]*?<\\/section>`))?.[0] || "";
+    assert.match(scene, new RegExp(product));
+    assert.match(scene, new RegExp(cue, "i"));
+    assert.match(scene, new RegExp(`href="${href}"`));
+  }
 
   assert.ok(guide, "expected full comparison guide below the story");
   assert.equal((guide.match(/class="ledger-row"/g) || []).length, 4);
@@ -72,25 +75,24 @@ test("third scene tells the buyer what to test and defers the full ledger", () =
   }
 });
 
-test("fourth scene gives a direct comparison method with sourced proof", () => {
-  const actFour = story.match(/<section class="act[^"]*"[^>]*data-act="4"[\s\S]*?<\/section>/)?.[0] || "";
-
-  assert.match(actFour, /Compare the whole job\. Then choose\./);
-  assert.match(actFour, /30 minutes/);
-  assert.match(actFour, /garden hose/i);
-  assert.match(actFour, /This test needed no scrubbing/i);
-  assert.match(actFour, /href="blog\/hcr-brevard-hvac-rust-case-study"/);
-  assert.match(actFour, /href="products\/hcr"/);
-  assert.doesNotMatch(actFour, /Industrial muscle|\$115,000/);
-});
-
-test("homepage cleaner copy avoids third-person case-note narration", () => {
+test("homepage result copy directs comparison to geometry, not exposure", () => {
   assert.doesNotMatch(
     story,
     /field notes say|job notes say|this field job|on this field job|MASEST matched|previous attempt|one job from diagnosis/i
   );
-  assert.match(story, /If a cleaner runs for 36 hours and leaves rust behind/);
-  assert.match(story, /Compare the result: 30 minutes of HCR contact time/);
+  assert.match(story, /Read the surface, not the exposure/);
+  assert.match(story, /Geometry stays recognizable/);
+  assert.match(story, /Follow fixed hardware/);
+});
+
+test("story reveal uses a scroll-driven and draggable wipe, not a contrast crossfade", () => {
+  assert.match(storyCss, /--story-reveal:\s*8%/);
+  assert.match(storyCss, /clip-path:\s*inset\(0 0 0 calc\(100% - var\(--story-reveal\)\)\)/);
+  assert.match(storyCss, /\.story-object__divider\s*\{[^}]*left:\s*var\(--story-reveal\)/s);
+  assert.match(storyCss, /rotate\(var\(--story-after-rotate\)\)/);
+  assert.match(storyJs, /return 8 \+ clamp\(progress, 0, 1\) \* 84/);
+  assert.match(storyJs, /comparisonRange\.addEventListener\("input"/);
+  assert.match(storyJs, /manualReveal/);
 });
 
 test("story uses compact native-scroll roads and scene renderer contracts", () => {
@@ -98,16 +100,16 @@ test("story uses compact native-scroll roads and scene renderer contracts", () =
 
   const heights = [...storyCss.matchAll(/\.story \.act\[data-act="\d"\]\s*\{[^}]*height:\s*(\d+)vh/gs)]
     .map((match) => Number(match[1]));
-  assert.equal(heights.length, 4);
+  assert.equal(heights.length, 6);
   assert.ok(heights.every((height) => height >= 100), heights);
-  assert.ok(heights.reduce((sum, height) => sum + height, 0) >= 420, heights);
-  assert.ok(heights.reduce((sum, height) => sum + height, 0) <= 480, heights);
+  assert.ok(heights.reduce((sum, height) => sum + height, 0) >= 650, heights);
+  assert.ok(heights.reduce((sum, height) => sum + height, 0) <= 700, heights);
 
-  assert.match(storyJs, /var SCENE_DEFS = \[/);
-  for (const id of ["diagnose", "burden", "switch", "prove"]) {
-    assert.match(storyJs, new RegExp(`id: "${id}"`));
-  }
-  assert.match(storyJs, /sceneDef\.render\(st\.p, st\)/);
+  assert.match(storyJs, /var states = acts\.map/);
+  assert.match(storyJs, /config: sceneConfig\(act\)/);
+  assert.match(storyJs, /activateSceneMedia\(st\)/);
+  assert.match(storyJs, /preloadNextScene\(st\)/);
+  assert.match(storyJs, /renderScene\(st\)/);
   assert.match(storyJs, /initCompactStory\(\)/);
   assert.match(storyJs, /rect\.bottom\s*>=\s*window\.innerHeight/);
 });

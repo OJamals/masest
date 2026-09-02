@@ -110,7 +110,7 @@ test("admin quotes API can send a lead follow-up email", () => {
   assert.match(ADMIN_QUOTES, /emailLayout/);
   assert.match(QUOTE_LEADS, /\.from\('quotes'\)[\s\S]*\.select\('id,name,email,company,status,priority,next_step,due_at,notes'\)/);
   assert.match(ADMIN_QUOTES, /category:\s*'lead_followup'/);
-  assert.match(QUOTE_LEADS, /next_step:\s*'Follow-up sent'/);
+  assert.match(QUOTE_LEADS, /next_step:\s*emailQueued \|\| thread\.posted \? 'Follow-up queued' : 'Follow-up needs retry'/);
 });
 
 test("admin quote follow-up can hand off to buyer message thread", () => {
@@ -133,7 +133,7 @@ test("admin quotes API sweeps stale due leads with email and notes", () => {
   assert.match(ADMIN_QUOTES, /logEmailEvent/);
   assert.match(ADMIN_QUOTES, /no_recipients/);
   assert.match(QUOTE_LEADS, /Automated due follow-up/);
-  assert.match(QUOTE_LEADS, /Automated reminder sent/);
+  assert.match(QUOTE_LEADS, /Automated reminder queued/);
   assert.match(ADMIN_QUOTES, /x-quote-crm-secret/i);
 });
 

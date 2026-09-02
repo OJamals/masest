@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="css/style.css?v=20260829b">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
 <link rel="stylesheet" href="css/components.css?v=20260830g">
-<link rel="stylesheet" href="css/story.css?v=20260826e">
+<link rel="stylesheet" href="css/story.css?v=20260902a">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/">
 <meta property="og:url" content="https://masest.co/">
@@ -46,140 +46,184 @@
 
 <main id="main">
 <!-- ============================================================
-     GUIDE: choose a cleaner in four direct steps.
-     GSAP ScrollTrigger on desktop; light in-flow reveals on mobile.
-     Reduced motion, missing GSAP, and no-JS remain fully readable.
+     PROOF: six true before/after field comparisons.
+     GSAP ScrollTrigger maps scroll progress to each reveal on desktop.
+     Native range input keeps every comparison directly draggable.
      ============================================================ -->
-<div class="story" id="story" data-active-scene="diagnose" role="region" aria-label="Choose a VertKleen cleaner in four steps">
+<div class="story" id="story" data-active-scene="kitchen-grease" role="region" aria-label="Six VertKleen before and after field results">
 <script>/* Apply desktop pinning before first paint. story.js removes this
   class when motion is reduced or GSAP is unavailable. */
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches &&
       matchMedia('(min-width: 761px)').matches)
     document.getElementById('story').classList.add('story-ready');</script>
 
-  <a class="story-skip" href="#storySummary">Skip to summary <span>View the four steps</span></a>
+  <a class="story-skip" href="#storySummary">Skip comparisons <span>View all six results</span></a>
 
-  <nav class="story-actions" aria-label="VertKleen HCR actions">
-    <span class="story-actions__match"><small>For rust + scale</small><b>VertKleen HCR</b></span>
-    <a class="story-actions__shop" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
-    <a class="story-actions__trial" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it</a>
+  <nav class="story-actions" aria-label="Active VertKleen result actions">
+    <span class="story-actions__match"><small>For kitchen grease</small><b>VertKleen CRHD</b></span>
+    <a class="story-actions__shop" href="products/crhd" aria-label="Shop VertKleen CRHD">Shop CRHD</a>
+    <a class="story-actions__trial" href="contact?type=sample&amp;product=VertKleen%20CRHD" aria-label="Try VertKleen CRHD on my cleaning job">Try it</a>
   </nav>
 
-  <nav class="story-rail" aria-label="Cleaner selection steps">
+  <nav class="story-rail" aria-label="Before and after field results">
     <div class="rail-inner">
-      <a class="rail-btn" href="#story-scene-1" aria-current="step"><b>01</b><span>Diagnose</span></a>
-      <a class="rail-btn" href="#story-scene-2"><b>02</b><span>Burden</span></a>
-      <a class="rail-btn" href="#story-scene-3"><b>03</b><span>Switch</span></a>
-      <a class="rail-btn" href="#story-scene-4"><b>04</b><span>Prove</span></a>
+      <a class="rail-btn" href="#story-scene-1" aria-current="step"><b>01</b><span>Kitchen</span></a>
+      <a class="rail-btn" href="#story-scene-2"><b>02</b><span>CIP vessel</span></a>
+      <a class="rail-btn" href="#story-scene-3"><b>03</b><span>Fermenter</span></a>
+      <a class="rail-btn" href="#story-scene-4"><b>04</b><span>Calcium</span></a>
+      <a class="rail-btn" href="#story-scene-5"><b>05</b><span>Aluminum</span></a>
+      <a class="rail-btn" href="#story-scene-6"><b>06</b><span>Filter</span></a>
     </div>
   </nav>
 
-  <div class="story-object" aria-hidden="true">
-    <div class="story-object__card">
+  <div class="story-object">
+    <div class="story-object__card" role="group" aria-labelledby="storyObjectTitle storyObjectDetail">
       <div class="story-object__media">
-        <img class="story-object__before" src="img/blog/cases/hcr-brevard-before.webp" alt="" fetchpriority="high" decoding="async" width="580" height="559">
+        <img class="story-object__before" src="https://media.masest.co/site/img/proof/story/kitchen-grease-before-202609.webp" alt="" fetchpriority="high" decoding="async" width="671" height="488">
         <div class="story-object__after">
-          <img src="img/blog/cases/hcr-brevard-after.webp" alt="" decoding="async" width="1417" height="714">
+          <img src="https://media.masest.co/site/img/proof/story/kitchen-grease-after-202609.webp" alt="" decoding="async" width="795" height="473">
         </div>
-        <span class="story-object__divider"></span>
-        <span class="story-object__scan"></span>
-        <span class="story-object__target story-object__target--rust"><i></i>Rust</span>
-        <span class="story-object__target story-object__target--scale"><i></i>Mineral buildup</span>
-        <span class="story-object__status">Check the buildup</span>
+        <span class="story-object__label story-object__label--before">Before</span>
+        <span class="story-object__label story-object__label--after">After</span>
+        <span class="story-object__divider" aria-hidden="true"></span>
+        <span class="story-object__status" aria-live="polite">Baked-on grease to exposed steel</span>
+        <span class="sr-only" id="storyCompareLabel">Reveal cleaned result</span>
+        <input class="story-object__range" type="range" name="storyComparisonReveal" min="0" max="100" value="50" step="1" aria-labelledby="storyCompareLabel storyObjectTitle" aria-valuetext="50% after image revealed">
       </div>
       <div class="story-object__footer">
         <div class="story-object__identity">
-          <small>Rust + mineral buildup</small>
-          <b>20-year stainless base plate</b>
+          <small id="storyObjectTitle">Commercial-kitchen grease</small>
+          <b id="storyObjectDetail">Baked-on residue to exposed stainless</b>
         </div>
         <div class="story-object__product">
-          <img src="img/updates/vertkleen-hvac-hcr-5gal.webp" alt="" decoding="async" width="900" height="1200">
-          <span><small>Cleaner to test</small><b>VertKleen HCR</b></span>
+          <img src="https://media.masest.co/site/img/products/crhd-food-beverage-studio.webp" alt="" decoding="async" width="900" height="1200">
+          <span><small>Documented cleaner</small><b>VertKleen CRHD</b></span>
         </div>
       </div>
     </div>
   </div>
 
-  <section class="act" id="story-scene-1" data-act="1" data-scene="diagnose" aria-labelledby="storyAct1Title">
+  <section class="act" id="story-scene-1" data-act="1" data-scene="kitchen-grease"
+    data-before-src="https://media.masest.co/site/img/proof/story/kitchen-grease-before-202609.webp" data-before-width="671" data-before-height="488" data-before-position="50% 55%" data-before-scale="1.05"
+    data-after-src="https://media.masest.co/site/img/proof/story/kitchen-grease-after-202609.webp" data-after-width="795" data-after-height="473" data-after-position="50% 53%" data-after-scale="1.05" data-after-rotate="0"
+    data-object-title="Commercial-kitchen grease" data-object-detail="Baked-on residue to exposed stainless" data-status="Baked-on grease to exposed steel" data-action-context="For kitchen grease"
+    data-product-name="VertKleen CRHD" data-product-short="CRHD" data-product-href="products/crhd" data-trial-href="contact?type=sample&amp;product=VertKleen%20CRHD"
+    data-product-src="https://media.masest.co/site/img/products/crhd-food-beverage-studio.webp" data-product-width="900" data-product-height="1200" aria-labelledby="storyAct1Title">
     <div class="stage">
       <div class="act-content">
-        <span class="kicker">01 &middot; Diagnose</span>
-        <h1 class="act-h" id="storyAct1Title" data-at="0">Show us the mess. We&rsquo;ll match the cleaner.</h1>
-        <p class="act-p" data-at="0">Cleaning rust and mineral buildup from stainless HVAC equipment? Start by identifying the buildup, the surface, and the result you need.</p>
-        <p class="story-evidence" data-at="0.35"><i class="ph ph-camera" aria-hidden="true"></i><span><b>Compare the same surface.</b> Keep the equipment and camera angle consistent before and after cleaning.</span></p>
+        <span class="kicker">01 &middot; Commercial kitchen</span>
+        <h1 class="act-h" id="storyAct1Title" data-at="0">Baked-on grease. Bare stainless after.</h1>
+        <p class="act-p" data-at="0.15">This true CRHD pair shows the same kitchen-line surface before and after cleaning. Scroll for the reveal, then drag the handle to inspect any point.</p>
+        <p class="story-evidence" data-at="0.35"><i class="ph ph-camera" aria-hidden="true"></i><span><b>Read the surface, not the exposure.</b> Follow the lower seam and the grease line across both frames.</span></p>
         <div class="story-ctas" data-at="0.55">
-          <a class="btn btn-primary" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
-          <a class="btn btn-ghost" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it on my job</a>
+          <a class="btn btn-primary" href="products/crhd" aria-label="Shop VertKleen CRHD">Shop CRHD</a>
+          <a class="btn btn-ghost" href="proof#commercial-kitchen-crhd">See kitchen result</a>
         </div>
       </div>
     </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/kitchen-grease-before-202609.webp" alt="Commercial-kitchen surface before CRHD cleaning" width="671" height="488"><img src="https://media.masest.co/site/img/proof/story/kitchen-grease-after-202609.webp" alt="Commercial-kitchen surface after CRHD cleaning" width="795" height="473"></figure></noscript>
   </section>
 
-  <!-- ACT 2 -->
-  <section class="act" id="story-scene-2" data-act="2" data-scene="burden" aria-labelledby="storyAct2Title">
+  <section class="act" id="story-scene-2" data-act="2" data-scene="cip-vessel"
+    data-before-src="https://media.masest.co/site/img/proof/story/cip-vessel-before-202609.webp" data-before-width="1200" data-before-height="1600" data-before-position="50% 72%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/cip-vessel-after-202609.webp" data-after-width="1600" data-after-height="1200" data-after-position="50% 54%" data-after-scale="1" data-after-rotate="0"
+    data-object-title="CIP vessel residue" data-object-detail="Bottom residue to reflective stainless" data-status="Vessel residue removed" data-action-context="For CIP residue"
+    data-product-name="VertKleen CR" data-product-short="CR" data-product-href="products/cr" data-trial-href="contact?type=sample&amp;product=VertKleen%20CR"
+    data-product-src="https://media.masest.co/site/img/products/cip-cr-studio.webp" data-product-width="900" data-product-height="1200" aria-labelledby="storyAct2Title">
     <div class="stage">
       <div class="act-content">
-        <span class="kicker">02 &middot; Measure the burden</span>
-        <h2 class="act-h" id="storyAct2Title" data-at="0">Count cleaning time as part of the job cost.</h2>
-        <p class="act-p" data-at="0.25">If a cleaner runs for 36 hours and leaves rust behind, count those hours—and the repeat work needed to finish—as part of the job cost.</p>
-        <div class="burden-chain" data-at="0.6" aria-label="Thirty-six cleaning hours, rust still present, and more work needed to finish">
-          <span><b>36 hours</b><small>cleaning time</small></span>
-          <i class="ph ph-arrow-right" aria-hidden="true"></i>
-          <span><b>Rust remained</b><small>incomplete result</small></span>
-          <i class="ph ph-arrow-right" aria-hidden="true"></i>
-          <span><b>More work</b><small>needed to finish</small></span>
+        <span class="kicker">02 &middot; CIP vessel</span>
+        <h2 class="act-h" id="storyAct2Title" data-at="0">Residue out. Stainless back in view.</h2>
+        <p class="act-p" data-at="0.18">Matched vessel interiors show the residue field before CR and the reflective wall, floor, and fittings after cleaning.</p>
+        <div class="proof-stats" data-at="0.42" aria-label="CIP vessel comparison details">
+          <span><b>Same vessel</b><small>interior geometry</small></span>
+          <span><b>CR clean</b><small>organic residue</small></span>
+          <span><b>Steel finish</b><small>visible after</small></span>
         </div>
+        <a class="story-source" href="proof#brewery-cip-trials" data-at="0.65">See brewery CIP evidence <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
       </div>
     </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/cip-vessel-before-202609.webp" alt="CIP vessel before VertKleen CR cleaning" width="1200" height="1600"><img src="https://media.masest.co/site/img/proof/story/cip-vessel-after-202609.webp" alt="CIP vessel after VertKleen CR cleaning" width="1600" height="1200"></figure></noscript>
   </section>
 
-  <!-- ACT 3 -->
-  <section class="act" id="story-scene-3" data-act="3" data-scene="switch" aria-labelledby="storyAct3Title">
+  <section class="act" id="story-scene-3" data-act="3" data-scene="labelle-fermenter"
+    data-before-src="https://media.masest.co/site/img/proof/story/labelle-fermenter-before-202609.webp" data-before-width="703" data-before-height="760" data-before-position="54% 50%" data-before-scale="1.06"
+    data-after-src="https://media.masest.co/site/img/proof/story/labelle-fermenter-after-202609.webp" data-after-width="705" data-after-height="705" data-after-position="54% 50%" data-after-scale="1.06" data-after-rotate="0"
+    data-object-title="LaBelle fermenter ring" data-object-detail="Brown wall ring to clean stainless" data-status="Fermenter ring removed" data-action-context="For brewery residue"
+    data-product-name="VertKleen CR" data-product-short="CR" data-product-href="products/cr" data-trial-href="contact?type=sample&amp;product=VertKleen%20CR"
+    data-product-src="https://media.masest.co/site/img/products/cip-cr-studio.webp" data-product-width="900" data-product-height="1200" aria-labelledby="storyAct3Title">
     <div class="stage">
       <div class="act-content">
-        <span class="kicker">03 &middot; Match the cleaner</span>
-        <h2 class="act-h" id="storyAct3Title" data-at="0">Switch the cleaner. Finish the job.</h2>
-        <p class="act-p" data-at="0.2">Test a small area first. Follow the HCR label for application and dwell time, then rinse and inspect before treating the full surface.</p>
-        <div class="switch-card" data-at="0.45">
-          <div class="switch-card__side switch-card__side--before">
-            <span>Instead of</span>
-            <b>CLR</b>
-            <small>36 hours; rust still present.</small>
-          </div>
-          <i class="ph ph-arrow-right" aria-hidden="true"></i>
-          <div class="switch-card__side switch-card__side--after">
-            <span>Test</span>
-            <b>VertKleen HCR</b>
-            <small><em aria-label="HMIS health 0, flammability 0, reactivity 0">HMIS 0&#8209;0&#8209;0</em> &middot; apply, dwell, rinse, inspect.</small>
-          </div>
-        </div>
-        <a class="story-text-link" href="#compareAllCleaners" data-at="0.75">Compare all four cleaner matches <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        <span class="kicker">03 &middot; LaBelle Brewing</span>
+        <h2 class="act-h" id="storyAct3Title" data-at="0">One dark fermenter ring. Then clean steel.</h2>
+        <p class="act-p" data-at="0.18">The rim, port, and wall curve anchor this documented CR trial. Drag across the ring to compare the same vessel area.</p>
+        <p class="story-evidence" data-at="0.42"><i class="ph ph-camera" aria-hidden="true"></i><span><b>Geometry stays recognizable.</b> The vessel curve and port remain fixed while the brown residue disappears.</span></p>
+        <a class="story-source" href="proof#brewery-cip-trials" data-at="0.65">See the brewery cleaning record <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
       </div>
     </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/labelle-fermenter-before-202609.webp" alt="LaBelle fermenter ring before VertKleen CR cleaning" width="703" height="760"><img src="https://media.masest.co/site/img/proof/story/labelle-fermenter-after-202609.webp" alt="LaBelle fermenter after VertKleen CR cleaning" width="705" height="705"></figure></noscript>
   </section>
 
-  <!-- ACT 4 -->
-  <section class="act" id="story-scene-4" data-act="4" data-scene="prove" aria-labelledby="storyAct4Title">
+  <section class="act" id="story-scene-4" data-act="4" data-scene="shower-track"
+    data-before-src="https://media.masest.co/site/img/proof/story/shower-track-before-202609.webp" data-before-width="1459" data-before-height="746" data-before-position="50% 58%" data-before-scale="1.02"
+    data-after-src="https://media.masest.co/site/img/proof/story/shower-track-after-202609.webp" data-after-width="1468" data-after-height="660" data-after-position="50% 58%" data-after-scale="1.02" data-after-rotate="0"
+    data-object-title="Shower-track calcium" data-object-detail="Orange mineral line to clear track" data-status="Calcium line removed" data-action-context="For calcium buildup"
+    data-product-name="VertKleen Descaler" data-product-short="Descaler" data-product-href="products/descaler" data-trial-href="contact?type=sample&amp;product=VertKleen%20Descaler"
+    data-product-src="https://media.masest.co/site/img/products/descaler-studio.webp" data-product-width="900" data-product-height="1200" aria-labelledby="storyAct4Title">
     <div class="stage">
       <div class="act-content">
-        <span class="kicker">04 &middot; Prove the result</span>
-        <h2 class="act-h" id="storyAct4Title" data-at="0">Compare the whole job. Then choose.</h2>
-        <p class="act-p" data-at="0.15">Compare the result: 30 minutes of HCR contact time, followed by a garden-hose rinse. This test needed no scrubbing.</p>
-        <div class="proof-stats" data-at="0.35" aria-label="Comparison result: 30 minutes of contact time, garden-hose rinse, no scrubbing needed">
-          <span><b>30 minutes</b><small>contact time</small></span>
-          <span><b>Garden hose</b><small>rinse method</small></span>
-          <span><b>No scrubbing</b><small>needed in this test</small></span>
+        <span class="kicker">04 &middot; Facility scale</span>
+        <h2 class="act-h" id="storyAct4Title" data-at="0">The orange calcium line is the proof.</h2>
+        <p class="act-p" data-at="0.18">The glass edge and lower track hold the comparison together. Descaler clears the concentrated mineral line in the after frame.</p>
+        <div class="proof-stats" data-at="0.42" aria-label="Shower-track calcium comparison details">
+          <span><b>Same track</b><small>glass edge aligned</small></span>
+          <span><b>Calcium</b><small>orange line before</small></span>
+          <span><b>Clear edge</b><small>visible after</small></span>
         </div>
-        <ul class="whole-job" data-at="0.55" aria-label="Six whole-job measures">
-          <li>Cleaner</li><li>Dilution</li><li>Labor</li><li>Water</li><li>Downtime</li><li>Disposal</li>
-        </ul>
-        <a class="story-source" href="blog/hcr-brevard-hvac-rust-case-study" data-at="0.6">See the complete before-and-after <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
-        <div class="story-ctas" data-at="0.7">
-          <a class="btn btn-primary" href="products/hcr" aria-label="Shop VertKleen HCR">Shop HCR</a>
-          <a class="btn btn-ghost" href="contact?type=sample&amp;product=VertKleen%20HCR" aria-label="Try VertKleen HCR on my cleaning job">Try it on my job</a>
-        </div>
+        <a class="story-source" href="products/descaler" data-at="0.65">See VertKleen Descaler <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
       </div>
     </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/shower-track-before-202609.webp" alt="Shower track before VertKleen Descaler cleaning" width="1459" height="746"><img src="https://media.masest.co/site/img/proof/story/shower-track-after-202609.webp" alt="Shower track after VertKleen Descaler cleaning" width="1468" height="660"></figure></noscript>
+  </section>
+
+  <section class="act" id="story-scene-5" data-act="5" data-scene="airboat-panel"
+    data-before-src="https://media.masest.co/site/img/proof/story/airboat-panel-before-202609.webp" data-before-width="963" data-before-height="1332" data-before-position="50% 52%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/airboat-panel-after-202609.webp" data-after-width="949" data-after-height="1210" data-after-position="50% 49%" data-after-scale="1" data-after-rotate="0"
+    data-object-title="Airboat aluminum panel" data-object-detail="Oxidized panel to brighter aluminum" data-status="Aluminum finish restored" data-action-context="For oxidized aluminum"
+    data-product-name="VertKleen AlumiBrite" data-product-short="AlumiBrite" data-product-href="products/alumibrite" data-trial-href="contact?type=sample&amp;product=VertKleen%20AlumiBrite"
+    data-product-src="https://media.masest.co/site/img/products/alumibrite-studio.webp" data-product-width="900" data-product-height="1200" aria-labelledby="storyAct5Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">05 &middot; Marine aluminum</span>
+        <h2 class="act-h" id="storyAct5Title" data-at="0">Oxidized panel to brighter aluminum.</h2>
+        <p class="act-p" data-at="0.18">The upper fastener line and panel edge keep this airboat sequence oriented. The after frame shows the brighter finish across the same working panel.</p>
+        <p class="story-evidence" data-at="0.42"><i class="ph ph-camera" aria-hidden="true"></i><span><b>Follow fixed hardware.</b> Compare the top fasteners and right edge while dragging through the finish.</span></p>
+        <a class="story-source" href="proof#airboat-alumibrite" data-at="0.65">See the airboat restoration <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+      </div>
+    </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/airboat-panel-before-202609.webp" alt="Airboat aluminum panel before VertKleen AlumiBrite treatment" width="963" height="1332"><img src="https://media.masest.co/site/img/proof/story/airboat-panel-after-202609.webp" alt="Airboat aluminum panel after VertKleen AlumiBrite treatment" width="949" height="1210"></figure></noscript>
+  </section>
+
+  <section class="act" id="story-scene-6" data-act="6" data-scene="pool-cartridge"
+    data-before-src="https://media.masest.co/site/img/proof/story/pool-cartridge-before-202609.webp" data-before-width="686" data-before-height="1229" data-before-position="50% 50%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/pool-cartridge-after-202609.webp" data-after-width="1220" data-after-height="648" data-after-position="50% 50%" data-after-scale="1.45" data-after-rotate="45"
+    data-object-title="Pool cartridge filter" data-object-detail="Dark fouling to clean pleats" data-status="Filter pleats visibly cleaner" data-action-context="For mineral-loaded filters"
+    data-product-name="VertKleen HCR" data-product-short="HCR" data-product-href="products/hcr" data-trial-href="contact?type=sample&amp;product=VertKleen%20HCR"
+    data-product-src="https://media.masest.co/site/img/products/cip-hcr-studio.webp" data-product-width="900" data-product-height="1200" aria-labelledby="storyAct6Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">06 &middot; Cartridge filter</span>
+        <h2 class="act-h" id="storyAct6Title" data-at="0">Dark pleats to a visibly cleaner filter.</h2>
+        <p class="act-p" data-at="0.18">The after photo turns 45&deg; clockwise to bring the cartridge pleats into a closer matched orientation. Drag across the frame to compare the filter media.</p>
+        <div class="proof-stats" data-at="0.42" aria-label="Pool cartridge comparison details">
+          <span><b>45&deg; turn</b><small>after aligned right</small></span>
+          <span><b>Same media</b><small>pleat pattern</small></span>
+          <span><b>HCR</b><small>documented result</small></span>
+        </div>
+        <a class="story-source" href="docs/sds/vertkleen-hcr-pool-filter.pdf" data-at="0.65">Read the pool-filter field note <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+      </div>
+    </div>
+    <noscript><figure class="story-fallback-pair story-fallback-pair--pool"><img src="https://media.masest.co/site/img/proof/story/pool-cartridge-before-202609.webp" alt="Pool cartridge filter before VertKleen HCR cleaning" width="686" height="1229"><img src="https://media.masest.co/site/img/proof/story/pool-cartridge-after-202609.webp" alt="Pool cartridge filter after VertKleen HCR cleaning, rotated 45 degrees clockwise" width="1220" height="648"></figure></noscript>
   </section>
 
 </div>
@@ -187,14 +231,16 @@
 <section class="story-summary" id="storySummary" aria-labelledby="storySummaryTitle" tabindex="-1">
   <div class="wrap">
     <div class="story-summary__head">
-      <span>Four-step summary</span>
-      <h2 id="storySummaryTitle">Choose your cleaner in four steps.</h2>
+      <span>Six field comparisons</span>
+      <h2 id="storySummaryTitle">See the change job by job.</h2>
     </div>
     <ol>
-      <li><b>Diagnose.</b> Name the mess, surface, and finish.</li>
-      <li><b>Measure the burden.</b> Count time, water, downtime, and repeat work.</li>
-      <li><b>Match the cleaner.</b> Choose the VertKleen product for that exact job.</li>
-      <li><b>Prove the result.</b> Run the same side-by-side test and inspect the finish.</li>
+      <li><b>Kitchen grease.</b> CRHD exposes stainless beneath baked-on residue.</li>
+      <li><b>CIP vessel.</b> CR clears the residue field from the vessel interior.</li>
+      <li><b>Fermenter ring.</b> CR removes the dark brewery wall ring.</li>
+      <li><b>Shower track.</b> Descaler clears the concentrated calcium line.</li>
+      <li><b>Airboat panel.</b> AlumiBrite restores a brighter aluminum finish.</li>
+      <li><b>Pool cartridge.</b> HCR leaves the filter pleats visibly cleaner.</li>
     </ol>
   </div>
 </section>
@@ -452,7 +498,7 @@
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). story.js degrades gracefully if these fail to load. -->
 <script src="vendor/gsap/gsap.min.js" defer></script>
 <script src="vendor/gsap/ScrollTrigger.min.js" defer></script>
-<script src="js/story.js?v=20260826e" defer></script>
+<script src="js/story.js?v=20260902a" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {

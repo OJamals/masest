@@ -279,7 +279,10 @@ test('follow-up owns customer message, thread handoff, and lifecycle update', as
   const lifecycle = createQuoteLeadLifecycle({
     store,
     now: () => new Date('2026-07-29T12:00:00Z'),
-    sendFollowUp: async (input) => effects.push(['sendFollowUp', input]),
+    sendFollowUp: async (input) => {
+      effects.push(['sendFollowUp', input]);
+      return true;
+    },
     handoff: async (input) => {
       effects.push(['handoff', input]);
       return { posted: true, message_id: 'm1' };
@@ -303,9 +306,9 @@ test('follow-up owns customer message, thread handoff, and lifecycle update', as
     status: 'contacted',
     handled_at: '2026-07-29T12:00:00.000Z',
     handled_by: 'owner@masest.co',
-    next_step: 'Follow-up sent',
+    next_step: 'Follow-up queued',
     due_at: '2026-08-01T09:00:00.000Z',
-    notes: 'Existing note\nFollow-up sent by owner@masest.co: Approve proposal\nBuyer message thread updated (m1)',
+    notes: 'Existing note\nFollow-up email queued by owner@masest.co: Approve proposal\nBuyer message thread updated (m1)',
   });
 });
 
@@ -317,7 +320,7 @@ test('due sweep owns reminder policy and rescheduling outcomes', async () => {
     now: () => new Date('2026-07-29T12:00:00Z'),
     sendDueNotice: async (input) => {
       notices.push(input);
-      return input.hasBuyerEmail;
+      return true;
     },
   });
 
@@ -334,7 +337,7 @@ test('due sweep owns reminder policy and rescheduling outcomes', async () => {
     expired_offers: 0,
     results: [
       { id: 'q1', ok: true, emailed: true, error: undefined },
-      { id: 'q2', ok: true, emailed: false, error: undefined },
+      { id: 'q2', ok: true, emailed: true, error: undefined },
     ],
   });
   assert.equal(notices[0].hasBuyerEmail, true);
@@ -344,8 +347,8 @@ test('due sweep owns reminder policy and rescheduling outcomes', async () => {
   assert.equal(updates[0][2].due_at, '2026-07-31T12:00:00.000Z');
   assert.equal(updates[1][2].status, 'contacted');
   assert.equal(updates[1][2].due_at, '2026-07-30T12:00:00.000Z');
-  assert.match(updates[0][2].notes, /buyer reminder sent/);
-  assert.match(updates[1][2].notes, /staff alert attempted/);
+  assert.match(updates[0][2].notes, /buyer reminder queued/);
+  assert.match(updates[1][2].notes, /staff alert queued/);
 });
 
 test('workspace exposes requisition and active offer through lifecycle interface', async () => {
