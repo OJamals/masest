@@ -1,5 +1,6 @@
--- Bounded staff customer-directory search. The API resolves Auth email only for
--- IDs in the returned page; complete email enumeration remains CSV-export only.
+-- Bounded staff customer-directory search. Auth email participates in the
+-- server-side filter, but the API resolves email only for IDs in the returned
+-- page; complete email enumeration remains CSV-export only.
 create or replace function public.admin_customer_directory(
   p_search text default null,
   p_role text default null,
@@ -20,6 +21,7 @@ returns table (
 )
 language sql
 stable
+security definer
 set search_path = pg_catalog, public
 as $$
   with matched as (
@@ -40,6 +42,12 @@ as $$
         nullif(btrim(p_search), '') is null
         or concat_ws(' ', p.full_name, p.phone, p.role::text, c.name, c.status::text)
           ilike '%' || btrim(p_search) || '%'
+        or exists (
+          select 1
+          from auth.users u
+          where u.id = p.id
+            and u.email ilike '%' || btrim(p_search) || '%'
+        )
       )
   )
   select
