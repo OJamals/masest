@@ -1017,7 +1017,7 @@ async function wireNotificationPrefs() {
       b.checked = prefs[b.dataset.pref] !== false;
       if (status) {
         status.textContent = prefs.marketing_sync === 'pending'
-          ? 'Preference saved. Provider sync will retry.'
+          ? 'Preference saved locally. Marketing provider sync is pending; retry later.'
           : 'Email preferences saved.';
         status.dataset.state = 'ok';
       }

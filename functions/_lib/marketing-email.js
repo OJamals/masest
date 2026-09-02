@@ -18,7 +18,7 @@ export async function queueMarketingEmail(env, {
   properties = {},
   fetchImpl = globalThis.fetch,
 } = {}) {
-  if (categoryPolicy(category).stream !== 'marketing') {
+  if (categoryPolicy(category)?.stream !== 'marketing') {
     return { ok: false, queued: false, provider: 'klaviyo', retryable: false, error: 'marketing_category_required' };
   }
   const metricKey = FLOW_METRIC_ENV[String(category || '')];
@@ -26,9 +26,14 @@ export async function queueMarketingEmail(env, {
   if (!metric) {
     return { ok: false, queued: false, provider: 'klaviyo', retryable: false, error: 'marketing_flow_not_configured' };
   }
+  const uniqueId = String(idempotencyKey || '').trim().slice(0, 255);
+  if (!uniqueId) {
+    return { ok: false, queued: false, provider: 'klaviyo', retryable: false, error: 'marketing_idempotency_key_required' };
+  }
   const result = await klaviyoTrack(env, {
     email: String(email || '').trim().toLowerCase(),
     metric,
+    uniqueId,
     fetchImpl,
     properties: {
       ...properties,
@@ -36,7 +41,7 @@ export async function queueMarketingEmail(env, {
       message_subject: String(subject || '').slice(0, 255),
       message_html: String(html || '').slice(0, 100000),
       message_text: String(text || '').slice(0, 50000),
-      idempotency_key: String(idempotencyKey || '').slice(0, 255),
+      idempotency_key: uniqueId,
     },
   });
   if (!result.ok) {

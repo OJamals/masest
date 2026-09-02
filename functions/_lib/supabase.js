@@ -3,7 +3,7 @@
 // Cloudflare has no `process.env`; env vars arrive via the per-request `env` binding,
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
-import { filterByStream, categoryStream, unsubscribeToken, htmlToText } from './email.js';
+import { filterByStream, categoryPolicy, unsubscribeToken, htmlToText } from './email.js';
 import { isStaffEmail, platformStaffRole } from './authz.js';
 import {
   CommerceContextError,
@@ -260,14 +260,17 @@ export async function updateEmailStatus(env, providerMessageId, status) {
   } catch { /* advisory */ }
 }
 
-// Upsert a suppression for one stream (best-effort). stream 'all' = hard block
+// Upsert a suppression for one stream. stream 'all' = hard block
 // (bounce/complaint, the default); 'marketing' = unsubscribe (transactional still sends).
 export async function recordSuppression(env, email, reason, stream = 'all') {
-  if (!email) return;
+  if (!email) return false;
   try {
-    await adminClient(env).from('email_suppressions')
+    const { error } = await adminClient(env).from('email_suppressions')
       .upsert({ email: String(email).toLowerCase(), reason, stream }, { onConflict: 'email,stream' });
-  } catch { /* advisory */ }
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 // Remove only one explicit suppression stream. Used when an authenticated user opts
@@ -316,7 +319,18 @@ export async function sendEmailResult(env, {
   if (!serviceFetch || (!allTo.length && !allBcc.length)) {
     return { ok: false, retryable: false, error: 'email_not_configured' };
   }
-  if (categoryStream(category) === 'marketing') {
+  const policy = categoryPolicy(category);
+  if (!policy) {
+    await logEmailEvent(env, {
+      to_email: [...allTo, ...allBcc].join(', '),
+      category,
+      subject,
+      status: 'failed',
+      error: 'email_category_required',
+    });
+    return { ok: false, retryable: false, error: 'email_category_required' };
+  }
+  if (policy.stream === 'marketing') {
     await logEmailEvent(env, {
       to_email: [...allTo, ...allBcc].join(', '),
       category,

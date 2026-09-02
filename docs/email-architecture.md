@@ -25,8 +25,9 @@ move to Klaviyo.
   status reconciliation.
 - `functions/_lib/email-template.js`: shared MASEST visual shell for both streams.
 
-`sendEmailResult()` rejects marketing categories. `queueMarketingEmail()` rejects
-transactional categories. This makes provider drift fail closed.
+`sendEmailResult()` rejects marketing, missing, and unknown categories.
+`queueMarketingEmail()` rejects transactional, missing, and unknown categories.
+This makes provider drift fail closed.
 
 ## Preferences and suppression
 
@@ -35,7 +36,8 @@ transactional categories. This makes provider drift fail closed.
   Klaviyo list.
 - `notify_messages` independently controls optional support-reply alerts.
 - Marketing opt-out writes local `email_suppressions` first, then sends the
-  Klaviyo unsubscribe job. Old signed unsubscribe links remain valid.
+  Klaviyo unsubscribe job with bounded transient retries. Persistent provider
+  failure is reported as pending; old signed unsubscribe links remain valid.
 - Marketing opt-in requires successful Klaviyo subscription before the local
   preference is enabled. Hard bounce/complaint suppression is never cleared by
   a user marketing opt-in.

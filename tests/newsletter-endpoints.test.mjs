@@ -2,7 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseImportEmails, onRequest as recipientsRoute } from '../functions/api/admin/recipients.js';
-import { onRequest as newslettersRoute } from '../functions/api/admin/newsletters.js';
+import {
+  claimNewsletter,
+  onRequest as newslettersRoute,
+} from '../functions/api/admin/newsletters.js';
+import { claimBlogNewsletter } from '../functions/api/admin/blog-newsletter.js';
 
 const originalFetch = globalThis.fetch;
 
@@ -153,11 +157,92 @@ test('newsletters: sweep_due 401 when no secret configured', async () => {
   assert.equal(res.status, 401);
 });
 
+test('claimNewsletter: atomically moves one allowed row to queueing', async () => {
+  const calls = [];
+  const claimed = { id: 'newsletter-1', status: 'queueing', subject: 'Claimed' };
+  const sb = {
+    from(table) {
+      calls.push(['from', table]);
+      return {
+        update(patch) {
+          calls.push(['update', patch]);
+          return {
+            eq(column, value) {
+              calls.push(['eq', column, value]);
+              return {
+                in(statusColumn, statuses) {
+                  calls.push(['in', statusColumn, statuses]);
+                  return {
+                    select(columns) {
+                      calls.push(['select', columns]);
+                      return {
+                        async maybeSingle() {
+                          calls.push(['maybeSingle']);
+                          return { data: claimed, error: null };
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+
+  const result = await claimNewsletter(sb, 'newsletter-1', ['draft', 'scheduled']);
+
+  assert.deepEqual(result, { newsletter: claimed, error: null });
+  assert.deepEqual(calls[0], ['from', 'newsletters']);
+  assert.equal(calls[1][0], 'update');
+  assert.equal(calls[1][1].status, 'queueing');
+  assert.deepEqual(calls.slice(2), [
+    ['eq', 'id', 'newsletter-1'],
+    ['in', 'status', ['draft', 'scheduled']],
+    ['select', '*'],
+    ['maybeSingle'],
+  ]);
+});
+
+test('claimBlogNewsletter: primary-key insert claims one post before provider work', async () => {
+  let inserted = null;
+  const sb = {
+    from(table) {
+      assert.equal(table, 'blog_newsletter_sends');
+      return {
+        async insert(row) {
+          inserted = row;
+          return { error: null };
+        },
+      };
+    },
+  };
+
+  assert.deepEqual(await claimBlogNewsletter(sb, 'new-post'), { claimed: true, error: null });
+  assert.equal(inserted.slug, 'new-post');
+  assert.equal(inserted.provider, 'klaviyo');
+  assert.equal(inserted.provider_status, 'queueing');
+  assert.equal(inserted.sent_at, null);
+});
+
+test('claimBlogNewsletter: duplicate primary key is an already-claimed no-op', async () => {
+  const sb = {
+    from() {
+      return { insert: async () => ({ error: { code: '23505' } }) };
+    },
+  };
+
+  assert.deepEqual(await claimBlogNewsletter(sb, 'new-post'), { claimed: false, error: null });
+});
+
 test('newsletters: send_now queues one Klaviyo campaign without local recipient fanout', () => {
   const source = readFileSync(new URL('../functions/api/admin/newsletters.js', import.meta.url), 'utf8');
   const start = source.indexOf("if (action === 'send_now')");
   const end = source.indexOf("return json(400, { error: 'bad_action' })", start);
   const sendNow = source.slice(start, end);
+  assert.match(sendNow, /await claimNewsletter\(sb, body\.id/);
   assert.match(sendNow, /await publishNewsletter\(env, sb, newsletter\)/);
   assert.match(sendNow, /return json\(202,/);
   assert.doesNotMatch(sendNow, /sendEmail|runSupabaseDeliveryWorker|materializeDeliverySource/);
@@ -175,6 +260,9 @@ test('newsletters: send_now queues one Klaviyo campaign without local recipient 
 
 test('blog sweep queues Klaviyo campaigns and persists provider identity', () => {
   const source = readFileSync(new URL('../functions/api/admin/blog-newsletter.js', import.meta.url), 'utf8');
+  const claimAt = source.indexOf('await claimBlogNewsletter(sb, post.slug)');
+  const publishAt = source.indexOf('await publishKlaviyoCampaign(env, {');
+  assert.ok(claimAt >= 0 && claimAt < publishAt, 'blog post must be claimed before provider work');
   assert.match(source, /publishKlaviyoCampaign/);
   assert.match(source, /getKlaviyoCampaignStatus/);
   assert.match(source, /provider_campaign_id/);

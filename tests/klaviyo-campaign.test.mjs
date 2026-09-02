@@ -90,6 +90,19 @@ test('klaviyoUnsubscribe uses bulk delete subscription job', async () => {
   assert.equal(seen.body.data.relationships.list.data.id, 'LIST_MAIN');
 });
 
+test('klaviyoUnsubscribe retries retryable failures before reporting pending sync', async () => {
+  let calls = 0;
+  const result = await klaviyoUnsubscribe(env, 'user@example.com', 'LIST_MAIN', {
+    fetchImpl: async () => {
+      calls += 1;
+      return calls < 3 ? response(503) : response(202);
+    },
+    sleepImpl: async () => {},
+  });
+  assert.deepEqual(result, { ok: true, status: 202 });
+  assert.equal(calls, 3);
+});
+
 test('getKlaviyoCampaignStatus reports provider job state', async () => {
   const result = await getKlaviyoCampaignStatus(env, 'C1', {
     fetchImpl: async () => response(200, { data: { id: 'C1', attributes: { status: 'complete' } } }),

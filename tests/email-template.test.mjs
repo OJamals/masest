@@ -34,3 +34,9 @@ test('email shell blocks unsafe CTA protocols', () => {
   const html = emailLayout({ ctaText: 'Bad', ctaUrl: 'javascript:alert(1)' });
   assert.doesNotMatch(html, />Bad<\/a>/);
 });
+
+test('email shell owns heading escaping', () => {
+  const html = emailLayout({ heading: '<img src=x onerror=alert(1)>Field & notes' });
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;Field &amp; notes/);
+  assert.doesNotMatch(html, /<img src=x/);
+});

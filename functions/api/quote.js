@@ -257,7 +257,7 @@ export async function handleQuote({ request, env }, dependencies = {}) {
         subject: `New ${priority} ${reqLabel} request - ${company || name}`,
         category: 'lead_internal',
         html: emailLayout({
-          heading: `New ${htmlEscape(reqLabel)} request`,
+          heading: `New ${reqLabel} request`,
           bodyHtml: `
             <p><b>Lead score:</b> ${leadScore} (${htmlEscape(priority)})</p>
             <table style="border-collapse:collapse">${rows}</table>
@@ -269,7 +269,7 @@ export async function handleQuote({ request, env }, dependencies = {}) {
         subject: 'We received your MASEST request',
         category: 'lead_autoreply',
         html: emailLayout({
-          heading: `Thanks for reaching out, ${htmlEscape(name)}`,
+          heading: `Thanks for reaching out, ${name}`,
           bodyHtml: '<p>We received your request. A MASEST team member will review it and follow up with next steps.</p>',
           ctaText: 'Visit MASEST',
           ctaUrl: env.SITE_URL || 'https://masest.co',

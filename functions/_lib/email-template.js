@@ -48,6 +48,7 @@ export function emailLayout({
   stream = 'transactional',
 } = {}) {
   const emailStream = stream === 'marketing' ? 'marketing' : 'transactional';
+  const safeHeading = escapeHtml(heading);
   const href = safeHref(ctaUrl);
   const cta = ctaText && href
     ? `<div style="margin:28px 0 0"><a href="${href}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:800;font-size:14px;line-height:1;padding:14px 24px;border-radius:999px">${escapeHtml(ctaText)}</a></div>`
@@ -69,7 +70,7 @@ ${hiddenPreheader}
       <div style="margin-top:10px;color:#f4f8f8;font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase">VertKleen Performance Chemistry</div>
     </td></tr>
     <tr><td class="email-pad" style="padding:36px 34px;color:#27323a;font-size:15px;line-height:1.65">
-      ${heading ? `<h1 style="margin:0 0 18px;color:#0b0d12;font-size:26px;line-height:1.2;letter-spacing:-.02em">${heading}</h1>` : ''}
+      ${safeHeading ? `<h1 style="margin:0 0 18px;color:#0b0d12;font-size:26px;line-height:1.2;letter-spacing:-.02em">${safeHeading}</h1>` : ''}
       ${bodyHtml}${cta}
     </td></tr>
     <tr><td style="background:#0b0d12;padding:24px 30px;color:#8f9ca7;font-size:11px;line-height:1.65;text-align:center">

@@ -65,18 +65,19 @@ export async function onRequest({ request, env }) {
     const companyIds = await targetCompanies(sb, audience, body.company_id);
     if (!companyIds.length) return json(200, { ok: true, recipients: 0, message: 'No companies match.' });
 
-    await sb.from('notifications').insert(companyIds.map((cid) => ({
-      company_id: cid, type: 'offer', title,
-      body: bodyText.slice(0, 1000) || null, link: ctaUrl || '/products.html',
-    }))).then(() => {}, () => {});
-
-    const { data: offer } = await sb.from('offers').insert({
+    const { data: offer, error: offerError } = await sb.from('offers').insert({
       title, body: bodyText || null, cta_url: ctaUrl || null,
       audience, company_id: audience === 'company' ? body.company_id : null,
       created_by: user.email || null, recipients: companyIds.length, emailed: false,
       email_provider: body.send_email ? 'klaviyo' : null,
       email_status: body.send_email ? 'queueing' : 'not_requested',
     }).select('id').single();
+    if (offerError || !offer?.id) return json(500, { error: 'offer_create_failed' });
+
+    await sb.from('notifications').insert(companyIds.map((cid) => ({
+      company_id: cid, type: 'offer', title,
+      body: bodyText.slice(0, 1000) || null, link: ctaUrl || '/products.html',
+    }))).then(() => {}, () => {});
 
     let emailQueued = 0;
     let emailFailed = 0;
@@ -86,7 +87,7 @@ export async function onRequest({ request, env }) {
       if (emails.length) {
         const html = emailLayout({
           stream: 'marketing',
-          heading: htmlEscape(title),
+          heading: title,
           preheader: bodyText || title,
           bodyHtml: `<p>${htmlEscape(String(body.body || ''))}</p>`,
           ctaText: ctaUrl ? 'View' : undefined,
@@ -99,8 +100,8 @@ export async function onRequest({ request, env }) {
             subject: title,
             html,
             text: htmlToText(html),
-            idempotencyKey: `offer/${offer?.id || 'unknown'}/${email}`,
-            properties: { offer_id: offer?.id || '', cta_url: ctaUrl || '', audience },
+            idempotencyKey: `offer/${offer.id}/${email}`,
+            properties: { offer_id: offer.id, cta_url: ctaUrl || '', audience },
           })));
           emailQueued += results.filter((result) => result.ok).length;
           emailFailed += results.filter((result) => !result.ok).length;
@@ -115,17 +116,15 @@ export async function onRequest({ request, env }) {
       : emailQueued && !emailFailed ? 'queued'
         : emailQueued ? 'partially_queued'
           : 'failed';
-    if (offer?.id) {
-      await sb.from('offers').update({
-        email_status: emailStatus,
-        email_queued_count: emailQueued,
-        email_failed_count: emailFailed,
-      }).eq('id', offer.id);
-    }
+    await sb.from('offers').update({
+      email_status: emailStatus,
+      email_queued_count: emailQueued,
+      email_failed_count: emailFailed,
+    }).eq('id', offer.id);
 
     return json(201, {
       ok: true,
-      id: offer?.id,
+      id: offer.id,
       recipients: companyIds.length,
       emailed: false,
       email_queued: emailQueued > 0,

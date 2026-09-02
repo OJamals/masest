@@ -66,9 +66,9 @@ export async function onRequestPatch({ request, env }) {
   }
 
   if (patch.marketing_email_enabled === false) {
-    await recordSuppression(env, user.email, 'user_preference', 'marketing');
+    const suppressed = await recordSuppression(env, user.email, 'user_preference', 'marketing');
     const unsubscribed = await klaviyoUnsubscribe(env, user.email, env.KLAVIYO_LIST_ID);
-    if (!unsubscribed.ok) marketingSync = 'pending';
+    if (!suppressed || !unsubscribed.ok) marketingSync = 'pending';
   } else if (patch.marketing_email_enabled === true) {
     const cleared = await clearSuppression(env, user.email, 'marketing');
     if (!cleared) marketingSync = 'pending';

@@ -9,7 +9,7 @@ test('categoryStream classifies marketing vs transactional', () => {
   assert.equal(categoryStream('order'), 'transactional');
   assert.equal(categoryStream('billing'), 'transactional');
   assert.equal(categoryStream('lead_autoreply'), 'transactional'); // expected response, not marketing
-  assert.equal(categoryStream(null), 'transactional');
+  assert.equal(categoryStream(null), null);
 });
 
 test('filterByStream: hard block hides everything, marketing block only marketing', () => {

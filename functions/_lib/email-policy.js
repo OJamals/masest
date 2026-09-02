@@ -1,6 +1,5 @@
 // Canonical email policy. Category decides stream, provider, and user preference.
-// Unknown categories fail toward transactional service mail; Cloudflare still enforces
-// its own transactional-only transport boundary.
+// Unknown categories have no policy and cannot enter either provider.
 const TRANSACTIONAL = Object.freeze({
   stream: 'transactional',
   provider: 'cloudflare',
@@ -51,9 +50,9 @@ export const MARKETING_CATEGORIES = new Set(
 );
 
 export function categoryPolicy(category) {
-  return EMAIL_CATEGORY_POLICY[String(category || '')] || TRANSACTIONAL;
+  return EMAIL_CATEGORY_POLICY[String(category || '')] || null;
 }
 
 export function categoryStream(category) {
-  return categoryPolicy(category).stream;
+  return categoryPolicy(category)?.stream || null;
 }

@@ -8,7 +8,7 @@ create table if not exists public.newsletters (
   body_md text not null default '',
   source text not null default 'compose',        -- 'compose' | 'blog_post'
   blog_slug text,
-  status text not null default 'draft',           -- draft|scheduled|sending|sent|failed|canceled
+  status text not null default 'draft',           -- draft|scheduled|queueing|sending|sent|failed|canceled
   audience jsonb not null default '{"populations":[],"recipient_tags":[]}'::jsonb,
   schedule jsonb not null default '{}'::jsonb,     -- {mode, send_at, interval_days, next_run_at}
   recipient_count int not null default 0,

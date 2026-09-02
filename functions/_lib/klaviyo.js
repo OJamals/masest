@@ -125,9 +125,12 @@ export async function klaviyoSubscribe(env, email, listId, properties = {}, { fe
     : { ok: false, ...(result.skipped ? { skipped: true } : {}), ...(result.status ? { status: result.status } : {}), ...(!result.status && result.error ? { error: result.error } : {}) };
 }
 
-// Unsubscribe one profile from marketing on a list. Local suppression remains the
-// fail-closed source while this async Klaviyo job is accepted.
-export async function klaviyoUnsubscribe(env, email, listId, { fetchImpl = globalThis.fetch } = {}) {
+// Unsubscribe one profile from marketing on a list. Local suppression preserves
+// opt-out intent; this accepted job removes the profile from Klaviyo audiences.
+export async function klaviyoUnsubscribe(env, email, listId, {
+  fetchImpl = globalThis.fetch,
+  sleepImpl = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+} = {}) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!env?.KLAVIYO_PRIVATE_KEY || !listId || !EMAIL_RE.test(normalized)) {
     return { ok: false, skipped: true };
@@ -141,9 +144,14 @@ export async function klaviyoUnsubscribe(env, email, listId, { fetchImpl = globa
       relationships: { list: { data: { type: 'list', id: listId } } },
     },
   };
-  const result = await klaviyoRequest(env, '/api/profile-subscription-bulk-delete-jobs/', {
-    method: 'POST', body: payload, fetchImpl,
-  });
+  let result;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    result = await klaviyoRequest(env, '/api/profile-subscription-bulk-delete-jobs/', {
+      method: 'POST', body: payload, fetchImpl,
+    });
+    if (result.ok || !result.retryable || attempt === 2) break;
+    await sleepImpl(100 * (2 ** attempt));
+  }
   return result.ok
     ? { ok: result.status === 202, status: result.status }
     : { ok: false, ...(result.skipped ? { skipped: true } : {}), ...(result.status ? { status: result.status } : {}), ...(result.error ? { error: result.error } : {}) };
@@ -273,12 +281,14 @@ export async function subscribeLeadByIndustry(env, { email, industry } = {}) {
 
 // Build a Klaviyo Events-API payload for a server-side metric (e.g. a pipeline stage
 // change). Pure — unit-tested without network.
-export function buildEventPayload({ email, metric, properties = {}, value } = {}) {
+export function buildEventPayload({ email, metric, properties = {}, value, uniqueId } = {}) {
   const attributes = {
     properties,
     metric: { data: { type: 'metric', attributes: { name: metric } } },
     profile: { data: { type: 'profile', attributes: { email } } },
   };
+  const stableId = String(uniqueId || '').trim().slice(0, 255);
+  if (stableId) attributes.unique_id = stableId;
   if (Number.isFinite(Number(value))) attributes.value = Number(value);
   return { data: { type: 'event', attributes } };
 }
@@ -286,12 +296,21 @@ export function buildEventPayload({ email, metric, properties = {}, value } = {}
 // Record a server-side metric event in Klaviyo. NOTE: an event does NOT send email — it only
 // triggers a send if the owner has built a Klaviyo flow on that metric. Best-effort: skips
 // (no throw) without a private key, metric name, or valid email.
-export async function klaviyoTrack(env, { email, metric, properties, value, fetchImpl = globalThis.fetch } = {}) {
+export async function klaviyoTrack(env, {
+  email,
+  metric,
+  properties,
+  value,
+  uniqueId,
+  fetchImpl = globalThis.fetch,
+} = {}) {
   const key = env.KLAVIYO_PRIVATE_KEY;
   if (!key || !metric || !EMAIL_RE.test(String(email || ''))) return { ok: false, skipped: true };
   const result = await klaviyoRequest(env, '/api/events/', {
     method: 'POST',
-    body: buildEventPayload({ email: String(email).trim().toLowerCase(), metric, properties, value }),
+    body: buildEventPayload({
+      email: String(email).trim().toLowerCase(), metric, properties, value, uniqueId,
+    }),
     fetchImpl,
   });
   if (result.ok) return { ok: [200, 202].includes(result.status), status: result.status };

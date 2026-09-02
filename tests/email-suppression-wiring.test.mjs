@@ -21,7 +21,9 @@ test("supabase lib imports the pure email helpers", () => {
 });
 
 test("lib exposes recordSuppression + updateEmailStatus", () => {
-  assert.match(SRC, /export async function recordSuppression\(/);
+  const record = SRC.match(/export async function recordSuppression[\s\S]*?\n}\n\n\/\/ Remove only/)?.[0] || '';
+  assert.match(record, /const \{ error \} = await adminClient\(env\)\.from\('email_suppressions'\)/);
+  assert.match(record, /return !error/);
   assert.match(SRC, /export async function updateEmailStatus\(/);
 });
 

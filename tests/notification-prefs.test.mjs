@@ -54,6 +54,8 @@ test('notification-prefs endpoint exposes GET + PATCH using sanitizeNotification
   assert.match(src, /onRequestGet/);
   assert.match(src, /onRequestPatch|method === 'PATCH'/);
   assert.match(src, /sanitizeNotificationPrefs\(/);
+  assert.match(src, /const suppressed = await recordSuppression/);
+  assert.match(src, /if \(!suppressed \|\| !unsubscribed\.ok\) marketingSync = 'pending'/);
 });
 
 test('migration adds default-on marketing preference and preserves support preference', () => {
@@ -64,7 +66,10 @@ test('migration adds default-on marketing preference and preserves support prefe
 });
 
 test('send sites keep orders mandatory and use marketing preference for offers', () => {
-  assert.match(read('functions/_lib/staff-order-operations.js'), /companyEmails\(sb, companyId, 'orders'\)/);
+  const orders = read('functions/_lib/staff-order-operations.js');
+  assert.match(orders, /companyEmails\(sb, companyId, 'orders'\)/);
+  const notifyCompany = orders.match(/async function notifyCompany[\s\S]*?\n}\n\nasync function sendTrackingEmail/)?.[0] || '';
+  assert.match(notifyCompany, /category:\s*'order'/);
   assert.match(read('functions/api/admin/messages.js'), /deliverSupportMessageEmail/);
   assert.match(read('functions/_lib/support-email.js'), /shouldEmailSupportRecipient/);
   assert.match(read('functions/_lib/message-notifications.js'), /notify_messages/);
@@ -77,4 +82,5 @@ test('dashboard exposes immutable transactional + optional marketing settings', 
   assert.match(html, /checked disabled/);
   assert.match(html, /data-pref="marketing_email_enabled"/);
   assert.match(read('js/dashboard.js'), /notification-prefs/);
+  assert.doesNotMatch(read('js/dashboard.js'), /Provider sync will retry/);
 });

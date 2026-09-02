@@ -14,6 +14,23 @@ import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
 const COMPLETE_PROVIDER_STATES = new Set(['complete', 'sent']);
+const SENDABLE_NEWSLETTER_STATES = ['draft', 'scheduled', 'failed'];
+
+export async function claimNewsletter(sb, id, allowedStatuses = SENDABLE_NEWSLETTER_STATES) {
+  const statuses = [...new Set(allowedStatuses)].filter((status) => typeof status === 'string' && status);
+  if (!id || !statuses.length) return { newsletter: null, error: new Error('newsletter_claim_invalid') };
+  const { data, error } = await sb.from('newsletters')
+    .update({
+      status: 'queueing',
+      provider_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .in('status', statuses)
+    .select('*')
+    .maybeSingle();
+  return { newsletter: data || null, error: error || null };
+}
 
 function campaignPatch(result) {
   return {
@@ -41,10 +58,11 @@ async function publishNewsletter(env, sb, newsletter, { scheduled = false, listI
   if (!result.ok) {
     await sb.from('newsletters').update({
       provider: 'klaviyo',
+      status: 'failed',
       provider_status: 'failed_to_queue',
       provider_error: result.error || 'klaviyo_campaign_failed',
       updated_at: new Date().toISOString(),
-    }).eq('id', newsletter.id);
+    }).eq('id', newsletter.id).eq('status', 'queueing');
     return { error: result.error || 'klaviyo_campaign_failed', retryable: result.retryable === true };
   }
 
@@ -103,7 +121,14 @@ async function sweepDue(env) {
   const due = dueNewsletters(data || [], Date.now());
   const queued = [];
   const failed = [];
-  for (const newsletter of due) {
+  for (const candidate of due) {
+    const claim = await claimNewsletter(sb, candidate.id, ['scheduled']);
+    if (claim.error) {
+      failed.push({ id: candidate.id, error: 'newsletter_claim_failed', retryable: true });
+      continue;
+    }
+    const newsletter = claim.newsletter;
+    if (!newsletter) continue;
     const result = await publishNewsletter(env, sb, newsletter, { scheduled: true });
     if (result.error) failed.push({ id: newsletter.id, ...result });
     else queued.push({ id: newsletter.id, ...result });
@@ -186,7 +211,9 @@ export async function onRequest({ request, env }) {
   if (action === 'delete') {
     if (!body.id) return json(400, { error: 'id_required' });
     const { data: current } = await sb.from('newsletters').select('status').eq('id', body.id).maybeSingle();
-    if (current?.status === 'sending') return json(409, { error: 'campaign_in_flight' });
+    if (current?.status === 'sending' || current?.status === 'queueing') {
+      return json(409, { error: 'campaign_in_flight' });
+    }
     await sb.from('newsletters').delete().eq('id', body.id);
     return json(200, { ok: true });
   }
@@ -198,10 +225,14 @@ export async function onRequest({ request, env }) {
     const schedule = mode === 'recurring'
       ? { mode, interval_days: Math.max(1, Number(input.interval_days) || 14), next_run_at: input.send_at || new Date().toISOString() }
       : { mode, send_at: input.send_at || new Date().toISOString(), next_run_at: input.send_at || new Date().toISOString() };
-    const { error } = await sb.from('newsletters')
+    const { data: scheduled, error } = await sb.from('newsletters')
       .update({ status: 'scheduled', schedule, provider_error: null, updated_at: new Date().toISOString() })
-      .eq('id', body.id).neq('status', 'sending');
+      .eq('id', body.id)
+      .in('status', ['draft', 'scheduled', 'sent', 'failed', 'canceled'])
+      .select('id')
+      .maybeSingle();
     if (error) return json(500, { error: error.message });
+    if (!scheduled) return json(409, { error: 'campaign_in_flight' });
     return json(200, { ok: true, schedule });
   }
 
@@ -236,10 +267,17 @@ export async function onRequest({ request, env }) {
 
   if (action === 'send_now') {
     if (!body.id) return json(400, { error: 'id_required' });
-    const { data: newsletter } = await sb.from('newsletters').select('*').eq('id', body.id).maybeSingle();
-    if (!newsletter) return json(404, { error: 'not_found' });
-    if (newsletter.status === 'sent') return json(409, { error: 'already_sent' });
-    if (newsletter.status === 'sending') return json(409, { error: 'campaign_in_flight' });
+    const claim = await claimNewsletter(sb, body.id);
+    if (claim.error) return json(503, { error: 'newsletter_claim_failed', retryable: true });
+    const newsletter = claim.newsletter;
+    if (!newsletter) {
+      const { data: current, error } = await sb.from('newsletters')
+        .select('status').eq('id', body.id).maybeSingle();
+      if (error) return json(503, { error: 'newsletter_state_load_failed', retryable: true });
+      if (!current) return json(404, { error: 'not_found' });
+      if (current.status === 'sent') return json(409, { error: 'already_sent' });
+      return json(409, { error: 'campaign_in_flight' });
+    }
     const queued = await publishNewsletter(env, sb, newsletter);
     if (queued.error) return json(503, { error: queued.error, retryable: queued.retryable });
     return json(202, { ok: true, ...queued });

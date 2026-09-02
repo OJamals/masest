@@ -10,6 +10,21 @@ import { recordAutomationRun } from '../../_lib/automation-runs.js';
 const MAX_POSTS_PER_RUN = 5;
 const FINAL = new Set(['complete', 'sent']);
 
+export async function claimBlogNewsletter(sb, slug) {
+  const { error } = await sb.from('blog_newsletter_sends').insert({
+    slug,
+    queued_at: new Date().toISOString(),
+    sent_at: null,
+    provider: 'klaviyo',
+    provider_status: 'queueing',
+    provider_error: null,
+    recipient_count: 0,
+  });
+  if (!error) return { claimed: true, error: null };
+  if (String(error.code || '') === '23505') return { claimed: false, error: null };
+  return { claimed: false, error };
+}
+
 async function reconcileQueued(env, sb) {
   const { data, error } = await sb.from('blog_newsletter_sends')
     .select('slug,provider_campaign_id,provider_status')
@@ -70,6 +85,12 @@ export async function onRequestPost({ request, env }) {
     const queued = [];
     const failed = [];
     for (const post of todo) {
+      const claim = await claimBlogNewsletter(sb, post.slug);
+      if (claim.error) {
+        failed.push({ slug: post.slug, error: 'blog_newsletter_claim_failed', retryable: true });
+        continue;
+      }
+      if (!claim.claimed) continue;
       const { subject, html } = renderBlogEmail(post);
       const published = await publishKlaviyoCampaign(env, {
         name: `MASEST blog · ${post.slug}`,
@@ -80,21 +101,20 @@ export async function onRequestPost({ request, env }) {
         listId: env.KLAVIYO_LIST_ID,
       });
       if (!published.ok) {
+        await sb.from('blog_newsletter_sends').update({
+          provider_status: 'failed_to_queue',
+          provider_error: published.error || 'klaviyo_campaign_failed',
+        }).eq('slug', post.slug).eq('provider_status', 'queueing');
         failed.push({ slug: post.slug, error: published.error, retryable: published.retryable === true });
         continue;
       }
-      const { error: saveError } = await sb.from('blog_newsletter_sends').insert({
-        slug: post.slug,
-        queued_at: new Date().toISOString(),
-        sent_at: null,
-        provider: 'klaviyo',
+      const { error: saveError } = await sb.from('blog_newsletter_sends').update({
         provider_campaign_id: published.campaignId,
         provider_message_id: published.messageId,
         provider_template_id: published.templateId,
         provider_status: published.status || 'queued',
         provider_error: null,
-        recipient_count: 0,
-      });
+      }).eq('slug', post.slug).eq('provider_status', 'queueing');
       if (saveError) {
         failed.push({ slug: post.slug, error: 'provider_identity_save_failed', retryable: true });
         continue;

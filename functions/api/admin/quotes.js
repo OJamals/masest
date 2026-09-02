@@ -198,7 +198,7 @@ function quoteLeadLifecycle({ sb, env }) {
       category: 'lead_followup',
       idempotencyKey: `quote-followup/${quote.id}/${due || 'manual'}`,
       html: emailLayout({
-        heading: `Follow-up for ${htmlEscape(quote.company || quote.name || 'your request')}`,
+        heading: `Follow-up for ${quote.company || quote.name || 'your request'}`,
         preheader: nextStep,
         bodyHtml: `<p>${htmlEscape(nextStep)}</p>${dueText ? `<p><b>Target follow-up:</b> ${htmlEscape(dueText)} ET</p>` : ''}`,
         ctaText: 'Reply to MASEST',
@@ -212,7 +212,7 @@ function quoteLeadLifecycle({ sb, env }) {
       category: 'lead_followup_reminder',
       idempotencyKey: `quote-followup-reminder/${quote.id}/${quote.due_at || dueText}`,
       html: emailLayout({
-        heading: `Follow-up for ${htmlEscape(label)}`,
+        heading: `Follow-up for ${label}`,
         preheader: nextStep,
         bodyHtml: `<p>${htmlEscape(nextStep)}</p><p>This follow-up was due ${htmlEscape(dueText)} ET.</p>`,
         ctaText: 'Reply to MASEST',
@@ -223,7 +223,7 @@ function quoteLeadLifecycle({ sb, env }) {
       subject: `Quote follow-up needed: ${label}`,
       category: 'lead_followup_alert',
       html: emailLayout({
-        heading: `Quote follow-up needed: ${htmlEscape(label)}`,
+        heading: `Quote follow-up needed: ${label}`,
         bodyHtml: `<p>${htmlEscape(nextStep)}</p><p>This lead has no buyer email on file. Follow-up was due ${htmlEscape(dueText)} ET.</p>`,
       }),
     }),

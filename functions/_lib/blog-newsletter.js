@@ -58,7 +58,7 @@ export function renderBlogEmail(post = {}) {
     + `<p style="margin:0 0 8px">${htmlEscape(excerpt)}</p>`;
   const html = emailLayout({
     stream: 'marketing',
-    heading: htmlEscape(title),
+    heading: title,
     preheader: excerpt || title,
     bodyHtml,
     ctaText: 'Read the full post',

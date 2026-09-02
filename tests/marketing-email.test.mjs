@@ -40,6 +40,7 @@ test('configured marketing automation queues a truthful Klaviyo event', async ()
   assert.equal(request.body.data.attributes.properties.message_subject, 'Field offer');
   assert.equal(request.body.data.attributes.properties.message_html, '<p>Offer</p>');
   assert.equal(request.body.data.attributes.properties.idempotency_key, 'offer/42/a@b.co');
+  assert.equal(request.body.data.attributes.unique_id, 'offer/42/a@b.co');
 });
 
 test('transactional categories cannot enter Klaviyo marketing automation', async () => {
@@ -47,4 +48,14 @@ test('transactional categories cannot enter Klaviyo marketing automation', async
     category: 'order', email: 'a@b.co', subject: 'Order', html: '<p>Order</p>',
   });
   assert.equal(result.error, 'marketing_category_required');
+});
+
+test('marketing automation requires stable provider idempotency', async () => {
+  const result = await queueMarketingEmail({
+    KLAVIYO_PRIVATE_KEY: 'k',
+    KLAVIYO_FLOW_METRIC_OFFER: 'MASEST Offer Email',
+  }, {
+    category: 'offer', email: 'a@b.co', subject: 'Offer', html: '<p>Offer</p>',
+  });
+  assert.equal(result.error, 'marketing_idempotency_key_required');
 });
