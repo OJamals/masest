@@ -3,9 +3,8 @@
 //   POST { action: 'chat_presence', chat_open } → authenticated buyer chat state
 import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
-import { deliverSupportMessageEmail } from '../../_lib/support-email.js';
+import { publishSupportMessage } from '../../_lib/support-message-publisher.js';
 import {
-  appendSupportMessage,
   hydrateSupportOrderContexts,
   messagePage,
   resolveSupportOrderId,
@@ -79,9 +78,12 @@ export async function onRequest({ request, env }) {
       companyId,
     });
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
-    let data;
+    let publication;
     try {
-      data = await appendSupportMessage(sb, {
+      publication = await publishSupportMessage({
+        ...env,
+        APP_URL: env.APP_URL || new URL(request.url).origin,
+      }, sb, {
         companyId,
         userId: user.id,
         senderRole: 'buyer',
@@ -92,13 +94,7 @@ export async function onRequest({ request, env }) {
     } catch {
       return json(500, { error: 'server_error' });
     }
-
-    let emailDelivery;
-    try {
-      emailDelivery = await deliverSupportMessageEmail({ ...env, APP_URL: env.APP_URL || new URL(request.url).origin }, sb, data);
-    } catch {
-      emailDelivery = { ok: false, retryable: true, error: 'support_email_delivery_failed' };
-    }
+    const { message: data, emailDelivery } = publication;
 
     return json(201, {
       id: data.id,

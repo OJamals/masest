@@ -9,7 +9,7 @@
 //
 // Usage:
 //   SUPABASE_DB_URL='postgresql://…pooler…:5432/postgres' npm run publish:content
-//     (or set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY for the REST path)
+//     (or set SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY for the REST path)
 //   git diff data/content/        # review
 //   git add data/content/ && git commit && git push   # publish → CF deploy
 //
@@ -25,7 +25,7 @@ const ALLOW_EMPTY = process.argv.includes("--allow-empty");
 
 // Pull published entries over a direct Postgres (pooler) connection — the path
 // for operators who hold the pooler connection string rather than the REST
-// service-role key. Ordered to match build-content's Supabase query so output
+// publishable key. Ordered to match build-content's Supabase query so output
 // stays byte-identical across sources.
 async function loadEntriesFromDb(connectionString) {
   let pg;
@@ -68,7 +68,8 @@ async function main() {
         "publish-content: no content source configured.",
         "Set ONE of:",
         "  SUPABASE_DB_URL=postgresql://…pooler…:5432/postgres   (direct Postgres / pooler)",
-        "  SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY              (Supabase REST)",
+        "  SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY               (Supabase REST, preferred)",
+        "  SUPABASE_URL + SUPABASE_ANON_KEY                      (Supabase REST, legacy)",
         "Then re-run: npm run publish:content",
       ].join("\n"),
     );

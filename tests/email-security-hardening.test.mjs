@@ -8,13 +8,15 @@ import {
 
 const messagesSrc = readFileSync(new URL("../functions/api/account/messages.js", import.meta.url), "utf8");
 const adminMessagesSrc = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
+const supportPublisherSrc = readFileSync(new URL("../functions/_lib/support-message-publisher.js", import.meta.url), "utf8");
 const supportEmailSrc = readFileSync(new URL("../functions/_lib/support-email.js", import.meta.url), "utf8");
 const emailBridgeSrc = readFileSync(new URL("../shared/email-bridge.js", import.meta.url), "utf8");
 const messageRepliesSrc = readFileSync(new URL("../functions/_lib/message-replies.js", import.meta.url), "utf8");
 
 test("support notification emails escape customer and staff-supplied body", () => {
-  assert.match(messagesSrc, /deliverSupportMessageEmail/);
-  assert.match(adminMessagesSrc, /deliverSupportMessageEmail/);
+  assert.match(messagesSrc, /publishSupportMessage/);
+  assert.match(adminMessagesSrc, /publishSupportMessage/);
+  assert.match(supportPublisherSrc, /deliverSupportMessageEmail/);
   assert.match(supportEmailSrc, /htmlEscape\(String\(message\.body\)\.slice\(0, 4000\)\)/);
   assert.match(supportEmailSrc, /htmlEscape\(order\.reference \|\| order\.id\)/);
   assert.doesNotMatch(supportEmailSrc, /<blockquote[^>]*>\$\{message\.body\}/);

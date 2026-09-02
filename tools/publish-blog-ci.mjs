@@ -24,7 +24,7 @@ const PROTECTED_COMPARISON_SLUGS = [
 async function main() {
   const entries = await loadEntries();
   if (!entries) {
-    console.error("publish-blog-ci: no content source. Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.");
+    console.error("publish-blog-ci: no content source. Set SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY.");
     process.exitCode = 1;
     return;
   }

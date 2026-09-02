@@ -269,19 +269,25 @@ export function createQuoteLeadLifecycle({
         })
         : null;
 
-      const emailQueued = Boolean(await sendFollowUp({ quote, nextStep, due, dueText, subject, actor }));
       const thread = await handoff({
         quote,
         companyId,
         text: nextStep,
         actor: actor || 'staff',
       });
+      let emailQueued = Boolean(thread.email_delivery?.ok);
+      if (!thread.posted) {
+        emailQueued = Boolean(await sendFollowUp({ quote, nextStep, due, dueText, subject, actor }));
+      }
       const handoffNote = thread.posted
         ? `Buyer message thread updated (${thread.message_id || 'message'})`
         : `Buyer message thread not updated (${thread.reason || thread.error || 'no account match'})`;
+      const deliveryNote = thread.posted
+        ? `Follow-up posted in customer thread${emailQueued ? ' and email queued' : ''}`
+        : `Follow-up ${emailQueued ? 'email queued' : 'not delivered'}`;
       const notes = [
         quote.notes,
-        `Follow-up ${emailQueued ? 'email queued' : 'email not queued'} by ${actor || 'staff'}: ${nextStep}`,
+        `${deliveryNote} by ${actor || 'staff'}: ${nextStep}`,
         handoffNote,
       ].filter(Boolean).join('\n');
       const updated = await store.updateFollowUp(id, {

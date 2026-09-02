@@ -70,7 +70,8 @@ test('send sites keep orders mandatory and use marketing preference for offers',
   assert.match(orders, /companyEmails\(sb, companyId, 'orders'\)/);
   const notifyCompany = orders.match(/async function notifyCompany[\s\S]*?\n}\n\nasync function sendTrackingEmail/)?.[0] || '';
   assert.match(notifyCompany, /category:\s*'order'/);
-  assert.match(read('functions/api/admin/messages.js'), /deliverSupportMessageEmail/);
+  assert.match(read('functions/api/admin/messages.js'), /publishSupportMessage/);
+  assert.match(read('functions/_lib/support-message-publisher.js'), /deliverSupportMessageEmail/);
   assert.match(read('functions/_lib/support-email.js'), /shouldEmailSupportRecipient/);
   assert.match(read('functions/_lib/message-notifications.js'), /notify_messages/);
   assert.match(read('functions/api/admin/offers.js'), /marketing_email_enabled/);

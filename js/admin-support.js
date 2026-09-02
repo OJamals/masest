@@ -108,7 +108,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/admin-support.css?v=20260830h`;
+    stylesheet.href = `${root}css/admin-support.css?v=20260901b`;
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }
@@ -148,6 +148,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
           <button type="button" data-support-close aria-label="Close support menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
         </header>
         <div class="site-support__conversation-body"><div class="site-support__conversation-empty"><i class="ph ph-chat-centered-text" aria-hidden="true"></i><h3>No conversation selected</h3><p>Choose a customer conversation to read and reply.</p></div></div>
+        <button type="submit" form="siteSupportNewChatForm" data-support-compose-submit hidden>Start chat</button>
         <div class="site-support__settings" id="siteSupportSettings" hidden>
           <p class="site-support__settings-intro">Choose when you get support email alerts. These apply to your staff account only.</p>
           ${SUPPORT_PREFS.map(([id, key, title, help]) => `<label><input id="${id}" name="support_${key}" type="checkbox" data-support-pref="${key}"><span><b>${title}</b><small>${help}</small></span></label>`).join("")}
@@ -182,6 +183,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   const newChat = shell.querySelector("[data-support-new-chat]");
   const back = shell.querySelector("[data-support-back]");
   const viewLabel = shell.querySelector("[data-support-view-label]");
+  const composeSubmit = shell.querySelector("[data-support-compose-submit]");
   let prefsLoaded = false;
   let threadFilter = "open";
   let threads = [];
@@ -243,7 +245,12 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     settings.hidden = !isSettings;
     view.hidden = isSettings;
     back.hidden = !(isSettings || isCompose || selected);
-    viewLabel.textContent = isSettings ? "Support settings" : isCompose ? "New conversation" : selected ? "Conversation" : "Customer inbox";
+    viewLabel.textContent = isSettings ? "Support settings" : isCompose ? "New chat" : selected ? "Conversation" : "Customer inbox";
+    if (!isCompose) {
+      composeSubmit.hidden = true;
+      composeSubmit.disabled = false;
+      composeSubmit.textContent = "Start chat";
+    }
     settingsToggle.setAttribute("aria-expanded", String(isSettings));
     if (isSettings) void loadPrefs();
   };
@@ -562,6 +569,9 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
 
   const renderNewChatSearch = ({ query = "", customers = null, loading = false, error = "" } = {}) => {
     if (drawer.dataset.view !== "compose") return;
+    composeSubmit.hidden = true;
+    composeSubmit.disabled = false;
+    composeSubmit.textContent = "Start chat";
     const users = Array.isArray(customers)
       ? customers.filter((customer) => customer.id && customer.company_id)
       : [];
@@ -625,14 +635,18 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     view.innerHTML = `<section class="site-support__new-chat" aria-labelledby="siteSupportNewChatTitle">
       <header class="site-support__new-chat-head"><p>New customer conversation</p><h3 id="siteSupportNewChatTitle" tabindex="-1">Write first message</h3><span>Message enters same support thread customers use in their dashboard.</span></header>
       <div class="site-support__new-chat-selected"><span><strong>${escapeHtml(profile.full_name || profile.email || "Customer")}</strong><small>${escapeHtml(profile.email || "No email available")} · ${escapeHtml(company.name || "Customer account")} · ${escapeHtml(companyStatus)}</small></span><button type="button" data-support-change-customer>Change customer</button></div>
-      <form class="site-support__new-chat-form">
+      <form class="site-support__new-chat-form" id="siteSupportNewChatForm">
         <label for="siteSupportNewChatOrder">Order reference <small>Optional</small></label>
         <select id="siteSupportNewChatOrder" name="order_id"><option value="">General account conversation</option>${orderOptions}</select>
         <label for="siteSupportNewChatMessage">Message <small id="siteSupportNewChatHint">⌘/Ctrl + Enter sends</small></label>
         <textarea id="siteSupportNewChatMessage" name="support_message" maxlength="4000" autocomplete="off" aria-describedby="siteSupportNewChatHint" required></textarea>
-        <div class="site-support__new-chat-actions"><span role="status" aria-live="polite"></span><button type="submit">Start chat</button></div>
+        <p class="site-support__new-chat-status" role="status" aria-live="polite"></p>
       </form>
     </section>`;
+
+    composeSubmit.hidden = false;
+    composeSubmit.disabled = false;
+    composeSubmit.textContent = "Start chat";
 
     view.querySelector("[data-support-change-customer]").addEventListener("click", () => {
       void loadNewChatUsers("");
@@ -648,10 +662,11 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       event.preventDefault();
       const body = textarea.value.trim();
       const orderId = form.elements.order_id.value || null;
-      const send = form.querySelector('[type="submit"]');
+      const send = composeSubmit;
       const status = form.querySelector('[role="status"]');
       if (!body || send.disabled) return;
       send.disabled = true;
+      send.textContent = "Sending…";
       status.textContent = "Sending…";
       const requestId = newChatRequestId;
       try {
@@ -676,6 +691,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
         if (requestId !== newChatRequestId || drawer.dataset.view !== "compose") return;
         status.textContent = requestError?.data?.message || "Could not start chat.";
         send.disabled = false;
+        send.textContent = "Start chat";
       }
     });
     view.scrollTop = 0;

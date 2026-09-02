@@ -273,7 +273,7 @@ test('lead lifecycle rejects invalid transition input before writes', async () =
   assert.deepEqual(store.calls, []);
 });
 
-test('follow-up owns customer message, thread handoff, and lifecycle update', async () => {
+test('linked follow-up uses the canonical customer thread without duplicate standalone email', async () => {
   const store = lifecycleStore();
   const effects = [];
   const lifecycle = createQuoteLeadLifecycle({
@@ -285,7 +285,7 @@ test('follow-up owns customer message, thread handoff, and lifecycle update', as
     },
     handoff: async (input) => {
       effects.push(['handoff', input]);
-      return { posted: true, message_id: 'm1' };
+      return { posted: true, message_id: 'm1', email_delivery: { ok: true } };
     },
   });
 
@@ -299,8 +299,7 @@ test('follow-up owns customer message, thread handoff, and lifecycle update', as
   });
 
   assert.equal(result.ok, true);
-  assert.equal(effects[0][0], 'sendFollowUp');
-  assert.equal(effects[1][0], 'handoff');
+  assert.deepEqual(effects.map(([name]) => name), ['handoff']);
   const update = store.calls.find(([name]) => name === 'updateFollowUp');
   assert.deepEqual(update[2], {
     status: 'contacted',
@@ -308,8 +307,34 @@ test('follow-up owns customer message, thread handoff, and lifecycle update', as
     handled_by: 'owner@masest.co',
     next_step: 'Follow-up queued',
     due_at: '2026-08-01T09:00:00.000Z',
-    notes: 'Existing note\nFollow-up email queued by owner@masest.co: Approve proposal\nBuyer message thread updated (m1)',
+    notes: 'Existing note\nFollow-up posted in customer thread and email queued by owner@masest.co: Approve proposal\nBuyer message thread updated (m1)',
   });
+});
+
+test('unlinked follow-up falls back to standalone email after thread handoff declines', async () => {
+  const store = lifecycleStore();
+  const effects = [];
+  const lifecycle = createQuoteLeadLifecycle({
+    store,
+    sendFollowUp: async (input) => effects.push(['sendFollowUp', input]),
+    handoff: async (input) => {
+      effects.push(['handoff', input]);
+      return { posted: false, reason: 'company_not_found' };
+    },
+  });
+
+  const result = await lifecycle.followUp({
+    id: 'q1',
+    actor: 'owner@masest.co',
+    nextStep: 'Approve proposal',
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(effects.map(([name]) => name), ['handoff', 'sendFollowUp']);
+  assert.match(
+    store.calls.find(([name]) => name === 'updateFollowUp')[2].notes,
+    /Buyer message thread not updated \(company_not_found\)/,
+  );
 });
 
 test('due sweep owns reminder policy and rescheduling outcomes', async () => {

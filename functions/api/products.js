@@ -8,6 +8,7 @@ import {
   tierPriceMap,
 } from '../_lib/supabase.js';
 import { productIsPublished } from '../_lib/product-publication.generated.js';
+import { canonicalizeProductMedia } from '../_lib/product-media.js';
 
 const BASE_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,allow_backorder,sort,market,package_kind,marketing_name,units_per_case,unit_vsku,intended_active,activation_blocker,requires_quote,pricing_source_version)';
 const MEDIA_SELECT = 'sku,name,group_key,hmis,mode,hazmat,taxable,price,currency,stock,track_stock,sort,image_url,photo_alt,gallery,product_variants(vsku,label,gallons,price,currency,active,stock,track_stock,allow_backorder,sort,market,package_kind,marketing_name,units_per_case,unit_vsku,intended_active,activation_blocker,requires_quote,pricing_source_version)';
@@ -77,7 +78,7 @@ export async function onRequestGet({ request, env }) {
   const products = (data || [])
     .filter((product) => productIsPublished(product.sku))
     .map((product) => ({
-      ...product,
+      ...canonicalizeProductMedia(product),
       tier,
       product_variants: (product.product_variants || [])
         .map((variant) => shapePublicProductVariant(variant, overrides)),

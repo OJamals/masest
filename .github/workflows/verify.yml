@@ -40,7 +40,7 @@ jobs:
         if: github.repository == 'medicux/masest' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build:content
 
       - name: Install Chromium

@@ -8,7 +8,7 @@ import { csvResponse } from '../../_lib/reports.js';
 import { pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
 import { klaviyoTrack } from '../../_lib/klaviyo.js';
 import { escapeLike } from '../../_lib/crm.js';
-import { appendSupportMessage } from '../../_lib/support-messages.js';
+import { publishSupportMessage } from '../../_lib/support-message-publisher.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { createQuoteLeadLifecycle, createSupabaseQuoteLeadStore } from '../../_lib/quote-leads.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
@@ -118,16 +118,16 @@ async function userIdForQuote(sb, { companyId, email }) {
   }
 }
 
-async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
+async function postQuoteThreadHandoff({ env, sb, quote, companyId, text, actor }) {
   const resolvedCompanyId = await companyIdForQuote(sb, { companyId, email: quote.email });
   if (!resolvedCompanyId) return { posted: false, reason: 'company_not_found' };
   const recipientUserId = await userIdForQuote(sb, { companyId: resolvedCompanyId, email: quote.email });
   if (!recipientUserId) return { posted: false, company_id: resolvedCompanyId, reason: 'user_not_found' };
 
   const messageBody = `Quote follow-up: ${text}`.slice(0, 4000);
-  let message;
+  let publication;
   try {
-    message = await appendSupportMessage(sb, {
+    publication = await publishSupportMessage(env, sb, {
       companyId: resolvedCompanyId,
       recipientUserId,
       senderRole: 'staff',
@@ -147,7 +147,12 @@ async function postQuoteThreadHandoff({ sb, quote, companyId, text, actor }) {
     body: `A MASEST quote follow-up from ${actor} is ready in your message thread.`,
     link: '/dashboard.html#messages',
   });
-  return { posted: true, company_id: resolvedCompanyId, message_id: message?.id || null };
+  return {
+    posted: true,
+    company_id: resolvedCompanyId,
+    message_id: publication.message?.id || null,
+    email_delivery: publication.emailDelivery,
+  };
 }
 
 async function sendTrackedLeadEmail(env, options) {
@@ -205,7 +210,7 @@ function quoteLeadLifecycle({ sb, env }) {
         ctaUrl: `mailto:${actor || 'matthew@masest.co'}`,
       }),
     }),
-    handoff: (input) => postQuoteThreadHandoff({ sb, ...input }),
+    handoff: (input) => postQuoteThreadHandoff({ env, sb, ...input }),
     sendDueNotice: ({ quote, label, nextStep, dueText, hasBuyerEmail }) => sendTrackedLeadEmail(env, hasBuyerEmail ? {
       to: [quote.email],
       subject: 'MASEST quote follow-up reminder',

@@ -60,7 +60,7 @@ export async function initCustomerChat() {
       const account = await session.me();
       if (account?.can_admin) {
         document.removeEventListener("masest:open-support-order", handleSupportOrderRequest);
-        const { initAdminSupport } = await import("./admin-support.js?v=20260830h");
+        const { initAdminSupport } = await import("./admin-support.js?v=20260901b");
         initAdminSupport({ auth: session, root, staff: account.staff });
         return;
       }
@@ -76,7 +76,7 @@ export async function initCustomerChat() {
       stylesheet.addEventListener("error", resolve, { once: true });
     });
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/customer-chat.css?v=20260830h`;
+    stylesheet.href = `${root}css/customer-chat.css?v=20260901a`;
     stylesheet.dataset.masestCustomerChat = "true";
     document.head.append(stylesheet);
   }

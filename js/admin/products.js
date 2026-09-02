@@ -2,10 +2,10 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate, money, rowMatchesQuery } from '../util.js?v=20260830h';
-import { captureDirty, restoreDirty } from './edits.js?v=20260830h';
-import { PRODUCTS } from '../main/catalog-data.js?v=20260830h';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260830h';
+import { esc, safeUrl, confirmDialog, delegate, money, rowMatchesQuery } from '../util.js?v=20260902a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260902a';
+import { PRODUCTS } from '../main/catalog-data.js?v=20260902a';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260902a';
 
 export function withCatalogMediaFallback(product = {}) {
   const catalog = PRODUCTS[product.sku === 'cr-hd' ? 'crhd' : product.sku];
@@ -162,11 +162,9 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     message('prodStatus', 'Linking CMS image…');
     try {
       if (slot === 'gallery') {
-        const product = (state.products || []).find((candidate) => candidate.sku === sku);
-        const gallery = [...new Set([...(product?.gallery || []), details.url])];
         await api('/api/admin/product-image', {
           method: 'PATCH',
-          body: { sku, action: 'reorder', gallery },
+          body: { sku, action: 'add_gallery', url: details.url },
         });
       } else {
         const row = document.querySelector(`[data-product="${CSS.escape(sku)}"]`);

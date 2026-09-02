@@ -12,7 +12,7 @@
 #
 # REQUIRED repo secrets (Settings -> Secrets and variables -> Actions):
 #   SUPABASE_URL                 https://<project>.supabase.co
-#   SUPABASE_SERVICE_ROLE_KEY    service-role key (server-side only)
+#   SUPABASE_PUBLISHABLE_KEY     read-only through content_entries RLS
 #
 # Triggers:
 #   - schedule: baseline automation (every 30 min) with no wiring needed
@@ -56,7 +56,7 @@ jobs:
       - name: Regenerate blog from Supabase + static pages
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           # Blog-only: writes data/content/blog.json + its manifest entry ONLY.
           # Other content snapshots (industry sectors, etc.) are git-sourced and

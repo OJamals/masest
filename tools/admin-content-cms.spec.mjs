@@ -115,11 +115,14 @@ async function openContentWorkspace(page, tab) {
   await expect(page.locator(`[data-content-workspace-panel="${tab}"]`)).toBeVisible();
 }
 
-test("Products renders CMS photos and can relink the primary image through the shared viewer", async ({ page }) => {
+test("Products can relink primary and add gallery images through the shared R2 viewer", async ({ page }) => {
   await bootAsStaff(page);
   const cmsBase = "https://example.supabase.co/storage/v1/object/public/content-assets/site";
   const initialUrl = `${cmsBase}/img/products/hvac-hcr-studio.webp`;
-  const replacementUrl = `${cmsBase}/img/products/cip-cr-studio.webp`;
+  const replacementSourceUrl = `${cmsBase}/img/products/cip-cr-studio.webp`;
+  const replacementUrl = "https://media.masest.co/site/img/products/cip-cr-studio.webp";
+  const gallerySourceUrl = `${cmsBase}/img/products/hcr-detail.webp`;
+  const galleryUrl = "https://media.masest.co/site/img/products/hcr-detail.webp";
   const onePixelPng = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
@@ -134,8 +137,14 @@ test("Products renders CMS photos and can relink the primary image through the s
     gallery: [],
     product_variants: [],
   };
+  let productImageBody = null;
 
   await page.route(`${cmsBase}/**`, (route) => route.fulfill({
+    status: 200,
+    contentType: "image/png",
+    body: onePixelPng,
+  }));
+  await page.route("https://media.masest.co/**", (route) => route.fulfill({
     status: 200,
     contentType: "image/png",
     body: onePixelPng,
@@ -146,14 +155,30 @@ test("Products renders CMS photos and can relink the primary image through the s
     body: JSON.stringify({
       assets: [{
         storage_path: "/img/products/cip-cr-studio.webp",
-        source_url: replacementUrl,
-        public_url: replacementUrl,
+        source_url: replacementSourceUrl,
+        public_url: replacementSourceUrl,
         alt: "VertKleen CR product bottle",
+        status: "available",
+        mime_type: "image/webp",
+      }, {
+        storage_path: "/img/products/hcr-detail.webp",
+        source_url: gallerySourceUrl,
+        public_url: gallerySourceUrl,
+        alt: "VertKleen HCR product detail",
         status: "available",
         mime_type: "image/webp",
       }],
     }),
   }));
+  await page.route("**/api/admin/product-image", async (route) => {
+    productImageBody = route.request().postDataJSON();
+    product = { ...product, gallery: [...new Set([...product.gallery, productImageBody.url])] };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, gallery: product.gallery }),
+    });
+  });
   await page.route("**/api/admin/products**", async (route) => {
     if (route.request().method() === "POST") {
       const body = route.request().postDataJSON();
@@ -187,6 +212,18 @@ test("Products renders CMS photos and can relink the primary image through the s
   await expect(page.locator("#prodStatus")).toHaveText("hcr CMS image linked.");
   await expect(card.locator(".product-photo")).toHaveAttribute("src", replacementUrl);
   await expect(card.locator('[data-field="image_url"]')).toHaveValue(replacementUrl);
+
+  await card.getByRole("button", { name: "Add gallery image" }).click();
+  await picker.getByPlaceholder("Search by name or alt text").fill("hcr-detail");
+  await picker.locator(".shared-image-library-card").first().click();
+  await picker.getByRole("button", { name: "Select", exact: true }).click();
+
+  await expect.poll(() => productImageBody).toEqual({
+    sku: "hcr",
+    action: "add_gallery",
+    url: galleryUrl,
+  });
+  await expect(card.locator(".product-gallery img")).toHaveAttribute("src", galleryUrl);
 });
 
 test("staff edits structured CMS service fields and posts normalized payload", async ({ page }) => {

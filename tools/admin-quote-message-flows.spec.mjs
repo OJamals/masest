@@ -282,5 +282,149 @@ test("staff replies to a support thread with the expected payload", async ({ pag
   await reply.locator('button[type="submit"]').click();
   await replyResp;
 
-  expect(replyBody).toEqual({ company_id: "co-1", body: "Ships Friday via LTL freight." });
+  expect(replyBody).toEqual({
+    company_id: "co-1",
+    body: "Ships Friday via LTL freight.",
+    order_id: null,
+  });
+});
+
+test("new customer chat keeps its start action visible and opens the linked order thread", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  let startBody = null;
+  await page.route("**/api/admin/messages**", (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "POST") {
+      startBody = request.postDataJSON();
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({ id: "message-1", created_at: "2026-09-01T05:00:00Z" }),
+      });
+    }
+    if (url.searchParams.has("company_id")) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          thread: {
+            company_id: "co-1",
+            company_name: "Acme Manufacturing",
+            status: "open",
+            participant: { id: "user-1", full_name: "Alex Rivera", email: "alex@example.com" },
+            order_scope: { id: "order-1", reference: "MST-1042", status: "processing" },
+          },
+          messages: [{
+            id: "message-1",
+            sender_role: "staff",
+            body: "Your replacement drum ships tomorrow.",
+            created_at: "2026-09-01T05:00:00Z",
+            participant: { id: "user-1", full_name: "Alex Rivera", email: "alex@example.com" },
+            order: { id: "order-1", reference: "MST-1042", status: "processing", admin_url: "/admin.html?order=order-1#orders" },
+          }],
+          order_scope: { id: "order-1", reference: "MST-1042", status: "processing" },
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ threads: [] }),
+    });
+  });
+  await page.route("**/api/admin/customers**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      customers: [{
+        id: "user-1",
+        company_id: "co-1",
+        full_name: "Alex Rivera",
+        email: "alex@example.com",
+        company_name: "Acme Manufacturing",
+        company_status: "active",
+      }],
+    }),
+  }));
+  await page.route("**/api/admin/users?detail=**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      profile: { id: "user-1", full_name: "Alex Rivera", email: "alex@example.com" },
+      company: { id: "co-1", name: "Acme Manufacturing", status: "active" },
+      orders: [{ id: "order-1", order_number: "MST-1042", status: "processing" }],
+    }),
+  }));
+
+  await page.goto(`${BASE_URL}/admin.html#messages`, { waitUntil: "domcontentloaded" });
+  await page.locator("[data-support-new-chat]").click();
+  const start = page.locator("[data-support-compose-submit]");
+  await expect(start).toBeHidden();
+  await page.locator('[data-support-user-id="user-1"]').click();
+  await expect(start).toBeVisible();
+  await expect(start).toHaveAttribute("form", "siteSupportNewChatForm");
+  await page.locator("#siteSupportNewChatOrder").selectOption("order-1");
+  const message = page.locator("#siteSupportNewChatMessage");
+  await message.fill("Your replacement drum ships tomorrow.");
+  await message.press("Tab");
+  await expect(start).toBeFocused();
+
+  const readLayout = () => page.evaluate(() => {
+    const toolbar = document.querySelector(".site-support__conversation-toolbar");
+    const toolbarLead = document.querySelector(".site-support__toolbar-lead");
+    const action = document.querySelector("[data-support-compose-submit]");
+    const close = document.querySelector("[data-support-close]");
+    const drawer = document.querySelector(".site-support__drawer");
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const toolbarLeadRect = toolbarLead.getBoundingClientRect();
+    const actionRect = action.getBoundingClientRect();
+    const closeRect = close.getBoundingClientRect();
+    const drawerRect = drawer.getBoundingClientRect();
+    return {
+      toolbarTop: toolbarRect.top,
+      toolbarBottom: toolbarRect.bottom,
+      toolbarLeadRight: toolbarLeadRect.right,
+      actionLeft: actionRect.left,
+      actionTop: actionRect.top,
+      actionRight: actionRect.right,
+      actionBottom: actionRect.bottom,
+      closeLeft: closeRect.left,
+      drawerLeft: drawerRect.left,
+      drawerRight: drawerRect.right,
+      viewportWidth: innerWidth,
+    };
+  });
+
+  for (const viewport of [
+    { width: 320, height: 720 },
+    { width: 390, height: 844 },
+    { width: 768, height: 900 },
+    { width: 1024, height: 900 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const layout = await readLayout();
+    expect(layout.actionTop, JSON.stringify({ viewport, layout })).toBeGreaterThanOrEqual(layout.toolbarTop);
+    expect(layout.actionBottom, JSON.stringify({ viewport, layout })).toBeLessThanOrEqual(layout.toolbarBottom);
+    expect(layout.actionLeft, JSON.stringify({ viewport, layout })).toBeGreaterThanOrEqual(layout.toolbarLeadRight);
+    expect(layout.actionRight, JSON.stringify({ viewport, layout })).toBeLessThanOrEqual(layout.closeLeft);
+    expect(layout.drawerLeft, JSON.stringify({ viewport, layout })).toBeGreaterThanOrEqual(0);
+    expect(layout.drawerRight, JSON.stringify({ viewport, layout })).toBeLessThanOrEqual(layout.viewportWidth);
+  }
+
+  const startResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/admin/messages") && response.request().method() === "POST");
+  await start.click();
+  await startResponse;
+  expect(startBody).toEqual({
+    company_id: "co-1",
+    recipient_user_id: "user-1",
+    body: "Your replacement drum ships tomorrow.",
+    order_id: "order-1",
+    start_thread: true,
+  });
+  await expect(page.locator(".site-support__order-scope")).toContainText("MST-1042");
 });

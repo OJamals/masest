@@ -868,6 +868,9 @@ test("live 200-percent zoom crossing reconfigures the story without hidden chapt
 });
 
 test("desktop story stays inside a controlled-scroll frame budget", async ({ page }) => {
+  // Three 9.4-second measurement samples leave too little setup/teardown headroom
+  // under Playwright's 30-second default on shared CI runners.
+  test.setTimeout(45_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
 

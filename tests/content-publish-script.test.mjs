@@ -3,7 +3,9 @@
 // snapshots from published entries so a human can review + commit them.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { once } from "node:events";
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -32,6 +34,76 @@ test("importing build-content.mjs is side-effect-free (exposes builders, runs no
   assert.equal(typeof snapshotPayloads, "function");
   assert.equal(typeof writeSnapshots, "function");
   assert.equal(typeof loadEntries, "function");
+});
+
+test("loadEntries uses only the publishable key and requests the public snapshot columns", async () => {
+  let request;
+  const server = createServer((req, res) => {
+    request = req;
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end("[]");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+
+  const prior = Object.fromEntries([
+    "CONTENT_EXPORT_SOURCE",
+    "SUPABASE_URL",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ].map((key) => [key, process.env[key]]));
+  const restore = () => {
+    for (const [key, value] of Object.entries(prior)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+
+  try {
+    delete process.env.CONTENT_EXPORT_SOURCE;
+    delete process.env.SUPABASE_ANON_KEY;
+    process.env.SUPABASE_URL = `http://127.0.0.1:${server.address().port}`;
+    process.env.SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ci-test";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-must-not-be-used";
+
+    assert.deepEqual(await loadEntries(), []);
+    assert.equal(request.headers.apikey, "sb_publishable_ci-test");
+    assert.equal(request.headers.authorization, "Bearer sb_publishable_ci-test");
+
+    const url = new URL(request.url, process.env.SUPABASE_URL);
+    assert.equal(url.pathname, "/rest/v1/content_entries");
+    assert.equal(url.searchParams.get("select"), "type,slug,title,status,locale,payload,seo");
+    assert.equal(url.searchParams.get("status"), "eq.published");
+    assert.equal(url.searchParams.get("order"), "type.asc,slug.asc");
+  } finally {
+    restore();
+    server.close();
+    await once(server, "close");
+  }
+});
+
+test("loadEntries never falls back to SUPABASE_SERVICE_ROLE_KEY", async () => {
+  const prior = Object.fromEntries([
+    "CONTENT_EXPORT_SOURCE",
+    "SUPABASE_URL",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ].map((key) => [key, process.env[key]]));
+  try {
+    delete process.env.CONTENT_EXPORT_SOURCE;
+    delete process.env.SUPABASE_PUBLISHABLE_KEY;
+    delete process.env.SUPABASE_ANON_KEY;
+    process.env.SUPABASE_URL = "http://127.0.0.1:9";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-must-not-be-used";
+    await assert.rejects(loadEntries(), /SUPABASE_PUBLISHABLE_KEY/);
+  } finally {
+    for (const [key, value] of Object.entries(prior)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 });
 
 test("snapshotPayloads merges payload + drops drafts, keyed per snapshot file", () => {
@@ -163,6 +235,8 @@ test("publish:content errors with setup help when no source is configured", () =
     const env = { ...process.env };
     delete env.CONTENT_EXPORT_SOURCE;
     delete env.SUPABASE_URL;
+    delete env.SUPABASE_PUBLISHABLE_KEY;
+    delete env.SUPABASE_ANON_KEY;
     delete env.SUPABASE_SERVICE_ROLE_KEY;
     delete env.SUPABASE_DB_URL;
     delete env.CONTENT_DB_URL;

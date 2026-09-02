@@ -9,6 +9,7 @@ const chrome = read("js/main/chrome.js");
 const css = read("css/customer-chat.css");
 const messages = read("functions/api/account/messages.js");
 const adminMessages = read("functions/api/admin/messages.js");
+const supportPublisher = read("functions/_lib/support-message-publisher.js");
 const supportEmail = read("functions/_lib/support-email.js");
 const phase5 = read("supabase/schema-phase5.sql");
 const admin = read("js/admin.js");
@@ -47,6 +48,7 @@ async function chatPage(browser, authModuleSource, {
 test("customer chat is always mounted and gates sending on an auth session", () => {
   assert.match(chat, /id = "customerChat"/);
   assert.match(chat, /customer-chat__toggle/);
+  assert.match(chat, /customer-chat\.css\?v=\d{8}[a-z]/);
   assert.match(chat, /getToken/);
   assert.match(chat, /Sign up \/ Log in/);
   assert.match(chat, /masest:auth/);
@@ -150,7 +152,8 @@ test("customer chat posts to the authenticated message thread and receives staff
   assert.match(chat, /source: "customer_chat"/);
   assert.match(chat, /POLL_MS/);
   assert.match(messages, /body\.source === 'customer_chat'/);
-  assert.match(messages, /appendSupportMessage\(sb,/);
+  assert.match(messages, /publishSupportMessage\(/);
+  assert.match(supportPublisher, /appendSupportMessage/);
   assert.match(messages, /source,/);
   assert.match(admin, /source === 'customer_chat'/);
 });
@@ -159,8 +162,9 @@ test("customer chat records presence and delegates counterpart email to shared s
   assert.match(chat, /chat_presence/);
   assert.match(chat, /setChatPresence\(false\)/);
   assert.match(messages, /body\.action === 'chat_presence'/);
-  assert.match(messages, /deliverSupportMessageEmail/);
-  assert.match(adminMessages, /deliverSupportMessageEmail/);
+  assert.match(messages, /publishSupportMessage/);
+  assert.match(adminMessages, /publishSupportMessage/);
+  assert.match(supportPublisher, /deliverSupportMessageEmail/);
   assert.match(supportEmail, /adminMessageAlertKind/);
   assert.match(supportEmail, /shouldEmailSupportRecipient/);
   assert.match(phase5, /support_chat_open boolean not null default false/);
@@ -185,11 +189,26 @@ test("logged-out visitors always see chat and get a sign-up/login link", async (
       assert.equal(await quoteLink.textContent(), "Get a quote with this info");
       assert.equal(await quoteLink.getAttribute("class"), "customer-chat__quote-link");
       assert.equal(await toggle.locator("svg.customer-chat__icon").count(), 1);
+      assert.deepEqual(await page.locator(".customer-chat__thread").evaluate((thread) => ({
+        hidden: thread.hidden,
+        display: getComputedStyle(thread).display,
+        height: thread.getBoundingClientRect().height,
+      })), { hidden: true, display: "none", height: 0 });
+      assert.equal(
+        await page.locator(".customer-chat__close svg").evaluate((icon) => getComputedStyle(icon).stroke),
+        "rgb(255, 255, 255)",
+      );
       const panel = page.locator(".customer-chat__panel");
       const panelBox = await panel.boundingBox();
-      assert.ok(panelBox && panelBox.height < 460, `panel height ${panelBox?.height}`);
+      assert.ok(panelBox && panelBox.height < 320, `guest panel height ${panelBox?.height}`);
       const headerBox = await page.locator(".customer-chat__header").boundingBox();
       assert.ok(panelBox && headerBox && headerBox.y - panelBox.y < 8, `header offset ${headerBox?.y - panelBox?.y}`);
+      const actionBox = await link.boundingBox();
+      const quoteBox = await quoteLink.boundingBox();
+      assert.ok(
+        actionBox && quoteBox && quoteBox.y >= actionBox.y + actionBox.height,
+        `guest actions should stack: ${JSON.stringify({ actionBox, quoteBox })}`,
+      );
       await page.locator(".customer-chat__guest").evaluate((guest) => { guest.hidden = true; });
       await page.locator(".customer-chat__thread").evaluate((thread) => { thread.hidden = false; });
       const messages = page.locator(".customer-chat__messages");
