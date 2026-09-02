@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { proofCardHtml } from "../js/proof-records.js";
 import { organizationJsonLd } from "./company-identity.mjs";
 import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
@@ -20,10 +21,14 @@ const { industries: INDUSTRY_APPLICATIONS } = JSON.parse(
 const { assets: SITE_IMAGES } = JSON.parse(
   readFileSync(resolve(HERE, "..", "data", "content", "site-images.json"), "utf8"),
 );
+const { proof_cards: PROOF_CARDS } = JSON.parse(
+  readFileSync(resolve(HERE, "..", "data", "content", "proof.json"), "utf8"),
+);
 const INDUSTRY_APPLICATIONS_BY_SLUG = new Map(
   INDUSTRY_APPLICATIONS.map((industry) => [industry.slug, industry]),
 );
 const SITE_IMAGE_BY_PATH = new Map(SITE_IMAGES.map((asset) => [asset.public_url, asset]));
+const PROOF_CARD_BY_SLUG = new Map(PROOF_CARDS.map((card) => [card.slug, card]));
 const ORGANIZATION_SCHEMA = organizationJsonLd();
 
 const INDUSTRIES = INDUSTRY_APPLICATIONS.map((application) => ({
@@ -488,6 +493,39 @@ function industryDetailBlock(ind) {
   </section>`;
 }
 
+function featuredProofBlock(ind) {
+  const application = INDUSTRY_APPLICATIONS_BY_SLUG.get(ind.slug);
+  const proofSlug = application?.featured_proof_slug;
+  if (!proofSlug) return "";
+  const card = PROOF_CARD_BY_SLUG.get(proofSlug);
+  if (!card) throw new Error(`${ind.slug}: missing featured proof ${proofSlug}`);
+  if (card.publication_scope !== "Published result summary" || !/field record/i.test(card.source || "")) {
+    throw new Error(`${ind.slug}: featured proof must be a published field record`);
+  }
+  const product = application.featured_proof_product;
+  if (!/^[a-z0-9-]+$/.test(product || "")) {
+    throw new Error(`${ind.slug}: featured proof needs a safe product slug`);
+  }
+  const market = application.featured_proof_market;
+  const productQuery = market ? `?market=${enc(market)}` : "";
+  const productLabel = htmlText(card.chips?.[0] || "featured product");
+  return `<section class="section section-slim" data-featured-proof="${htmlAttr(proofSlug)}">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Documented field result</span>
+        <h2 class="headline">One real job, with the method and boundary attached.</h2>
+        <p class="subhead">Review the treatment details, before-and-after photos, and limits before planning your own trial.</p>
+      </div>
+      <div class="case-grid">
+${proofCardHtml(card)}      </div>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="../products/${product}${productQuery}">See ${productLabel}</a>
+        <a class="btn btn-secondary" href="../proof#${htmlAttr(proofSlug)}">See all published results</a>
+      </div>
+    </div>
+  </section>`;
+}
+
 function industrySchema(ind, plain) {
   return {
     "@context": "https://schema.org",
@@ -661,7 +699,7 @@ ${nav}
     </div>
   </section>
 
-${industryDetailBlock(ind)}${imageGalleryBlock(ind)}
+${industryDetailBlock(ind)}${featuredProofBlock(ind)}${imageGalleryBlock(ind)}
 
 ${recommendedProductsBlock(ind)}${industryLabelVariantsBlock(ind)}
 <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="industries/${ind.slug}" data-cms-region="body"></div>

@@ -65,6 +65,7 @@
         <div class="cta-chooser contact-intent" role="group" aria-label="What do you need?">
           <button type="button" class="cta-choice active" data-intent="quote" aria-pressed="true"><i class="ph ph-tag" aria-hidden="true"></i> Quote</button>
           <button type="button" class="cta-choice" data-intent="audit" aria-pressed="false"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Replace a Cleaner</button>
+          <button type="button" class="cta-choice" data-intent="program" aria-pressed="false"><i class="ph ph-buildings" aria-hidden="true"></i> Program</button>
           <button type="button" class="cta-choice" data-intent="sample" aria-pressed="false"><i class="ph ph-package" aria-hidden="true"></i> Sample Kit</button>
           <button type="button" class="cta-choice" data-intent="technical" aria-pressed="false"><i class="ph ph-file-text" aria-hidden="true"></i> Labels &amp; SDS</button>
           <button type="button" class="cta-choice" data-intent="distributor" aria-pressed="false"><i class="ph ph-handshake" aria-hidden="true"></i> Distributor</button>
@@ -177,6 +178,47 @@
               <option>Flexible</option>
             </select>
           </div>
+        </div>
+
+        <div data-intent-group="program" hidden>
+          <div class="field-grid">
+            <div class="field"><label for="fProgramAssets">Sites, vehicles, or technicians *</label><textarea id="fProgramAssets" name="program_assets" rows="3" maxlength="500" placeholder="12 service vehicles, 3 branches, 28 technicians…" data-req></textarea></div>
+            <div class="field">
+              <label for="fPilotSize">First pilot scope *</label>
+              <select id="fPilotSize" name="pilot_size" data-req>
+                <option value="">Select pilot scope</option>
+                <option>1 site, vehicle, or crew</option>
+                <option>2-5 sites, vehicles, or crews</option>
+                <option>6-20 sites, vehicles, or crews</option>
+                <option>21+ sites, vehicles, or crews</option>
+              </select>
+            </div>
+            <div class="field"><label for="fCurrentSkuCount">Current chemical count</label><input id="fCurrentSkuCount" name="current_sku_count" type="number" min="0" max="999" inputmode="numeric" placeholder="How many products are on the shelf?…"></div>
+            <div class="field"><label for="fMonthlyUsage">Estimated monthly usage</label><input id="fMonthlyUsage" name="monthly_usage" type="text" maxlength="160" autocomplete="off" placeholder="Pails, drums, totes, or best estimate…"></div>
+            <div class="field">
+              <label for="fPreferredPacks">Preferred packs</label>
+              <select id="fPreferredPacks" name="preferred_packs">
+                <option value="">Select pack preference</option>
+                <option>Pails</option>
+                <option>Drums</option>
+                <option>Totes</option>
+                <option>Mixed packs by route or site</option>
+                <option>Not sure yet</option>
+              </select>
+            </div>
+            <div class="field"><label for="fCurrentVendor">Current supplier or program</label><input id="fCurrentVendor" name="current_vendor" type="text" maxlength="240" autocomplete="organization" placeholder="Optional…"></div>
+          </div>
+          <fieldset class="field sample-fieldset u-mt-14">
+            <legend>Program services to scope</legend>
+            <div class="sample-picker">
+              <label><input type="checkbox" name="program_services" value="Chemical consolidation"> Chemical consolidation</label>
+              <label><input type="checkbox" name="program_services" value="Private-label supply"> Private-label supply</label>
+              <label><input type="checkbox" name="program_services" value="Technician training"> Technician training</label>
+              <label><input type="checkbox" name="program_services" value="Recurring resupply"> Recurring resupply</label>
+              <label><input type="checkbox" name="program_services" value="Container-return plan"> Container-return plan</label>
+              <label><input type="checkbox" name="program_services" value="Water-treatment expansion"> Water-treatment expansion</label>
+            </div>
+          </fieldset>
         </div>
 
         <div data-intent-group="sample" hidden>

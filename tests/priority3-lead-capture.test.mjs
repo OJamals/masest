@@ -90,8 +90,8 @@ test("quote-submit analytics carries request type, industry, and product metadat
   assert.match(track, /\['request_type', detail\.request_type\]/);
 });
 
-test("contact page exposes all five public request types", () => {
-  for (const label of ["Quote", "Replace a Cleaner", "Sample Kit", "Labels &amp; SDS", "Distributor"]) {
+test("contact page exposes all six public request types", () => {
+  for (const label of ["Quote", "Replace a Cleaner", "Program", "Sample Kit", "Labels &amp; SDS", "Distributor"]) {
     assert.match(contact, new RegExp(label));
   }
   assert.match(contact, /data-intent="technical"/, "technical document requests should be a first-class contact intent");
@@ -109,10 +109,24 @@ test("sample picker covers the full parent product catalog", () => {
   }
 });
 
-test("contact form posts all five public request types to quote intake", async () => {
+test("contact form posts all six public request types to quote intake", async () => {
   const flows = [
     { intent: "quote", fill: async () => {} },
     { intent: "audit", fill: async (page) => page.fill("#fSystem", "Cooling tower loop") },
+    {
+      intent: "program",
+      fill: async (page) => {
+        await page.fill("#fProgramAssets", "14 service vehicles and 22 technicians");
+        await page.selectOption("#fPilotSize", { label: "2-5 sites, vehicles, or crews" });
+        await page.fill("#fCurrentSkuCount", "11");
+        await page.fill("#fMonthlyUsage", "18 pails and 2 drums");
+        await page.selectOption("#fPreferredPacks", { label: "Mixed packs by route or site" });
+        await page.fill("#fCurrentVendor", "Current regional supplier");
+        for (const label of ["Chemical consolidation", "Technician training", "Recurring resupply"]) {
+          await page.getByLabel(label, { exact: true }).check();
+        }
+      },
+    },
     {
       intent: "sample",
       fill: async (page) => {
@@ -184,6 +198,11 @@ test("contact form posts all five public request types to quote intake", async (
       assert.ok(body, `${flow.intent} request should post its type`);
       assert.ok(hasMultipartField(body, "industry", "Data Centers"), `${flow.intent} request should carry industry attribution`);
       assert.ok(hasMultipartField(body, "email", `${flow.intent}@example.com`), `${flow.intent} request should carry email`);
+      if (flow.intent === "program") {
+        assert.ok(hasMultipartField(body, "program_assets", "14 service vehicles and 22 technicians"));
+        assert.ok(hasMultipartField(body, "pilot_size", "2-5 sites, vehicles, or crews"));
+        assert.ok(hasMultipartField(body, "program_services", "Technician training"));
+      }
       if (["technical", "distributor"].includes(flow.intent)) {
         assert.equal(
           hasMultipartField(body, "current_chemical", "Not applicable"),

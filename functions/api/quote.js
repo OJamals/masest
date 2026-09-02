@@ -33,6 +33,13 @@ const LABELS = {
   samples: 'Sample products',
   ship_to: 'Ship-to address',
   territory: 'Territory / region',
+  program_assets: 'Sites, vehicles, or technicians',
+  pilot_size: 'First pilot scope',
+  current_sku_count: 'Current chemical count',
+  monthly_usage: 'Estimated monthly usage',
+  preferred_packs: 'Preferred packs',
+  current_vendor: 'Current supplier or program',
+  program_services: 'Program services',
   ...Object.fromEntries(QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label])),
   message: 'Notes',
 };
@@ -67,6 +74,7 @@ function pipelineStageForType(type) {
 
 function nextStepForType(type) {
   if (type === 'sample') return 'Confirm sample fit, ship-to address, and trial follow-up.';
+  if (type === 'program') return 'Confirm current chemical inventory, pilot scope, training, and supply needs.';
   return null;
 }
 

@@ -129,7 +129,7 @@ export function renderChrome({
   const links = [
     { href: "products", label: "Products" },
     { href: "services", label: "Services" },
-    { href: "programs", label: "Water Programs" },
+    { href: "programs", label: "Programs" },
     {
       key: "useCases",
       label: "Applications",
@@ -358,7 +358,7 @@ export function renderChrome({
         <div class="foot-secondary">
           <div class="foot-title">SDS &amp; Product Help</div>
           <a href="${root}resources">Resources &amp; SDS</a>
-          <a href="${root}programs">Water Programs &amp; Pricing</a>
+          <a href="${root}programs">Programs &amp; Pricing</a>
           <a href="${root}proof">Customer Results</a>
           <a href="${root}blog">Blog</a>
         </div>
