@@ -1,7 +1,6 @@
 // functions/api/reviews.js — public reviews list (GET) + submit (POST).
 import { adminClient, userFromRequest, json, readBody } from '../_lib/supabase.js';
 import { rateLimit, clientIp } from '../_lib/ratelimit.js';
-import { klaviyoTrack } from '../_lib/klaviyo.js';
 import { productIsPublished } from '../_lib/product-publication.generated.js';
 import {
   validateReviewInput, aggregateStats, findVerifiedOrderId, verifyReviewToken,
@@ -95,6 +94,5 @@ export async function onRequestPost({ request, env }) {
     if (String(error.code) === '23505') return json(409, { error: 'already_reviewed' });
     return json(500, { error: 'save_failed' });
   }
-  await klaviyoTrack(env, { email, metric: 'Review Submitted', properties: { sku, kind, rating } }).catch(() => {});
   return json(200, { ok: true, pending: true });
 }

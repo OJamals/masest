@@ -82,14 +82,14 @@ site.
 - `MESSAGE_REPLY_DOMAIN=reply.masest.co`
 - `MESSAGE_REPLY_SECRET`
 - `EMAIL_INGRESS_SECRET`
-- `KLAVIYO_PRIVATE_KEY`
-- `KLAVIYO_LIST_ID`
-- `KLAVIYO_TEST_LIST_ID` — dedicated staff-only audience for newsletter test sends
-- `KLAVIYO_FROM_EMAIL=noreply@send.masest.co`
-- `KLAVIYO_FROM_LABEL=MASEST · VertKleen`
-- `KLAVIYO_REPLY_TO=dev@masest.co`
-- `KLAVIYO_FLOW_METRIC_OFFER`
-- `KLAVIYO_FLOW_METRIC_REVIEW_REQUEST`
+- `EMAIL_UNSUB_SECRET` — signs one-click unsubscribe and online-view URLs
+- `AWS_SES_ACCESS_KEY_ID` — dedicated least-privilege IAM access key
+- `AWS_SES_SECRET_ACCESS_KEY` — matching IAM secret
+- `AWS_SES_REGION=us-east-1`
+- `AWS_SES_FROM_EMAIL=dev@masest.co`
+- `AWS_SES_FROM_NAME=MASEST · VertKleen`
+- `AWS_SES_REPLY_TO=dev@masest.co`
+- `AWS_SES_CONFIGURATION_SET=masest-marketing`
 
 Required Pages binding:
 
@@ -98,9 +98,9 @@ Required Pages binding:
 
 Email Worker owns restricted `EMAIL` binding, idempotency Durable Object,
 lifecycle queue, and inbound Email Routing handler for service/transactional mail,
-including requested quote follow-ups. Pages holds Klaviyo private key only for
-promotional offers, newsletters, nurture, review solicitations, subscriptions,
-flows, and campaigns.
+including requested quote follow-ups. Pages signs one-recipient Amazon SES calls for
+consented promotional offers, newsletters, nurture, and review solicitations. Supabase
+owns canonical consent, suppression, and durable delivery rows.
 
 After env var changes, run the `Verify` workflow on `main` so the new values bind.
 

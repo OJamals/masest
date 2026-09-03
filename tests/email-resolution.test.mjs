@@ -46,13 +46,15 @@ test('companyEmails + admin/account email lookups use emailsByIds, not listUsers
   for (const [path, helper] of [
     ['functions/api/account/team.js', /emailsByIds\(/],
     ['functions/api/admin/company.js', /emailsByIds\(/],
-    ['functions/api/admin/offers.js', /emailsByIds\(/],
     ['functions/api/admin/customers.js', /emailsByIds\(/],
   ]) {
     const src = read(path);
     assert.match(src, helper, `${path} must use the new helper`);
     assert.doesNotMatch(src, /listUsers\(/, `${path} must not call listUsers directly`);
   }
+  const offers = read('functions/api/admin/offers.js');
+  assert.match(offers, /rpc\('marketing_company_emails'/, 'offer fanout must resolve through one database RPC');
+  assert.doesNotMatch(offers, /emailsByIds\(|listUsers\(/, 'offer fanout must not perform per-user Auth lookups');
   const customers = read('functions/api/admin/customers.js');
   assert.match(customers, /fullCustomerExport[\s\S]*allUserEmails\(/, 'full Auth scan is CSV-only');
 });

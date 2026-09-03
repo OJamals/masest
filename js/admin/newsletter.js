@@ -4,15 +4,15 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260903c';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260903d';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260903c';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260903c';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260903c';
+} from './rich-editor.js?v=20260903d';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260903d';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260903d';
 
 const SECTIONS = [
   ['compose', 'Compose'],
@@ -93,7 +93,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
           <div>
             <p class="adm-eyebrow">Newsletter</p>
             <h2 id="nlEditorHeading">${editingId ? 'Edit newsletter' : 'New newsletter'}</h2>
-            <p class="muted">Compose a Klaviyo campaign for the canonical MASEST marketing list. Klaviyo owns consent, unsubscribe state, suppression, fanout, and delivery. To post an in-dashboard customer notification, use <a href="#offers">Offers</a>.</p>
+            <p class="muted">Compose an Amazon SES campaign for the canonical MASEST audience. MASEST owns consent, suppression, queueing, and delivery history. To post an in-dashboard customer notification, use <a href="#offers">Offers</a>.</p>
           </div>
           <button class="btn btn-ghost btn-sm" type="button" data-nl-action="new" data-capability="admin.write"><i class="ph ph-plus" aria-hidden="true"></i> New</button>
         </div>
@@ -126,7 +126,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
           </div>
           <div class="full">
             <p class="adm-eyebrow" style="margin-top:6px">Audience</p>
-            <p class="adm-content-check"><i class="ph ph-check-circle" aria-hidden="true"></i> Klaviyo marketing subscribers <span id="nlCountSubscribers" class="pill">0</span></p>
+            <p class="adm-content-check"><i class="ph ph-check-circle" aria-hidden="true"></i> Eligible marketing recipients <span id="nlCountSubscribers" class="pill">0</span></p>
             <p id="nlAudEstimate" class="adm-status" aria-live="polite" style="margin-top:6px">Loading subscriber count…</p>
           </div>
           <div class="adm-inline-actions full" aria-label="Newsletter actions">
@@ -167,7 +167,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       <div class="adm-content-workflow-row" data-nl-row="${esc(n.id)}">
         <div class="adm-panel-header">
           <span><b>${esc(n.subject)}</b> ${statusBadge(n.status)} <span class="pill">${esc(n.source === 'blog_post' ? 'Blog post' : 'Compose')}</span></span>
-          <span class="muted">${esc(n.provider_status || n.status || 'draft')} via ${esc(n.provider || 'Klaviyo')} · ${esc(nextRunText(n))}</span>
+          <span class="muted">${esc(n.provider_status || n.status || 'draft')} via ${esc(n.provider || 'SES')} · ${esc(nextRunText(n))}</span>
         </div>
         <div class="adm-inline-actions">
           <button class="btn btn-ghost btn-sm" type="button" data-nl-edit="${esc(n.id)}" data-capability="admin.write"><i class="ph ph-pencil-simple" aria-hidden="true"></i> Edit</button>
@@ -254,11 +254,11 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       const res = await api('/api/admin/recipients');
       const c = res.counts || {};
       const counts = $('nlRecipCounts');
-      if (counts) counts.textContent = `Klaviyo marketing subscribers: ${c.subscribers || 0} · imported/manual audit rows: ${c.imported || 0}`;
+      if (counts) counts.textContent = `Eligible marketing recipients: ${c.subscribers || 0} · managed audience rows: ${c.imported || 0}`;
       const list = $('nlRecipList');
       if (!list) return;
       const rows = res.recipients || [];
-      if (!rows.length) { list.innerHTML = admEmpty('ph-address-book', 'No imported recipients', 'Account signups and website subscribers sync directly to Klaviyo. Add or import extra addresses here.'); return; }
+      if (!rows.length) { list.innerHTML = admEmpty('ph-address-book', 'No recipients yet', 'Account signups and website subscribers appear here. Add or import extra addresses as needed.'); return; }
       list.innerHTML = `<table class="adm-table"><thead><tr><th>Email</th><th>Name</th><th>Source</th><th>Subscribed</th><th></th></tr></thead><tbody>${rows.map((r) => `
         <tr>
           <td>${esc(r.email)}</td><td>${esc(r.name || '')}</td><td>${esc(r.source || '')}</td>
@@ -292,7 +292,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
   }
 
   function readAudience() {
-    return { provider: 'klaviyo', list: 'KLAVIYO_LIST_ID' };
+    return { provider: 'ses', source: 'newsletter_recipients' };
   }
 
   function writeAudience() {}
@@ -406,7 +406,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     const el = $('nlAudEstimate');
     if (!el) return;
     const total = Number(counts.subscribers || 0);
-    el.textContent = `${total.toLocaleString()} current Klaviyo subscriber${total === 1 ? '' : 's'}. Final eligible audience is calculated by Klaviyo at send time.`;
+    el.textContent = `${total.toLocaleString()} eligible recipient${total === 1 ? '' : 's'}. Consent and suppression are rechecked at send time.`;
     el.dataset.state = total ? 'ok' : 'warn';
   }
 
@@ -476,7 +476,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     setStatus('Sending test…');
     try {
       await api('/api/admin/newsletters', { method: 'POST', body: { action: 'test_send', to: to || undefined, subject, body_md: bodyMd } });
-      setStatus('Test campaign queued in Klaviyo.', 'ok');
+      setStatus('Test email accepted by Amazon SES.', 'ok');
     } catch (err) {
       setStatus(err.data?.error || 'Could not send the test email. Retry.', 'err');
     }
@@ -496,18 +496,18 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       ))) return;
       const estimate = Number(counts.subscribers || 0);
       const ok = await confirmDialog(
-        `Queue this Klaviyo campaign for about ${estimate.toLocaleString()} current subscribers? Klaviyo applies final consent and suppression at send time.`,
+        `Queue this campaign for about ${estimate.toLocaleString()} eligible recipients? Consent and suppression are rechecked before delivery.`,
         { confirmText: 'Send now', danger: true },
       );
       if (!ok) return;
       const id = await saveDraft();
       if (!id) return;
-      setStatus('Creating Klaviyo campaign…');
+      setStatus('Creating recipient delivery queue…');
       const res = await api('/api/admin/newsletters', { method: 'POST', body: { action: 'send_now', id } });
       await renderNewsletter({ refetch: true });
-      setStatus(`Queued in Klaviyo (${res.campaign_id || 'campaign created'}).`, 'ok');
+      setStatus(`Queued ${Number(res.total || 0).toLocaleString()} recipient${Number(res.total || 0) === 1 ? '' : 's'} for Amazon SES. ${Number(res.processed || 0).toLocaleString()} started now.`, 'ok');
     } catch (err) {
-      const map = { already_sent: 'This newsletter was already sent.', campaign_in_flight: 'A Klaviyo campaign is already in progress for this newsletter.' };
+      const map = { already_sent: 'This newsletter was already sent.', campaign_in_flight: 'A delivery run is already in progress for this newsletter.' };
       setStatus(map[err.data?.error] || err.data?.error || 'Could not send the newsletter. Retry.', 'err');
     } finally {
       sending = false;

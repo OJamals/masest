@@ -281,8 +281,8 @@
           <button class="template-button" type="button" role="tab" aria-selected="false" data-template="confirmed"><strong>Order confirmed</strong><span>Cloudflare · Transactional</span></button>
           <button class="template-button" type="button" role="tab" aria-selected="false" data-template="shipped"><strong>Shipment sent</strong><span>Cloudflare · Transactional</span></button>
           <button class="template-button" type="button" role="tab" aria-selected="false" data-template="refund"><strong>Refund issued</strong><span>Cloudflare · Transactional</span></button>
-          <button class="template-button" type="button" role="tab" aria-selected="false" data-template="newsletter"><strong>Field notes</strong><span>Klaviyo · Marketing</span></button>
-          <button class="template-button" type="button" role="tab" aria-selected="false" data-template="product"><strong>Product spotlight</strong><span>Klaviyo · Marketing</span></button>
+          <button class="template-button" type="button" role="tab" aria-selected="false" data-template="newsletter"><strong>Field notes</strong><span>Amazon SES · Marketing</span></button>
+          <button class="template-button" type="button" role="tab" aria-selected="false" data-template="product"><strong>Product spotlight</strong><span>Amazon SES · Marketing</span></button>
         </div>
         <p class="rail-note">Six prototypes define three reusable systems. Payment, delivery, cancellation, lead nurture, and promotion states inherit the approved shell.</p>
       </nav>
@@ -536,7 +536,7 @@ Required order notice · Privacy: https://masest.co/privacy</pre>
             <div class="email-frame email-html">
               <table role="presentation" class="email-canvas" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f4f6f7;border-collapse:collapse"><tr><td style="padding:24px 0">
                 <table role="presentation" width="100%" class="email-surface" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background:#fff;border-collapse:collapse">
-                  <tr><td class="light-logo-cell" style="padding:10px 24px;background:#fff;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td class="email-muted" style="color:#5f656d;font-size:10px">Field-tested cleaning guidance for your next shutdown.</td><td align="right" style="font-size:10px"><a class="email-link" href="https://masest.co" data-klaviyo-href="{% web_view_link %}" style="color:#0a5b62">View in browser</a></td></tr></table></td></tr>
+                  <tr><td class="light-logo-cell" style="padding:10px 24px;background:#fff;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td class="email-muted" style="color:#5f656d;font-size:10px">Field-tested cleaning guidance for your next shutdown.</td><td align="right" style="font-size:10px"><a class="email-link" href="https://masest.co" data-runtime-href="{{web_view_url}}" style="color:#0a5b62">View in browser</a></td></tr></table></td></tr>
                   <tr><td style="padding:18px 28px;background:#111518"><table role="presentation" width="100%"><tr><td><img src="https://media.masest.co/site/img/masest-logo.png" width="38" height="47" alt="MASEST" style="display:block;width:38px;height:47px;object-fit:contain"></td><td align="right" style="font-family:Arial,sans-serif;font-size:11px"><a href="https://masest.co/products" style="color:#dce4e6;text-decoration:none">Products</a>&nbsp;&nbsp;&nbsp;<a href="https://masest.co/industries" style="color:#dce4e6;text-decoration:none">Industries</a>&nbsp;&nbsp;&nbsp;<a href="https://masest.co/blog" style="color:#dce4e6;text-decoration:none">Blog</a></td></tr></table></td></tr>
                   <tr><td><img class="email-content-image" src="https://media.masest.co/site/img/blog/heat-exchanger-descaling-hero.webp" width="600" height="338" alt="Technician preparing an industrial heat exchanger cleaning loop" style="display:block;width:100%;height:auto"></td></tr>
                   <tr><td style="padding:34px 28px 26px;font-family:Arial,sans-serif">
@@ -561,7 +561,7 @@ Required order notice · Privacy: https://masest.co/privacy</pre>
                     <img src="https://media.masest.co/site/img/masest-logo.png" width="34" height="42" alt="MASEST" style="display:block;width:34px;height:42px;object-fit:contain;margin-bottom:14px">
                     <p style="margin:0 0 10px;color:#d8e0e2;font-size:11px;line-height:1.6"><a href="https://masest.co" style="color:#fff">Website</a> · <a href="https://masest.co/products" style="color:#fff">Products</a> · <a href="https://masest.co/blog" style="color:#fff">Blog</a> · <a href="https://masest.co/contact" style="color:#fff">Contact</a></p>
                     <p style="margin:0 0 10px;color:#a9b7ba;font-size:10px;line-height:1.6">You received this because you subscribed to VertKleen Tips or asked MASEST for product updates.</p>
-                    <p style="margin:0 0 10px;color:#d8e0e2;font-size:11px"><a href="https://masest.co/dashboard.html#notifications" style="color:#fff">Manage email settings</a> · <a href="https://masest.co/dashboard.html#notifications" data-klaviyo-href="{% unsubscribe_link %}" style="color:#fff">Unsubscribe</a> · <a href="https://masest.co/privacy.html" style="color:#fff">Privacy</a></p>
+                    <p style="margin:0 0 10px;color:#d8e0e2;font-size:11px"><a href="https://masest.co/dashboard.html#notifications" style="color:#fff">Manage email settings</a> · <a href="https://masest.co/dashboard.html#notifications" data-runtime-href="{{unsubscribe_url}}" style="color:#fff">Unsubscribe</a> · <a href="https://masest.co/privacy.html" style="color:#fff">Privacy</a></p>
                     <p style="margin:0;color:#8f9ca1;font-size:10px;line-height:1.6">MASEST Consulting LLC · 1361 Grand Cayman Dr, Merritt Island, FL 32952</p>
                   </td></tr>
                 </table>
@@ -596,7 +596,7 @@ MASEST Consulting LLC · 1361 Grand Cayman Dr, Merritt Island, FL 32952</pre>
             <div class="email-frame email-html">
               <table role="presentation" class="email-canvas" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f4f6f7;border-collapse:collapse"><tr><td style="padding:24px 0">
                 <table role="presentation" width="100%" class="email-surface" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background:#fff;border-collapse:collapse">
-                  <tr><td class="light-logo-cell" style="padding:10px 24px;background:#fff;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td class="email-muted" style="color:#5f656d;font-size:10px">Industrial grease removal, planned around the whole job.</td><td align="right" style="font-size:10px"><a class="email-link" href="https://masest.co" data-klaviyo-href="{% web_view_link %}" style="color:#0a5b62">View in browser</a></td></tr></table></td></tr>
+                  <tr><td class="light-logo-cell" style="padding:10px 24px;background:#fff;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td class="email-muted" style="color:#5f656d;font-size:10px">Industrial grease removal, planned around the whole job.</td><td align="right" style="font-size:10px"><a class="email-link" href="https://masest.co" data-runtime-href="{{web_view_url}}" style="color:#0a5b62">View in browser</a></td></tr></table></td></tr>
                   <tr><td style="padding:18px 28px;background:#111518"><table role="presentation" width="100%"><tr><td><img src="https://media.masest.co/site/img/masest-logo.png" width="38" height="47" alt="MASEST" style="display:block;width:38px;height:47px;object-fit:contain"></td><td align="right" style="font-family:Arial,sans-serif;font-size:11px"><a href="https://masest.co/products" style="color:#dce4e6;text-decoration:none">Products</a>&nbsp;&nbsp;&nbsp;<a href="https://masest.co/proof" style="color:#dce4e6;text-decoration:none">Results</a>&nbsp;&nbsp;&nbsp;<a href="https://masest.co/blog" style="color:#dce4e6;text-decoration:none">Blog</a></td></tr></table></td></tr>
                   <tr><td style="padding:38px 28px 26px;background:#0d1517;font-family:Arial,sans-serif">
                     <p style="margin:0 0 10px;color:#9dd5d8;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">Product spotlight · VertKleen CRHD</p>
@@ -621,7 +621,7 @@ MASEST Consulting LLC · 1361 Grand Cayman Dr, Merritt Island, FL 32952</pre>
                     <img src="https://media.masest.co/site/img/masest-logo.png" width="34" height="42" alt="MASEST" style="display:block;width:34px;height:42px;object-fit:contain;margin-bottom:14px">
                     <p style="margin:0 0 10px;color:#d8e0e2;font-size:11px;line-height:1.6"><a href="https://masest.co" style="color:#fff">Website</a> · <a href="https://masest.co/products" style="color:#fff">Products</a> · <a href="https://masest.co/blog" style="color:#fff">Blog</a> · <a href="https://masest.co/contact" style="color:#fff">Contact</a></p>
                     <p style="margin:0 0 10px;color:#a9b7ba;font-size:10px;line-height:1.6">Advertisement. You received this because you asked MASEST for product information or subscribed to product updates.</p>
-                    <p style="margin:0 0 10px;color:#d8e0e2;font-size:11px"><a href="https://masest.co/dashboard.html#notifications" style="color:#fff">Manage email settings</a> · <a href="https://masest.co/dashboard.html#notifications" data-klaviyo-href="{% unsubscribe_link %}" style="color:#fff">Unsubscribe</a> · <a href="https://masest.co/privacy.html" style="color:#fff">Privacy</a></p>
+                    <p style="margin:0 0 10px;color:#d8e0e2;font-size:11px"><a href="https://masest.co/dashboard.html#notifications" style="color:#fff">Manage email settings</a> · <a href="https://masest.co/dashboard.html#notifications" data-runtime-href="{{unsubscribe_url}}" style="color:#fff">Unsubscribe</a> · <a href="https://masest.co/privacy.html" style="color:#fff">Privacy</a></p>
                     <p style="margin:0;color:#8f9ca1;font-size:10px;line-height:1.6">MASEST Consulting LLC · 1361 Grand Cayman Dr, Merritt Island, FL 32952</p>
                   </td></tr>
                 </table>
@@ -743,7 +743,7 @@ MASEST Consulting LLC · 1361 Grand Cayman Dr, Merritt Island, FL 32952</pre>
         fields: {
           "From": "MASEST VertKleen <news@masest.co>",
           "Reply-To": "sales@masest.co",
-          "Provider": "Klaviyo · marketing",
+          "Provider": "Amazon SES · marketing",
           "Primary CTA": "Featured field note",
           "Header links": "Website; products; industries; blog",
           "Footer": "Reason; preferences; unsubscribe; privacy; postal address",
@@ -760,7 +760,7 @@ MASEST Consulting LLC · 1361 Grand Cayman Dr, Merritt Island, FL 32952</pre>
         fields: {
           "From": "MASEST VertKleen <products@masest.co>",
           "Reply-To": "sales@masest.co",
-          "Provider": "Klaviyo · marketing",
+          "Provider": "Amazon SES · marketing",
           "Primary CTA": "Product detail",
           "Secondary CTA": "Relevant application guide",
           "Disclosure": "Advertisement + permission reason",

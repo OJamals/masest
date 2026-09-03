@@ -157,11 +157,11 @@ const previews = {
 };
 
 for (const [file, preview] of Object.entries(previews)) {
-  // Keep provider tokens inspectable without making local-preview link checkers
+  // Keep runtime tokens inspectable without making local-preview link checkers
   // treat them as relative files. Production renderer output stays unchanged.
   const browserSafeHtml = preview.html
-    .replaceAll('href="{% web_view_link %}"', 'href="https://masest.co" data-klaviyo-href="{% web_view_link %}"')
-    .replaceAll('href="{% unsubscribe_link %}"', 'href="https://masest.co/dashboard.html#notifications" data-klaviyo-href="{% unsubscribe_link %}"');
+    .replaceAll('href="{{web_view_url}}"', 'href="https://masest.co" data-runtime-href="{{web_view_url}}"')
+    .replaceAll('href="{{unsubscribe_url}}"', 'href="https://masest.co/dashboard.html#notifications" data-runtime-href="{{unsubscribe_url}}"');
   writeFileSync(join(outputDir, file), browserSafeHtml, 'utf8');
   writeFileSync(join(outputDir, file.replace(/\.html$/, '.txt')), `${preview.text || ''}\n`, 'utf8');
 }

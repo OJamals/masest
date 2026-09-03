@@ -22,7 +22,7 @@ Use one isolated, staff-only Prospect domain:
 - `prospect_source_records` maps non-PII source IDs to imported records.
 
 All imported consent is `unknown`; outreach is `unreviewed`. No import or API path writes
-to Companies, Buyer accounts, account CRM contacts, support messages, Klaviyo, or newsletter
+to Companies, Buyer accounts, account CRM contacts, support messages, marketing delivery, or newsletter
 recipients. A Prospect Organization may become customer context only through an explicit
 `linked_company_id`. The existing CRM workspace owns the Prospect UI so staff have one
 relationship workspace without creating a second admin application.

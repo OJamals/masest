@@ -27,7 +27,7 @@ conversion engine — split into **Scheduled** (committed/near-term) and **Poten
 - **Cloudflare Email Service** — transactional Workers binding, delivery-event queue,
   inbound Email Routing, and Supabase Auth SMTP. Verified sending domain is
   `send.masest.co`; support replies use the isolated `reply.masest.co` routing subdomain.
-- **Klaviyo** — marketing/newsletter (`functions/api/newsletter.js`).
+- **Amazon SES** — marketing transport; Supabase owns consent and queues (`functions/api/newsletter.js`).
 - **Turnstile** — CAPTCHA (sitekey in `js/config.js`).
 
 **Shared helpers** (`functions/_lib/supabase.js`): `adminClient`, `userFromRequest`, `json`, `readBody`,
@@ -83,7 +83,7 @@ notification, subscription branch + `customer.subscription.*` updates), branded 
 **Lead intake:** `/api/quote` (own endpoint, replaced Formspree) → persists to `quotes` table + Cloudflare
 transactional sales-notify + buyer autoreply; honeypot + soft Turnstile. Surfaces in admin Quotes tab.
 
-**Other:** newsletter (Klaviyo), pageview beacon (`/api/track` + `js/track.js`), notifications (in-app + email).
+**Other:** newsletter (Supabase + SES), pageview beacon (`/api/track` + `js/track.js`), notifications (in-app + email).
 
 **Schema files (applied):** schema.sql, schema-phase5.sql, schema-team.sql, schema-programs.sql,
 schema-quotes.sql, grants.sql, seed.sql, variants_seed.sql.
@@ -182,11 +182,11 @@ bounded server pagination. The unchecked items below remain top-of-funnel work.
 - [ ] **Booking / scheduling** — let prospects book an audit/demo (embed Cal.com/Calendly, or build a
       slots table + confirmation email). Sync to the assigned rep.
 - [ ] **Lead magnets / gated content** — SDS pack, savings whitepaper, compliance guide behind an email
-      capture → push consented contacts to Klaviyo + `quotes`/`leads` table; fulfill requested files through
+      capture → record consented contacts in Supabase + `quotes`/`leads` table; fulfill requested files through
       Cloudflare transactional email.
 - [ ] **ROI / cost-savings calculator** — interactive tool (chemical/water/energy savings vs incumbent) that
       captures inputs + email; strong B2B lead magnet and sales talking point.
-- [ ] **Newsletter capture** — footer signup, exit-intent and scroll popups, post-purchase opt-in (Klaviyo lists).
+- [ ] **Newsletter capture** — footer signup, exit-intent and scroll popups, post-purchase opt-in (Supabase audience).
 - [x] **Customer chat** — first-party authenticated chat with direct handoff to the
       admin Messages thread; logged-out visitors are sent to sign up or log in.
 - [x] **Admin CRM foundation** — quote lifecycle stages and board, owner/due-date follow-up, task inbox,
@@ -206,7 +206,7 @@ Turn traffic and leads into orders and repeat revenue.
 - [ ] **A/B testing** — server-assigned variant cookie + variant rendering + conversion tracking; start with hero/CTA/PDP.
 - [ ] **Retargeting pixels** — Meta, Google Ads, LinkedIn Insight (consent-gated); server-side events where possible.
 
-**Lifecycle email automation** (Klaviyo for optional marketing; Cloudflare only for transactional events)
+**Lifecycle email automation** (Amazon SES for optional marketing; Cloudflare only for transactional events)
 - [ ] **Cart abandonment** (guest + logged-in), **browse abandonment**, **quote follow-up** sequence,
       **post-purchase** (reorder reminder timed to consumption), **win-back**, **subscription renewal/dunning**.
 
@@ -251,4 +251,4 @@ Turn traffic and leads into orders and repeat revenue.
 Each task: implement on `main`, follow the CF Functions + `_lib` conventions, add the table
 grant when creating tables, verify with `node --check` + a smoke call (expect 401 on gated endpoints), and
 confirm transactional paths through the private Cloudflare service binding and marketing paths through
-Klaviyo previews or bounded test recipients. Keep changes small and committed per-feature.
+SES previews or bounded test recipients. Keep changes small and committed per-feature.

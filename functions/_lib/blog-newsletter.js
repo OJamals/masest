@@ -1,5 +1,5 @@
 // Blog newsletter: render the "new post" email + pure helpers for the send sweep.
-// Klaviyo owns consent, suppression, unsubscribe state, fanout, and delivery.
+// Supabase owns consent/queue state; Amazon SES owns transport.
 import { emailEscape } from './email-template.js';
 import { renderMarketingEmail } from './email-renderers.js';
 

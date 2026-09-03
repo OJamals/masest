@@ -54,8 +54,9 @@ test('notification-prefs endpoint exposes GET + PATCH using sanitizeNotification
   assert.match(src, /onRequestGet/);
   assert.match(src, /onRequestPatch|method === 'PATCH'/);
   assert.match(src, /sanitizeNotificationPrefs\(/);
-  assert.match(src, /const suppressed = await recordSuppression/);
-  assert.match(src, /if \(!suppressed \|\| !unsubscribed\.ok\) marketingSync = 'pending'/);
+  assert.match(src, /await setMarketingPreference\(env/);
+  assert.match(src, /userId: user\.id/);
+  assert.doesNotMatch(src, /klaviyo/i);
 });
 
 test('migration adds default-on marketing preference and preserves support preference', () => {
@@ -74,7 +75,8 @@ test('send sites keep orders mandatory and use marketing preference for offers',
   assert.match(read('functions/_lib/support-message-publisher.js'), /deliverSupportMessageEmail/);
   assert.match(read('functions/_lib/support-email.js'), /shouldEmailSupportRecipient/);
   assert.match(read('functions/_lib/message-notifications.js'), /notify_messages/);
-  assert.match(read('functions/api/admin/offers.js'), /marketing_email_enabled/);
+  assert.match(read('functions/api/admin/offers.js'), /marketing_company_emails/);
+  assert.match(read('supabase/migrate-ses-marketing-2026-09-03.sql'), /marketing_email_enabled is not false/);
 });
 
 test('dashboard exposes immutable transactional + optional marketing settings', () => {

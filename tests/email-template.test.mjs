@@ -18,15 +18,15 @@ test('transactional shell uses official MASEST identity + required-email notice'
   assert.doesNotMatch(html, /\{% unsubscribe %\}/);
 });
 
-test('marketing shell uses same design + Klaviyo unsubscribe and preference links', () => {
+test('marketing shell uses same design + provider-neutral unsubscribe and preference links', () => {
   const html = emailLayout({
     stream: 'marketing',
     heading: 'Field notes',
     bodyHtml: '<p>New guide.</p>',
   });
   assert.match(html, /https:\/\/media\.masest\.co\/site\/img\/masest-logo\.png/);
-  assert.match(html, /\{% unsubscribe_link %\}/);
-  assert.match(html, /\{% web_view_link %\}/);
+  assert.match(html, /\{\{unsubscribe_url\}\}/);
+  assert.match(html, /\{\{web_view_url\}\}/);
   assert.match(html, /dashboard\.html#notifications/);
   assert.match(html, /1361 Grand Cayman Dr/);
   assert.match(html, /Merritt Island, FL 32952/);

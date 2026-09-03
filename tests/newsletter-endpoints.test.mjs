@@ -30,8 +30,6 @@ const staffEnv = {
   SUPABASE_URL: 'https://supabase.test',
   SUPABASE_ANON_KEY: 'anon-key',
   SUPABASE_SERVICE_ROLE_KEY: 'service-key',
-  KLAVIYO_PRIVATE_KEY: 'klaviyo-key',
-  KLAVIYO_LIST_ID: 'marketing-list',
 };
 
 function staffReq(method, body = {}, onParse = () => {}) {
@@ -66,11 +64,8 @@ function mockStaffFetch(role) {
       const method = init.method || 'GET';
       return method === 'GET' ? Response.json([]) : new Response(null, { status: 201 });
     }
-    if (url.includes('a.klaviyo.com/api/lists/')) {
-      return Response.json({ data: [], links: { next: null } });
-    }
-    if (url.includes('a.klaviyo.com/api/profile-subscription-bulk-create-jobs/')) {
-      return new Response(null, { status: 202 });
+    if (url.includes('/rest/v1/rpc/set_marketing_email_preferences')) {
+      return Response.json(1);
     }
     throw new Error(`Unexpected fetch: ${url}`);
   };
@@ -81,7 +76,7 @@ test('recipients: 401 for anonymous', async () => {
   assert.equal(res.status, 401);
 });
 
-test('recipients: read_only retains Klaviyo count and import-audit access', async () => {
+test('recipients: read_only retains canonical audience count and import-audit access', async () => {
   mockStaffFetch('read_only');
   let parseCalls = 0;
   const res = await recipientsRoute({
@@ -222,7 +217,7 @@ test('claimBlogNewsletter: primary-key insert claims one post before provider wo
 
   assert.deepEqual(await claimBlogNewsletter(sb, 'new-post'), { claimed: true, error: null });
   assert.equal(inserted.slug, 'new-post');
-  assert.equal(inserted.provider, 'klaviyo');
+  assert.equal(inserted.provider, 'ses');
   assert.equal(inserted.provider_status, 'queueing');
   assert.equal(inserted.sent_at, null);
 });
@@ -237,20 +232,22 @@ test('claimBlogNewsletter: duplicate primary key is an already-claimed no-op', a
   assert.deepEqual(await claimBlogNewsletter(sb, 'new-post'), { claimed: false, error: null });
 });
 
-test('newsletters: send_now queues one Klaviyo campaign without local recipient fanout', () => {
+test('newsletters: send_now materializes durable SES deliveries', () => {
   const source = readFileSync(new URL('../functions/api/admin/newsletters.js', import.meta.url), 'utf8');
   const start = source.indexOf("if (action === 'send_now')");
   const end = source.indexOf("return json(400, { error: 'bad_action' })", start);
   const sendNow = source.slice(start, end);
   assert.match(sendNow, /await claimNewsletter\(sb, body\.id/);
-  assert.match(sendNow, /await publishNewsletter\(env, sb, newsletter\)/);
+  assert.match(sendNow, /await queueNewsletter\(env, sb, claim\.newsletter\)/);
   assert.match(sendNow, /return json\(202,/);
-  assert.doesNotMatch(sendNow, /sendEmail|runSupabaseDeliveryWorker|materializeDeliverySource/);
-  assert.match(source, /publishKlaviyoCampaign/);
-  assert.match(source, /provider_campaign_id/);
+  assert.match(source, /materializeDeliverySource/);
+  assert.match(source, /runSupabaseDeliveryWorker/);
+  assert.match(source, /loadMarketingAudience/);
+  assert.match(source, /provider: 'ses'/);
+  assert.doesNotMatch(source, /klaviyo/i);
   const ui = readFileSync(new URL('../js/admin/newsletter.js', import.meta.url), 'utf8');
-  assert.match(ui, /Queued in Klaviyo \(\$\{res\.campaign_id \|\| 'campaign created'\}\)\./);
-  assert.doesNotMatch(ui, /Queued \$\{Number\(res\.total/);
+  assert.match(ui, /Queued \$\{Number\(res\.total/);
+  assert.doesNotMatch(ui, /klaviyo/i);
   const adminEntry = readFileSync(new URL('../js/admin.js', import.meta.url), 'utf8');
   // Derived from the deployed entry so a release bump stays a one-line change.
   const release = readFileSync(new URL('../admin.html', import.meta.url), 'utf8').match(/js\/admin\.js\?v=(\d{8}[a-z])/)?.[1];
@@ -258,14 +255,14 @@ test('newsletters: send_now queues one Klaviyo campaign without local recipient 
   assert.match(adminEntry, new RegExp(`\\./admin/newsletter\\.js\\?v=${release}`));
 });
 
-test('blog sweep queues Klaviyo campaigns and persists provider identity', () => {
+test('blog sweep materializes durable SES deliveries after claiming each post', () => {
   const source = readFileSync(new URL('../functions/api/admin/blog-newsletter.js', import.meta.url), 'utf8');
   const claimAt = source.indexOf('await claimBlogNewsletter(sb, post.slug)');
-  const publishAt = source.indexOf('await publishKlaviyoCampaign(env, {');
-  assert.ok(claimAt >= 0 && claimAt < publishAt, 'blog post must be claimed before provider work');
-  assert.match(source, /publishKlaviyoCampaign/);
-  assert.match(source, /getKlaviyoCampaignStatus/);
-  assert.match(source, /provider_campaign_id/);
-  assert.match(source, /return json\(failed\.length \? 503 : 202,/);
-  assert.doesNotMatch(source, /materializeDeliverySource|sendEmail|for \(const email/);
+  const materializeAt = source.indexOf('await materializeDeliverySource(sb, {');
+  assert.ok(claimAt >= 0 && claimAt < materializeAt, 'blog post must be claimed before delivery materialization');
+  assert.match(source, /materializeDeliverySource/);
+  assert.match(source, /runSupabaseDeliveryWorker/);
+  assert.match(source, /loadMarketingAudience/);
+  assert.match(source, /provider: 'ses'/);
+  assert.doesNotMatch(source, /klaviyo/i);
 });

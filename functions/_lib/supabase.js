@@ -4,6 +4,7 @@
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
 import { filterByStream, categoryPolicy, unsubscribeToken, htmlToText } from './email.js';
+import { sendSesMarketingEmail } from './ses-email.js';
 import { isStaffEmail, platformStaffRole } from './authz.js';
 import {
   CommerceContextError,
@@ -216,11 +217,12 @@ export async function companyEmails(sb, companyId, category) {
 // Transactional delivery uses the private Cloudflare Worker service binding below.
 // Load the subset of `emails` that are suppressed. Fails open (empty Set on error).
 // Returns Map<emailLower, Set<stream>> for the given addresses. Fails open (empty Map).
-export async function loadSuppressed(env, emails) {
+export async function loadSuppressed(env, emails, { strict = false } = {}) {
   try {
     const sb = adminClient(env);
     const lowered = emails.map((e) => String(e).toLowerCase());
-    const { data } = await sb.from('email_suppressions').select('email,stream').in('email', lowered);
+    const { data, error } = await sb.from('email_suppressions').select('email,stream').in('email', lowered);
+    if (error) throw error;
     const map = new Map();
     for (const r of data || []) {
       const key = String(r.email).toLowerCase();
@@ -228,7 +230,8 @@ export async function loadSuppressed(env, emails) {
       map.get(key).add(r.stream || 'all');
     }
     return map;
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     return new Map();
   }
 }
@@ -311,18 +314,17 @@ export async function sendEmailResult(env, {
   attachments = [],
   fetchImpl = globalThis.fetch,
   suppressionLoader = loadSuppressed,
+  marketingSender = sendSesMarketingEmail,
+  sesSigner = null,
+  webViewUrl = '',
 }) {
   const allTo = Array.isArray(to) ? to : [];
   const allBcc = Array.isArray(bcc) ? bcc : [];
-  const bindingFetch = emailConfigured(env) ? env.EMAIL_SERVICE.fetch.bind(env.EMAIL_SERVICE) : null;
-  const serviceFetch = bindingFetch || (fetchImpl !== globalThis.fetch ? fetchImpl : null);
-  if (!serviceFetch || (!allTo.length && !allBcc.length)) {
-    return { ok: false, retryable: false, error: 'email_not_configured' };
-  }
+  const logTo = [...allTo, ...allBcc].join(', ');
   const policy = categoryPolicy(category);
   if (!policy) {
     await logEmailEvent(env, {
-      to_email: [...allTo, ...allBcc].join(', '),
+      to_email: logTo,
       category,
       subject,
       status: 'failed',
@@ -330,25 +332,57 @@ export async function sendEmailResult(env, {
     });
     return { ok: false, retryable: false, error: 'email_category_required' };
   }
-  if (policy.stream === 'marketing') {
-    await logEmailEvent(env, {
-      to_email: [...allTo, ...allBcc].join(', '),
-      category,
-      subject,
-      status: 'failed',
-      error: 'marketing_provider_required',
-    });
-    return { ok: false, retryable: false, error: 'marketing_provider_required' };
+  if (!allTo.length && !allBcc.length) {
+    return { ok: false, retryable: false, error: 'email_recipient_required' };
   }
-  const suppressed = await suppressionLoader(env, [...allTo, ...allBcc]);
-  // Per-stream: a marketing opt-out blocks only marketing categories; hard blocks ('all')
-  // block everything. Transactional receipts survive a marketing unsubscribe.
+  const bindingFetch = emailConfigured(env) ? env.EMAIL_SERVICE.fetch.bind(env.EMAIL_SERVICE) : null;
+  const serviceFetch = bindingFetch || (fetchImpl !== globalThis.fetch ? fetchImpl : null);
+  if (policy.stream === 'transactional' && !serviceFetch) {
+    return { ok: false, retryable: false, error: 'email_not_configured' };
+  }
+  let suppressed;
+  try {
+    suppressed = await suppressionLoader(env, [...allTo, ...allBcc], { strict: policy.stream === 'marketing' });
+  } catch {
+    await logEmailEvent(env, {
+      to_email: logTo, category, subject, status: 'failed', error: 'suppression_check_failed',
+    });
+    return { ok: false, retryable: true, error: 'suppression_check_failed' };
+  }
   const toR = filterByStream(allTo, category, suppressed).slice(0, 50);
   const bccR = filterByStream(allBcc, category, suppressed).slice(0, 50 - toR.length);
-  const logTo = [...allTo, ...allBcc].join(', ');
   if (!toR.length && !bccR.length) {
-    await logEmailEvent(env, { to_email: logTo, category, subject, status: 'failed', error: 'all_recipients_suppressed' });
+    await logEmailEvent(env, {
+      to_email: logTo, category, subject, status: 'failed', error: 'all_recipients_suppressed',
+    });
     return { ok: false, suppressed: true, retryable: false, error: 'all_recipients_suppressed' };
+  }
+  const stableKey = await emailIdempotencyKey(idempotencyKey || `ephemeral/${crypto.randomUUID()}`);
+  if (policy.stream === 'marketing') {
+    if (toR.length !== 1 || bccR.length) {
+      return { ok: false, retryable: false, error: 'marketing_single_recipient_required' };
+    }
+    const result = await marketingSender(env, {
+      to: toR[0],
+      subject,
+      html,
+      text: text || '',
+      category,
+      idempotencyKey: stableKey,
+      replyTo,
+      webViewUrl,
+      fetchImpl,
+      signer: sesSigner,
+    });
+    await logEmailEvent(env, {
+      provider_message_id: result.providerMessageId || null,
+      to_email: toR[0],
+      category,
+      subject,
+      status: result.ok ? 'sent' : 'failed',
+      error: result.error || null,
+    });
+    return result;
   }
   const sentTo = [...toR, ...bccR].join(', ');
   const reply = replyTo || env.EMAIL_REPLY_TO || null;
@@ -358,7 +392,6 @@ export async function sendEmailResult(env, {
   const messageHeaders = Object.fromEntries(Object.entries(emailHeaders || {})
     .filter(([key, value]) => /^(?:In-Reply-To|References|X-[A-Za-z0-9_-]+)$/i.test(key)
       && typeof value === 'string' && value.length <= 2048 && !/[\r\n]/.test(value)));
-  const stableKey = await emailIdempotencyKey(idempotencyKey || `ephemeral/${crypto.randomUUID()}`);
   try {
     const r = await serviceFetch('https://email.service/v1/send', {
       method: 'POST',

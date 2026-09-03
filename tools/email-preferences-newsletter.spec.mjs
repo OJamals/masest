@@ -29,11 +29,17 @@ async function boot(page, { canAdmin }) {
     contentType: 'text/javascript',
     body: authStubModule({ canAdmin }),
   }));
-  await page.route('**/api/**', (route) => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: '{}',
-  }));
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const body = path === '/api/admin/recipients'
+      ? { counts: { subscribers: 12, imported: 12 }, recipients: [] }
+      : {};
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+  });
   return consoleProblems;
 }
 
@@ -94,13 +100,13 @@ test('email preferences remain operable at phone width', async ({ page }) => {
   expect(consoleProblems).toEqual([]);
 });
 
-test('admin newsletter identifies Klaviyo ownership and queues a test campaign', async ({ page }) => {
+test('admin newsletter identifies SES ownership and sends a test email', async ({ page }) => {
   const consoleProblems = await boot(page, { canAdmin: true });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(`${site.baseUrl}/admin.html#newsletter`, { waitUntil: 'load' });
   await expect(page.locator('.adm-panel[data-panel="newsletter"]')).toHaveAttribute('data-active', 'true');
-  await expect(page.locator('#admNewsletter')).toContainText('Klaviyo campaign');
-  await expect(page.locator('#nlAudEstimate')).toContainText('12 current Klaviyo subscribers');
+  await expect(page.locator('#admNewsletter')).toContainText('Amazon SES campaign');
+  await expect(page.locator('#nlAudEstimate')).toContainText('12 eligible recipients');
   await expect(page.locator('#nlBlogPickWrap')).toBeHidden();
 
   await page.locator('#nlSubject').fill('Field note: VertKleen update');
@@ -110,7 +116,7 @@ test('admin newsletter identifies Klaviyo ownership and queues a test campaign',
   await expect(dialog).toBeVisible();
   await dialog.locator('[data-nl-test-email]').fill('dev@masest.co');
   await dialog.getByRole('button', { name: 'Send test' }).click();
-  await expect(page.locator('#nlStatus')).toHaveText('Test campaign queued in Klaviyo.');
+  await expect(page.locator('#nlStatus')).toHaveText('Test email accepted by Amazon SES.');
 
   await page.evaluate(() => {
     document.documentElement.style.scrollBehavior = 'auto';
@@ -118,6 +124,6 @@ test('admin newsletter identifies Klaviyo ownership and queues a test campaign',
   });
   await page.locator('.adm-panel[data-panel="newsletter"] > .adm-panel-title').scrollIntoViewIfNeeded();
   await page.waitForTimeout(100);
-  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-newsletter-klaviyo.png` });
+  await page.screenshot({ path: `${SCREENSHOT_DIR}/admin-newsletter-ses.png` });
   expect(consoleProblems).toEqual([]);
 });

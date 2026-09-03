@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { renderBlogEmail, postFromEntry, unsentPosts } from '../functions/_lib/blog-newsletter.js';
-import { klaviyoListProfiles } from '../functions/_lib/klaviyo.js';
+import { loadMarketingAudience } from '../functions/_lib/marketing-subscribers.js';
 import { MARKETING_CATEGORIES, categoryStream } from '../functions/_lib/email.js';
 
 test('blog_newsletter is a marketing category (suppression + unsub apply)', () => {
@@ -40,7 +40,7 @@ test('renderBlogEmail: hero, title, excerpt, escaped CTA to the live post', () =
   assert.match(html, /Lower hazard\./);
   assert.match(html, /Read the full post/);
   assert.match(html, /href="https:\/\/masest\.co\/blog\/hmis-000-explained"/);
-  assert.match(html, /\{% unsubscribe_link %\}/);
+  assert.match(html, /\{\{unsubscribe_url\}\}/);
   assert.match(html, /1361 Grand Cayman Dr/);
   assert.match(text, /Read the full post: https:\/\/masest\.co\/blog\/hmis-000-explained/);
 });
@@ -50,7 +50,7 @@ test('renderBlogEmail: escapes HTML in title/excerpt (no injection)', () => {
   assert.ok(!html.includes('<script>alert(1)'));
   assert.match(html, /&lt;script&gt;/);
   assert.match(html, /&lt;b&gt;hi&lt;\/b&gt;/);
-  assert.ok(subject.includes('<script>')); // subject is plain-text (Resend), not HTML
+  assert.ok(subject.includes('<script>')); // subject is plain text, not HTML
 });
 
 test('renderBlogEmail: no hero keeps shared R2 header and footer logos only', () => {
@@ -60,22 +60,28 @@ test('renderBlogEmail: no hero keeps shared R2 header and footer logos only', ()
   assert.ok(images.every((image) => /https:\/\/media\.masest\.co\/site\/img\/masest-logo\.png/.test(image)));
 });
 
-test('klaviyoListProfiles: paginates links.next, dedupes, lowercases', async () => {
-  const pages = {
-    'https://a.klaviyo.com/api/lists/L1/profiles/?page%5Bsize%5D=100': {
-      ok: true, json: async () => ({ data: [{ attributes: { email: 'A@x.com' } }, { attributes: { email: 'b@x.com' } }], links: { next: 'https://a.klaviyo.com/next2' } }),
-    },
-    'https://a.klaviyo.com/next2': {
-      ok: true, json: async () => ({ data: [{ attributes: { email: 'b@x.com' } }, { attributes: { email: 'c@x.com' } }], links: { next: null } }),
-    },
+test('loadMarketingAudience paginates, dedupes, and lowercases', async () => {
+  const pages = [
+    [{ email: 'A@x.com' }, { email: 'b@x.com' }],
+    [{ email: 'b@x.com' }, { email: 'c@x.com' }],
+    [],
+  ];
+  const sb = {
+    from: () => ({ select: () => ({ eq: () => ({
+      range: async (start) => ({ data: pages[start / 2], error: null }),
+    }) }) }),
   };
-  const fetchImpl = async (url) => pages[url];
-  const emails = await klaviyoListProfiles({ KLAVIYO_PRIVATE_KEY: 'k' }, 'L1', { fetchImpl });
+  const emails = await loadMarketingAudience(sb, { pageSize: 2 });
   assert.deepEqual(emails, ['a@x.com', 'b@x.com', 'c@x.com']);
 });
 
-test('klaviyoListProfiles: no key -> [] (best-effort)', async () => {
-  assert.deepEqual(await klaviyoListProfiles({}, 'L1'), []);
+test('loadMarketingAudience fails closed on DB errors', async () => {
+  const sb = {
+    from: () => ({ select: () => ({ eq: () => ({
+      range: async () => ({ data: null, error: new Error('db_down') }),
+    }) }) }),
+  };
+  await assert.rejects(loadMarketingAudience(sb), /marketing_audience_unavailable/);
 });
 
 import { onRequestPost } from '../functions/api/admin/blog-newsletter.js';

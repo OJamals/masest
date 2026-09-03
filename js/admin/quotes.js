@@ -5,11 +5,11 @@
 // helpers are injected; esc/delegate/money/confirmDialog/dateTime come from util.js and
 // the dirty-edit helpers from edits.js. The CRM activity panel (Timeline/Tasks/Notes,
 // slice 1) is reused inside the drawer via createCrmPanel — no js/admin.js change needed.
-import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260903c';
-import { captureDirty, restoreDirty } from './edits.js?v=20260903c';
-import { createCrmPanel } from './crm.js?v=20260903c';
-import { createSavedViews } from './saved-views.js?v=20260903c';
-import { QUOTE_TASK_DETAILS } from '../quote-task-details.js?v=20260903c';
+import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260903d';
+import { captureDirty, restoreDirty } from './edits.js?v=20260903d';
+import { createCrmPanel } from './crm.js?v=20260903d';
+import { createSavedViews } from './saved-views.js?v=20260903d';
+import { QUOTE_TASK_DETAILS } from '../quote-task-details.js?v=20260903d';
 
 const REQUEST_DETAIL_FIELDS = [
   ['samples', 'Sample products'],
@@ -510,7 +510,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     const status = dlg.querySelector('[data-drawer-status]');
     // Only send pipeline_stage when it actually changed: the server treats any stage
     // in the payload as a stage move — re-stamping stage_changed_at (clearing the
-    // Stale badge) and firing the Klaviyo "Deal Stage Changed" event, which can run
+    // Stale badge) and persisting downstream lifecycle state, which can run
     // customer-facing flows off a plain note edit.
     const newStage = v('[data-d-stage]');
     const stageChanged = newStage && newStage !== (quote.pipeline_stage || 'new');

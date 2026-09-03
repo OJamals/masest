@@ -61,7 +61,7 @@ test("program requests persist a useful CRM next step and readable field labels"
       return { quoteId: "22222222-2222-4222-8222-222222222222", duplicate: false };
     },
     sendEmail: async (_env, message) => { emails.push(message); return { ok: true }; },
-    subscribeLeadByIndustry: async () => ({ ok: true }),
+    enrollMarketingNurture: async () => ({ ok: true }),
   });
   const request = new Request("https://masest.test/api/quote", {
     method: "POST",

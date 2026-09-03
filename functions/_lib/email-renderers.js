@@ -464,7 +464,7 @@ export function renderMarketingEmail({
   );
   const heroHtml = hero ? `<tr><td><img src="${emailEscape(hero)}" width="${heroSize.width}" height="${heroSize.height}" alt="${emailEscape(campaign.heroAlt || heading)}" style="display:block;width:100%;height:auto"></td></tr>` : '';
   const darkHero = campaign.darkHero === true;
-  const rows = `<tr><td style="padding:10px 24px;background:#fff;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td style="color:#5f656d;font-size:10px">${emailEscape(previewText)}</td><td align="right" style="font-size:10px"><a href="{% web_view_link %}" style="color:#0a5b62">View in browser</a></td></tr></table></td></tr>`
+  const rows = `<tr><td style="padding:10px 24px;background:#fff;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td style="color:#5f656d;font-size:10px">${emailEscape(previewText)}</td><!--WEB_VIEW_START--><td align="right" style="font-size:10px"><a href="{{web_view_url}}" style="color:#0a5b62">View in browser</a></td><!--WEB_VIEW_END--></tr></table></td></tr>`
     + `<tr><td style="padding:18px 28px;background:#111518"><table role="presentation" width="100%"><tr><td><a href="${EMAIL_BASE}"><img src="${EMAIL_LOGO}" width="38" height="47" alt="MASEST" style="display:block;width:38px;height:47px;border:0;object-fit:contain"></a></td><td align="right" style="font-family:Arial,sans-serif;font-size:11px"><a href="${EMAIL_BASE}/products" style="color:#dce4e6;text-decoration:none">Products</a>&nbsp;&nbsp;&nbsp;<a href="${EMAIL_BASE}/industries" style="color:#dce4e6;text-decoration:none">Industries</a>&nbsp;&nbsp;&nbsp;<a href="${EMAIL_BASE}/blog" style="color:#dce4e6;text-decoration:none">Blog</a></td></tr></table></td></tr>`
     + heroHtml
     + `<tr><td class="email-pad" style="padding:34px 28px 26px;background:${darkHero ? '#0d1517' : '#fff'};font-family:Arial,sans-serif">${campaign.eyebrow ? `<p style="margin:0 0 9px;color:${darkHero ? '#9dd5d8' : '#0a5b62'};font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">${emailEscape(campaign.eyebrow)}</p>` : ''}<h1 style="margin:0;color:${darkHero ? '#fff' : '#15171c'};font-size:31px;line-height:1.13;letter-spacing:-.7px">${emailEscape(heading)}</h1><div style="margin:13px 0 0;color:${darkHero ? '#c8d2d5' : '#5f656d'};font-size:15px;line-height:1.65">${campaign.bodyHtml || ''}</div>${cta ? `<div style="margin-top:21px">${cta}</div>` : ''}</td></tr>`
@@ -491,12 +491,12 @@ export function renderMarketingEmail({
     ctaUrl ? `${campaign.ctaText || 'Open'}: ${ctaUrl}` : '',
     moduleText ? `\n${moduleText}` : '',
     '',
-    `View in browser: {% web_view_link %}`,
+    '<!--WEB_VIEW_START-->View in browser: {{web_view_url}}<!--WEB_VIEW_END-->',
     `Website: ${EMAIL_BASE}`,
     `Products: ${EMAIL_BASE}/products`,
     `Blog: ${EMAIL_BASE}/blog`,
     `Manage email settings: ${EMAIL_BASE}/dashboard.html#notifications`,
-    'Unsubscribe: {% unsubscribe_link %}',
+    'Unsubscribe: {{unsubscribe_url}}',
     '',
     disclosure,
     `${companyIdentity.legal_name} · ${address}`,

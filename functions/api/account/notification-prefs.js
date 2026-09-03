@@ -2,15 +2,13 @@
 // Transactional service mail is mandatory. Marketing defaults on and may be disabled.
 import {
   adminClient,
-  clearSuppression,
   json,
   loadSuppressed,
   readBody,
-  recordSuppression,
   sanitizeNotificationPrefs,
   userFromRequest,
 } from '../../_lib/supabase.js';
-import { klaviyoSubscribe, klaviyoUnsubscribe } from '../../_lib/klaviyo.js';
+import { setMarketingPreference } from '../../_lib/marketing-subscribers.js';
 
 const COLUMNS = 'marketing_email_enabled,notify_messages';
 const DEFAULTS = { marketing_email_enabled: true, notify_messages: true };
@@ -47,32 +45,23 @@ export async function onRequestPatch({ request, env }) {
   const patch = sanitizeNotificationPrefs(body);
   if (!Object.keys(patch).length) return json(400, { error: 'no_valid_fields' });
 
-  let marketingSync = 'synced';
-  if (patch.marketing_email_enabled === true) {
-    const subscribed = await klaviyoSubscribe(env, user.email, env.KLAVIYO_LIST_ID, {
+  if (typeof patch.marketing_email_enabled === 'boolean') {
+    const result = await setMarketingPreference(env, {
+      email: user.email,
+      enabled: patch.marketing_email_enabled,
       source: 'account_email_preferences',
-    });
-    if (!subscribed.ok) {
-      return json(502, { error: 'marketing_subscribe_failed', retryable: true });
-    }
+      userId: user.id,
+    }, { sb });
+    if (!result.ok) return json(503, { error: result.error, retryable: result.retryable });
   }
 
-  const { data, error } = await sb.from('profiles').update(patch).eq('id', user.id).select(COLUMNS).maybeSingle();
-  if (error) {
-    if (patch.marketing_email_enabled === true) {
-      await klaviyoUnsubscribe(env, user.email, env.KLAVIYO_LIST_ID);
-    }
-    return json(500, { error: 'server_error' });
+  const nonMarketingPatch = { ...patch };
+  delete nonMarketingPatch.marketing_email_enabled;
+  if (Object.keys(nonMarketingPatch).length) {
+    const { error } = await sb.from('profiles').update(nonMarketingPatch).eq('id', user.id);
+    if (error) return json(500, { error: 'server_error' });
   }
-
-  if (patch.marketing_email_enabled === false) {
-    const suppressed = await recordSuppression(env, user.email, 'user_preference', 'marketing');
-    const unsubscribed = await klaviyoUnsubscribe(env, user.email, env.KLAVIYO_LIST_ID);
-    if (!suppressed || !unsubscribed.ok) marketingSync = 'pending';
-  } else if (patch.marketing_email_enabled === true) {
-    const cleared = await clearSuppression(env, user.email, 'marketing');
-    if (!cleared) marketingSync = 'pending';
-  }
-
-  return json(200, await responsePrefs(env, user, { ...DEFAULTS, ...(data || {}) }, marketingSync));
+  const { data, error } = await sb.from('profiles').select(COLUMNS).eq('id', user.id).maybeSingle();
+  if (error) return json(503, { error: 'email_preferences_unavailable', retryable: true });
+  return json(200, await responsePrefs(env, user, { ...DEFAULTS, ...(data || {}) }, 'synced'));
 }

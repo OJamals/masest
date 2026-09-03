@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   renderNewsletterBody, renderNewsletterEmail, resolveAudience, nextRunAt, dueNewsletters,
 } from '../functions/_lib/newsletter.js';
-import { klaviyoListProfiles } from '../functions/_lib/klaviyo.js';
+import { loadMarketingAudience } from '../functions/_lib/marketing-subscribers.js';
 import { allUserEmails, sendEmailResult } from '../functions/_lib/supabase.js';
 
 test('renderNewsletterBody: markdown constructs', () => {
@@ -134,8 +134,8 @@ test('renderNewsletterEmail: subject + branded shell uses identical safe body ou
   assert.ok(html.includes(renderedBody));
   assert.doesNotMatch(html, /<script\b/i);
   assert.match(html, /MASEST/);
-  assert.match(html, /\{% web_view_link %\}/);
-  assert.match(html, /\{% unsubscribe_link %\}/);
+  assert.match(html, /\{\{web_view_url\}\}/);
+  assert.match(html, /\{\{unsubscribe_url\}\}/);
   assert.match(html, /1361 Grand Cayman Dr/);
   assert.match(text, /Hello world/);
 });
@@ -176,12 +176,12 @@ test('dueNewsletters: scheduled + next_run_at in the past', () => {
   assert.deepEqual(dueNewsletters(rows, now).map((n) => n.id), [1, 4]);
 });
 
-test('sendEmailResult fails closed when a marketing provider is not configured', async () => {
+test('sendEmailResult fails closed when SES is not configured', async () => {
   let calls = 0;
   const result = await sendEmailResult({}, {
     to: ['person@example.test'],
     subject: 'Subject',
-    html: '<p>Body</p>',
+    html: '<p>Body</p><a href="{{unsubscribe_url}}">Unsubscribe</a>',
     category: 'newsletter',
     idempotencyKey: 'newsletter:campaign-1:person@example.test',
     suppressionLoader: async () => new Map(),
@@ -190,33 +190,26 @@ test('sendEmailResult fails closed when a marketing provider is not configured',
   assert.equal(calls, 0);
   assert.deepEqual(result, {
     ok: false,
+    provider: 'ses',
     retryable: false,
-    error: 'marketing_provider_required',
+    error: 'ses_not_configured',
   });
 });
 
 test('strict audience reads distinguish source failure from an empty audience', async () => {
+  const audienceDb = (result) => ({
+    from: () => ({
+      select: () => ({
+        eq: () => ({ range: async () => result }),
+      }),
+    }),
+  });
   await assert.rejects(
-    klaviyoListProfiles({}, 'list-1', { strict: true }),
-    /klaviyo_profiles_not_configured/,
-  );
-  await assert.rejects(
-    klaviyoListProfiles(
-      { KLAVIYO_PRIVATE_KEY: 'test-key' },
-      'list-1',
-      { strict: true, fetchImpl: async () => { throw new Error('network_down'); } },
-    ),
-    /klaviyo_profiles_network_failure/,
+    loadMarketingAudience(audienceDb({ data: null, error: new Error('db_down') })),
+    /marketing_audience_unavailable/,
   );
   assert.deepEqual(
-    await klaviyoListProfiles(
-      { KLAVIYO_PRIVATE_KEY: 'test-key' },
-      'list-1',
-      {
-        strict: true,
-        fetchImpl: async () => Response.json({ data: [], links: { next: null } }),
-      },
-    ),
+    await loadMarketingAudience(audienceDb({ data: [], error: null })),
     [],
   );
 

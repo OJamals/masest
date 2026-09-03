@@ -19,6 +19,20 @@ test('.env.example documents the Cloudflare email bindings and bridge secrets', 
   assert.doesNotMatch(env, /^RESEND_/m);
 });
 
+test('.env.example documents least-privilege Amazon SES marketing config', () => {
+  for (const key of [
+    'AWS_SES_ACCESS_KEY_ID',
+    'AWS_SES_SECRET_ACCESS_KEY',
+    'AWS_SES_REGION',
+    'AWS_SES_FROM_EMAIL',
+    'AWS_SES_REPLY_TO',
+    'AWS_SES_CONFIGURATION_SET',
+  ]) {
+    assert.match(env, new RegExp(`^${key}=`, 'm'), `${key} missing from .env.example`);
+  }
+  assert.doesNotMatch(env, /^KLAVIYO_/m);
+});
+
 test('.env.example has no retired Crisp credentials', () => {
   assert.doesNotMatch(env, /CRISP_/);
 });
@@ -48,6 +62,7 @@ test('current architecture, acceptance, and roadmap docs name the canonical emai
     assert.doesNotMatch(document, /\bResend\b/);
   }
   assert.match(architecture, /Cloudflare Email Service/);
-  assert.match(architecture, /Klaviyo/);
+  assert.match(architecture, /Amazon SES/);
+  assert.match(architecture, /Supabase.*marketing consent/);
   assert.match(acceptance, /Cloudflare Email Routing/);
 });

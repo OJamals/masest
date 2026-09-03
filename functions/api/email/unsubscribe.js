@@ -2,9 +2,9 @@
 // GET shows a confirm page (so email-scanner prefetches don't auto-unsubscribe);
 // POST (the RFC 8058 one-click action) suppresses the 'marketing' stream only, so the
 // buyer keeps order/billing receipts. Both require a valid HMAC token tied to the email.
-import { htmlEscape, recordSuppression } from '../../_lib/supabase.js';
+import { htmlEscape } from '../../_lib/supabase.js';
 import { verifyUnsubscribeToken } from '../../_lib/email.js';
-import { klaviyoUnsubscribe } from '../../_lib/klaviyo.js';
+import { setMarketingPreference } from '../../_lib/marketing-subscribers.js';
 
 function page(bodyHtml) {
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -35,19 +35,18 @@ export async function onRequestGet({ request, env }) {
 }
 
 export function createUnsubscribePostHandler({
-  record = recordSuppression,
-  unsubscribe = klaviyoUnsubscribe,
+  setPreference = setMarketingPreference,
 } = {}) {
   return async function unsubscribePost({ request, env }) {
     const { email, ok } = await resolve(request, env);
     if (!ok) return html(INVALID, 400);
-    const saved = await record(env, email, 'unsubscribe', 'marketing');
-    if (!saved) {
+    const saved = await setPreference(env, {
+      email,
+      enabled: false,
+      source: 'email_unsubscribe',
+    });
+    if (!saved.ok) {
       return html('<p>We could not save this preference. Please retry in a moment.</p>', 503);
-    }
-    const synced = await unsubscribe(env, email, env.KLAVIYO_LIST_ID);
-    if (!synced.ok) {
-      return html('<p>Your preference was saved locally, but marketing provider sync is pending. Please retry in a moment.</p>', 503);
     }
     return html('<p>Done — you’ve been unsubscribed from MASEST marketing emails. Order and billing notices will still reach you.</p>');
   };

@@ -7,11 +7,11 @@ Explore VertKleen CRHD: https://masest.co/products/crhd
 Useful links
 Read field notes: https://masest.co/blog
 Practical application guidance.
-View in browser: {% web_view_link %}
+<!--WEB_VIEW_START-->View in browser: {{web_view_url}}<!--WEB_VIEW_END-->
 Website: https://masest.co
 Products: https://masest.co/products
 Blog: https://masest.co/blog
 Manage email settings: https://masest.co/dashboard.html#notifications
-Unsubscribe: {% unsubscribe_link %}
+Unsubscribe: {{unsubscribe_url}}
 Advertisement. You asked MASEST for product information.
 MASEST Consulting LLC · 1361 Grand Cayman Dr, Merritt Island, FL 32952

@@ -61,7 +61,7 @@ create index if not exists newsletters_provider_campaign_idx
   where provider_campaign_id is not null;
 
 create table if not exists public.newsletter_delivery_sources (
-  source_type text not null check (source_type in ('newsletter', 'blog_post')),
+  source_type text not null check (source_type in ('newsletter', 'blog_post', 'nurture')),
   source_id text not null,
   parent_id text not null,
   subject text not null,
@@ -127,7 +127,7 @@ declare
   v_created boolean := false;
   v_inserted int := 0;
 begin
-  if p_source_type not in ('newsletter', 'blog_post') then
+  if p_source_type not in ('newsletter', 'blog_post', 'nurture') then
     raise exception 'invalid_delivery_source_type';
   end if;
 
@@ -143,14 +143,15 @@ begin
 
   if v_created then
     insert into public.newsletter_deliveries (
-      source_type, source_id, normalized_email, provider_idempotency_key
+      source_type, source_id, normalized_email, provider_idempotency_key, available_at
     )
     select
       p_source_type,
       p_source_id,
       email,
-      (case when p_source_type = 'blog_post' then 'blog-newsletter:' else 'newsletter:' end)
-        || p_source_id || ':' || email
+      (case when p_source_type = 'blog_post' then 'blog-newsletter:' else p_source_type || ':' end)
+        || p_source_id || ':' || email,
+      coalesce(nullif(p_metadata->>'available_at', '')::timestamptz, now())
     from (
       select distinct lower(btrim(value)) as email
       from jsonb_array_elements_text(coalesce(p_emails, '[]'::jsonb))

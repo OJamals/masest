@@ -32,7 +32,7 @@ test('quote task economics and operating boundaries are normalized, persisted, a
       emails.push(message);
       return { ok: true };
     },
-    subscribeLeadByIndustry: async () => {},
+    enrollMarketingNurture: async () => {},
   });
 
   const response = await handler({
@@ -107,7 +107,7 @@ test('legacy quote payloads remain unchanged and blank task details are removed'
       return { quoteId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', duplicate: false };
     },
     sendEmail: async () => ({ ok: true }),
-    subscribeLeadByIndustry: async () => {},
+    enrollMarketingNurture: async () => {},
   });
 
   const response = await handler({
@@ -144,7 +144,7 @@ test('every task-detail field is independently bounded at the API boundary', asy
       return { quoteId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', duplicate: false };
     },
     sendEmail: async () => ({ ok: true }),
-    subscribeLeadByIndustry: async () => {},
+    enrollMarketingNurture: async () => {},
   });
   const overlong = Object.fromEntries(
     Object.entries(limits).map(([key, limit]) => [key, key + 'x'.repeat(limit + 50)]),

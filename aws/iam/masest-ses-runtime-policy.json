@@ -1,0 +1,25 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SendMarketingFromVerifiedMasestIdentity",
+      "Effect": "Allow",
+      "Action": "ses:SendEmail",
+      "Resource": [
+        "arn:aws:ses:us-east-1:791359098991:identity/masest.co",
+        "arn:aws:ses:us-east-1:791359098991:configuration-set/masest-marketing"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ses:FromAddress": "dev@masest.co"
+        }
+      }
+    },
+    {
+      "Sid": "ReadAccountSuppressionList",
+      "Effect": "Allow",
+      "Action": "ses:ListSuppressedDestinations",
+      "Resource": "*"
+    }
+  ]
+}

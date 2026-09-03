@@ -8,7 +8,7 @@ const TRANSACTIONAL = Object.freeze({
 
 const MARKETING = Object.freeze({
   stream: 'marketing',
-  provider: 'klaviyo',
+  provider: 'ses',
   preference: 'marketing_email_enabled',
 });
 

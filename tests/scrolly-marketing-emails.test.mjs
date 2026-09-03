@@ -76,11 +76,11 @@ test('every email proof URL has a real JPEG source asset', async () => {
   }
 });
 
-test('rendered Klaviyo templates are static, accessible, and unsubscribe-safe', () => {
+test('rendered SES templates are static, accessible, and unsubscribe-safe', () => {
   const rendered = renderAllScrollyMarketingEmails();
   assert.equal(rendered.length, 6);
   for (const campaign of rendered) {
-    assert.match(campaign.html, /\{% unsubscribe_link %\}/);
+    assert.match(campaign.html, /\{\{unsubscribe_url\}\}/);
     assert.match(campaign.html, /Advertisement\./);
     assert.match(campaign.html, />Before<\/td>/);
     assert.match(campaign.html, />After<\/td>/);
@@ -149,14 +149,14 @@ test('three nurture emails cover all six proof scenes without changing flow cade
   );
 });
 
-test('flow-ready nurture templates use every aligned R2 pair with no accent lines', () => {
+test('queue-ready nurture templates use every aligned R2 pair with no accent lines', () => {
   const rendered = renderAllNurtureFlowEmails();
   assert.equal(rendered.length, 3);
   assert.equal(new Set(rendered.flatMap(({ sceneIds }) => sceneIds)).size, 6);
   for (const campaign of rendered) {
     assert.equal((campaign.html.match(/img\/proof\/story\//g) || []).length, 4);
-    assert.match(campaign.html, /\{\{ first_name\|default:'there' \}\}/);
-    assert.match(campaign.html, /\{% unsubscribe_link %\}/);
+    assert.match(campaign.html, /Hi there,/);
+    assert.match(campaign.html, /\{\{unsubscribe_url\}\}/);
     assert.doesNotMatch(campaign.html, /<hr\b|border(?:-top|-right|-bottom|-left)?:[1-9]|padding:0 1px/i);
     assert.doesNotMatch(campaign.html, /safety of water|without the hazard profile|minus the hazard profile/i);
   }

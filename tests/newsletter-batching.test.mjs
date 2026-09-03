@@ -40,6 +40,10 @@ test('delivery identity uses source plus normalized email and preserves provider
     deliveryIdentity('blog_post', 'post-1', 'Person@Example.test').providerIdempotencyKey,
     'blog-newsletter:post-1:person@example.test',
   );
+  assert.equal(
+    deliveryIdentity('nurture', 'quote-1:proof-1', 'Person@Example.test').providerIdempotencyKey,
+    'nurture:quote-1:proof-1:person@example.test',
+  );
 });
 
 test('delivery transitions cover sent, suppression, provider retry, network retry, and dead letter', () => {
@@ -72,6 +76,10 @@ test('delivery transitions cover sent, suppression, provider retry, network retr
   assert.deepEqual(
     deliveryTransition({ status: 400, error: 'email_400' }, 1, now),
     { state: 'dead', last_error: 'email_400' },
+  );
+  assert.deepEqual(
+    deliveryTransition({ network: true, ambiguous: true, retryable: false, error: 'ses_network_error' }, 1, now),
+    { state: 'dead', last_error: 'ses_network_error' },
   );
 });
 
@@ -225,6 +233,8 @@ test('partial blog failure stays incomplete until retry becomes terminal', async
 test('schema enforces unique ledger identities and lease-safe bounded claims', () => {
   const schema = readFileSync(new URL('../supabase/schema-newsletters.sql', import.meta.url), 'utf8');
   assert.match(schema, /state in \('pending', 'processing', 'sent', 'suppressed', 'retry', 'dead'\)/);
+  assert.match(schema, /source_type in \('newsletter', 'blog_post', 'nurture'\)/);
+  assert.match(schema, /p_metadata->>'available_at'/);
   assert.match(schema, /unique \(source_type, source_id, normalized_email\)/);
   assert.match(schema, /for update skip locked/i);
   assert.match(schema, /limit least\(greatest\(coalesce\(p_limit, 25\), 1\), 500\)/);

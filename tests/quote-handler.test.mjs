@@ -29,7 +29,7 @@ function baseDependencies(overrides = {}) {
     adminClient: () => ({}),
     saveIntake: async () => ({ quoteId: QUOTE_ID, duplicate: false }),
     sendEmail: async () => ({ ok: true }),
-    subscribeLeadByIndustry: async () => ({ ok: true }),
+    enrollMarketingNurture: async () => ({ ok: true }),
     ...overrides,
   };
 }
@@ -87,7 +87,7 @@ test('indeterminate persistence is retryable and never sends follow-up side effe
   const response = await createQuoteHandler(baseDependencies({
     saveIntake: async () => ({ error: 'intake_unavailable' }),
     sendEmail: async () => { followUps += 1; },
-    subscribeLeadByIndustry: async () => { followUps += 1; },
+    enrollMarketingNurture: async () => { followUps += 1; },
   }))({ request: request(), env: {} });
 
   assert.deepEqual(await json(response), {
@@ -116,7 +116,7 @@ test('a lost acknowledgement retries idempotently without duplicating intake ema
   const response = await createQuoteHandler(baseDependencies({
     saveIntake: async () => ({ quoteId: QUOTE_ID, duplicate: true }),
     sendEmail: async () => { followUps += 1; },
-    subscribeLeadByIndustry: async () => { followUps += 1; },
+    enrollMarketingNurture: async () => { followUps += 1; },
   }))({ request: request(), env: {} });
 
   const result = await json(response);
@@ -129,13 +129,51 @@ test('a lost acknowledgement retries idempotently without duplicating intake ema
 test('post-commit email or nurture failure cannot erase the durable acknowledgement', async () => {
   const response = await createQuoteHandler(baseDependencies({
     sendEmail: async () => { throw new Error('mailer unavailable'); },
-    subscribeLeadByIndustry: async () => { throw new Error('nurture unavailable'); },
-  }))({ request: request(), env: {} });
+    enrollMarketingNurture: async () => { throw new Error('nurture unavailable'); },
+  }))({ request: request({ marketing_email_enabled: true }), env: {} });
 
   const result = await json(response);
   assert.equal(result.status, 201);
   assert.equal(result.body.durable, true);
   assert.equal(result.body.quote_id, QUOTE_ID);
+});
+
+test('post-commit provider failures are surfaced to operations without changing the acknowledgement', async () => {
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => warnings.push(args);
+  try {
+    const response = await createQuoteHandler(baseDependencies({
+      sendEmail: async () => ({ ok: false, error: 'email_unavailable' }),
+      enrollMarketingNurture: async () => ({ ok: false, error: 'nurture_unavailable' }),
+    }))({ request: request({ marketing_email_enabled: true }), env: {} });
+
+    const result = await json(response);
+    assert.equal(result.status, 201);
+    assert.equal(result.body.durable, true);
+    assert.deepEqual(warnings, [['quote_intake_follow_up_failed', QUOTE_ID]]);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+test('quote nurture requires explicit consent and receives stable quote identity', async () => {
+  const enrollments = [];
+  const handler = createQuoteHandler(baseDependencies({
+    enrollMarketingNurture: async (_env, _sb, input) => { enrollments.push(input); return { ok: true }; },
+  }));
+
+  await handler({ request: request(), env: {} });
+  await handler({ request: request({ marketing_email_enabled: 'on' }), env: {} });
+
+  assert.equal(enrollments.length, 1);
+  assert.deepEqual(enrollments[0], {
+    email: 'buyer@example.com',
+    quoteId: QUOTE_ID,
+    name: 'Buyer',
+    industry: undefined,
+    consented: true,
+  });
 });
 
 test('the browser requires the durable acknowledgement before showing success', () => {

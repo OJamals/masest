@@ -155,7 +155,7 @@ test('commerce renderer handles stored ship_address and avoids false no-payment 
   assert.doesNotMatch(rendered.html, /No captured payment/);
 });
 
-test('marketing renderer uses Klaviyo browser/unsubscribe links and confirmed postal identity', () => {
+test('marketing renderer uses provider-neutral browser/unsubscribe links and confirmed postal identity', () => {
   const rendered = renderMarketingEmail({
     kind: 'product',
     campaign: {
@@ -186,8 +186,8 @@ test('marketing renderer uses Klaviyo browser/unsubscribe links and confirmed po
   });
 
   assert.equal(rendered.subject, 'A more complete industrial degreasing cycle');
-  assert.match(rendered.html, /href="\{% web_view_link %\}"/);
-  assert.match(rendered.html, /href="\{% unsubscribe_link %\}"/);
+  assert.match(rendered.html, /href="\{\{web_view_url\}\}"/);
+  assert.match(rendered.html, /href="\{\{unsubscribe_url\}\}"/);
   assert.match(rendered.html, /Products/);
   assert.match(rendered.html, /Industries/);
   assert.match(rendered.html, /Blog/);
@@ -196,7 +196,7 @@ test('marketing renderer uses Klaviyo browser/unsubscribe links and confirmed po
   assert.match(rendered.html, /Advertisement/);
   assert.match(rendered.html, /cr-hd-walmart-product-field\.webp" width="600" height="1095"/);
   assert.match(rendered.html, /heat-exchanger-descaling-hero\.webp" width="220" height="124"/);
-  assert.match(rendered.text, /Unsubscribe: \{% unsubscribe_link %\}/);
+  assert.match(rendered.text, /Unsubscribe: \{\{unsubscribe_url\}\}/);
   assert.deepEqual(rendered.headers, {});
 });
 

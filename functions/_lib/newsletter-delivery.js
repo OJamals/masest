@@ -1,4 +1,5 @@
 import { sendEmailResult } from './supabase.js';
+import { marketingEmailViewUrl } from './ses-email.js';
 
 export const DELIVERY_CONCURRENCY = 5;
 export const DELIVERY_BATCH_SIZE = 25;
@@ -23,10 +24,10 @@ export function normalizeDeliveryEmails(emails = []) {
 
 export function deliveryIdentity(sourceType, sourceId, value) {
   const email = String(value || '').trim().toLowerCase();
-  if (!['newsletter', 'blog_post'].includes(sourceType)) throw new Error('invalid_delivery_source_type');
+  if (!['newsletter', 'blog_post', 'nurture'].includes(sourceType)) throw new Error('invalid_delivery_source_type');
   if (!sourceId) throw new Error('delivery_source_id_required');
   if (!EMAIL_RE.test(email)) throw new Error('invalid_delivery_email');
-  const prefix = sourceType === 'blog_post' ? 'blog-newsletter' : 'newsletter';
+  const prefix = sourceType === 'blog_post' ? 'blog-newsletter' : sourceType;
   return {
     sourceType,
     sourceId: String(sourceId),
@@ -37,6 +38,7 @@ export function deliveryIdentity(sourceType, sourceId, value) {
 }
 
 function retryableResult(result = {}) {
+  if (result.retryable === false) return false;
   const status = Number(result.status) || 0;
   return Boolean(result.retryable || result.network || status === 429 || status >= 500);
 }
@@ -275,14 +277,18 @@ export function createSupabaseDeliveryStore(sb) {
 
       if (sourceType === 'newsletter') {
         const nextSchedule = source.metadata?.next_schedule || null;
+        const failed = summary.complete && summary.dead > 0;
         const patch = {
-          status: summary.complete ? (nextSchedule ? 'scheduled' : 'sent') : 'sending',
+          status: summary.complete ? (failed ? 'failed' : (nextSchedule ? 'scheduled' : 'sent')) : 'sending',
+          provider: 'ses',
+          provider_status: summary.complete ? (failed ? 'partial_failure' : 'complete') : 'processing',
+          provider_error: failed ? `${summary.dead} recipient delivery failure${summary.dead === 1 ? '' : 's'}` : null,
           recipient_count: summary.sent,
           delivery_summary: summary,
           delivery_source_id: summary.complete ? null : sourceId,
           updated_at: new Date().toISOString(),
-          ...(summary.complete && !nextSchedule ? { sent_at: completedAt } : {}),
-          ...(summary.complete && nextSchedule ? { schedule: nextSchedule } : {}),
+          ...(summary.complete && !failed && !nextSchedule ? { sent_at: completedAt } : {}),
+          ...(summary.complete && !failed && nextSchedule ? { schedule: nextSchedule } : {}),
         };
         const { error } = await sb.from('newsletters').update(patch)
           .eq('id', source.parent_id)
@@ -291,7 +297,10 @@ export function createSupabaseDeliveryStore(sb) {
       } else if (sourceType === 'blog_post' && summary.complete) {
         const { error } = await sb.from('blog_newsletter_sends').upsert({
           slug: source.parent_id,
-          sent_at: completedAt,
+          sent_at: summary.dead ? null : completedAt,
+          provider: 'ses',
+          provider_status: summary.dead ? 'partial_failure' : 'complete',
+          provider_error: summary.dead ? `${summary.dead} recipient delivery failure${summary.dead === 1 ? '' : 's'}` : null,
           recipient_count: summary.sent,
           delivery_source_id: sourceId,
           delivery_total: summary.total,
@@ -317,12 +326,20 @@ export async function runSupabaseDeliveryWorker(env, sb, { sourceType } = {}) {
     limit: envNumber(env, 'NEWSLETTER_DELIVERY_BATCH_SIZE', DELIVERY_BATCH_SIZE),
     concurrency: envNumber(env, 'NEWSLETTER_DELIVERY_CONCURRENCY', DELIVERY_CONCURRENCY),
     leaseSeconds: envNumber(env, 'NEWSLETTER_DELIVERY_LEASE_SECONDS', DELIVERY_LEASE_SECONDS),
-    send: (row) => sendEmailResult(env, {
-      to: [row.normalized_email],
-      subject: row.subject,
-      html: row.html,
-      category: row.category,
-      idempotencyKey: row.provider_idempotency_key,
-    }),
+    send: async (row) => {
+      const webViewUrl = await marketingEmailViewUrl(env, {
+        email: row.normalized_email,
+        sourceType: row.source_type,
+        sourceId: row.source_id,
+      });
+      return sendEmailResult(env, {
+        to: [row.normalized_email],
+        subject: row.subject,
+        html: row.html,
+        category: row.category,
+        idempotencyKey: row.provider_idempotency_key,
+        webViewUrl,
+      });
+    },
   });
 }

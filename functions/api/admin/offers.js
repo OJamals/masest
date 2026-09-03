@@ -1,9 +1,11 @@
 // /api/admin/offers — staff broadcasts. GET → past sends · POST → in-app notification fan-out
 // (+ optional marketing email when a compliant marketing provider is configured).
-import { adminClient, requireStaff, json, readBody, emailsByIds } from '../../_lib/supabase.js';
+import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import { emailEscape } from '../../_lib/email-template.js';
 import { renderMarketingEmail } from '../../_lib/email-renderers.js';
 import { queueMarketingEmail } from '../../_lib/marketing-email.js';
+import { syncSesSuppressions } from '../../_lib/ses-email.js';
+import { normalizeMarketingEmails } from '../../_lib/marketing-subscribers.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 
 const AUDIENCES = ['all', 'approved', 'pending', 'company'];
@@ -29,14 +31,13 @@ async function targetCompanies(sb, audience, companyId) {
   return (data || []).map((c) => c.id);
 }
 
-async function memberEmails(sb, companyIds) {
+export async function memberEmails(sb, companyIds) {
   if (!companyIds.length) return [];
-  // Offers are marketing; only explicitly enabled recipients remain eligible.
-  const { data: profiles } = await sb.from('profiles').select('id,marketing_email_enabled').in('company_id', companyIds);
-  const ids = (profiles || []).filter((p) => p.marketing_email_enabled !== false).map((p) => p.id);
-  if (!ids.length) return [];
-  const byId = await emailsByIds(sb, ids);
-  return [...new Set(Object.values(byId))];
+  const { data, error } = await sb.rpc('marketing_company_emails', {
+    p_company_ids: companyIds,
+  });
+  if (error) throw new Error('marketing_company_emails_unavailable');
+  return normalizeMarketingEmails((data || []).map((row) => row.email));
 }
 
 export async function onRequest({ request, env }) {
@@ -70,7 +71,7 @@ export async function onRequest({ request, env }) {
       title, body: bodyText || null, cta_url: ctaUrl || null,
       audience, company_id: audience === 'company' ? body.company_id : null,
       created_by: user.email || null, recipients: companyIds.length, emailed: false,
-      email_provider: body.send_email ? 'klaviyo' : null,
+      email_provider: body.send_email ? 'ses' : null,
       email_status: body.send_email ? 'queueing' : 'not_requested',
     }).select('id').single();
     if (offerError || !offer?.id) return json(500, { error: 'offer_create_failed' });
@@ -84,39 +85,50 @@ export async function onRequest({ request, env }) {
     let emailFailed = 0;
     let emailError = null;
     if (body.send_email) {
-      const emails = await memberEmails(sb, companyIds);
-      if (emails.length) {
-        const rendered = renderMarketingEmail({
-          kind: 'promotion',
-          campaign: {
-            subject: title,
-            heading: title,
-            previewText: bodyText || title,
-            eyebrow: 'VertKleen offer',
-            bodyHtml: `<p>${emailEscape(bodyText).replace(/\r?\n/g, '<br>')}</p>`,
-            ctaText: ctaUrl ? 'View offer' : undefined,
-            ctaUrl: ctaUrl || undefined,
-          },
-          recipientContext: {
-            reason: 'You received this offer because marketing email is enabled for your MASEST account.',
-          },
-        });
-        for (let offset = 0; offset < emails.length; offset += 5) {
-          const results = await Promise.all(emails.slice(offset, offset + 5).map((email) => queueMarketingEmail(env, {
-            category: 'offer',
-            email,
-            subject: rendered.subject,
-            html: rendered.html,
-            text: rendered.text,
-            idempotencyKey: `offer/${offer.id}/${email}`,
-            properties: { offer_id: offer.id, cta_url: ctaUrl || '', audience },
-          })));
-          emailQueued += results.filter((result) => result.ok).length;
-          emailFailed += results.filter((result) => !result.ok).length;
-          emailError ||= results.find((result) => !result.ok)?.error || null;
-        }
+      const suppressionSync = await syncSesSuppressions(env, sb);
+      if (!suppressionSync.ok) {
+        emailFailed = 1;
+        emailError = suppressionSync.error;
       } else {
-        emailError = 'no_email_recipients';
+        try {
+          const emails = await memberEmails(sb, companyIds);
+          if (emails.length) {
+            const rendered = renderMarketingEmail({
+              kind: 'promotion',
+              campaign: {
+                subject: title,
+                heading: title,
+                previewText: bodyText || title,
+                eyebrow: 'VertKleen offer',
+                bodyHtml: `<p>${emailEscape(bodyText).replace(/\r?\n/g, '<br>')}</p>`,
+                ctaText: ctaUrl ? 'View offer' : undefined,
+                ctaUrl: ctaUrl || undefined,
+              },
+              recipientContext: {
+                reason: 'You received this offer because marketing email is enabled for your MASEST account.',
+              },
+            });
+            for (let offset = 0; offset < emails.length; offset += 5) {
+              const results = await Promise.all(emails.slice(offset, offset + 5).map((email) => queueMarketingEmail(env, {
+                category: 'offer',
+                email,
+                subject: rendered.subject,
+                html: rendered.html,
+                text: rendered.text,
+                idempotencyKey: `offer/${offer.id}/${email}`,
+                properties: { offer_id: offer.id, cta_url: ctaUrl || '', audience },
+              })));
+              emailQueued += results.filter((result) => result.ok).length;
+              emailFailed += results.filter((result) => !result.ok).length;
+              emailError ||= results.find((result) => !result.ok)?.error || null;
+            }
+          } else {
+            emailError = 'no_email_recipients';
+          }
+        } catch (error) {
+          emailFailed = 1;
+          emailError = error.message || 'marketing_company_emails_unavailable';
+        }
       }
     }
 

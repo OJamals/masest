@@ -2,7 +2,7 @@
 // acknowledgement boundary; email and nurture delivery happen only after that commit.
 import { adminClient, emailLayout, htmlEscape, json, sendEmail } from '../_lib/supabase.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
-import { subscribeLeadByIndustry } from '../_lib/klaviyo.js';
+import { enrollMarketingNurture } from '../_lib/marketing-nurture.js';
 import {
   RequestBodyTooLargeError,
   readBoundedFormData,
@@ -40,6 +40,7 @@ const LABELS = {
   preferred_packs: 'Preferred packs',
   current_vendor: 'Current supplier or program',
   program_services: 'Program services',
+  marketing_email_enabled: 'Marketing email consent',
   ...Object.fromEntries(QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label])),
   message: 'Notes',
 };
@@ -52,6 +53,10 @@ function fieldValues(value) {
 
 function normalizeRequestType(value) {
   return String(value || 'quote').trim().toLowerCase().slice(0, 40) || 'quote';
+}
+
+function checked(value) {
+  return value === true || ['1', 'true', 'on', 'yes'].includes(String(value || '').trim().toLowerCase());
 }
 
 function normalizeTaskDetails(fields) {
@@ -157,7 +162,7 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
   const persistIntake = dependencies.saveIntake || saveQuoteIntake;
   const sendMessage = dependencies.sendEmail || sendEmail;
-  const subscribeLead = dependencies.subscribeLeadByIndustry || subscribeLeadByIndustry;
+  const enrollLead = dependencies.enrollMarketingNurture || enrollMarketingNurture;
   const ct = request.headers.get('content-type') || '';
   const rl = await checkRateLimit(env, 'quote', clientIp(request), { limit: 8, windowSec: 60 });
   if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
@@ -201,6 +206,8 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   if (!UUID.test(intakeId)) return json(400, { error: 'submission_id_required' });
 
   const type = normalizeRequestType(fields.type);
+  const marketingConsent = checked(fields.marketing_email_enabled);
+  fields.marketing_email_enabled = marketingConsent;
   const payload = { ...fields };
   delete payload._gotcha;
   delete payload['cf-turnstile-response'];
@@ -234,8 +241,9 @@ export async function handleQuote({ request, env }, dependencies = {}) {
     next_step: nextStep,
   };
   let durable;
+  let sb;
   try {
-    const sb = getAdminClient(env);
+    sb = getAdminClient(env);
     durable = await persistIntake(sb, {
       intakeId,
       fingerprint: await quoteIntakeFingerprint(row),
@@ -251,7 +259,7 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   if (!durable.duplicate) {
     const reqLabel = type.charAt(0).toUpperCase() + type.slice(1);
     const rows = displayRows(payload);
-    const followUps = await Promise.allSettled([
+    const followUpTasks = [
       sendMessage(env, {
         to: salesRecipients(env),
         subject: `New ${priority} ${reqLabel} request - ${company || name}`,
@@ -275,9 +283,18 @@ export async function handleQuote({ request, env }, dependencies = {}) {
           ctaUrl: env.SITE_URL || 'https://masest.co',
         }),
       }),
-      subscribeLead(env, { email, industry: fields.industry }),
-    ]);
-    if (followUps.some(({ status }) => status === 'rejected')) {
+    ];
+    if (marketingConsent) {
+      followUpTasks.push(enrollLead(env, sb, {
+        email,
+        quoteId: durable.quoteId,
+        name,
+        industry: fields.industry,
+        consented: true,
+      }));
+    }
+    const followUps = await Promise.allSettled(followUpTasks);
+    if (followUps.some((result) => result.status === 'rejected' || result.value?.ok === false)) {
       console.warn('quote_intake_follow_up_failed', durable.quoteId);
     }
   }

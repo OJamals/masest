@@ -56,17 +56,36 @@ export function filterByStream(recipients, category, suppressionMap) {
 
 // Signed unsubscribe token: HMAC-SHA256(email) hex. Lets the one-click endpoint suppress
 // only addresses we actually emailed — not arbitrary ones. Async (SubtleCrypto).
-export async function unsubscribeToken(email, secret) {
-  if (!secret || !email) return '';
+async function hmacToken(value, secret) {
+  if (!secret || !value) return '';
   const key = await crypto.subtle.importKey(
     'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(String(email).toLowerCase()));
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(String(value)));
   return [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function unsubscribeToken(email, secret) {
+  if (!email) return '';
+  return hmacToken(String(email).toLowerCase(), secret);
+}
+
+export async function emailViewToken(email, sourceType, sourceId, secret) {
+  if (!email || !sourceType || !sourceId) return '';
+  return hmacToken(`view\n${String(email).toLowerCase()}\n${sourceType}\n${sourceId}`, secret);
 }
 
 export async function verifyUnsubscribeToken(email, token, secret) {
   if (!token) return false;
   const expected = await unsubscribeToken(email, secret);
+  if (!expected || expected.length !== String(token).length) return false;
+  let diff = 0;
+  for (let i = 0; i < expected.length; i += 1) diff |= expected.charCodeAt(i) ^ String(token).charCodeAt(i);
+  return diff === 0;
+}
+
+export async function verifyEmailViewToken(email, sourceType, sourceId, token, secret) {
+  if (!token) return false;
+  const expected = await emailViewToken(email, sourceType, sourceId, secret);
   if (!expected || expected.length !== String(token).length) return false;
   let diff = 0;
   for (let i = 0; i < expected.length; i += 1) diff |= expected.charCodeAt(i) ^ String(token).charCodeAt(i);

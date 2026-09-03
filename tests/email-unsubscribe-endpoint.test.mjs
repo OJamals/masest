@@ -28,8 +28,7 @@ test('GET with a valid token shows a POST confirm form (no auto-unsub on prefetc
 test('POST one-click with a valid token confirms the unsubscribe', async () => {
   const tok = await unsubscribeToken('a@b.co', env.EMAIL_UNSUB_SECRET);
   const handler = createUnsubscribePostHandler({
-    record: async () => true,
-    unsubscribe: async () => ({ ok: true, status: 202 }),
+    setPreference: async () => ({ ok: true, count: 1 }),
   });
   const res = await handler({ request: req('a@b.co', tok, 'POST'), env });
   assert.equal(res.status, 200);
@@ -38,37 +37,36 @@ test('POST one-click with a valid token confirms the unsubscribe', async () => {
 
 test('POST does not claim success when local suppression cannot persist', async () => {
   const tok = await unsubscribeToken('a@b.co', env.EMAIL_UNSUB_SECRET);
-  let providerCalls = 0;
   const handler = createUnsubscribePostHandler({
-    record: async () => false,
-    unsubscribe: async () => { providerCalls += 1; return { ok: true }; },
+    setPreference: async () => ({ ok: false, error: 'marketing_preference_write_failed', retryable: true }),
   });
   const res = await handler({ request: req('a@b.co', tok, 'POST'), env });
   assert.equal(res.status, 503);
   assert.match(await res.text(), /could not save/i);
-  assert.equal(providerCalls, 0);
 });
 
-test('POST reports pending provider sync after durable local suppression', async () => {
+test('POST writes one atomic local marketing preference', async () => {
   const tok = await unsubscribeToken('a@b.co', env.EMAIL_UNSUB_SECRET);
+  let input;
   const handler = createUnsubscribePostHandler({
-    record: async () => true,
-    unsubscribe: async () => ({ ok: false, status: 503 }),
+    setPreference: async (_env, value) => { input = value; return { ok: true, count: 1 }; },
   });
   const res = await handler({ request: req('a@b.co', tok, 'POST'), env });
-  const body = await res.text();
-  assert.equal(res.status, 503);
-  assert.match(body, /saved locally/i);
-  assert.match(body, /retry/i);
+  assert.equal(res.status, 200);
+  assert.deepEqual(input, {
+    email: 'a@b.co',
+    enabled: false,
+    source: 'email_unsubscribe',
+  });
 });
 
-test('unsubscribe endpoint syncs marketing opt-out to local suppression + Klaviyo', () => {
+test('unsubscribe endpoint writes canonical local marketing consent only', () => {
   const src = new URL('../functions/api/email/unsubscribe.js', import.meta.url);
   return import('node:fs/promises').then(({ readFile }) => readFile(src, 'utf8')).then((body) => {
-    assert.match(body, /record = recordSuppression/);
-    assert.match(body, /unsubscribe = klaviyoUnsubscribe/);
-    assert.match(body, /record\(env, email, 'unsubscribe', 'marketing'\)/);
-    assert.match(body, /unsubscribe\(env, email, env\.KLAVIYO_LIST_ID/);
+    assert.match(body, /setPreference = setMarketingPreference/);
+    assert.match(body, /enabled: false/);
+    assert.match(body, /source: 'email_unsubscribe'/);
+    assert.doesNotMatch(body, /klaviyo/i);
   });
 });
 

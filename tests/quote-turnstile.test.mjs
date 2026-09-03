@@ -64,7 +64,7 @@ test('configured quote route rejects missing token before side effects', async (
     verifyTurnstile,
     adminClient: failIfCalled('DB'),
     sendEmail: failIfCalled('email'),
-    subscribeLeadByIndustry: failIfCalled('Klaviyo'),
+    enrollMarketingNurture: failIfCalled('nurture'),
   });
   const out = await result(await handler({ request: quoteRequest({}), env: { TURNSTILE_SECRET: 'secret' } }));
   assert.deepEqual(out, { status: 400, body: { error: 'captcha_failed' } });
@@ -76,7 +76,7 @@ test('quote verifier outage returns 503 before side effects', async () => {
     verifyTurnstile: async () => ({ status: 'unavailable' }),
     adminClient: failIfCalled('DB'),
     sendEmail: failIfCalled('email'),
-    subscribeLeadByIndustry: failIfCalled('Klaviyo'),
+    enrollMarketingNurture: failIfCalled('nurture'),
   });
   const out = await result(await handler({
     request: quoteRequest({ 'cf-turnstile-response': 'token' }),

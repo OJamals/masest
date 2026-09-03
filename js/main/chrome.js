@@ -396,7 +396,7 @@ export function renderChrome({
     </div>`;
   document.body.append(foot);
 
-  // Newsletter signup → Klaviyo (via window.MASEST.subscribeNewsletter from integrations.js).
+  // Newsletter signup → canonical Supabase consent (via shared integration boundary).
   const news = foot.querySelector("#footNews");
   if (news) {
     news.addEventListener("submit", async e => {

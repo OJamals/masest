@@ -76,7 +76,7 @@ export function marketingEmailFooter(reason = '') {
     + `<img src="${EMAIL_LOGO}" width="34" height="42" alt="MASEST" style="display:block;width:34px;height:42px;object-fit:contain;margin-bottom:14px">`
     + `<p style="margin:0 0 10px;color:#d8e0e2;font-size:11px;line-height:1.6"><a href="${EMAIL_BASE}" style="color:#fff">Website</a> · <a href="${EMAIL_BASE}/products" style="color:#fff">Products</a> · <a href="${EMAIL_BASE}/blog" style="color:#fff">Blog</a> · <a href="${EMAIL_BASE}/contact" style="color:#fff">Contact</a></p>`
     + `<p style="margin:0 0 10px;color:#a9b7ba;font-size:10px;line-height:1.6">${emailEscape(permission)}</p>`
-    + `<p style="margin:0 0 10px;color:#d8e0e2;font-size:11px"><a href="${EMAIL_BASE}/dashboard.html#notifications" style="color:#fff">Manage email settings</a> · <a href="{% unsubscribe_link %}" style="color:#fff">Unsubscribe</a> · <a href="${EMAIL_BASE}/privacy.html" style="color:#fff">Privacy</a></p>`
+    + `<p style="margin:0 0 10px;color:#d8e0e2;font-size:11px"><a href="${EMAIL_BASE}/dashboard.html#notifications" style="color:#fff">Manage email settings</a> · <a href="{{unsubscribe_url}}" style="color:#fff">Unsubscribe</a> · <a href="${EMAIL_BASE}/privacy.html" style="color:#fff">Privacy</a></p>`
     + `<p style="margin:0;color:#8f9ca1;font-size:10px;line-height:1.6">${emailEscape(companyIdentity.legal_name)} · ${emailEscape(address)}</p>`
     + '</td></tr>';
 }
@@ -104,7 +104,7 @@ export function marketingEmailLayout({
   disclosure = '',
 } = {}) {
   const cta = emailButton(ctaText, ctaUrl);
-  const rows = `<tr><td style="padding:10px 24px;background:#fff;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td style="color:#5f656d;font-size:10px">${emailEscape(preheader || heading)}</td><td align="right" style="font-size:10px"><a href="{% web_view_link %}" style="color:#0a5b62">View in browser</a></td></tr></table></td></tr>`
+  const rows = `<tr><td style="padding:10px 24px;background:#fff;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td style="color:#5f656d;font-size:10px">${emailEscape(preheader || heading)}</td><!--WEB_VIEW_START--><td align="right" style="font-size:10px"><a href="{{web_view_url}}" style="color:#0a5b62">View in browser</a></td><!--WEB_VIEW_END--></tr></table></td></tr>`
     + `<tr><td style="padding:18px 28px;background:#111518"><table role="presentation" width="100%"><tr><td><a href="${EMAIL_BASE}"><img src="${EMAIL_LOGO}" width="38" height="47" alt="MASEST" style="display:block;width:38px;height:47px;border:0;object-fit:contain"></a></td><td align="right" style="font-family:Arial,sans-serif;font-size:11px"><a href="${EMAIL_BASE}/products" style="color:#dce4e6;text-decoration:none">Products</a>&nbsp;&nbsp;&nbsp;<a href="${EMAIL_BASE}/industries" style="color:#dce4e6;text-decoration:none">Industries</a>&nbsp;&nbsp;&nbsp;<a href="${EMAIL_BASE}/blog" style="color:#dce4e6;text-decoration:none">Blog</a></td></tr></table></td></tr>`
     + `<tr><td class="email-pad" style="padding:34px 28px 30px;font-family:Arial,sans-serif"><p style="margin:0 0 9px;color:#0a5b62;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">${emailEscape(eyebrow)}</p>${heading ? `<h1 style="margin:0;color:#15171c;font-size:31px;line-height:1.13;letter-spacing:-.7px">${emailEscape(heading)}</h1>` : ''}<div style="margin-top:16px;color:#27323a;font-size:15px;line-height:1.65">${bodyHtml}</div>${cta ? `<div style="margin-top:22px">${cta}</div>` : ''}</td></tr>`
     + marketingEmailFooter(disclosure);

@@ -3,9 +3,9 @@
 // slice; sub-views are filled by later plans. Mirrors the createQuotesTab shape
 // (#36 per-tab split). Shared primitives ($, api, state, admSkeleton, admEmpty)
 // are injected; esc/delegate come from util.js.
-import { esc, delegate, dateTime as date } from '../util.js?v=20260903c';
-import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260903c';
-import { createCrmProspects } from './crm-prospects.js?v=20260903c';
+import { esc, delegate, dateTime as date } from '../util.js?v=20260903d';
+import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260903d';
+import { createCrmProspects } from './crm-prospects.js?v=20260903d';
 
 const DIR_ROLES = [
   ['', 'All roles'],

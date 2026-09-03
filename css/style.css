@@ -1441,7 +1441,7 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: 72px 0 3
 .foot-legal a { display: inline-flex; align-items: center; min-height: 44px; color: rgba(255,255,255,.82); text-decoration: none; }
 .foot-legal a:hover { color: #fff; }
 
-/* Footer newsletter signup (Klaviyo) */
+/* Footer newsletter signup */
 .foot-news { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 40px; padding-top: 32px; padding-bottom: 4px; border-top: 1px solid rgba(255,255,255,.16); }
 .foot-news-copy { max-width: 40ch; }
 .foot-news-copy p { margin-top: 6px; font-size: .86rem; line-height: 1.6; color: rgba(255,255,255,.7); }

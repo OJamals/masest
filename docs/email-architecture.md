@@ -8,21 +8,25 @@ an email category; they do not choose a provider independently.
 | Mail | Categories | Provider | User control |
 | --- | --- | --- | --- |
 | Required service mail | orders, shipping, billing, refunds, cancellations, returns, auth, team invites, support/chat, requested quote operations, staff alerts | Cloudflare Email Service | Always on |
-| Optional marketing mail | offers, newsletters, blog campaigns, nurture sequences, review solicitations | Klaviyo | Default on; user may unsubscribe |
+| Optional marketing mail | offers, newsletters, blog campaigns, nurture sequences, review solicitations | Amazon SES | Default on; user may unsubscribe |
 
 Cloudflare Email Service is transactional-only. Requested quote follow-ups may
 use Cloudflare only while they continue a buyer-initiated request and contain no
 promotion. Add promotional content or broad prospecting and the category must
-move to Klaviyo.
+move to Amazon SES.
 
 ## Canonical modules
 
 - `functions/_lib/email-policy.js`: category to stream/provider/preference.
 - `functions/_lib/supabase.js`: Cloudflare transactional send, hard-suppression
   filtering, lifecycle logging, idempotency.
-- `functions/_lib/marketing-email.js`: one-to-one Klaviyo flow events.
-- `functions/_lib/klaviyo.js`: Klaviyo subscriptions, campaigns, and provider
-  status reconciliation.
+- `functions/_lib/marketing-email.js`: one-to-one SES marketing gateway.
+- `functions/_lib/ses-email.js`: SigV4 SES transport, one-click unsubscribe,
+  provider result normalization, and single-recipient enforcement.
+- `functions/_lib/marketing-subscribers.js`: canonical consent/audience writes.
+- `functions/_lib/newsletter-delivery.js`: durable recipient queue, leases,
+  retries, suppression checks, and reconciliation.
+- `functions/_lib/marketing-nurture.js`: consent-gated three-message quote nurture.
 - `functions/_lib/email-template.js`: shared MASEST visual shell for both streams.
 
 `sendEmailResult()` rejects marketing, missing, and unknown categories.
@@ -32,26 +36,31 @@ This makes provider drift fail closed.
 ## Preferences and suppression
 
 - `transactional_email_enabled` is always `true` and read-only in account UI.
-- `marketing_email_enabled` defaults to `true` and syncs to the canonical
-  Klaviyo list.
+- `marketing_email_enabled` defaults to `true` for accounts. Anonymous quote
+  nurture requires the checked consent control on the request form.
 - `notify_messages` independently controls optional support-reply alerts.
-- Marketing opt-out writes local `email_suppressions` first, then sends the
-  Klaviyo unsubscribe job with bounded transient retries. Persistent provider
-  failure is reported as pending; old signed unsubscribe links remain valid.
-- Marketing opt-in requires successful Klaviyo subscription before the local
-  preference is enabled. Hard bounce/complaint suppression is never cleared by
-  a user marketing opt-in.
+- `set_marketing_email_preferences` atomically updates the account preference,
+  `newsletter_recipients`, and local marketing suppression.
+- Signed unsubscribe links update that same canonical state; transactional mail
+  stays enabled. Send-time filtering rechecks suppression for every recipient.
+- SES account-level suppression covers bounce/complaint destinations. Each bulk
+  marketing run refreshes that list through one paginated provider read and one
+  atomic Supabase RPC; provider blocks are never deleted automatically. User
+  marketing opt-in never overrides an SES provider suppression.
 
 ## Campaigns
 
-Newsletters and blog announcements create one Klaviyo campaign and store its
-provider campaign/message IDs. Scheduled reconciliation updates local status.
-No per-recipient Supabase delivery rows are materialized for new campaigns.
-This removes repeated account-directory reads and lowers Supabase egress.
+Newsletters, blog announcements, and nurture messages snapshot rendered HTML in
+`newsletter_delivery_sources`, then materialize one idempotent recipient row in
+`newsletter_deliveries`. Workers lease at most 25 rows, send with concurrency 5,
+and reconcile sent/suppressed/dead totals. Audience reads use only the canonical
+recipient email column; auth-directory enumeration is not part of campaign send.
+Company-targeted offers resolve eligible account emails through one database RPC,
+not one Supabase Auth request per user.
 
-Test sends require `KLAVIYO_TEST_LIST_ID`; production audience always uses
-`KLAVIYO_LIST_ID`. Offer and review event mail requires live Klaviyo flows for
-`KLAVIYO_FLOW_METRIC_OFFER` and `KLAVIYO_FLOW_METRIC_REVIEW_REQUEST`.
+Every SES request has one recipient, RFC 8058 headers, a signed unsubscribe URL,
+and a signed source/recipient-bound online-view URL. Explicit 429/5xx responses
+retry. Ambiguous network failures stop to avoid duplicate marketing delivery.
 
 ## Operations
 
@@ -68,6 +77,11 @@ application payloads or `wrangler email sending send` probes. Use the dedicated
 `replyTo` field plus `In-Reply-To` and `References` for support-thread continuity.
 The Worker rejects provider-controlled and arbitrary headers before delivery.
 
+SES runtime uses a dedicated IAM access key restricted to `ses:SendEmail` for
+`masest.co` and configuration set `masest-marketing` in `us-east-1`. Sender is
+`dev@masest.co`; custom MAIL FROM is `marketing.masest.co`. Do not bind root AWS
+credentials. Do not add SES credentials until production access is enabled.
+
 Apply these migrations before release:
 
 - `supabase/schema-unified-support-messages.sql`
@@ -76,12 +90,13 @@ Apply these migrations before release:
 - `supabase/migrate-support-participant-threads-2026-09-03.sql`
 - `supabase/schema-notification-prefs.sql`
 - `supabase/schema-newsletters.sql`
+- `supabase/migrate-ses-marketing-2026-09-03.sql`
 - `supabase/schema-blog-newsletter.sql`
 - offer email columns in `supabase/schema-phase5.sql`
 
-Existing accounts are not repeatedly scanned. Backfill them into Klaviyo once,
-then rely on registration, explicit preference changes, newsletter signup, and
-recipient admin actions for ongoing sync.
+Existing accounts are backfilled into `newsletter_recipients` once. Registration,
+explicit preference changes, newsletter signup, consented quote intake, and
+recipient admin actions maintain it thereafter.
 
 Support email and dashboard chat share `support_threads`. One participant thread
 belongs to one user, may reference that user's current or past orders, and keeps

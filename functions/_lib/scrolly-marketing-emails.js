@@ -131,7 +131,7 @@ export const NURTURE_FLOW_EMAILS = Object.freeze([
     ],
     sceneIds: ['industrial-strength', 'hmis-000'],
     ctaText: 'Match a cleaner to my job',
-    ctaUrl: `${SITE}/contact?type=audit&utm_source=klaviyo&utm_medium=email&utm_campaign=nurture_proof`,
+    ctaUrl: `${SITE}/contact?type=audit&utm_source=masest&utm_medium=email&utm_campaign=nurture_proof`,
   }),
   nurtureEmail({
     id: 'compare-match',
@@ -147,7 +147,7 @@ export const NURTURE_FLOW_EMAILS = Object.freeze([
     ],
     sceneIds: ['outperform', 'right-formula'],
     ctaText: 'Plan a side-by-side trial',
-    ctaUrl: `${SITE}/contact?type=sample&utm_source=klaviyo&utm_medium=email&utm_campaign=nurture_proof`,
+    ctaUrl: `${SITE}/contact?type=sample&utm_source=masest&utm_medium=email&utm_campaign=nurture_proof`,
   }),
   nurtureEmail({
     id: 'cost-trial',
@@ -163,7 +163,7 @@ export const NURTURE_FLOW_EMAILS = Object.freeze([
     ],
     sceneIds: ['whole-job-cost', 'prove-it'],
     ctaText: 'Scope my controlled trial',
-    ctaUrl: `${SITE}/contact?type=sample&utm_source=klaviyo&utm_medium=email&utm_campaign=nurture_proof`,
+    ctaUrl: `${SITE}/contact?type=sample&utm_source=masest&utm_medium=email&utm_campaign=nurture_proof`,
   }),
 ]);
 
@@ -248,9 +248,9 @@ export function renderNurtureFlowEmail(id) {
     .join('');
   const proofs = scenes.map((scene) => `${proofPair(scene.proof)}
     <p style="margin:0 0 20px"><a href="${emailEscape(scene.evidenceUrl)}" style="color:#0e7c86;font-weight:800;text-decoration:none">${emailEscape(scene.evidenceText)} &rarr;</a></p>`).join('');
-  const bodyHtml = `<p style="margin:0 0 14px">Hi {{ first_name|default:'there' }},</p>${paragraphs}${proofs}`;
+  const bodyHtml = `<p style="margin:0 0 14px">Hi there,</p>${paragraphs}${proofs}`;
   const bodyText = [
-    "Hi {{ first_name|default:'there' }},",
+    'Hi there,',
     '',
     ...campaign.paragraphs,
     '',

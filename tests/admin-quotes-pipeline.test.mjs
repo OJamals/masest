@@ -48,7 +48,7 @@ test('stays staff + write guarded', () => {
   assert.match(src, /staffCanWrite\(role\)/);
 });
 
-test('fires a Klaviyo metric event on stage change', () => {
-  assert.match(src, /klaviyoTrack\(/);
-  assert.match(src, /'Deal Stage Changed'/);
+test('stage changes remain canonical in Supabase without provider analytics coupling', () => {
+  assert.doesNotMatch(src, /klaviyo/i);
+  assert.match(lifecycle, /stage_changed_at/);
 });

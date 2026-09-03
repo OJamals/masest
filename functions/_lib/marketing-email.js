@@ -1,12 +1,6 @@
-// One-to-one marketing automation gateway. Klaviyo flow must be configured on each
-// metric and render event.message_html (safe), event.message_text, and subject fields.
+// One-to-one marketing gateway. Supabase owns consent; Amazon SES owns transport.
 import { categoryPolicy } from './email-policy.js';
-import { klaviyoTrack } from './klaviyo.js';
-
-const FLOW_METRIC_ENV = Object.freeze({
-  offer: 'KLAVIYO_FLOW_METRIC_OFFER',
-  review_request: 'KLAVIYO_FLOW_METRIC_REVIEW_REQUEST',
-});
+import { sendEmailResult } from './supabase.js';
 
 export async function queueMarketingEmail(env, {
   category,
@@ -17,42 +11,44 @@ export async function queueMarketingEmail(env, {
   idempotencyKey = '',
   properties = {},
   fetchImpl = globalThis.fetch,
+  signer = null,
+  suppressionLoader,
 } = {}) {
   if (categoryPolicy(category)?.stream !== 'marketing') {
-    return { ok: false, queued: false, provider: 'klaviyo', retryable: false, error: 'marketing_category_required' };
-  }
-  const metricKey = FLOW_METRIC_ENV[String(category || '')];
-  const metric = metricKey ? String(env?.[metricKey] || '').trim() : '';
-  if (!metric) {
-    return { ok: false, queued: false, provider: 'klaviyo', retryable: false, error: 'marketing_flow_not_configured' };
+    return { ok: false, queued: false, provider: 'ses', retryable: false, error: 'marketing_category_required' };
   }
   const uniqueId = String(idempotencyKey || '').trim().slice(0, 255);
   if (!uniqueId) {
-    return { ok: false, queued: false, provider: 'klaviyo', retryable: false, error: 'marketing_idempotency_key_required' };
+    return { ok: false, queued: false, provider: 'ses', retryable: false, error: 'marketing_idempotency_key_required' };
   }
-  const result = await klaviyoTrack(env, {
-    email: String(email || '').trim().toLowerCase(),
-    metric,
-    uniqueId,
+  const result = await sendEmailResult(env, {
+    to: [String(email || '').trim().toLowerCase()],
+    category,
+    subject,
+    html,
+    text,
+    idempotencyKey: uniqueId,
+    webViewUrl: properties.web_view_url || '',
     fetchImpl,
-    properties: {
-      ...properties,
-      email_category: String(category),
-      message_subject: String(subject || '').slice(0, 255),
-      message_html: String(html || '').slice(0, 100000),
-      message_text: String(text || '').slice(0, 50000),
-      idempotency_key: uniqueId,
-    },
+    sesSigner: signer,
+    ...(suppressionLoader ? { suppressionLoader } : {}),
   });
   if (!result.ok) {
     return {
       ok: false,
       queued: false,
-      provider: 'klaviyo',
-      retryable: result.status === 429 || Number(result.status) >= 500 || result.error === true,
-      error: result.error || 'klaviyo_event_failed',
+      provider: 'ses',
+      retryable: result.retryable === true,
+      error: result.error || 'ses_send_failed',
       ...(result.status ? { status: result.status } : {}),
+      ...(result.ambiguous ? { ambiguous: true } : {}),
     };
   }
-  return { ok: true, queued: true, provider: 'klaviyo', status: result.status, metric };
+  return {
+    ok: true,
+    queued: true,
+    provider: 'ses',
+    status: result.status,
+    providerMessageId: result.providerMessageId,
+  };
 }

@@ -6,7 +6,6 @@ import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { csvResponse } from '../../_lib/reports.js';
 import { pipelineSummary, pipelineReport } from '../../_lib/crm-pipeline.js';
-import { klaviyoTrack } from '../../_lib/klaviyo.js';
 import { escapeLike } from '../../_lib/crm.js';
 import { publishSupportMessage } from '../../_lib/support-message-publisher.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
@@ -184,19 +183,6 @@ function quoteLeadLifecycle({ sb, env }) {
       store: checkoutAttemptStore,
     }),
     releaseCheckoutChange: (input) => releaseQuoteCheckoutMutation(checkoutAttemptStore, input),
-    stageChanged: (quote, stage, source) => klaviyoTrack(env, {
-      email: quote.email,
-      metric: 'Deal Stage Changed',
-      value: quote.deal_value,
-      properties: {
-        stage,
-        deal_value: quote.deal_value,
-        product: quote.product,
-        company: quote.company,
-        type: quote.type,
-        source,
-      },
-    }),
     sendFollowUp: ({ quote, nextStep, due, dueText, subject, actor }) => sendTrackedLeadEmail(env, {
       to: [quote.email],
       subject: subject || 'MASEST quote follow-up',

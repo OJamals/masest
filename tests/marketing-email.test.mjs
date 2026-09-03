@@ -2,60 +2,75 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { queueMarketingEmail } from '../functions/_lib/marketing-email.js';
 
-test('marketing automation fails closed until matching Klaviyo flow metric is configured', async () => {
+test('marketing automation fails closed until SES is configured', async () => {
   let calls = 0;
-  const result = await queueMarketingEmail({ KLAVIYO_PRIVATE_KEY: 'k' }, {
+  const result = await queueMarketingEmail({}, {
     category: 'offer', email: 'a@b.co', subject: 'Offer', html: '<p>Offer</p>',
+    idempotencyKey: 'offer/test/a@b.co',
+    suppressionLoader: async () => new Map(),
     fetchImpl: async () => { calls += 1; },
   });
   assert.deepEqual(result, {
-    ok: false, queued: false, provider: 'klaviyo', retryable: false, error: 'marketing_flow_not_configured',
+    ok: false, queued: false, provider: 'ses', retryable: false, error: 'ses_not_configured',
   });
   assert.equal(calls, 0);
 });
 
-test('configured marketing automation queues a truthful Klaviyo event', async () => {
+test('configured marketing automation sends one truthful SES message', async () => {
   let request;
   const result = await queueMarketingEmail({
-    KLAVIYO_PRIVATE_KEY: 'k',
-    KLAVIYO_FLOW_METRIC_OFFER: 'MASEST Offer Email',
+    AWS_SES_ACCESS_KEY_ID: 'AKIA_TEST',
+    AWS_SES_SECRET_ACCESS_KEY: 'secret',
+    EMAIL_UNSUB_SECRET: 'unsub-secret',
   }, {
     category: 'offer',
     email: 'A@B.CO',
     subject: 'Field offer',
-    html: '<p>Offer</p>',
-    text: 'Offer',
+    html: '<p>Offer</p><!--WEB_VIEW_START--><a href="{{web_view_url}}">View in browser</a><!--WEB_VIEW_END--><a href="{{unsubscribe_url}}">Unsubscribe</a>',
+    text: 'Offer\nUnsubscribe: {{unsubscribe_url}}',
     idempotencyKey: 'offer/42/a@b.co',
     properties: { cta_url: 'https://masest.co/products.html' },
-    fetchImpl: async (url, init) => {
-      request = { url: String(url), body: JSON.parse(init.body) };
-      return new Response(null, { status: 202 });
+    signer: fakeSigner([]),
+    suppressionLoader: async () => new Map(),
+    fetchImpl: async (req) => {
+      request = { url: req.url, body: JSON.parse(await req.text()) };
+      return Response.json({ MessageId: 'ses-message' });
     },
   });
   assert.deepEqual(result, {
-    ok: true, queued: true, provider: 'klaviyo', status: 202, metric: 'MASEST Offer Email',
+    ok: true, queued: true, provider: 'ses', status: 200, providerMessageId: 'ses-message',
   });
-  assert.match(request.url, /\/api\/events/);
-  assert.equal(request.body.data.attributes.profile.data.attributes.email, 'a@b.co');
-  assert.equal(request.body.data.attributes.properties.message_subject, 'Field offer');
-  assert.equal(request.body.data.attributes.properties.message_html, '<p>Offer</p>');
-  assert.equal(request.body.data.attributes.properties.idempotency_key, 'offer/42/a@b.co');
-  assert.equal(request.body.data.attributes.unique_id, 'offer/42/a@b.co');
+  assert.match(request.url, /email\.us-east-1\.amazonaws\.com/);
+  assert.deepEqual(request.body.Destination.ToAddresses, ['a@b.co']);
+  assert.equal(request.body.Content.Simple.Subject.Data, 'Field offer');
+  assert.doesNotMatch(request.body.Content.Simple.Body.Html.Data, /View in browser/);
 });
 
-test('transactional categories cannot enter Klaviyo marketing automation', async () => {
-  const result = await queueMarketingEmail({ KLAVIYO_PRIVATE_KEY: 'k' }, {
+test('transactional categories cannot enter SES marketing automation', async () => {
+  const result = await queueMarketingEmail({}, {
     category: 'order', email: 'a@b.co', subject: 'Order', html: '<p>Order</p>',
+    suppressionLoader: async () => new Map(),
   });
   assert.equal(result.error, 'marketing_category_required');
 });
 
 test('marketing automation requires stable provider idempotency', async () => {
   const result = await queueMarketingEmail({
-    KLAVIYO_PRIVATE_KEY: 'k',
-    KLAVIYO_FLOW_METRIC_OFFER: 'MASEST Offer Email',
+    AWS_SES_ACCESS_KEY_ID: 'AKIA_TEST',
+    AWS_SES_SECRET_ACCESS_KEY: 'secret',
+    EMAIL_UNSUB_SECRET: 'unsub-secret',
   }, {
     category: 'offer', email: 'a@b.co', subject: 'Offer', html: '<p>Offer</p>',
+    suppressionLoader: async () => new Map(),
   });
   assert.equal(result.error, 'marketing_idempotency_key_required');
 });
+
+function fakeSigner(calls) {
+  return {
+    async sign(url, init) {
+      calls.push({ url, init });
+      return new Request(url, init);
+    },
+  };
+}

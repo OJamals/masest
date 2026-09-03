@@ -15,7 +15,7 @@ const track = read("js/track.js");
 const engagement = read("js/main/engagement.js");
 const integrations = read("js/integrations.js");
 const newsletter = read("functions/api/newsletter.js");
-const klaviyo = read("functions/_lib/klaviyo.js");
+const marketingSubscribers = read("functions/_lib/marketing-subscribers.js");
 const contact = read("contact.html");
 const productPage = read("products/hcr.html");
 
@@ -78,7 +78,8 @@ test("footer newsletter signup sends page and industry context", () => {
   assert.match(integrations, /source_path/);
   assert.match(integrations, /industry/);
   assert.match(newsletter, /newsletterProperties/);
-  assert.match(klaviyo, /properties:\s*profileProperties/);
+  assert.match(newsletter, /tags:\s*\[properties\.industry, properties\.document\]\.filter\(Boolean\)/);
+  assert.match(marketingSubscribers, /p_tags:/);
 });
 
 test("quote-submit analytics carries request type, industry, and product metadata", () => {
@@ -96,6 +97,8 @@ test("contact page exposes all six public request types", () => {
   }
   assert.match(contact, /data-intent="technical"/, "technical document requests should be a first-class contact intent");
   assert.match(contact, /<option>Data Centers<\/option>/);
+  assert.match(contact, /name="marketing_email_enabled"[^>]*checked/);
+  assert.match(contact, /Unsubscribe anytime\./);
 });
 
 test("product detail pages expose a product-specific free sample request CTA", () => {

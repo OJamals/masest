@@ -8,14 +8,17 @@
 //
 // Body: { profile: { full_name?, phone? } }   (company fields are ignored if sent)
 import { adminClient, userFromRequest, json, readBody } from '../../_lib/supabase.js';
-import { klaviyoSubscribe } from '../../_lib/klaviyo.js';
+import { setMarketingPreference } from '../../_lib/marketing-subscribers.js';
 
-async function syncDefaultMarketing(env, user, existing) {
-  if (existing?.marketing_email_enabled === false) return 'disabled';
-  const result = await klaviyoSubscribe(env, user.email, env.KLAVIYO_LIST_ID, {
+async function syncDefaultMarketing(env, user, existing, sb) {
+  const enabled = existing?.marketing_email_enabled !== false;
+  const result = await setMarketingPreference(env, {
+    email: user.email,
+    enabled,
     source: 'account_registration',
-  });
-  return result.ok ? 'queued' : 'pending';
+    userId: user.id,
+  }, { sb });
+  return result.ok ? (enabled ? 'synced' : 'disabled') : 'pending';
 }
 
 export async function onRequestPost({ request, env }) {
@@ -56,7 +59,7 @@ export async function onRequestPost({ request, env }) {
     const { error: jErr } = await write;
     if (jErr) { console.error('register_join_failed', jErr.message); return json(500, { error: 'server_error' }); }
     await sb.from('company_invites').update({ status: 'accepted' }).eq('id', invite.id);
-    const marketing_sync = await syncDefaultMarketing(env, user, existing);
+    const marketing_sync = await syncDefaultMarketing(env, user, existing, sb);
     return json(201, { account_ready: true, company_id: invite.company_id, joined: true, marketing_sync, message: 'You’ve joined your team. Account ready.' });
   }
 
@@ -72,7 +75,7 @@ export async function onRequestPost({ request, env }) {
     : sb.from('profiles').insert({ id: user.id, company_id: null, role: 'buyer', ...row });
   const { error: pErr } = await write;
   if (pErr) { console.error('register_profile_failed', pErr.message); return json(500, { error: 'server_error' }); }
-  const marketing_sync = await syncDefaultMarketing(env, user, existing);
+  const marketing_sync = await syncDefaultMarketing(env, user, existing, sb);
   return json(201, {
     account_ready: true,
     needs_business: true,

@@ -12,7 +12,7 @@ test('email category policy owns provider + preference semantics', () => {
     stream: 'transactional', provider: 'cloudflare', preference: null,
   });
   assert.deepEqual(categoryPolicy('newsletter'), {
-    stream: 'marketing', provider: 'klaviyo', preference: 'marketing_email_enabled',
+    stream: 'marketing', provider: 'ses', preference: 'marketing_email_enabled',
   });
   assert.equal(categoryPolicy('unknown'), null);
   assert.equal(categoryPolicy(null), null);

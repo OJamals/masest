@@ -33,7 +33,7 @@ test("sendEmail supports bcc (offer broadcast privacy)", () => {
 
 const OFFERS = readFileSync(new URL("../functions/api/admin/offers.js", import.meta.url), "utf8");
 
-test("offers use the canonical Klaviyo marketing gateway", () => {
+test("offers use canonical SES marketing gateway", () => {
   assert.match(OFFERS, /queueMarketingEmail\(/, "offers must call the canonical marketing gateway");
   assert.match(OFFERS, /category:\s*'offer'/, "offers must tag category 'offer'");
   assert.doesNotMatch(OFFERS, /sendEmail(?:Result)?\(/, "offers must not enter Cloudflare transactional sending");

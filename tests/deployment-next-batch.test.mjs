@@ -35,20 +35,20 @@ test('business creation is one guarded database transaction', () => {
   assert.match(migration, /grant execute on function public\.create_company_for_user\(uuid, jsonb\) to service_role/i);
 });
 
-test('newsletter campaigns persist Klaviyo identity and reconcile provider state', () => {
+test('newsletter campaigns persist durable SES deliveries and reconcile state', () => {
   const endpoint = read('functions/api/admin/newsletters.js');
-  const provider = read('functions/_lib/klaviyo.js');
+  const provider = read('functions/_lib/ses-email.js');
   const schema = read('supabase/schema-newsletters.sql');
-  assert.match(endpoint, /publishKlaviyoCampaign/);
-  assert.match(endpoint, /getKlaviyoCampaignStatus/);
-  assert.match(endpoint, /provider_campaign_id/);
-  assert.match(endpoint, /status:\s*'sending'/);
+  assert.match(endpoint, /materializeDeliverySource/);
+  assert.match(endpoint, /runSupabaseDeliveryWorker/);
+  assert.match(endpoint, /provider: 'ses'/);
+  assert.match(endpoint, /status:[^\n]+: 'sending'/);
   assert.match(endpoint, /return json\(202/);
   assert.match(endpoint, /json\(503/);
-  assert.doesNotMatch(endpoint, /materializeDeliverySource|runSupabaseDeliveryWorker/);
-  assert.match(provider, /KLAVIYO_CAMPAIGN_CREATE_REVISION/);
-  assert.match(schema, /add column if not exists provider_campaign_id text/);
-  assert.match(schema, /newsletters_provider_campaign_idx/);
+  assert.match(provider, /AwsClient/);
+  assert.match(provider, /List-Unsubscribe-Post/);
+  assert.match(schema, /newsletter_delivery_sources/);
+  assert.match(schema, /newsletter_deliveries/);
 });
 
 test('admin user directory fetches bounded pages and joins only page records', () => {
