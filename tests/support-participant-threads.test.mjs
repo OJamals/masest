@@ -163,6 +163,13 @@ test('staff replies always target one user and therefore one email recipient', (
   assert.match(supportUi, /Start a customer chat to reply by chat and email\./);
 });
 
+test('legacy business order handoff keeps the order while staff chooses a recipient', () => {
+  const supportUi = read('js/admin-support.js');
+
+  assert.match(supportUi, /openNewChat\(\{ orderId: activeOrder\?\.id \|\| activeOrderId \|\| null \}\)/);
+  assert.match(supportUi, /loadNewChatUser\(button\.dataset\.supportUserId, \{ orderId: pendingNewChatOrderId \}\)/);
+});
+
 test('order dashboard messaging enters the selected user participant thread with order scope', () => {
   const admin = read('js/admin.js');
   const orders = read('js/admin/orders.js');

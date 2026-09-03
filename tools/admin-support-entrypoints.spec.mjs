@@ -876,6 +876,118 @@ test("Admin Orders starts an order-scoped participant chat through canonical sup
   ))).toBe(true);
 });
 
+test("legacy business orders keep order scope while staff chooses the email recipient", async ({ page }) => {
+  await bootAsStaff(page);
+  await page.unroute("**/api/admin/orders**");
+  await page.unroute("**/api/admin/messages**");
+
+  const orderId = "33333333-3333-4333-8333-333333333333";
+  const companyId = "c-legacy-order";
+  const userId = "u-legacy-order";
+  const order = {
+    id: orderId,
+    order_number: "MST-1999",
+    company_id: companyId,
+    user_id: null,
+    companies: { name: "Legacy Facilities" },
+    customer_email: "buyer@example.test",
+    status: "cancelled",
+    tracking_status: "closed",
+    payment_method: "stripe",
+    created_at: "2026-07-29T04:18:42Z",
+    subtotal: 10.4,
+    total: 10.4,
+    currency: "usd",
+    order_items: [],
+  };
+  const orderContext = {
+    id: orderId,
+    reference: "MST-1999",
+    status: "cancelled",
+    admin_url: `/admin.html?order=${orderId}#orders`,
+  };
+  const businessThread = {
+    thread_id: "t-legacy-business",
+    participant_user_id: null,
+    participant: null,
+    company_id: companyId,
+    company_name: "Legacy Facilities",
+    scope: "company",
+    last_body: "Legacy order history",
+    last_at: "2026-07-29T04:18:42Z",
+    unanswered: false,
+    status: "open",
+    order_scope: orderContext,
+  };
+
+  await page.route("**/api/admin/orders**", (route) => {
+    const url = new URL(route.request().url());
+    const payload = url.searchParams.get("view") === "requests"
+      ? { requests: [] }
+      : { orders: [order], total: 1, has_more: false };
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  });
+  await page.route("**/api/admin/customers?*", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      customers: [{
+        id: userId,
+        company_id: companyId,
+        full_name: "Avery Buyer",
+        email: "buyer@example.test",
+        company_name: "Legacy Facilities",
+        company_status: "approved",
+      }],
+    }),
+  }));
+  await page.route(`**/api/admin/users?detail=${userId}`, (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      profile: { id: userId, full_name: "Avery Buyer", email: "buyer@example.test" },
+      company: { id: companyId, name: "Legacy Facilities", status: "approved" },
+      orders: [{ id: orderId, order_number: "MST-1999", status: "cancelled" }],
+    }),
+  }));
+  await page.route("**/api/admin/messages**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("summary") === "1") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ summary: { open: 1, unanswered: 0 } }),
+      });
+    }
+    if (url.searchParams.get("company_id") === companyId) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ thread: businessThread, messages: [] }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ threads: [businessThread] }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#orders`);
+  const orderCard = page.locator(".admin-order-card").filter({ hasText: "MST-1999" });
+  await orderCard.getByRole("button", { name: "Message customer" }).click();
+  await expect(page.locator(".site-support__order-scope")).toContainText("Replying about order MST-1999");
+  await expect(page.locator(".site-support__notice")).toContainText("no single email recipient");
+
+  await page.getByRole("button", { name: "Start customer chat" }).click();
+  await page.locator(`[data-support-user-id="${userId}"]`).click();
+  await expect(page.locator("#siteSupportNewChatOrder")).toHaveValue(orderId);
+});
+
 test("support list load failures offer an in-place retry", async ({ page }) => {
   await bootAsStaff(page);
   await page.unroute("**/api/admin/messages**");

@@ -197,6 +197,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   let threadsRequestId = 0;
   let summaryRequestId = 0;
   let newChatRequestId = 0;
+  let pendingNewChatOrderId = null;
   let poller = null;
   let presenceOpen = false;
   let lastPresencePing = 0;
@@ -462,7 +463,9 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     view.querySelector("[data-support-full-thread]")?.addEventListener("click", () => {
       void openThread(threadId, { companyId, orderId: null });
     });
-    view.querySelector("[data-support-start-customer]")?.addEventListener("click", () => openNewChat());
+    view.querySelector("[data-support-start-customer]")?.addEventListener("click", () => {
+      openNewChat({ orderId: activeOrder?.id || activeOrderId || null });
+    });
     view.querySelectorAll("[data-status]").forEach((button) => button.addEventListener("click", async () => {
       button.disabled = true;
       const actionRequestId = threadRequestId;
@@ -634,7 +637,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       void loadNewChatUsers(input.value);
     });
     view.querySelectorAll("[data-support-user-id]").forEach((button) => button.addEventListener("click", () => {
-      void loadNewChatUser(button.dataset.supportUserId);
+      void loadNewChatUser(button.dataset.supportUserId, { orderId: pendingNewChatOrderId });
     }));
   };
 
@@ -690,7 +693,11 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       void loadNewChatUsers("");
     });
     const form = view.querySelector(".site-support__new-chat-form");
+    const orderSelect = form.elements.order_id;
     const textarea = form.querySelector("textarea");
+    orderSelect.addEventListener("change", () => {
+      pendingNewChatOrderId = orderSelect.value || null;
+    });
     textarea.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" || (!event.metaKey && !event.ctrlKey)) return;
       event.preventDefault();
@@ -762,6 +769,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   const openNewChat = ({ userId = null, orderId = null } = {}) => {
     if (!canWrite) return;
     threadRequestId += 1;
+    pendingNewChatOrderId = String(orderId || "").trim() || null;
     selected = null;
     activeOrderId = null;
     messages = [];
@@ -770,7 +778,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     setView("compose");
     renderNewChatSearch({ loading: true });
     setOpen(true, { focus: view.querySelector("#siteSupportAccountSearch") });
-    if (userId) void loadNewChatUser(userId, { orderId });
+    if (userId) void loadNewChatUser(userId, { orderId: pendingNewChatOrderId });
     else void loadNewChatUsers("");
   };
 
