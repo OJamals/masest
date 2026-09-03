@@ -146,11 +146,71 @@ export function cloudflarePagesDeploymentFromPayload(payload = {}) {
   };
 }
 
+function webAnalyticsSiteAppliesToDomain(site, domain) {
+  if (site?.enabled === false || site?.ruleset?.enabled === false) return false;
+  if (site?.auto_install === true) {
+    const zoneName = String(site?.ruleset?.zone_name || "").trim().toLowerCase();
+    return Boolean(zoneName) && (domain === zoneName || domain.endsWith(`.${zoneName}`));
+  }
+
+  const hostPattern = String(site?.host || "").trim();
+  if (!hostPattern) return false;
+  try {
+    return new RegExp(hostPattern).test(domain);
+  } catch {
+    return hostPattern.toLowerCase() === domain;
+  }
+}
+
+export function cloudflareWebAnalyticsOwnershipFromPayload(payload = {}, { domains = [] } = {}) {
+  const sites = Array.isArray(payload?.result) ? payload.result : [];
+  const projectDomains = [...new Set(
+    domains.map((domain) => String(domain || "").trim().toLowerCase()).filter(Boolean),
+  )].sort();
+  if (!projectDomains.length) {
+    return {
+      status: "unavailable",
+      source: "cloudflare_rum_api",
+      error: "Cloudflare Pages project returned no domains",
+      duplicate_domains: [],
+      missing_domains: [],
+      installers_by_domain: {},
+    };
+  }
+  const installersByDomain = Object.fromEntries(projectDomains.map((domain) => [domain, []]));
+
+  sites.forEach((site, index) => {
+    const siteTag = String(site?.site_tag || `site-${index + 1}`);
+    for (const domain of projectDomains) {
+      if (webAnalyticsSiteAppliesToDomain(site, domain)) {
+        installersByDomain[domain].push(siteTag);
+      }
+    }
+  });
+
+  const duplicateDomains = projectDomains.filter((domain) => installersByDomain[domain].length > 1);
+  const missingDomains = projectDomains.filter((domain) => installersByDomain[domain].length === 0);
+  const status = duplicateDomains.length
+    ? "duplicate"
+    : missingDomains.length
+      ? "missing"
+      : "single_owner";
+
+  return {
+    status,
+    source: "cloudflare_rum_api",
+    duplicate_domains: duplicateDomains,
+    missing_domains: missingDomains,
+    installers_by_domain: installersByDomain,
+  };
+}
+
 export function buildPreflightReport({
   env = process.env,
   envSource = { type: "local_process" },
   git,
   pagesBuild,
+  webAnalytics = null,
   now = new Date().toISOString(),
 } = {}) {
   const checks = {};
@@ -189,6 +249,23 @@ export function buildPreflightReport({
       pages_commit: pagesBuild?.commit || null,
     },
   );
+
+  if (webAnalytics) {
+    const duplicateDomains = webAnalytics.duplicate_domains || [];
+    const missingDomains = webAnalytics.missing_domains || [];
+    const message = webAnalytics.status === "duplicate"
+      ? `overlapping Cloudflare Web Analytics injectors on ${duplicateDomains.join(", ")}`
+      : webAnalytics.status === "missing"
+        ? `no Cloudflare Web Analytics owner on ${missingDomains.join(", ")}`
+        : webAnalytics.status === "single_owner"
+          ? "one Cloudflare Web Analytics owner per Pages domain"
+          : webAnalytics.error || "Cloudflare Web Analytics ownership unavailable";
+    checks.web_analytics_ownership = check(
+      webAnalytics.status === "single_owner",
+      message,
+      webAnalytics,
+    );
+  }
 
   for (const group of acceptanceEnvGroups) {
     checks[`env_${group.id}`] = checkEnvGroup(env, group);
@@ -273,6 +350,15 @@ export async function collectCloudflarePagesEnv({
     throw cloudflareApiError(deploymentsBody, deploymentsResponse.status, "Cloudflare deployment lookup failed");
   }
 
+  const analyticsResponse = await fetchImpl(
+    `https://api.cloudflare.com/client/v4/accounts/${account}/rum/site_info/list`,
+    { headers },
+  );
+  const analyticsBody = await analyticsResponse.json().catch(() => ({}));
+  if (!analyticsResponse.ok || analyticsBody.success === false) {
+    throw cloudflareApiError(analyticsBody, analyticsResponse.status, "Cloudflare Web Analytics lookup failed");
+  }
+
   return {
     env: cloudflarePagesEnvPresence(projectBody.result, { environment }),
     source: {
@@ -281,6 +367,9 @@ export async function collectCloudflarePagesEnv({
       environment,
     },
     pagesBuild: cloudflarePagesDeploymentFromPayload(deploymentsBody),
+    webAnalytics: cloudflareWebAnalyticsOwnershipFromPayload(analyticsBody, {
+      domains: projectBody?.result?.domains || [],
+    }),
   };
 }
 
@@ -363,6 +452,7 @@ async function main() {
       source: "cloudflare_pages_api",
       error: "Cloudflare deployment state requires --cloudflare-env; use --skip-pages only for an explicit local-only check.",
     };
+  let webAnalytics = null;
   if (options.cloudflareEnv) {
     const credentialEnv = {
       ...parseEnvFile(".dev.vars"),
@@ -382,12 +472,14 @@ async function main() {
     env = cloudflare.env;
     envSource = cloudflare.source;
     pagesBuild = cloudflare.pagesBuild;
+    webAnalytics = cloudflare.webAnalytics;
   }
   const report = buildPreflightReport({
     env,
     envSource,
     git,
     pagesBuild,
+    webAnalytics,
   });
   const json = `${JSON.stringify(report, null, 2)}\n`;
   if (options.output) {

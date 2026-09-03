@@ -6,6 +6,7 @@ import {
   buildPreflightReport,
   cloudflarePagesDeploymentFromPayload,
   cloudflarePagesEnvPresence,
+  cloudflareWebAnalyticsOwnershipFromPayload,
   collectCloudflarePagesEnv,
   redactValue,
 } from "../tools/production-acceptance-preflight.mjs";
@@ -185,12 +186,146 @@ test("cloudflarePagesDeploymentFromPayload fails closed for failed or missing de
   assert.equal(cloudflarePagesDeploymentFromPayload({ result: [] }).status, "unavailable");
 });
 
+test("Cloudflare analytics ownership rejects overlapping zone and Pages injectors", () => {
+  const ownership = cloudflareWebAnalyticsOwnershipFromPayload({
+    result: [
+      {
+        site_tag: "zone-site",
+        auto_install: true,
+        ruleset: {
+          enabled: true,
+          zone_name: "masest.co",
+        },
+      },
+      {
+        site_tag: "pages-site",
+        auto_install: false,
+        host: "(masest-commerce.pages.dev|masest.co|www.masest.co)$",
+      },
+    ],
+  }, {
+    domains: ["masest-commerce.pages.dev", "masest.co", "www.masest.co"],
+  });
+
+  assert.equal(ownership.status, "duplicate");
+  assert.deepEqual(ownership.duplicate_domains, ["masest.co", "www.masest.co"]);
+  assert.deepEqual(ownership.missing_domains, []);
+  assert.deepEqual(ownership.installers_by_domain["masest.co"], ["zone-site", "pages-site"]);
+});
+
+test("Cloudflare analytics ownership accepts disabled zone injection with Pages as sole owner", () => {
+  const ownership = cloudflareWebAnalyticsOwnershipFromPayload({
+    result: [
+      {
+        site_tag: "zone-site",
+        auto_install: true,
+        ruleset: {
+          enabled: false,
+          zone_name: "masest.co",
+        },
+      },
+      {
+        site_tag: "pages-site",
+        auto_install: false,
+        host: "(masest-commerce.pages.dev|masest.co|www.masest.co)$",
+      },
+    ],
+  }, {
+    domains: ["masest-commerce.pages.dev", "masest.co", "www.masest.co"],
+  });
+
+  assert.equal(ownership.status, "single_owner");
+  assert.deepEqual(ownership.duplicate_domains, []);
+  assert.deepEqual(ownership.missing_domains, []);
+  assert.deepEqual(ownership.installers_by_domain["masest.co"], ["pages-site"]);
+});
+
+test("Cloudflare analytics ownership fails closed when Pages returns no domains", () => {
+  const ownership = cloudflareWebAnalyticsOwnershipFromPayload({
+    result: [{
+      site_tag: "pages-site",
+      auto_install: false,
+      host: "masest.co$",
+    }],
+  });
+
+  assert.equal(ownership.status, "unavailable");
+  assert.equal(ownership.error, "Cloudflare Pages project returned no domains");
+  assert.deepEqual(ownership.installers_by_domain, {});
+});
+
+test("buildPreflightReport blocks overlapping Cloudflare analytics ownership", () => {
+  const report = buildPreflightReport({
+    env: completeEnv,
+    git: {
+      head: "abc123",
+      branch: "main",
+      originHead: "abc123",
+      dirtyFiles: [],
+    },
+    pagesBuild: { status: "built", commit: "abc123" },
+    webAnalytics: {
+      status: "duplicate",
+      duplicate_domains: ["masest.co"],
+      missing_domains: [],
+      installers_by_domain: {
+        "masest.co": ["zone-site", "pages-site"],
+      },
+    },
+  });
+
+  assert.equal(report.ready, false);
+  assert.equal(report.checks.web_analytics_ownership.ok, false);
+  assert.deepEqual(report.blockers, [
+    "web_analytics_ownership: overlapping Cloudflare Web Analytics injectors on masest.co",
+  ]);
+});
+
+test("buildPreflightReport blocks unavailable Cloudflare analytics ownership", () => {
+  const report = buildPreflightReport({
+    env: completeEnv,
+    git: {
+      head: "abc123",
+      branch: "main",
+      originHead: "abc123",
+      dirtyFiles: [],
+    },
+    pagesBuild: { status: "built", commit: "abc123" },
+    webAnalytics: {
+      status: "unavailable",
+      error: "Cloudflare Pages project returned no domains",
+      duplicate_domains: [],
+      missing_domains: [],
+      installers_by_domain: {},
+    },
+  });
+
+  assert.equal(report.ready, false);
+  assert.deepEqual(report.blockers, [
+    "web_analytics_ownership: Cloudflare Pages project returned no domains",
+  ]);
+});
+
 test("collectCloudflarePagesEnv reads config and deployment without leaking token", async () => {
   const urls = [];
   const token = "top-secret-token";
   const fetchImpl = async (url, options) => {
     urls.push(String(url));
     assert.equal(options.headers.Authorization, `Bearer ${token}`);
+    if (String(url).includes("/rum/site_info/list")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          result: [{
+            site_tag: "pages-site",
+            auto_install: false,
+            host: "(masest-commerce.pages.dev|masest.co)$",
+          }],
+        }),
+      };
+    }
     if (String(url).includes("/deployments?")) {
       return {
         ok: true,
@@ -211,7 +346,10 @@ test("collectCloudflarePagesEnv reads config and deployment without leaking toke
       status: 200,
       json: async () => ({
         success: true,
-        result: { deployment_configs: { production: { env_vars: { APP_URL: { type: "secret_text" } } } } },
+        result: {
+          domains: ["masest-commerce.pages.dev", "masest.co"],
+          deployment_configs: { production: { env_vars: { APP_URL: { type: "secret_text" } } } },
+        },
       }),
     };
   };
@@ -221,9 +359,10 @@ test("collectCloudflarePagesEnv reads config and deployment without leaking toke
     token,
     fetchImpl,
   });
-  assert.equal(urls.length, 2);
+  assert.equal(urls.length, 3);
   assert.equal(result.env.APP_URL, "cloudflare:secret_text");
   assert.equal(result.pagesBuild.commit, "abc123");
+  assert.equal(result.webAnalytics.status, "single_owner");
   assert.equal(JSON.stringify(result).includes(token), false);
 });
 
