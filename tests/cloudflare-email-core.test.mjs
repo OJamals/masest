@@ -38,10 +38,11 @@ test('email Worker accepts one bounded transactional message and fixes sender id
   assert.deepEqual(normalized.message.headers, sendRequest.headers);
 });
 
-test('email Worker rejects marketing, arbitrary headers, missing keys, and oversized recipient sets', () => {
+test('email Worker rejects marketing, provider-controlled headers, arbitrary headers, missing keys, and oversized recipient sets', () => {
   const config = { fromAddress: 'noreply@send.masest.co', fromName: 'MASEST' };
   assert.throws(() => normalizeSendRequest({ ...sendRequest, stream: 'marketing' }, config), /marketing_provider_required/);
   assert.throws(() => normalizeSendRequest({ ...sendRequest, idempotencyKey: '' }, config), /idempotency_key_required/);
+  assert.throws(() => normalizeSendRequest({ ...sendRequest, headers: { 'Message-ID': '<caller@send.masest.co>' } }, config), /header_not_allowed/);
   assert.throws(() => normalizeSendRequest({ ...sendRequest, headers: { Date: 'tomorrow' } }, config), /header_not_allowed/);
   assert.throws(() => normalizeSendRequest({ ...sendRequest, headers: { 'Thread-Topic': 'Unsupported by live binding' } }, config), /header_not_allowed/);
   assert.throws(() => normalizeSendRequest({

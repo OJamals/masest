@@ -55,6 +55,19 @@ Test sends require `KLAVIYO_TEST_LIST_ID`; production audience always uses
 
 ## Operations
 
+Cloudflare Worker configuration is owned by
+`workers/email-service/wrangler.jsonc`. Validate it without publishing:
+
+```sh
+npx wrangler deploy --dry-run --config workers/email-service/wrangler.jsonc
+```
+
+The send binding must report `noreply@send.masest.co` as an allowed sender.
+Cloudflare generates outbound `Message-ID` values; never supply that header in
+application payloads or `wrangler email sending send` probes. Use the dedicated
+`replyTo` field plus `In-Reply-To` and `References` for support-thread continuity.
+The Worker rejects provider-controlled and arbitrary headers before delivery.
+
 Apply these migrations before release:
 
 - `supabase/schema-unified-support-messages.sql`
