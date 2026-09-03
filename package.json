@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.60.0",
+    "parse5": "^8.0.1",
     "pg": "^8.22.0",
     "wrangler": "^4.128.0"
   }
