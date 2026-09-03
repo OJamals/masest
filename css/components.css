@@ -384,6 +384,23 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
 .crm-prospect-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .crm-prospect-detail-grid > div { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--border, #e5e7eb); border-radius: 8px; background: var(--surface, #fff); min-width: 0; }
 .crm-prospect-detail-grid b { overflow-wrap: anywhere; }
+.crm-prospect-account-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.crm-prospect-channels { list-style: none; display: grid; gap: 5px; margin: 0; padding: 0; min-width: 0; }
+.crm-prospect-channels li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; min-width: 0; }
+.crm-prospect-channels a,
+.crm-prospect-channels li > span:last-child { overflow-wrap: anywhere; }
+.crm-prospect-link-panel { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line, #e4e6e9); border-radius: var(--r-input, 10px); background: var(--panel, #f1f3f4); }
+.crm-prospect-link-panel[hidden] { display: none; }
+.crm-prospect-link-panel h4 { margin: 0 0 4px; }
+.crm-prospect-link-panel p { margin: 0; }
+.crm-prospect-link-search { display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 8px; align-items: end; }
+.crm-prospect-company-create { display: grid; grid-template-columns: minmax(220px, 1fr) auto minmax(180px, .6fr); gap: 8px; align-items: end; }
+.crm-prospect-link-search .adm-search,
+.crm-prospect-company-create .adm-search { width: 100%; max-width: none; }
+.crm-prospect-company-results { min-height: 24px; }
+.crm-prospect-company-list { list-style: none; display: grid; gap: 6px; margin: 0; padding: 0; }
+.crm-prospect-company-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid var(--line, #e4e6e9); border-radius: var(--r-input, 10px); background: var(--surface, #fff); }
+.crm-prospect-company-list li > span { display: grid; gap: 2px; min-width: 0; }
 .crm-prospect-update { display: grid; grid-template-columns: minmax(160px, .5fr) minmax(160px, .5fr) auto minmax(120px, 1fr); gap: 8px; align-items: end; }
 @media (max-width: 640px) {
   .crm-ws { gap: 10px; }
@@ -402,7 +419,10 @@ body:has(.about-router) .page-hero { padding-bottom: 112px; }
   .adm-tools.crm-contact-search { grid-template-columns: 1fr; }
   .adm-tools.crm-prospect-tools,
   .crm-prospect-detail-grid,
+  .crm-prospect-link-search,
+  .crm-prospect-company-create,
   .crm-prospect-update { grid-template-columns: 1fr; }
+  .crm-prospect-account-actions { justify-content: flex-start; }
   .crm-inline-fields { grid-template-columns: 1fr; }
   .crm-task { grid-template-columns: auto minmax(0, 1fr); }
   .crm-task .badge,

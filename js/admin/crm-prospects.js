@@ -1,6 +1,7 @@
 // Pre-account Prospect surface for the integrated CRM workspace. Prospect
 // Organizations stay separate from customer Companies until explicitly linked.
-import { esc, delegate } from '../util.js?v=20260902c';
+import { esc, delegate } from '../util.js?v=20260902d';
+import { createCrmProspectAccount, renderProspectChannels } from './crm-prospect-account.js?v=20260902d';
 
 const STATUSES = [
   ['', 'All stages'], ['new', 'New'], ['researching', 'Researching'],
@@ -21,6 +22,7 @@ export function createCrmProspects({
   syncWorkspaceUrl,
 }) {
   let loadId = 0;
+  const prospectAccount = createCrmProspectAccount({ api, state, renderDetail });
 
   const options = (values, current) => values.map(([value, label]) => (
     `<option value="${esc(value)}"${value === current ? ' selected' : ''}>${esc(label)}</option>`
@@ -119,10 +121,8 @@ export function createCrmProspects({
         return;
       }
       const location = [prospect.address, prospect.city, prospect.state, prospect.postal_code].filter(Boolean).map(esc).join(' · ');
-      const channels = [prospect.general_email, prospect.phone, prospect.website].filter(Boolean).map(esc).join(' · ');
-      const linked = prospect.linked_company
-        ? `<button class="btn btn-ghost btn-sm" type="button" data-prospect-open-company="${esc(prospect.linked_company.id)}" data-company-label="${esc(prospect.linked_company.name)}">Open customer account</button>`
-        : '<span class="muted">Not linked to a customer account</span>';
+      const channels = renderProspectChannels(prospect);
+      const linked = prospectAccount.header(prospect);
       const editStatuses = STATUSES.slice(1).map(([value, label]) => {
         const disabled = value === 'converted' && !prospect.linked_company_id;
         return `<option value="${esc(value)}"${value === prospect.status ? ' selected' : ''}${disabled ? ' disabled' : ''}>${esc(label)}</option>`;
@@ -139,10 +139,11 @@ export function createCrmProspects({
         </div>
         <div class="crm-prospect-detail-grid">
           <div><span class="muted">Location</span><b>${location || 'Not recorded'}</b></div>
-          <div><span class="muted">Channels</span><b>${channels || 'No direct channel'}</b></div>
+          <div><span class="muted">Channels</span>${channels}</div>
           <div><span class="muted">Retention review</span><b>${esc(prospect.retention_review_at || 'Not set')}</b></div>
           <div><span class="muted">Consent</span><b>Marketing ${esc(prospect.marketing_consent || 'unknown')} · outreach ${esc(prospect.outreach_status || 'unreviewed')}</b></div>
         </div>
+        ${prospectAccount.panel(prospect)}
         <p class="adm-status" data-state="warn"><b>No bulk marketing.</b> Approve outreach only through a future evidence-backed consent workflow.</p>
         <form class="crm-prospect-update" data-prospect-update data-prospect-id="${esc(prospect.id)}">
           <label class="crm-field">Stage<select class="adm-select" name="status">${editStatuses}</select></label>
@@ -164,6 +165,7 @@ export function createCrmProspects({
   }
 
   function wire(box) {
+    prospectAccount.wire(box);
     delegate(box, 'submit', '[data-prospect-form]', (event, form) => {
       event.preventDefault();
       state.crmProspectQ = form.querySelector('[data-prospect-q]').value.trim();

@@ -52,7 +52,7 @@ async function boot(page) {
         email: 'dev@masest.co',
         role: 'owner',
         can_write: true,
-        capabilities: ['prospect.write', 'prospect.delete'],
+        capabilities: ['prospect.write', 'prospect.delete', 'company.credit'],
       },
     }),
   }));
@@ -175,4 +175,168 @@ test('Prospect list stays inside a narrow mobile viewport', async ({ page }) => 
   await expect(page.locator('.crm-prospect-card')).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('Unlinked Prospect searches and links an existing customer account', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await boot(page);
+  const prospectId = '6fd360e3-2475-48c9-a8f1-f2e180f3f6f1';
+  const companyId = '86b5e767-8b8f-42fd-8fcb-8f6c0f176b15';
+  const patches = [];
+  let linkedCompany = null;
+  let releasePatch;
+  const patchGate = new Promise((resolve) => { releasePatch = resolve; });
+
+  await page.route('**/api/admin/crm/prospects**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === 'PATCH') {
+      const body = request.postDataJSON();
+      patches.push(body);
+      await patchGate;
+      linkedCompany = { id: body.linked_company_id, name: 'Acme customer account', status: 'approved' };
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    }
+    if (url.searchParams.get('id')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          prospect: {
+            id: prospectId,
+            name: 'Acme Mechanical',
+            segment: 'HVAC / Refrigeration',
+            status: 'qualified',
+            priority: 'normal',
+            general_email: 'info@example.test',
+            phone: '(313) 555-0100',
+            website: 'example.test',
+            marketing_consent: 'unknown',
+            outreach_status: 'unreviewed',
+            linked_company_id: linkedCompany?.id || null,
+            linked_company: linkedCompany,
+            contacts: [],
+          },
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ prospects: [{
+        id: prospectId, name: 'Acme Mechanical', status: 'qualified', priority: 'normal',
+        marketing_consent: 'unknown', outreach_status: 'unreviewed', contact_count: 0,
+      }], total: 1, has_more: false }),
+    });
+  });
+  await page.route('**/api/admin/companies**', (route) => {
+    const url = new URL(route.request().url());
+    expect(url.searchParams.get('search')).toBe('Acme Mechanical');
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ companies: [{ id: companyId, name: 'Acme customer account', status: 'approved' }], total: 1 }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#crm`);
+  await page.locator('[data-crm-ws-tab="prospects"]').click();
+  await page.locator('[data-prospect-open]').click();
+  await expect(page.locator('[data-prospect-channel="email"]')).toHaveAttribute('href', 'mailto:info%40example.test');
+  await expect(page.locator('[data-prospect-channel="phone"]')).toHaveAttribute('href', 'tel:+13135550100');
+  await expect(page.locator('[data-prospect-channel="website"]')).toHaveAttribute('href', 'https://example.test/');
+
+  await page.locator('[data-prospect-link-toggle]').click();
+  await expect(page.locator('[data-prospect-link-panel]')).toBeVisible();
+  await expect(page.locator('[data-prospect-company-search] input[name="query"]')).toBeFocused();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await page.locator('[data-prospect-company-search]').getByRole('button', { name: 'Search accounts' }).click();
+  await expect(page.locator('[data-prospect-company-results]')).toContainText('Acme customer account');
+  await page.locator('[data-prospect-link-company]').click();
+
+  await expect.poll(() => patches.length).toBe(1);
+  expect(patches[0]).toEqual({ id: prospectId, linked_company_id: companyId });
+  await page.locator('[data-prospect-back]').click();
+  releasePatch();
+  await expect(page.getByRole('heading', { name: 'Pre-account prospects' })).toBeVisible();
+  await expect(page.locator('.crm-prospect-detail')).toHaveCount(0);
+  await page.locator('[data-prospect-open]').click();
+  await expect(page.locator('[data-prospect-open-company]')).toHaveText('Open customer account');
+});
+
+test('Unlinked Prospect creates one pending account and recovers a failed auto-link without email', async ({ page }) => {
+  await boot(page);
+  const prospectId = '6fd360e3-2475-48c9-a8f1-f2e180f3f6f1';
+  const companyId = '86b5e767-8b8f-42fd-8fcb-8f6c0f176b15';
+  const companyCreates = [];
+  const prospectPatches = [];
+  let linkedCompany = null;
+
+  await page.route('**/api/admin/crm/prospects**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === 'PATCH') {
+      const body = request.postDataJSON();
+      prospectPatches.push(body);
+      if (prospectPatches.length === 1) {
+        return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'server_error' }) });
+      }
+      linkedCompany = { id: body.linked_company_id, name: 'Acme Mechanical', status: 'pending' };
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    }
+    if (url.searchParams.get('id')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ prospect: {
+          id: prospectId, name: 'Acme Mechanical', status: 'qualified', priority: 'normal',
+          marketing_consent: 'unknown', outreach_status: 'unreviewed', linked_company_id: linkedCompany?.id || null,
+          linked_company: linkedCompany, contacts: [],
+        } }),
+      });
+    }
+    return route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ prospects: [{
+        id: prospectId, name: 'Acme Mechanical', status: 'qualified', priority: 'normal',
+        marketing_consent: 'unknown', outreach_status: 'unreviewed', contact_count: 0,
+      }], total: 1, has_more: false }),
+    });
+  });
+  await page.route('**/api/admin/companies**', async (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ companies: [{ id: companyId, name: 'Acme Mechanical', status: 'pending' }], total: 1 }),
+      });
+    }
+    const body = route.request().postDataJSON();
+    companyCreates.push(body);
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ company: { id: companyId, name: 'Acme Mechanical', status: 'pending' } }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#crm`);
+  await page.locator('[data-crm-ws-tab="prospects"]').click();
+  await page.locator('[data-prospect-open]').click();
+  await page.locator('[data-prospect-link-toggle]').click();
+  await expect(page.locator('[data-prospect-link-panel]')).toContainText('No user is invited and no email is sent.');
+  await page.locator('[data-prospect-company-create]').getByRole('button', { name: 'Create pending account' }).click();
+
+  await expect.poll(() => companyCreates.length).toBe(1);
+  expect(companyCreates[0]).toEqual({ action: 'create_company', name: 'Acme Mechanical', status: 'pending' });
+  await expect.poll(() => prospectPatches.length).toBe(1);
+  expect(prospectPatches[0]).toEqual({ id: prospectId, linked_company_id: companyId });
+  await expect(page.locator('[data-prospect-company-create] button[type="submit"]')).toBeDisabled();
+  await expect(page.locator('[data-prospect-company-create-status]')).toContainText('Account created, but linking failed.');
+  await page.locator('[data-prospect-company-search]').getByRole('button', { name: 'Search accounts' }).click();
+  await page.locator('[data-prospect-link-company]').click();
+  await expect.poll(() => prospectPatches.length).toBe(2);
+  expect(companyCreates).toHaveLength(1);
+  await expect(page.locator('[data-prospect-open-company]')).toHaveText('Open customer account');
+  await expect(page.locator('[data-prospect-update-status]')).toHaveText('Customer account linked.');
 });
