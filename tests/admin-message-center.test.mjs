@@ -124,3 +124,25 @@ test('company message action opens its support thread instead of settings', () =
     assert.ok(adapterExports.includes(name), `threads.js must expose ${name}`);
   }
 });
+
+test('account user detail starts the canonical support composer for that user', () => {
+  const admin = read('js/admin.js');
+  const companies = read('js/admin/companies.js');
+  const threads = read('js/admin/threads.js');
+  const support = read('js/admin-support.js');
+
+  assert.match(companies, /data-account-user-message/,
+    'user detail should expose a direct Start chat action');
+  assert.match(companies, /startSupportChat\?\.\(\{\s*userId:\s*user\.id\s*\}\)/,
+    'the action should preserve the selected user identity');
+  assert.match(admin, /startSupportChat:\s*\(\{\s*userId\s*\}\)\s*=>\s*showSupportConsole\(\{\s*userId\s*\}\)/,
+    'Accounts should enter the shared support composer, not another messaging UI');
+  assert.match(companies, /data-account-user-message[^>]*data-capability="admin\.write"/,
+    'read-only staff should not receive an inoperative chat action');
+  assert.match(admin, /if \(userId\) return supportEntry\.openNewChat\?\.\(\{\s*userId\s*\}\)/,
+    'the shared support entry point should preselect the requested user');
+  assert.match(threads, /openNewChat/,
+    'the admin adapter should expose the canonical composer entry point');
+  assert.match(support, /openNewChat:\s*\(options\s*=\s*\{\}\)\s*=>\s*openNewChat\(options\)/,
+    'the shared console should own direct composer opening');
+});

@@ -718,7 +718,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     }
   };
 
-  const openNewChat = () => {
+  const openNewChat = ({ userId = null } = {}) => {
     if (!canWrite) return;
     threadRequestId += 1;
     selected = null;
@@ -729,7 +729,8 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     setView("compose");
     renderNewChatSearch({ loading: true });
     setOpen(true, { focus: view.querySelector("#siteSupportAccountSearch") });
-    void loadNewChatUsers("");
+    if (userId) void loadNewChatUser(userId);
+    else void loadNewChatUsers("");
   };
 
   list.addEventListener("click", (event) => {
@@ -752,7 +753,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   search.addEventListener("input", renderThreads);
   launcher.addEventListener("click", () => setOpen(drawer.hidden));
   close.addEventListener("click", () => setOpen(false));
-  newChat?.addEventListener("click", openNewChat);
+  newChat?.addEventListener("click", () => openNewChat());
   settingsToggle.addEventListener("click", () => setView(drawer.dataset.view === "settings" ? "inbox" : "settings"));
   back.addEventListener("click", () => {
     if (drawer.dataset.view === "settings") leaveSettings();
@@ -811,6 +812,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       setOpen(true);
       return openThread(companyId, { orderId });
     },
+    openNewChat: (options = {}) => openNewChat(options),
     open: () => { setView("inbox"); setOpen(true); },
     openSettings,
     refresh: () => poller.refresh(),

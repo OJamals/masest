@@ -68,7 +68,7 @@ test('prospect list and detail are responsive and use existing CRM primitives', 
 });
 
 test('admin loads a cache-busted CRM workspace version', () => {
-  assert.match(admin, /import\('\.\/admin\/crm-workspace\.js\?v=20260902d'\)/);
+  assert.match(admin, /import\('\.\/admin\/crm-workspace\.js\?v=20260903a'\)/);
 });
 
 test('shared authenticated browser fixture covers the Prospect surface', () => {

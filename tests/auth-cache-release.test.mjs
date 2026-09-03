@@ -7,18 +7,19 @@ const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
 const MAIN_RELEASE = "20260830h";
-const ADMIN_RELEASE = "20260902d";
-const ADMIN_PAGE_RELEASE = "20260902d";
-const ADMIN_WORKFLOW_RELEASE = "20260902d";
-const ADMIN_CHROME_RELEASE = "20260902d";
+const ADMIN_RELEASE = "20260903a";
+const ADMIN_PAGE_RELEASE = "20260903a";
+const ADMIN_ACCOUNTS_RELEASE = "20260903a";
+const ADMIN_WORKFLOW_RELEASE = "20260903a";
+const ADMIN_CHROME_RELEASE = "20260903a";
 const CHROME_RELEASE = MAIN_RELEASE;
 const ACCOUNT_NAV_RELEASE = "20260822c";
 const CUSTOMER_CHAT_RELEASE = "20260831a";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260901a";
-const CONTENT_RELEASE = "20260902d";
+const CONTENT_RELEASE = "20260903a";
 const STORY_RELEASE = "20260902a";
 const PUBLIC_SUPPORT_RELEASE = "20260901b";
-const ADMIN_SUPPORT_RELEASE = "20260902d";
+const ADMIN_SUPPORT_RELEASE = "20260903a";
 const ADMIN_SUPPORT_STYLE_RELEASE = "20260902b";
 const MAIN_RELEASE_OVERRIDES = new Map();
 
@@ -64,9 +65,8 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/dashboard.js"), new RegExp(`business\\.js\\?v=${dashboardEntry[1]}`));
 
   assert.match(read("admin.html"), new RegExp(`admin\\.js\\?v=${ADMIN_PAGE_RELEASE}`));
-  for (const module of ["qbo", "companies"]) {
-    assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_RELEASE}`));
-  }
+  assert.match(read("js/admin.js"), new RegExp(`admin/qbo\\.js\\?v=${ADMIN_RELEASE}`));
+  assert.match(read("js/admin.js"), new RegExp(`admin/companies\\.js\\?v=${ADMIN_ACCOUNTS_RELEASE}`));
   assert.match(read("js/admin.js"), new RegExp(`admin/threads\\.js\\?v=${ADMIN_SUPPORT_RELEASE}`));
   for (const module of ["products", "orders"]) {
     assert.match(read("js/admin.js"), new RegExp(`admin/${module}\\.js\\?v=${ADMIN_WORKFLOW_RELEASE}`));

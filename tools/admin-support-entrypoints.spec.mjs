@@ -56,7 +56,7 @@ async function bootAsStaff(page) {
     status: 200,
     contentType: "application/json",
     body: JSON.stringify({
-      staff_context: { email: "staff@masest.test", role: "owner" },
+      staff_context: { email: "staff@masest.test", role: "owner", capabilities: ["admin.write"] },
       crm: { unread_messages: 3 },
     }),
   }));
@@ -220,6 +220,74 @@ test("at phone width new chat uses the full drawer and keeps order/message field
   });
   expect(layout.conversationHeight).toBeGreaterThan(layout.drawerHeight - 3);
   expect(layout.unusedBottom).toBeLessThan(3);
+});
+
+test("Accounts user detail opens the same new-chat composer with that user preselected", async ({ page }) => {
+  await bootAsStaff(page);
+  let customerSearches = 0;
+  let userDetailRequests = 0;
+
+  await page.route("**/api/admin/customers**", (route) => {
+    customerSearches += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ customers: [] }),
+    });
+  });
+  await page.route("**/api/admin/companies?limit=500", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      companies: [{ id: "c1", name: "Acme HVAC", status: "approved" }],
+      total: 1,
+      has_more: false,
+    }),
+  }));
+  await page.route("**/api/admin/users?limit=**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      users: [{
+        id: "u1",
+        company_id: "c1",
+        full_name: "Avery Buyer",
+        email: "avery@example.test",
+        role: "buyer",
+        company_name: "Acme HVAC",
+        company_status: "approved",
+      }],
+      total: 1,
+      has_more: false,
+    }),
+  }));
+  await page.route("**/api/admin/users?detail=u1", (route) => {
+    userDetailRequests += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        profile: { id: "u1", full_name: "Avery Buyer", email: "avery@example.test", role: "buyer" },
+        company: { id: "c1", name: "Acme HVAC", status: "approved" },
+        addresses: [],
+        payment_methods: [],
+        orders: [{ id: "o1", order_number: "VK-1001", status: "delivered" }],
+      }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#companies`);
+  await page.getByRole("button", { name: "avery@example.test", exact: true }).click();
+  await page.getByRole("button", { name: "Start chat" }).click();
+
+  const drawer = page.locator(".site-support__drawer");
+  await expect(drawer).toBeVisible();
+  await expect(drawer).toHaveAttribute("data-view", "compose");
+  await expect(page.locator(".site-support__new-chat-selected")).toContainText("Avery Buyer");
+  await expect(page.locator("#siteSupportNewChatOrder option")).toContainText(["General account conversation", "Order VK-1001 · delivered"]);
+  await expect(page.locator("#siteSupportNewChatMessage")).toBeFocused();
+  expect(customerSearches).toBe(0);
+  expect(userDetailRequests).toBeGreaterThanOrEqual(2);
 });
 
 test("Overview's unread count opens the inbox without leaving Overview", async ({ page }) => {

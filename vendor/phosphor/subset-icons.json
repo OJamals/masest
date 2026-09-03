@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 261,
-  "usedCount": 152,
+  "count": 262,
+  "usedCount": 153,
   "bufferCount": 109,
   "icons": [
     {
@@ -222,6 +222,11 @@
     {
       "name": "chat-circle",
       "cp": "E168",
+      "src": "used"
+    },
+    {
+      "name": "chat-circle-dots",
+      "cp": "E16C",
       "src": "used"
     },
     {

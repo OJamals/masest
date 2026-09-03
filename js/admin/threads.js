@@ -18,7 +18,7 @@ export function createThreadsTab({ api, state, openContext }) {
   // One console per document, lazily mounted. initAdminSupport() returns null if
   // one is already present, so a second call cannot produce a second inbox.
   function ensureConsole() {
-    consolePromise ||= import('../admin-support.js?v=20260902d')
+    consolePromise ||= import('../admin-support.js?v=20260903a')
       .then(({ initAdminSupport }) => initAdminSupport({
         auth: { api },
         root: '/',
@@ -43,6 +43,11 @@ export function createThreadsTab({ api, state, openContext }) {
     await support?.openThread?.(companyId, options);
   }
 
+  async function openNewChat(options = {}) {
+    const support = await ensureConsole();
+    await support?.openNewChat?.(options);
+  }
+
   async function openConsole() {
     const support = await ensureConsole();
     await support?.open?.();
@@ -57,5 +62,5 @@ export function createThreadsTab({ api, state, openContext }) {
     void ensureConsole();
   }
 
-  return { renderThreads, wireThreads, openThread, openConsole, openSettings };
+  return { renderThreads, wireThreads, openThread, openNewChat, openConsole, openSettings };
 }
