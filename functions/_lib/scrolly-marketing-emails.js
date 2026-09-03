@@ -160,6 +160,63 @@ export const SCROLLY_MARKETING_EMAILS = Object.freeze([
   }),
 ]);
 
+const nurtureEmail = (value) => Object.freeze({
+  ...value,
+  paragraphs: Object.freeze([...value.paragraphs]),
+  sceneIds: Object.freeze([...value.sceneIds]),
+});
+
+export const NURTURE_FLOW_EMAILS = Object.freeze([
+  nurtureEmail({
+    id: 'strength-hmis',
+    flowSlot: 1,
+    templateName: 'MASEST Nurture 01 · Strength + HMIS 0-0-0',
+    subject: 'Industrial strength. HMIS 0-0-0.',
+    previewText: 'Purpose-built VertKleen chemistry, aligned field proof, and current product-document ratings.',
+    heading: 'Industrial strength. Better chemistry.',
+    eyebrow: 'Proof series · 1 of 3',
+    paragraphs: [
+      'Industrial cleaning should be judged by what leaves the surface—not how harsh the drum looks. VertKleen targets scale, rust, grease, oxidation, and organic buildup with focused chemistry built for field work.',
+      'Every VertKleen product MASEST offers is rated HMIS 0-0-0 in its current product documents. HMIS supports product qualification; read the current label and SDS, then use the PPE and controls required for the task.',
+    ],
+    sceneIds: ['industrial-strength', 'hmis-000'],
+    ctaText: 'Match a cleaner to my job',
+    ctaUrl: `${SITE}/contact?type=audit&utm_source=klaviyo&utm_medium=email&utm_campaign=nurture_proof`,
+  }),
+  nurtureEmail({
+    id: 'compare-match',
+    flowSlot: 2,
+    templateName: 'MASEST Nurture 02 · Compare + match',
+    subject: 'Put VertKleen beside your current cleaner',
+    previewText: 'Hold the job constant. Compare removal, passes, rinse, and return to service.',
+    heading: 'Compare the finished result.',
+    eyebrow: 'Proof series · 2 of 3',
+    paragraphs: [
+      'Claims matter less than a controlled side-by-side. Hold surface, soil, dilution, contact time, and tools constant. Compare what remains—and how much work it took to get there.',
+      'Minerals, rust, grease, organics, oxidation, and fouled water equipment are different problems. VertKleen uses focused formulas so crews can match chemistry to the soil and surface instead of forcing one generic cleaner onto every job.',
+    ],
+    sceneIds: ['outperform', 'right-formula'],
+    ctaText: 'Plan a side-by-side trial',
+    ctaUrl: `${SITE}/contact?type=sample&utm_source=klaviyo&utm_medium=email&utm_campaign=nurture_proof`,
+  }),
+  nurtureEmail({
+    id: 'cost-trial',
+    flowSlot: 3,
+    templateName: 'MASEST Nurture 03 · Whole-job proof',
+    subject: 'Price the finished job—not the gallon',
+    previewText: 'Count chemical, labor, water, waste, repeat passes, and downtime—then prove the switch.',
+    heading: 'Prove the better finished-job cost.',
+    eyebrow: 'Proof series · 3 of 3',
+    paragraphs: [
+      'Shelf price is one line item. Total cost also includes dilution, passes, labor, water, waste, rework, and the time equipment stays out of service.',
+      'Use your surface, soil, crew, tools, and operating limits. Record removal, passes, labor, water, rinse, and downtime. Keep VertKleen only if it produces the better finished job for less.',
+    ],
+    sceneIds: ['whole-job-cost', 'prove-it'],
+    ctaText: 'Scope my controlled trial',
+    ctaUrl: `${SITE}/contact?type=sample&utm_source=klaviyo&utm_medium=email&utm_campaign=nurture_proof`,
+  }),
+]);
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -167,13 +224,13 @@ function escapeHtml(value) {
 }
 
 function proofPair(proof) {
-  return `<div style="margin:24px 0 18px;border:1px solid #dce5e6;border-radius:14px;overflow:hidden;background:#eef3f3">
+  return `<div style="margin:24px 0 18px;border-radius:14px;overflow:hidden;background:#eef3f3">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;table-layout:fixed;border-collapse:collapse">
       <tr>
-        <td width="50%" style="width:50%;padding:0 1px 0 0;vertical-align:top">
+        <td width="50%" style="width:50%;padding:0;vertical-align:top">
           <img src="${escapeHtml(proof.before)}" alt="${escapeHtml(proof.beforeAlt)}" width="275" style="display:block;width:100%;height:auto;border:0">
         </td>
-        <td width="50%" style="width:50%;padding:0 0 0 1px;vertical-align:top">
+        <td width="50%" style="width:50%;padding:0;vertical-align:top">
           <img src="${escapeHtml(proof.after)}" alt="${escapeHtml(proof.afterAlt)}" width="275" style="display:block;width:100%;height:auto;border:0">
         </td>
       </tr>
@@ -227,4 +284,49 @@ export function renderScrollyMarketingEmail(id) {
 
 export function renderAllScrollyMarketingEmails() {
   return SCROLLY_MARKETING_EMAILS.map(({ id }) => renderScrollyMarketingEmail(id));
+}
+
+export function renderNurtureFlowEmail(id) {
+  const campaign = NURTURE_FLOW_EMAILS.find((item) => item.id === String(id || ''));
+  if (!campaign) throw new Error('nurture_flow_email_not_found');
+
+  const scenes = campaign.sceneIds.map((sceneId) => findScrollyMarketingEmail(sceneId));
+  const paragraphs = campaign.paragraphs
+    .map((paragraph) => `<p style="margin:0 0 14px">${escapeHtml(paragraph)}</p>`)
+    .join('');
+  const proofs = scenes.map((scene) => `${proofPair(scene.proof)}
+    <p style="margin:0 0 20px"><a href="${escapeHtml(scene.evidenceUrl)}" style="color:#0e7c86;font-weight:800;text-decoration:none">${escapeHtml(scene.evidenceText)} &rarr;</a></p>`).join('');
+  const bodyHtml = `<p style="margin:0 0 14px">Hi {{ first_name|default:"there" }},</p>${paragraphs}${proofs}`;
+  const rendered = renderMarketingEmail({
+    kind: 'product',
+    campaign: {
+      subject: campaign.subject,
+      heading: campaign.heading,
+      previewText: campaign.previewText,
+      eyebrow: campaign.eyebrow,
+      bodyHtml,
+      ctaText: campaign.ctaText,
+      ctaUrl: campaign.ctaUrl,
+    },
+    recipientContext: {
+      reason: 'You received this because you subscribed to VertKleen updates or asked MASEST for product information.',
+    },
+  });
+
+  return {
+    ...rendered,
+    id: campaign.id,
+    flowSlot: campaign.flowSlot,
+    sceneIds: campaign.sceneIds,
+    templateName: campaign.templateName,
+    text: `${rendered.text}\n\n${scenes.flatMap((scene) => [
+      `${scene.proof.label} before: ${scene.proof.before}`,
+      `${scene.proof.label} after: ${scene.proof.after}`,
+      `${scene.evidenceText}: ${scene.evidenceUrl}`,
+    ]).join('\n')}`,
+  };
+}
+
+export function renderAllNurtureFlowEmails() {
+  return NURTURE_FLOW_EMAILS.map(({ id }) => renderNurtureFlowEmail(id));
 }
