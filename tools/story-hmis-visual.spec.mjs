@@ -265,7 +265,7 @@ test("preloaded scene media fades out before its source swaps and fades back in"
           events.push({
             type: "before-src",
             at: performance.now() - startedAt,
-            path: new URL(before.currentSrc || before.src).pathname,
+            path: new URL(before.src).pathname,
           });
         }
       });
