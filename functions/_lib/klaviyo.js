@@ -67,6 +67,193 @@ async function klaviyoRequest(env, path, {
   }
 }
 
+function templateFailure(step, result) {
+  return {
+    ok: false,
+    provider: 'klaviyo',
+    step,
+    retryable: result?.retryable === true,
+    ...(result?.status ? { status: result.status } : {}),
+    ...(result?.skipped ? { skipped: true } : {}),
+    error: result?.error || `klaviyo_${step}_failed`,
+  };
+}
+
+function templateSuccess(result, step) {
+  const template = result?.body?.data;
+  if (!result?.ok) return templateFailure(step, result);
+  if (!template?.id || template?.type !== 'template') {
+    return templateFailure(step, { error: 'klaviyo_template_invalid_response' });
+  }
+  return { ok: true, provider: 'klaviyo', template };
+}
+
+function flowActionSuccess(result, step) {
+  const flowAction = result?.body?.data;
+  if (!result?.ok) return templateFailure(step, result);
+  if (!flowAction?.id || flowAction?.type !== 'flow-action') {
+    return templateFailure(step, { error: 'klaviyo_flow_action_invalid_response' });
+  }
+  return { ok: true, provider: 'klaviyo', flowAction };
+}
+
+export async function findKlaviyoTemplatesByName(
+  env,
+  name,
+  { fetchImpl = globalThis.fetch } = {},
+) {
+  const cleanName = String(name || '').trim().slice(0, 255);
+  if (!cleanName) return { ok: false, provider: 'klaviyo', error: 'klaviyo_template_name_required' };
+  const filterName = cleanName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const query = new URLSearchParams({
+    filter: `equals(name,"${filterName}")`,
+    'page[size]': '10',
+  });
+  const result = await klaviyoRequest(env, `/api/templates?${query}`, { fetchImpl });
+  if (!result.ok) return templateFailure('find_template', result);
+  const templates = Array.isArray(result.body?.data) ? result.body.data : [];
+  return { ok: true, provider: 'klaviyo', templates };
+}
+
+export async function getKlaviyoTemplate(
+  env,
+  templateId,
+  { fetchImpl = globalThis.fetch } = {},
+) {
+  const id = String(templateId || '').trim();
+  if (!id) return { ok: false, provider: 'klaviyo', error: 'klaviyo_template_id_required' };
+  const result = await klaviyoRequest(env, `/api/templates/${encodeURIComponent(id)}`, { fetchImpl });
+  return templateSuccess(result, 'get_template');
+}
+
+export async function getKlaviyoFlowMessageContext(
+  env,
+  flowMessageId,
+  { fetchImpl = globalThis.fetch } = {},
+) {
+  const id = String(flowMessageId || '').trim();
+  if (!id) return { ok: false, provider: 'klaviyo', error: 'klaviyo_flow_message_id_required' };
+  const query = new URLSearchParams({ include: 'flow-action,template' });
+  const result = await klaviyoRequest(
+    env,
+    `/api/flow-messages/${encodeURIComponent(id)}?${query}`,
+    { fetchImpl },
+  );
+  const step = 'get_flow_message_context';
+  if (!result.ok) return templateFailure(step, result);
+
+  const flowMessage = result.body?.data;
+  const included = Array.isArray(result.body?.included) ? result.body.included : [];
+  const templateLink = flowMessage?.relationships?.template?.data;
+  const flowActionLink = flowMessage?.relationships?.['flow-action']?.data;
+  const template = included.find((item) => (
+    item?.type === 'template' && item.id === templateLink?.id
+  ));
+  const flowAction = included.find((item) => (
+    item?.type === 'flow-action' && item.id === flowActionLink?.id
+  ));
+  if (
+    flowMessage?.type !== 'flow-message'
+    || flowMessage.id !== id
+    || templateLink?.type !== 'template'
+    || flowActionLink?.type !== 'flow-action'
+    || !template
+    || !flowAction
+  ) {
+    return templateFailure(step, { error: 'klaviyo_flow_context_invalid_response' });
+  }
+  return {
+    ok: true,
+    provider: 'klaviyo',
+    flowMessage,
+    flowAction,
+    template,
+  };
+}
+
+export async function updateKlaviyoFlowAction(env, {
+  flowActionId,
+  definition,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  const id = String(flowActionId || '').trim();
+  if (!id) return { ok: false, provider: 'klaviyo', error: 'klaviyo_flow_action_id_required' };
+  if (!definition || Array.isArray(definition) || typeof definition !== 'object') {
+    return { ok: false, provider: 'klaviyo', error: 'klaviyo_flow_action_definition_required' };
+  }
+  const result = await klaviyoRequest(env, `/api/flow-actions/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    fetchImpl,
+    body: {
+      data: {
+        type: 'flow-action',
+        id,
+        attributes: { definition },
+      },
+    },
+  });
+  return flowActionSuccess(result, 'update_flow_action');
+}
+
+export async function createKlaviyoTemplate(env, {
+  name,
+  html,
+  text = '',
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  const cleanName = String(name || '').trim().slice(0, 255);
+  if (!cleanName || !String(html || '').trim()) {
+    return { ok: false, provider: 'klaviyo', error: 'klaviyo_template_content_required' };
+  }
+  const result = await klaviyoRequest(env, '/api/templates', {
+    method: 'POST',
+    fetchImpl,
+    body: {
+      data: {
+        type: 'template',
+        attributes: {
+          name: cleanName,
+          editor_type: 'CODE',
+          html: String(html),
+          text: String(text || ''),
+        },
+      },
+    },
+  });
+  return templateSuccess(result, 'create_template');
+}
+
+export async function updateKlaviyoTemplate(env, {
+  templateId,
+  name,
+  html,
+  text = '',
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  const id = String(templateId || '').trim();
+  const cleanName = String(name || '').trim().slice(0, 255);
+  if (!id) return { ok: false, provider: 'klaviyo', error: 'klaviyo_template_id_required' };
+  if (!cleanName || !String(html || '').trim()) {
+    return { ok: false, provider: 'klaviyo', error: 'klaviyo_template_content_required' };
+  }
+  const result = await klaviyoRequest(env, `/api/templates/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    fetchImpl,
+    body: {
+      data: {
+        type: 'template',
+        id,
+        attributes: {
+          name: cleanName,
+          html: String(html),
+          text: String(text || ''),
+        },
+      },
+    },
+  });
+  return templateSuccess(result, 'update_template');
+}
+
 export function normalizeIndustry(industry) {
   return String(industry || '')
     .toLowerCase()
