@@ -155,17 +155,29 @@
     trialAction.setAttribute("aria-label", "Try " + config.product.name + " on my cleaning job");
   }
 
+  function waitForSceneFade() {
+    if (reduce) return Promise.resolve();
+    return new Promise(function (resolveFade) {
+      window.requestAnimationFrame(function () {
+        window.setTimeout(resolveFade, 180);
+      });
+    });
+  }
+
   function activateSceneMedia(st) {
     var request = ++mediaRequest;
     var config = st.config;
+    var needsSwap = beforeImage.getAttribute("src") !== config.before.src
+      || afterImage.getAttribute("src") !== config.after.src;
     applySceneStyles(st);
     applySceneMetadata(st);
-    objectCard.classList.add("is-swapping");
+    objectCard.classList.toggle("is-swapping", needsSwap);
 
     Promise.all([
       preloadImage(config.before.src),
       preloadImage(config.after.src),
-      preloadImage(config.product.src)
+      preloadImage(config.product.src),
+      needsSwap ? waitForSceneFade() : Promise.resolve()
     ]).then(function (loaded) {
       if (request !== mediaRequest || activeState !== st) return;
       if (!loaded[0] || !loaded[1]) {
@@ -440,8 +452,8 @@
         defaults: { ease: "power2.out" },
         scrollTrigger: {
           trigger: st.act,
-          start: "top top+=59",
-          end: "bottom bottom",
+          start: "top center",
+          end: "bottom center",
           scrub: .24,
           invalidateOnRefresh: true,
           onEnter: function () { if (!disposed) activateState(st, true); },

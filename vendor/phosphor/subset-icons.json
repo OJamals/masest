@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 262,
-  "usedCount": 153,
+  "count": 261,
+  "usedCount": 152,
   "bufferCount": 109,
   "icons": [
     {
@@ -162,11 +162,6 @@
     {
       "name": "calendar-check",
       "cp": "E712",
-      "src": "used"
-    },
-    {
-      "name": "camera",
-      "cp": "E10E",
       "src": "used"
     },
     {

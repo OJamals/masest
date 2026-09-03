@@ -29,11 +29,12 @@ test("homepage story uses six named field-result scenes", () => {
 test("one persistent comparator carries each true pair and active product", () => {
   assert.equal((story.match(/class="story-object"/g) || []).length, 1);
   assert.match(story, /class="story-object__range" type="range" name="storyComparisonReveal" min="0" max="100" value="50"/);
-  assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-before-202609\.webp/);
-  assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-after-202609\.webp/);
+  assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-before-aligned-202609\.webp/);
+  assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-after-aligned-202609\.webp/);
   assert.match(story, /media\.masest\.co\/site\/img\/products\/crhd-food-beverage-studio\.webp/);
   assert.match(story, /Commercial-kitchen grease/);
   assert.match(story, /VertKleen CRHD/);
+  assert.match(story, /After frame digitally reconstructed from source photo\./);
   assert.match(story, /story-object__label--before[^>]*>Before</);
   assert.match(story, /story-object__label--after[^>]*>After</);
   assert.equal((story.match(/data-before-src="https:\/\/media\.masest\.co\/site\/img\/proof\/story\//g) || []).length, 6);
@@ -41,13 +42,35 @@ test("one persistent comparator carries each true pair and active product", () =
   assert.doesNotMatch(story, /supabase\.co\/storage\/v1\/object/i);
 });
 
-test("first scene explains the real aligned surface and exposes CRHD actions", () => {
+test("primary story carries the product thesis while every job stays a secondary proof note", () => {
+  const thesis = [
+    "Industrial strength. Better chemistry.",
+    "Built to outperform traditional cleaners.",
+    "Industrial results. HMIS 0-0-0.",
+    "Less expensive by the finished job.",
+    "The right strength for the soil.",
+    "Put both cleaners on the same job.",
+  ];
+
+  assert.equal((story.match(/class="story-job-note"/g) || []).length, 6);
+  for (let act = 1; act <= 6; act += 1) {
+    const scene = story.match(new RegExp(`<section class="act[^"]*"[^>]*data-act="${act}"[\\s\\S]*?<\\/section>`))?.[0] || "";
+    assert.ok(scene.includes(thesis[act - 1]), `scene ${act} must carry its primary thesis`);
+    assert.ok(scene.indexOf('class="act-p"') < scene.indexOf('class="story-job-note"'));
+  }
+
+  assert.match(story, /more soil removed, fewer repeat passes/i);
+  assert.match(story, /Every VertKleen product MASEST offers is rated 0-0-0/i);
+  assert.match(story, /chemical, labor, water, waste, and downtime/i);
+  assert.doesNotMatch(story, /class="proof-stats"|class="story-evidence"|class="story-ctas"/);
+});
+
+test("first scene keeps the real aligned kitchen result inside its proof note", () => {
   const actOne = story.match(/<section class="act[^"]*"[^>]*data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
 
-  assert.match(actOne, /Baked-on grease\. Bare stainless after\./);
-  assert.match(actOne, /same kitchen-line surface before and after cleaning/i);
+  assert.match(actOne, /class="story-job-note"/);
+  assert.match(actOne, /Baked-on residue to exposed stainless/i);
   assert.match(actOne, /Follow the lower seam and the grease line/i);
-  assert.match(actOne, /class="btn btn-primary" href="products\/crhd"[^>]*>Shop CRHD<\/a>/);
   assert.match(actOne, /href="proof#commercial-kitchen-crhd"/);
   assert.doesNotMatch(actOne, /story-shortcuts|reel-slide/);
 });
@@ -59,7 +82,7 @@ test("all six scenes identify product, alignment cue, and evidence route", () =>
     ["3", "VertKleen CR", "vessel curve and port", "proof#brewery-cip-trials"],
     ["4", "VertKleen Descaler", "glass edge", "products/descaler"],
     ["5", "VertKleen AlumiBrite", "top fasteners", "proof#airboat-alumibrite"],
-    ["6", "VertKleen HCR", "45&deg; clockwise", "docs/sds/vertkleen-hcr-pool-filter.pdf"],
+    ["6", "VertKleen HCR", "cap, bands, and pleat pattern stay registered", "docs/sds/vertkleen-hcr-pool-filter.pdf"],
   ];
   for (const [act, product, cue, href] of expectations) {
     const scene = story.match(new RegExp(`<section class="act[^"]*"[^>]*data-act="${act}"[\\s\\S]*?<\\/section>`))?.[0] || "";
@@ -101,9 +124,12 @@ test("story uses compact native-scroll roads and scene renderer contracts", () =
   const heights = [...storyCss.matchAll(/\.story \.act\[data-act="\d"\]\s*\{[^}]*height:\s*(\d+)vh/gs)]
     .map((match) => Number(match[1]));
   assert.equal(heights.length, 6);
-  assert.ok(heights.every((height) => height >= 100), heights);
-  assert.ok(heights.reduce((sum, height) => sum + height, 0) >= 650, heights);
-  assert.ok(heights.reduce((sum, height) => sum + height, 0) <= 700, heights);
+  assert.ok(heights.every((height) => height >= 80 && height <= 88), heights);
+  assert.ok(heights.reduce((sum, height) => sum + height, 0) >= 480, heights);
+  assert.ok(heights.reduce((sum, height) => sum + height, 0) <= 520, heights);
+  assert.match(storyCss, /\.story \.stage\s*\{[^}]*position:\s*relative[^}]*height:\s*100%/s);
+  assert.match(storyJs, /start:\s*"top center"/);
+  assert.match(storyJs, /end:\s*"bottom center"/);
 
   assert.match(storyJs, /var states = acts\.map/);
   assert.match(storyJs, /config: sceneConfig\(act\)/);

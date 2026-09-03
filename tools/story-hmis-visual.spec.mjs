@@ -9,9 +9,9 @@ let BASE_URL = "";
 const STORY_SCENES = [
   {
     id: "kitchen-grease",
-    rail: "01Kitchen",
-    before: "/site/img/proof/story/kitchen-grease-before-202609.webp",
-    after: "/site/img/proof/story/kitchen-grease-after-202609.webp",
+    rail: "01Strength",
+    before: "/site/img/proof/story/kitchen-grease-before-aligned-202609.webp",
+    after: "/site/img/proof/story/kitchen-grease-after-aligned-202609.webp",
     product: "/site/img/products/crhd-food-beverage-studio.webp",
     shop: "products/crhd",
     trialProduct: "VertKleen%20CRHD",
@@ -19,9 +19,9 @@ const STORY_SCENES = [
   },
   {
     id: "cip-vessel",
-    rail: "02CIP vessel",
-    before: "/site/img/proof/story/cip-vessel-before-202609.webp",
-    after: "/site/img/proof/story/cip-vessel-after-202609.webp",
+    rail: "02Outperform",
+    before: "/site/img/proof/story/cip-vessel-before-aligned-202609.webp",
+    after: "/site/img/proof/story/cip-vessel-after-aligned-202609.webp",
     product: "/site/img/products/cip-cr-studio.webp",
     shop: "products/cr",
     trialProduct: "VertKleen%20CR",
@@ -29,9 +29,9 @@ const STORY_SCENES = [
   },
   {
     id: "labelle-fermenter",
-    rail: "03Fermenter",
-    before: "/site/img/proof/story/labelle-fermenter-before-202609.webp",
-    after: "/site/img/proof/story/labelle-fermenter-after-202609.webp",
+    rail: "03HMIS 0-0-0",
+    before: "/site/img/proof/story/labelle-fermenter-before-aligned-202609.webp",
+    after: "/site/img/proof/story/labelle-fermenter-after-aligned-202609.webp",
     product: "/site/img/products/cip-cr-studio.webp",
     shop: "products/cr",
     trialProduct: "VertKleen%20CR",
@@ -39,9 +39,9 @@ const STORY_SCENES = [
   },
   {
     id: "shower-track",
-    rail: "04Calcium",
-    before: "/site/img/proof/story/shower-track-before-202609.webp",
-    after: "/site/img/proof/story/shower-track-after-202609.webp",
+    rail: "04Lower cost",
+    before: "/site/img/proof/story/shower-track-before-aligned-202609.webp",
+    after: "/site/img/proof/story/shower-track-after-aligned-202609.webp",
     product: "/site/img/products/descaler-studio.webp",
     shop: "products/descaler",
     trialProduct: "VertKleen%20Descaler",
@@ -49,9 +49,9 @@ const STORY_SCENES = [
   },
   {
     id: "airboat-panel",
-    rail: "05Aluminum",
-    before: "/site/img/proof/story/airboat-panel-before-202609.webp",
-    after: "/site/img/proof/story/airboat-panel-after-202609.webp",
+    rail: "05Right formula",
+    before: "/site/img/proof/story/airboat-panel-before-aligned-202609.webp",
+    after: "/site/img/proof/story/airboat-panel-after-aligned-202609.webp",
     product: "/site/img/products/alumibrite-studio.webp",
     shop: "products/alumibrite",
     trialProduct: "VertKleen%20AlumiBrite",
@@ -59,9 +59,9 @@ const STORY_SCENES = [
   },
   {
     id: "pool-cartridge",
-    rail: "06Filter",
-    before: "/site/img/proof/story/pool-cartridge-before-202609.webp",
-    after: "/site/img/proof/story/pool-cartridge-after-202609.webp",
+    rail: "06Prove it",
+    before: "/site/img/proof/story/pool-cartridge-before-aligned-202609.webp",
+    after: "/site/img/proof/story/pool-cartridge-after-aligned-202609.webp",
     product: "/site/img/products/cip-hcr-studio.webp",
     shop: "products/hcr",
     trialProduct: "VertKleen%20HCR",
@@ -99,9 +99,14 @@ async function openStory(page) {
 
 async function scrollAct(page, actNumber, progress = .5) {
   await page.locator(`.story .act[data-act="${actNumber}"]`).evaluate((act, fraction) => {
+    if (innerWidth <= 760) {
+      act.scrollIntoView({ block: "start" });
+      return;
+    }
     const story = document.getElementById("story");
-    const road = Math.max(0, act.offsetHeight - window.innerHeight);
-    window.scrollTo(0, story.offsetTop + act.offsetTop + road * fraction);
+    const start = story.offsetTop + act.offsetTop - window.innerHeight * .5;
+    const end = story.offsetTop + act.offsetTop + act.offsetHeight - window.innerHeight * .5;
+    window.scrollTo(0, start + (end - start) * fraction);
   }, progress);
   await page.waitForTimeout(500);
 }
@@ -148,8 +153,8 @@ test("story boots cleanly with one verified visual object and six scene renderer
     "media.masest.co",
   ]);
   expect(state.images.map((image) => image.source)).toEqual([
-    "/site/img/proof/story/kitchen-grease-before-202609.webp",
-    "/site/img/proof/story/kitchen-grease-after-202609.webp",
+    "/site/img/proof/story/kitchen-grease-before-aligned-202609.webp",
+    "/site/img/proof/story/kitchen-grease-after-aligned-202609.webp",
     "/site/img/products/crhd-food-beverage-studio.webp",
   ]);
   for (const image of state.images) {
@@ -177,10 +182,10 @@ test("desktop story uses a compact six-scene scroll road", async ({ page }) => {
     };
   });
 
-  expect(geometry.viewports, JSON.stringify(geometry)).toBeGreaterThanOrEqual(6.5);
-  expect(geometry.viewports, JSON.stringify(geometry)).toBeLessThanOrEqual(7.1);
+  expect(geometry.viewports, JSON.stringify(geometry)).toBeGreaterThanOrEqual(4.9);
+  expect(geometry.viewports, JSON.stringify(geometry)).toBeLessThanOrEqual(5.3);
   expect(geometry.actViewports).toHaveLength(6);
-  expect(geometry.actViewports.every((height) => height >= 1.1 && height <= 1.2), JSON.stringify(geometry)).toBe(true);
+  expect(geometry.actViewports.every((height) => height >= .83 && height <= .85), JSON.stringify(geometry)).toBe(true);
   expect(geometry.pageOverflow).toBe(0);
 });
 
@@ -226,6 +231,81 @@ test("same story object remains pinned while scene state and chapter navigation 
     expect(samples[index].after).toBe(STORY_SCENES[index].after);
     expect(samples[index].productSource).toBe(STORY_SCENES[index].product);
   }
+});
+
+test("preloaded scene media fades out before its source swaps and fades back in", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const requestedPaths = new Set();
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    if (url.hostname === "media.masest.co") requestedPaths.add(url.pathname);
+  });
+  await openStory(page);
+
+  await expect.poll(() => (
+    requestedPaths.has(STORY_SCENES[1].before)
+    && requestedPaths.has(STORY_SCENES[1].after)
+  )).toBe(true);
+
+  const handoff = await page.evaluate(async ({ sceneId, beforePath }) => {
+    const card = document.querySelector(".story-object__card");
+    const before = document.querySelector(".story-object__before");
+    const startedAt = performance.now();
+    const events = [];
+    const observer = new MutationObserver((records) => {
+      records.forEach((record) => {
+        if (record.target === card) {
+          events.push({
+            type: "card-class",
+            at: performance.now() - startedAt,
+            swapping: card.classList.contains("is-swapping"),
+          });
+        }
+        if (record.target === before) {
+          events.push({
+            type: "before-src",
+            at: performance.now() - startedAt,
+            path: new URL(before.currentSrc || before.src).pathname,
+          });
+        }
+      });
+    });
+    observer.observe(card, {
+      attributes: true,
+      attributeFilter: ["class", "src"],
+      subtree: true,
+    });
+
+    window.__MASESTStory.render(sceneId, .5);
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
+    observer.disconnect();
+
+    const swapStart = events.find((event) => event.type === "card-class" && event.swapping);
+    const sourceSwap = events.find((event) => (
+      event.type === "before-src" && event.path === beforePath
+    ));
+    const swapEnd = events.find((event) => (
+      event.type === "card-class"
+      && !event.swapping
+      && swapStart
+      && event.at >= swapStart.at
+    ));
+    return {
+      events,
+      fadeOutMs: sourceSwap && swapStart ? sourceSwap.at - swapStart.at : -1,
+      fadeInStarted: Boolean(swapEnd && sourceSwap && swapEnd.at >= sourceSwap.at),
+      finalPath: new URL(before.currentSrc || before.src).pathname,
+      finalOpacity: Number(getComputedStyle(before).opacity),
+    };
+  }, {
+    sceneId: STORY_SCENES[1].id,
+    beforePath: STORY_SCENES[1].before,
+  });
+
+  expect(handoff.finalPath, JSON.stringify(handoff.events)).toBe(STORY_SCENES[1].before);
+  expect(handoff.fadeOutMs, JSON.stringify(handoff.events)).toBeGreaterThanOrEqual(140);
+  expect(handoff.fadeInStarted, JSON.stringify(handoff.events)).toBe(true);
+  expect(handoff.finalOpacity).toBe(1);
 });
 
 test("story requests only R2 media and preloads at most the next comparison", async ({ page }) => {
@@ -287,7 +367,7 @@ test("native range overrides scroll reveal per scene and remains reversible", as
   expect(await range.inputValue()).toBe("73");
 });
 
-test("pool-cartridge after frame applies the requested 45-degree clockwise turn", async ({ page }) => {
+test("pool-cartridge uses pre-registered pixels without runtime rotation", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
   await scrollAct(page, 6, .52);
@@ -307,7 +387,7 @@ test("pool-cartridge after frame applies the requested 45-degree clockwise turn"
   });
 
   expect(state.scene).toBe("pool-cartridge");
-  expect(state.rotate).toBe("45deg");
+  expect(state.rotate).toBe("0deg");
   expect(state.transform).toMatch(/^matrix\(/);
   expect(state.source).toBe(STORY_SCENES[5].after);
 });
@@ -468,7 +548,7 @@ for (const width of [320, 390, 430]) {
         story.querySelector(".story-actions"),
         story.querySelector(".story-object__card"),
         ...story.querySelectorAll(".act-content"),
-        story.querySelector(".proof-stats"),
+        story.querySelector(".story-job-note"),
       ].map((element) => {
         const rect = element.getBoundingClientRect();
         return { left: rect.left, right: rect.right, width: rect.width };
@@ -601,11 +681,6 @@ test("desktop tab order excludes links until their reveal is visible", async ({ 
     tabIndex: link.tabIndex,
   }));
 
-  expect(await linkState(1)).toMatchObject({ opacity: 0, tabIndex: -1 });
-  await scrollAct(page, 1, .94);
-  expect((await linkState(1)).opacity).toBeGreaterThan(.5);
-  expect((await linkState(1)).tabIndex).toBe(0);
-
   await scrollAct(page, 3, .05);
   expect(await linkState(3)).toMatchObject({ opacity: 0, tabIndex: -1 });
   await scrollAct(page, 3, .94);
@@ -679,7 +754,8 @@ test("missing GSAP exposes complete static content and final proof", async ({ pa
         height: act.getBoundingClientRect().height,
         text: act.innerText.trim().length,
       })),
-      href: story.querySelector('.act[data-act="1"] .btn-primary').getAttribute("href"),
+      proofHrefs: [...story.querySelectorAll(".story-job-note a")]
+        .map((link) => link.getAttribute("href")),
     };
   });
 
@@ -689,7 +765,9 @@ test("missing GSAP exposes complete static content and final proof", async ({ pa
   expect(fallback.scene).toBe("kitchen-grease");
   expect(fallback.reveal).toBeGreaterThanOrEqual(49);
   expect(fallback.reveal).toBeLessThanOrEqual(51);
-  expect(fallback.href).toBe("products/crhd");
+  expect(fallback.proofHrefs).toHaveLength(6);
+  expect(fallback.proofHrefs[0]).toBe("proof#commercial-kitchen-crhd");
+  expect(fallback.proofHrefs[5]).toBe("docs/sds/vertkleen-hcr-pool-filter.pdf");
   for (const act of fallback.acts) {
     expect(act.ariaHidden).toBeNull();
     expect(act.height).toBeGreaterThan(200);

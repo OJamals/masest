@@ -20,9 +20,12 @@ const expectedScenes = [
 ];
 
 const expectedAssets = expectedScenes.flatMap(([, scene]) => [
-  `/img/proof/story/${scene}-before-202609.webp`,
-  `/img/proof/story/${scene}-after-202609.webp`,
+  `/img/proof/story/${scene}-before-aligned-202609.webp`,
+  `/img/proof/story/${scene}-after-aligned-202609.webp`,
 ]);
+
+const alignedWidth = 1200;
+const alignedHeight = 1017;
 
 test("homepage story contains six R2-backed true before-after scenes", () => {
   assert.deepEqual(sceneTags.map((match) => [match[1], match[2]]), expectedScenes);
@@ -31,14 +34,14 @@ test("homepage story contains six R2-backed true before-after scenes", () => {
 
   for (const [act, scene] of expectedScenes) {
     const section = sceneTags.find((match) => match[1] === act)?.[0] || "";
-    const before = `https://media.masest.co/site/img/proof/story/${scene}-before-202609.webp`;
-    const after = `https://media.masest.co/site/img/proof/story/${scene}-after-202609.webp`;
+    const before = `https://media.masest.co/site/img/proof/story/${scene}-before-aligned-202609.webp`;
+    const after = `https://media.masest.co/site/img/proof/story/${scene}-after-aligned-202609.webp`;
     assert.match(section, new RegExp(`data-before-src="${before.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
     assert.match(section, new RegExp(`data-after-src="${after.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
-    assert.match(section, /data-before-width="\d+"/);
-    assert.match(section, /data-before-height="\d+"/);
-    assert.match(section, /data-after-width="\d+"/);
-    assert.match(section, /data-after-height="\d+"/);
+    assert.match(section, new RegExp(`data-before-width="${alignedWidth}"`));
+    assert.match(section, new RegExp(`data-before-height="${alignedHeight}"`));
+    assert.match(section, new RegExp(`data-after-width="${alignedWidth}"`));
+    assert.match(section, new RegExp(`data-after-height="${alignedHeight}"`));
     assert.match(section, /data-product-src="https:\/\/media\.masest\.co\/site\/img\/products\//);
   }
 });
@@ -59,11 +62,13 @@ test("story comparison is scroll-driven and can be overridden with an accessible
   assert.match(storyCss, /left:\s*var\(--story-reveal\)/);
 });
 
-test("pool-cartridge after frame rotates 45 degrees clockwise only", () => {
-  const pool = sceneTags.find((match) => match[2] === "pool-cartridge")?.[0] || "";
-  assert.match(pool, /data-after-rotate="45"/);
-  for (const match of sceneTags.filter((match) => match[2] !== "pool-cartridge")) {
-    assert.doesNotMatch(match[0], /data-after-rotate="45"/);
+test("all comparison frames use one locked camera with no runtime correction", () => {
+  for (const match of sceneTags) {
+    assert.match(match[0], /data-before-position="50% 50%"/);
+    assert.match(match[0], /data-after-position="50% 50%"/);
+    assert.match(match[0], /data-before-scale="1"/);
+    assert.match(match[0], /data-after-scale="1"/);
+    assert.match(match[0], /data-after-rotate="0"/);
   }
   assert.match(storyCss, /rotate\(var\(--story-after-rotate\)\)/);
 });
@@ -77,7 +82,8 @@ test("all twelve story frames stay in the site-image ledger for R2 byte verifica
     assert.equal(asset.mime_type, "image/webp");
     assert.match(asset.sha256, /^[a-f0-9]{64}$/);
     assert.ok(asset.byte_size > 0);
-    assert.ok(asset.width > 0 && asset.height > 0);
+    assert.equal(asset.width, alignedWidth);
+    assert.equal(asset.height, alignedHeight);
     assert.equal(existsSync(new URL(`..${path}`, import.meta.url)), true, `${path} source exists`);
   }
 });
