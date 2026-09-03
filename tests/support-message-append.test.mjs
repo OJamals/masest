@@ -46,6 +46,7 @@ test('canonical support append delegates one atomic database call', async () => 
       p_company_id: COMPANY_ID,
       p_user_id: USER_ID,
       p_recipient_user_id: null,
+      p_thread_user_id: USER_ID,
       p_sender_role: 'buyer',
       p_body: 'Need help with delivery',
       p_order_id: ORDER_ID,
@@ -97,24 +98,25 @@ test('support order hydration bounds large thread-list lookups', async () => {
 });
 
 test('support integration migration owns message, projection, order request, and grants atomically', () => {
-  const sql = readFileSync(new URL('../supabase/schema-unified-support-messages.sql', import.meta.url), 'utf8');
+  const sql = readFileSync(new URL('../supabase/migrate-support-participant-threads-2026-09-03.sql', import.meta.url), 'utf8');
 
   assert.match(sql, /create or replace function public\.append_support_message\s*\(/i);
   assert.match(sql, /insert into public\.messages/i);
   assert.match(sql, /create trigger messages_project_support_thread[\s\S]*after insert on public\.messages/i);
   assert.match(sql, /create or replace function public\.project_support_message\s*\(/i);
+  assert.match(sql, /update public\.support_threads/i);
   assert.match(sql, /update public\.companies/i);
-  assert.match(sql, /support_last_order_id/i);
+  assert.match(sql, /last_order_id/i);
   assert.match(sql, /recipient_user_id/i);
   assert.match(sql, /email_message_id/i);
-  assert.match(sql, /where id = p_order_id\s+and company_id = p_company_id/i);
+  assert.match(sql, /support_order_thread_mismatch/i);
   assert.match(sql, /create or replace function public\.create_order_support_request\s*\(/i);
   assert.match(sql, /insert into public\.order_requests/i);
   assert.match(sql, /public\.append_support_message\s*\(/i);
-  assert.match(sql, /v_order\.user_id is distinct from p_requested_by and not v_can_message/i);
-  assert.match(sql, /'chat_linked', v_can_message/i);
+  assert.match(sql, /v_order\.user_id = p_requested_by/i);
+  assert.match(sql, /'chat_linked', true/i);
   assert.match(sql, /on conflict \(order_id, type\) where status = 'open' do nothing/i);
-  assert.match(sql, /revoke execute on function public\.append_support_message[\s\S]*from anon, authenticated/i);
+  assert.match(sql, /revoke all on function public\.append_support_message[\s\S]*from public, anon, authenticated/i);
   assert.match(sql, /grant execute on function public\.append_support_message[\s\S]*to service_role/i);
   const inboundEmail = sql.match(/create or replace function public\.upsert_email_inbound_message[\s\S]*?grant execute on function public\.upsert_email_inbound_message/i)?.[0] || '';
   assert.match(inboundEmail, /'email_reply'/i);
@@ -123,5 +125,6 @@ test('support integration migration owns message, projection, order request, and
   assert.match(inboundEmail, /v_message\.order_id is distinct from p_order_id/i);
   assert.match(inboundEmail, /v_message\.user_id is distinct from p_user_id/i);
   assert.match(inboundEmail, /v_message\.recipient_user_id is distinct from p_recipient_user_id/i);
+  assert.match(sql, /revoke all on function public\.upsert_email_inbound_message[\s\S]*from public, anon, authenticated/i);
   assert.match(sql, /grant execute on function public\.upsert_email_inbound_message[\s\S]*to service_role/i);
 });

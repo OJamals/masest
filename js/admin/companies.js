@@ -3,9 +3,9 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260903a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260903a';
-import { ORDER_STATUSES } from './orders.js?v=20260903a';
+import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260903b';
+import { captureDirty, restoreDirty } from './edits.js?v=20260903b';
+import { ORDER_STATUSES } from './orders.js?v=20260903b';
 
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
@@ -1171,7 +1171,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
         </form>
         <div class="company-detail-actions">
           <button class="btn btn-primary btn-sm" type="button" data-account-user-save="${esc(user.id)}" data-capability="user.manage">Save user</button>
-          ${company?.id ? '<button class="btn btn-secondary btn-sm" type="button" data-account-user-message data-capability="admin.write"><i class="ph ph-chat-circle-dots" aria-hidden="true"></i> Start chat</button>' : ''}
+          ${user.id ? '<button class="btn btn-secondary btn-sm" type="button" data-account-user-message data-capability="admin.write"><i class="ph ph-chat-circle-dots" aria-hidden="true"></i> Start chat</button>' : ''}
           <button class="btn btn-ghost btn-sm" type="button" data-au-delete="${esc(user.id)}" data-au-email="${esc(user.email || '')}" data-capability="user.manage"><i class="ph ph-trash" aria-hidden="true"></i> Delete user</button>
         </div>
       </div>

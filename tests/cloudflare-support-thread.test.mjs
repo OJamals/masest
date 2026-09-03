@@ -10,6 +10,7 @@ const COMPANY_ID = '11111111-1111-4111-8111-111111111111';
 const MESSAGE_ID = '22222222-2222-4222-8222-222222222222';
 const BUYER_ID = '33333333-3333-4333-8333-333333333333';
 const ORDER_ID = '44444444-4444-4444-8444-444444444444';
+const THREAD_ID = '77777777-7777-4777-8777-777777777777';
 
 test('support delivery keeps provider identity separate from Cloudflare-generated RFC Message-ID', async () => {
   let replyTarget = null;
@@ -121,10 +122,16 @@ test('inbound reply address resolves the exact customer-order parent before chat
     messageIdFromReplyAddress: async () => MESSAGE_ID,
     replyMessage: async () => ({
       id: MESSAGE_ID,
+      thread_id: THREAD_ID,
       company_id: COMPANY_ID,
       sender_role: 'staff',
       recipient_user_id: BUYER_ID,
       order_id: ORDER_ID,
+    }),
+    replyThread: async () => ({
+      id: THREAD_ID,
+      participant_user_id: BUYER_ID,
+      company_id: COMPANY_ID,
     }),
     senderIdentity: async () => ({ role: 'buyer', userId: BUYER_ID }),
     upsertMessage: async (_sb, value) => {
@@ -142,6 +149,7 @@ test('inbound reply address resolves the exact customer-order parent before chat
     deliverMessage: async () => ({ ok: true }),
   });
   assert.equal(upserted.companyId, COMPANY_ID);
+  assert.equal(upserted.threadId, THREAD_ID);
   assert.equal(upserted.orderId, ORDER_ID);
   assert.equal(upserted.userId, BUYER_ID);
   assert.equal(upserted.emailId, '<buyer-reply@example.com>');

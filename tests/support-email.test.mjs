@@ -11,6 +11,7 @@ const BUYER_ID = '00000000-0000-4000-8000-000000000002';
 const STAFF_ID = '00000000-0000-4000-8000-000000000004';
 const ORDER_ID = '00000000-0000-4000-8000-000000000003';
 const MESSAGE_ID = '00000000-0000-4000-8000-000000000005';
+const THREAD_ID = '00000000-0000-4000-8000-000000000006';
 
 test('staff message uses canonical email gateway with exact buyer, order, and RFC thread', async () => {
   let sent;
@@ -137,6 +138,7 @@ test('customer and staff email replies append through canonical chat with exact 
     const parent = senderRole === 'buyer'
       ? {
           id: MESSAGE_ID,
+          thread_id: THREAD_ID,
           company_id: COMPANY_ID,
           sender_role: 'staff',
           user_id: STAFF_ID,
@@ -145,6 +147,7 @@ test('customer and staff email replies append through canonical chat with exact 
         }
       : {
           id: MESSAGE_ID,
+          thread_id: THREAD_ID,
           company_id: COMPANY_ID,
           sender_role: 'buyer',
           user_id: BUYER_ID,
@@ -165,6 +168,11 @@ test('customer and staff email replies append through canonical chat with exact 
       sb: {},
       messageIdFromReplyAddress: async () => MESSAGE_ID,
       replyMessage: async () => parent,
+      replyThread: async () => ({
+        id: THREAD_ID,
+        participant_user_id: BUYER_ID,
+        company_id: COMPANY_ID,
+      }),
       senderIdentity: async () => ({
         role: senderRole,
         userId: senderRole === 'buyer' ? BUYER_ID : STAFF_ID,
@@ -187,6 +195,7 @@ test('customer and staff email replies append through canonical chat with exact 
 
     assert.deepEqual(result, { routed: true, duplicate: false });
     assert.equal(upserted.senderRole, senderRole);
+    assert.equal(upserted.threadId, THREAD_ID);
     assert.equal(upserted.orderId, ORDER_ID);
     assert.equal(upserted.recipientUserId, senderRole === 'staff' ? BUYER_ID : null);
     assert.equal(

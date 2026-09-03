@@ -1,7 +1,7 @@
-// /api/account/messages — support thread between the caller's company and MASEST staff.
+// /api/account/messages — the caller's participant chat plus any shared company chat.
 //   GET → thread (marks staff msgs read by user unless ?peek=1) · POST { body } → buyer post
 //   POST { action: 'chat_presence', chat_open } → authenticated buyer chat state
-import { requireCompany, json, readBody } from '../../_lib/supabase.js';
+import { requireCommerceUser, json, readBody } from '../../_lib/supabase.js';
 import { rateLimit, clientIp } from '../../_lib/ratelimit.js';
 import { publishSupportMessage } from '../../_lib/support-message-publisher.js';
 import {
@@ -11,8 +11,20 @@ import {
   SUPPORT_PAGE_SIZE,
 } from '../../_lib/support-messages.js';
 
+async function visibleSupportThreadIds(sb, userId, companyId) {
+  const [participantResult, companyResult] = await Promise.all([
+    sb.from('support_threads').select('id').eq('participant_user_id', userId).maybeSingle(),
+    companyId
+      ? sb.from('support_threads').select('id')
+        .eq('company_id', companyId).is('participant_user_id', null).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (participantResult.error || companyResult.error) throw participantResult.error || companyResult.error;
+  return [participantResult.data?.id, companyResult.data?.id].filter(Boolean);
+}
+
 export async function onRequest({ request, env }) {
-  const ctx = await requireCompany(request, env);
+  const ctx = await requireCommerceUser(request, env);
   if (ctx.error) return ctx.error;
   const { user, companyId, sb } = ctx;
 
@@ -23,12 +35,22 @@ export async function onRequest({ request, env }) {
     const orderContext = await resolveSupportOrderId(sb, {
       orderId: url.searchParams.get('order_id'),
       companyId,
+      userId: user.id,
     });
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
+    let threadIds;
+    try { threadIds = await visibleSupportThreadIds(sb, user.id, companyId); }
+    catch { return json(500, { error: 'server_error' }); }
+    if (!threadIds.length) {
+      return json(200, {
+        messages: [], has_more: false, next_before: null,
+        order_scope: orderContext.order || null,
+      });
+    }
     let query = sb
       .from('messages')
-      .select('id,sender_role,body,order_id,source,created_at')
-      .eq('company_id', companyId)
+      .select('id,thread_id,sender_role,body,order_id,source,created_at')
+      .in('thread_id', threadIds)
       .order('created_at', { ascending: false })
       .limit(SUPPORT_PAGE_SIZE + 1);
     if (orderContext.orderId) query = query.eq('order_id', orderContext.orderId);
@@ -37,13 +59,13 @@ export async function onRequest({ request, env }) {
     if (error) return json(500, { error: 'server_error' });
     if (!peek) {
       let readQuery = sb.from('messages').update({ read_by_user: true })
-        .eq('company_id', companyId).eq('sender_role', 'staff').eq('read_by_user', false);
+        .in('thread_id', threadIds).eq('sender_role', 'staff').eq('read_by_user', false);
       if (orderContext.orderId) readQuery = readQuery.eq('order_id', orderContext.orderId);
       await readQuery;
     }
     try {
       const page = messagePage(data, SUPPORT_PAGE_SIZE);
-      page.messages = await hydrateSupportOrderContexts(sb, page.messages, companyId);
+      page.messages = await hydrateSupportOrderContexts(sb, page.messages);
       page.order_scope = orderContext.order || null;
       return json(200, page);
     } catch {
@@ -76,6 +98,7 @@ export async function onRequest({ request, env }) {
     const orderContext = await resolveSupportOrderId(sb, {
       orderId: body.order_id,
       companyId,
+      userId: user.id,
     });
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
     let publication;
@@ -86,6 +109,7 @@ export async function onRequest({ request, env }) {
       }, sb, {
         companyId,
         userId: user.id,
+        threadUserId: user.id,
         senderRole: 'buyer',
         body: text,
         orderId: orderContext.orderId,
@@ -98,6 +122,7 @@ export async function onRequest({ request, env }) {
 
     return json(201, {
       id: data.id,
+      thread_id: data.thread_id,
       created_at: data.created_at,
       order_id: data.order_id || null,
       email_delivery: emailDelivery,

@@ -17,7 +17,8 @@ test('supabase.js derives company gates from the typed commerce snapshot', () =>
   assert.match(context, /select\('id,name,status,price_tier,tax_exempt,stripe_customer_id'\)/, 'resolves Company commerce fields once');
 });
 
-// Every company-scoped account route uses the wrapper instead of re-deriving the company.
+// Company-scoped routes require a company. Personal commerce routes also admit
+// authenticated retail buyers whose profile has no company.
 const ROUTES = [
   'functions/api/account/orders.js',
   'functions/api/account/order.js',
@@ -28,9 +29,11 @@ const ROUTES = [
 ];
 
 for (const path of ROUTES) {
-  test(`${path} uses requireCompany`, () => {
+  test(`${path} uses its canonical commerce guard`, () => {
     const src = read(path);
-    const primitive = path.endsWith('/order.js') ? 'requireCommerceUser' : 'requireCompany';
+    const primitive = path.endsWith('/order.js') || path.endsWith('/messages.js')
+      ? 'requireCommerceUser'
+      : 'requireCompany';
     assert.match(src, new RegExp(`import\\s*\\{[^}]*${primitive}[^}]*\\}\\s*from\\s*['\"][^'\"]*supabase\\.js['\"]`), `must import ${primitive}`);
     assert.match(src, new RegExp(`${primitive}\\(request, env\\)`), `must call ${primitive}`);
     assert.doesNotMatch(src, /companyForUser\(/, 'must not re-derive the company itself');

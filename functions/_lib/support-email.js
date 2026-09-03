@@ -70,23 +70,27 @@ function orderLine(order) {
 
 async function orderContext(sb, message) {
   if (!message?.order_id) return null;
-  const contexts = await supportOrderContextsById(sb, [message.order_id], message.company_id);
+  const contexts = await supportOrderContextsById(sb, [message.order_id]);
   return contexts.get(message.order_id) || null;
 }
 
 async function threadParent(sb, message) {
-  if (!message?.company_id) return null;
+  if (!message?.thread_id && !message?.company_id) return null;
   let query = sb.from('messages')
     .select('id,email_message_id,email_references,created_at')
-    .eq('company_id', message.company_id)
     .or('email_message_id.not.is.null,email_references.not.is.null')
     .order('created_at', { ascending: false })
     .limit(1);
+  query = message.thread_id
+    ? query.eq('thread_id', message.thread_id)
+    : query.eq('company_id', message.company_id);
   if (message.id) query = query.neq('id', message.id);
   if (message.order_id) query = query.eq('order_id', message.order_id);
   else query = query.is('order_id', null);
-  const participantId = message.sender_role === 'staff' ? message.recipient_user_id : message.user_id;
-  if (participantId) query = query.or(`user_id.eq.${participantId},recipient_user_id.eq.${participantId}`);
+  if (!message.thread_id) {
+    const participantId = message.sender_role === 'staff' ? message.recipient_user_id : message.user_id;
+    if (participantId) query = query.or(`user_id.eq.${participantId},recipient_user_id.eq.${participantId}`);
+  }
   const { data, error } = await query.maybeSingle();
   if (error) throw error;
   const messageId = data?.email_message_id || messageIds(data?.email_references).at(-1) || null;
@@ -125,30 +129,45 @@ async function saveProviderDelivery(sb, message, deliveryId, references, depende
       };
 }
 
-async function senderIdentity(sb, sender, companyId, env) {
+async function senderIdentity(sb, sender, thread, env) {
   const address = emailAddress(sender);
   if (!address) return null;
-  const [{ data: members, error: memberError }, { data: staff, error: staffError }] = await Promise.all([
-    sb.from('profiles').select('id').eq('company_id', companyId),
+  const buyerQuery = thread?.participant_user_id
+    ? sb.from('profiles').select('id').eq('id', thread.participant_user_id)
+    : thread?.company_id
+      ? sb.from('profiles').select('id').eq('company_id', thread.company_id)
+      : Promise.resolve({ data: [], error: null });
+  const [{ data: buyers, error: buyerError }, { data: staff, error: staffError }] = await Promise.all([
+    buyerQuery,
     sb.from('profiles').select('id,is_staff').eq('is_staff', true),
   ]);
-  if (memberError) throw memberError;
+  if (buyerError) throw buyerError;
   if (staffError) throw staffError;
-  const profiles = [...(members || []), ...(staff || [])];
+  const profiles = [...(buyers || []), ...(staff || [])];
   const emails = await emailsByIds(sb, profiles.map((profile) => profile.id));
   const staffProfile = (staff || []).find((profile) => emailAddress(emails[profile.id]) === address);
   if (staffProfile || isStaffEmail(address, env)) {
     return { role: 'staff', userId: staffProfile?.id || null };
   }
-  const member = (members || []).find((profile) => emailAddress(emails[profile.id]) === address);
-  if (member) return { role: 'buyer', userId: member.id };
+  const buyer = (buyers || []).find((profile) => emailAddress(emails[profile.id]) === address);
+  if (buyer) return { role: 'buyer', userId: buyer.id };
   return null;
 }
 
 async function loadReplyMessage(sb, messageId) {
   const { data, error } = await sb.from('messages')
-    .select('id,company_id,sender_role,user_id,recipient_user_id,order_id')
+    .select('id,thread_id,company_id,sender_role,user_id,recipient_user_id,order_id')
     .eq('id', messageId)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+async function loadReplyThread(sb, threadId) {
+  if (!threadId) return null;
+  const { data, error } = await sb.from('support_threads')
+    .select('id,participant_user_id,company_id')
+    .eq('id', threadId)
     .maybeSingle();
   if (error) throw error;
   return data || null;
@@ -164,6 +183,7 @@ async function upsertInboundMessage(sb, input) {
     p_recipient_user_id: input.recipientUserId,
     p_order_id: input.orderId,
     p_email_references: input.emailReferences,
+    p_thread_id: input.threadId,
   });
   if (error) throw error;
   if (!data?.message_id && !data?.id) throw new Error('email_inbound_message_upsert_failed');
@@ -171,7 +191,9 @@ async function upsertInboundMessage(sb, input) {
 }
 
 export async function deliverSupportMessageEmail(env, sb, message, dependencies = {}) {
-  if (!message?.id || !message?.company_id || !['buyer', 'staff'].includes(message.sender_role)) {
+  const hasThreadOwner = message?.thread_id || message?.company_id
+    || message?.user_id || message?.recipient_user_id;
+  if (!message?.id || !hasThreadOwner || !['buyer', 'staff'].includes(message.sender_role)) {
     return { ok: false, retryable: false, error: 'invalid_support_message' };
   }
   if (message.email_delivery_id && message.email_message_id) {
@@ -223,7 +245,7 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     },
     references: inheritedIds.join(' '),
   } : threadHeaders(parent);
-  const companyName = message.company_name || message.company_id;
+  const companyName = message.company_name || message.customer_name || message.company_id || 'Customer';
   const isStaffMessage = message.sender_role === 'staff';
   const appUrl = String(env?.APP_URL || 'https://masest.co').replace(/\/+$/, '');
   const ctaPath = isStaffMessage
@@ -274,10 +296,18 @@ export async function routeInboundMessageReply(env, input, dependencies = {}) {
   if (!replyMessageId) return { routed: false, reason: 'invalid_reply_address' };
   const sb = dependencies.sb || adminClient(env);
   const parent = await (dependencies.replyMessage || loadReplyMessage)(sb, replyMessageId);
-  if (!parent?.company_id) return { routed: false, reason: 'reply_message_not_found' };
-  const companyId = parent.company_id;
+  if (!parent?.id) return { routed: false, reason: 'reply_message_not_found' };
+  const thread = parent.thread_id
+    ? await (dependencies.replyThread || loadReplyThread)(sb, parent.thread_id)
+    : {
+        id: null,
+        participant_user_id: parent.recipient_user_id || parent.user_id || null,
+        company_id: parent.company_id || null,
+      };
+  if (!thread) return { routed: false, reason: 'reply_thread_not_found' };
+  const companyId = thread.company_id || null;
   const sender = emailAddress(input?.from);
-  const identity = await (dependencies.senderIdentity || senderIdentity)(sb, sender, companyId, env);
+  const identity = await (dependencies.senderIdentity || senderIdentity)(sb, sender, thread, env);
   if (!identity) return { routed: false, reason: 'sender_not_participant' };
   if (identity.role === 'buyer'
     && (parent.sender_role !== 'staff' || parent.recipient_user_id !== identity.userId)) {
@@ -297,6 +327,7 @@ export async function routeInboundMessageReply(env, input, dependencies = {}) {
     headerValue(headers, 'message-id'),
   ).join(' ') || null;
   const result = await (dependencies.upsertMessage || upsertInboundMessage)(sb, {
+    threadId: thread.id || parent.thread_id || null,
     companyId,
     userId: identity.role === 'buyer' ? identity.userId : null,
     senderRole: identity.role,
@@ -309,7 +340,8 @@ export async function routeInboundMessageReply(env, input, dependencies = {}) {
   const message = {
     ...result,
     id: result.id || result.message_id,
-    company_id: result.company_id || companyId,
+    thread_id: result.thread_id || thread.id || parent.thread_id || null,
+    company_id: result.company_id ?? companyId,
     sender_role: result.sender_role || identity.role,
     user_id: result.user_id ?? (identity.role === 'buyer' ? identity.userId : null),
     recipient_user_id: result.recipient_user_id

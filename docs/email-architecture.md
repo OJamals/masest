@@ -57,6 +57,10 @@ Test sends require `KLAVIYO_TEST_LIST_ID`; production audience always uses
 
 Apply these migrations before release:
 
+- `supabase/schema-unified-support-messages.sql`
+- `supabase/migrate-cloudflare-email-service-2026-08-31.sql`
+- `supabase/migrate-email-inbound-reference-regex-2026-09-01.sql`
+- `supabase/migrate-support-participant-threads-2026-09-03.sql`
 - `supabase/schema-notification-prefs.sql`
 - `supabase/schema-newsletters.sql`
 - `supabase/schema-blog-newsletter.sql`
@@ -65,3 +69,9 @@ Apply these migrations before release:
 Existing accounts are not repeatedly scanned. Backfill them into Klaviyo once,
 then rely on registration, explicit preference changes, newsletter signup, and
 recipient admin actions for ongoing sync.
+
+Support email and dashboard chat share `support_threads`. One participant thread
+belongs to one user, may reference that user's current or past orders, and keeps
+the same identity when a reply returns through `reply.masest.co`. Company-wide
+business conversations use the same table with no participant. Legacy company
+summary columns remain a compatibility projection; they do not own chat state.

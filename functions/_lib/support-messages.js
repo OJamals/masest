@@ -4,20 +4,25 @@ export const SUPPORT_PAGE_SIZE = 200;
 export const SUPPORT_PRESENCE_TTL_MS = 45_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export async function resolveSupportOrderId(sb, { orderId, companyId } = {}) {
+export async function resolveSupportOrderId(sb, { orderId, companyId = null, userId = null } = {}) {
   const id = String(orderId || '').trim();
   if (!id) return { ok: true, orderId: null };
-  if (!UUID.test(id) || !companyId) {
+  const targetCompanyId = String(companyId || '').trim() || null;
+  const targetUserId = String(userId || '').trim() || null;
+  if (!UUID.test(id) || (!targetCompanyId && !targetUserId)) {
     return { ok: false, status: 404, error: 'order_not_found' };
   }
 
   const { data, error } = await sb.from('orders')
     .select('id,order_number,status,company_id,user_id,customer_email')
     .eq('id', id)
-    .eq('company_id', companyId)
     .maybeSingle();
   if (error) return { ok: false, status: 500, error: 'server_error' };
-  if (!data) return { ok: false, status: 404, error: 'order_not_found' };
+  const ownedByUser = targetUserId && data?.user_id === targetUserId;
+  const ownedByCompany = targetCompanyId && data?.company_id === targetCompanyId;
+  if (!data || (!ownedByUser && !ownedByCompany)) {
+    return { ok: false, status: 404, error: 'order_not_found' };
+  }
   return {
     ok: true,
     orderId: data.id,
@@ -27,7 +32,7 @@ export async function resolveSupportOrderId(sb, { orderId, companyId } = {}) {
   };
 }
 
-const SUPPORT_RECIPIENT_SELECT = 'id,full_name,notify_messages,support_chat_open,support_chat_seen_at';
+const SUPPORT_RECIPIENT_SELECT = 'id,company_id,full_name,notify_messages,support_chat_open,support_chat_seen_at';
 
 async function recipientWithEmail(sb, profile) {
   if (!profile?.id) return null;
@@ -36,22 +41,21 @@ async function recipientWithEmail(sb, profile) {
 }
 
 export async function resolveSupportRecipient(sb, { companyId, userId = null, email = null } = {}) {
-  const targetCompanyId = String(companyId || '').trim();
+  const targetCompanyId = String(companyId || '').trim() || null;
   const targetUserId = String(userId || '').trim();
   const targetEmail = String(email || '').trim().toLowerCase();
-  if (!targetCompanyId) return null;
 
   if (targetUserId) {
-    const { data, error } = await sb.from('profiles')
+    let query = sb.from('profiles')
       .select(SUPPORT_RECIPIENT_SELECT)
-      .eq('id', targetUserId)
-      .eq('company_id', targetCompanyId)
-      .maybeSingle();
+      .eq('id', targetUserId);
+    if (targetCompanyId) query = query.eq('company_id', targetCompanyId);
+    const { data, error } = await query.maybeSingle();
     if (error) throw error;
     if (data) return recipientWithEmail(sb, data);
   }
 
-  if (!targetEmail) return null;
+  if (!targetEmail || !targetCompanyId) return null;
   const { data, error } = await sb.from('profiles')
     .select(SUPPORT_RECIPIENT_SELECT)
     .eq('company_id', targetCompanyId)
@@ -68,6 +72,7 @@ export async function appendSupportMessage(sb, {
   companyId,
   userId = null,
   recipientUserId = null,
+  threadUserId = userId || recipientUserId || null,
   senderRole,
   body,
   orderId = null,
@@ -78,6 +83,7 @@ export async function appendSupportMessage(sb, {
     p_company_id: companyId,
     p_user_id: userId,
     p_recipient_user_id: recipientUserId,
+    p_thread_user_id: threadUserId,
     p_sender_role: senderRole,
     p_body: body,
     p_order_id: orderId,
@@ -151,14 +157,14 @@ export function supportThreadPatch(status, userId, now = new Date().toISOString(
   if (!['open', 'escalated', 'complete'].includes(status)) return null;
   if (status === 'complete') {
     return {
-      support_thread_status: 'complete',
-      support_thread_completed_at: now,
-      support_thread_completed_by: userId,
+      status: 'complete',
+      completed_at: now,
+      completed_by: userId,
     };
   }
   return {
-    support_thread_status: status,
-    support_thread_completed_at: null,
-    support_thread_completed_by: null,
+    status,
+    completed_at: null,
+    completed_by: null,
   };
 }

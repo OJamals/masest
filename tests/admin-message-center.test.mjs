@@ -65,7 +65,8 @@ test('support API persists thread lifecycle and admin message preferences', () =
   assert.match(admin, /publishSupportMessage/);
   assert.doesNotMatch(admin, /appendSupportMessage/);
   assert.match(admin, /request\.method === 'PATCH'/);
-  assert.match(admin, /support_thread_status/);
+  assert.match(admin, /support_threads/);
+  assert.match(admin, /supportThreadPatch/);
   assert.match(settings, /ADMIN_MESSAGE_PREF_COLUMNS/);
   assert.match(notifications, /notify_admin_support_requests/);
   assert.match(notifications, /notify_admin_messages/);
@@ -139,7 +140,7 @@ test('account user detail starts the canonical support composer for that user', 
     'Accounts should enter the shared support composer, not another messaging UI');
   assert.match(companies, /data-account-user-message[^>]*data-capability="admin\.write"/,
     'read-only staff should not receive an inoperative chat action');
-  assert.match(admin, /if \(userId\) return supportEntry\.openNewChat\?\.\(\{\s*userId\s*\}\)/,
+  assert.match(admin, /if \(userId\) return supportEntry\.openNewChat\?\.\(\{\s*userId,\s*orderId\s*\}\)/,
     'the shared support entry point should preselect the requested user');
   assert.match(threads, /openNewChat/,
     'the admin adapter should expose the canonical composer entry point');

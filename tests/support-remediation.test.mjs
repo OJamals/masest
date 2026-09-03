@@ -26,11 +26,11 @@ test('message pages retain the newest rows and expose an older-page cursor', () 
 
 test('support lifecycle persists escalation and completion metadata', () => {
   assert.deepEqual(supportThreadPatch('escalated', 'staff-1', '2026-07-11T04:00:00.000Z'), {
-    support_thread_status: 'escalated',
-    support_thread_completed_at: null,
-    support_thread_completed_by: null,
+    status: 'escalated',
+    completed_at: null,
+    completed_by: null,
   });
-  assert.equal(supportThreadPatch('complete', 'staff-1', '2026-07-11T04:00:00.000Z').support_thread_completed_by, 'staff-1');
+  assert.equal(supportThreadPatch('complete', 'staff-1', '2026-07-11T04:00:00.000Z').completed_by, 'staff-1');
   assert.equal(supportThreadPatch('bogus', 'staff-1'), null);
 });
 
@@ -239,7 +239,8 @@ test('staff-started messages reopen the canonical thread and expose user/order r
 
   assert.match(adminMessages, /reopen:\s*body\.start_thread === true/);
   assert.match(adminMessages, /recipient_user_id/);
-  assert.match(adminMessages, /hydrateSupportParticipants/);
+  assert.match(adminMessages, /hydrateThreads/);
+  assert.match(adminMessages, /participant_user_id/);
   assert.match(users, /select\('id,order_number,status,payment_method,total,currency,created_at,tracking_status'\)/);
 });
 

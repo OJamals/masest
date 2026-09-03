@@ -45,7 +45,7 @@ test('general support messages do not query order ownership', async () => {
   assert.equal(queried, false);
 });
 
-test('support order context resolves only inside the authenticated company', async () => {
+test('support order context resolves by id, then verifies authenticated ownership', async () => {
   const order = {
     id: ORDER_ID,
     order_number: 'MST-1042',
@@ -61,10 +61,7 @@ test('support order context resolves only inside the authenticated company', asy
     companyId: 'company-1',
   });
 
-  assert.deepEqual(filters, [
-    ['id', ORDER_ID],
-    ['company_id', 'company-1'],
-  ]);
+  assert.deepEqual(filters, [['id', ORDER_ID]]);
   assert.equal(result.ok, true);
   assert.equal(result.orderId, ORDER_ID);
   assert.equal(result.recipientUserId, 'user-1');
@@ -85,7 +82,7 @@ test('support recipient resolves an exact company user with Auth email', async (
       assert.equal(table, 'profiles');
       return {
         select(columns) {
-          assert.equal(columns, 'id,full_name,notify_messages,support_chat_open,support_chat_seen_at');
+          assert.equal(columns, 'id,company_id,full_name,notify_messages,support_chat_open,support_chat_seen_at');
           return this;
         },
         eq(column, value) { filters.push([column, value]); return this; },
@@ -201,12 +198,12 @@ test('malformed support order ids fail before querying the database', async () =
   assert.equal(queried, false);
 });
 
-test('support order schema enforces the company relationship', () => {
-  const sql = readFileSync(new URL('../supabase/schema-support-message-order-ownership.sql', import.meta.url), 'utf8');
-  assert.match(sql, /unique\s*\(id,\s*company_id\)/i);
-  assert.match(sql, /foreign key\s*\(order_id,\s*company_id\)/i);
-  assert.match(sql, /references\s+public\.orders\s*\(id,\s*company_id\)/i);
-  assert.match(sql, /on delete set null\s*\(order_id\)/i);
+test('support order schema enforces exact participant or company thread ownership', () => {
+  const sql = readFileSync(new URL('../supabase/migrate-support-participant-threads-2026-09-03.sql', import.meta.url), 'utf8');
+  assert.match(sql, /foreign key \(order_id\) references public\.orders\(id\) on delete set null/i);
+  assert.match(sql, /v_order\.user_id = v_thread\.participant_user_id/i);
+  assert.match(sql, /v_order\.company_id = v_thread\.company_id/i);
+  assert.match(sql, /support_order_thread_mismatch/i);
 });
 
 test('buyer message route inserts only the resolved order id', () => {
@@ -226,7 +223,8 @@ test('staff replies validate and retain active order context', () => {
   assert.match(source, /resolveSupportOrderId\(sb,/);
   assert.match(source, /publishSupportMessage\(/);
   assert.match(source, /orderId:\s*orderContext\.orderId/);
-  assert.match(source, /resolveSupportRecipient\(sb,[\s\S]*orderContext\.recipientUserId/);
+  assert.match(source, /userId:\s*recipientUserId/);
+  assert.match(source, /threadUserId:\s*recipientUserId/);
   assert.match(publisher, /deliverSupportMessageEmail/);
   assert.match(supportEmail, /dashboard\.html\?order=\$\{encodeURIComponent\(order\.id\)\}#messages/);
   assert.doesNotMatch(source, /from\('messages'\)\.insert/);

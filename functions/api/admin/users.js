@@ -56,7 +56,19 @@ async function userConsole(sb, env, uid) {
   if (!profile) return null;
   let email = null;
   try { const { data } = await sb.auth.admin.getUserById(uid); email = data?.user?.email || null; } catch { /* best-effort */ }
-  const co = profile.company_id ? await companyConsole(sb, env, profile.company_id) : { company: null, addresses: [], orders: [], payment_methods: [] };
+  let co;
+  if (profile.company_id) {
+    co = await companyConsole(sb, env, profile.company_id);
+  } else {
+    const { data: orders, error } = await sb.from('orders')
+      .select('id,order_number,status,payment_method,total,currency,created_at,tracking_status')
+      .eq('user_id', uid)
+      .neq('status', 'cart')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    co = { company: null, addresses: [], orders: orders || [], payment_methods: [] };
+  }
   return { profile: { ...profile, email }, ...co };
 }
 

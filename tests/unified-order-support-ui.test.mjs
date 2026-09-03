@@ -16,17 +16,19 @@ test('buyer Orders opens the existing customer chat with order context', () => {
   assert.match(dashboard, /if \(activeMessageOrderId\) params\.set\('order_id', activeMessageOrderId\)/);
 });
 
-test('Admin Orders opens the canonical support console scoped to company and order', () => {
+test('Admin Orders opens the canonical participant support composer scoped to user and order', () => {
   const admin = read('js/admin.js');
   const orders = read('js/admin/orders.js');
   const support = read('js/admin-support.js');
 
   assert.match(orders, /Message customer/);
   assert.match(orders, /onMessageCustomer/);
-  assert.match(admin, /onMessageCustomer:\s*\(\{\s*companyId,\s*orderId\s*\}\)/);
-  assert.match(admin, /showSupportConsole\(\{\s*view:\s*"conversation",\s*companyId,\s*orderId\s*\}\)/);
+  assert.match(orders, /data-message-user=/);
+  assert.match(admin, /onMessageCustomer:\s*\(\{\s*companyId,\s*orderId,\s*userId\s*\}\)/);
+  assert.match(admin, /view:\s*"conversation",\s*companyId,\s*orderId,\s*userId/);
+  assert.match(admin, /openNewChat\?\.\(\{\s*userId,\s*orderId\s*\}\)/);
   assert.match(support, /order_id:\s*activeOrderId/);
-  assert.match(support, /Full company conversation/);
+  assert.match(support, /Full conversation/);
 });
 
 test('Admin Orders surfaces existing support request queue without a parallel message store', () => {

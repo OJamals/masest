@@ -203,6 +203,7 @@
 .site-support__placeholder,
 .site-support__empty,
 .site-support__notice { color: var(--ink-soft, #626a73); }
+.site-support__notice [data-support-start-customer] { min-height: 40px; margin-left: 8px; padding: 0 11px; border: 1px solid var(--accent, #118894); border-radius: 9px; background: var(--paper, #fff); color: var(--accent, #118894); font-weight: 800; }
 .site-support__empty { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 12px; border: 1px dashed var(--line, #dfe3e7); border-radius: 11px; }
 .site-support__empty > i { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--accent, #118894) 12%, white); color: var(--accent, #118894); font-size: 1rem; }
 .site-support__empty strong,

@@ -3,9 +3,9 @@
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
 // injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260903a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260903a';
-import { createSavedViews } from './saved-views.js?v=20260903a';
+import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260903b';
+import { captureDirty, restoreDirty } from './edits.js?v=20260903b';
+import { createSavedViews } from './saved-views.js?v=20260903b';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 /* Lifecycle view rather than a column value: everything still owed a shipment.
@@ -752,7 +752,9 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         ? `<section class="admin-support-requests" aria-labelledby="adminSupportRequestsTitle"><div class="admin-support-requests__head"><div><span class="admin-kicker">Customer follow-up</span><h3 id="adminSupportRequestsTitle">Open support requests</h3></div><b>${state.orderRequests.length}</b></div><div class="admin-support-request-list">${state.orderRequests.map((request) => {
           const order = (Array.isArray(request.orders) ? request.orders[0] : request.orders) || {};
           const reference = order.order_number || request.order_id;
-          return `<article class="admin-support-request"><div><span class="admin-kicker">${esc(request.type)} · ${esc(date(request.created_at))}</span><h4>Order ${esc(reference)}</h4><p>${esc(request.reason || 'No reason supplied.')}</p><small class="muted">${esc(request.requested_email || order.customer_email || '')}</small></div><div class="admin-order-primary"><a class="btn btn-ghost btn-sm" href="admin.html?order=${encodeURIComponent(request.order_id)}#orders">Open order</a>${order.company_id ? `<button class="btn btn-primary btn-sm" type="button" data-order-request-chat="${esc(request.id)}" data-message-company="${esc(order.company_id)}" data-message-order="${esc(request.order_id)}">Message customer</button>` : ''}</div></article>`;
+          const customerId = request.requested_by || order.user_id || '';
+          const canMessage = customerId || order.company_id;
+          return `<article class="admin-support-request"><div><span class="admin-kicker">${esc(request.type)} · ${esc(date(request.created_at))}</span><h4>Order ${esc(reference)}</h4><p>${esc(request.reason || 'No reason supplied.')}</p><small class="muted">${esc(request.requested_email || order.customer_email || '')}</small></div><div class="admin-order-primary"><a class="btn btn-ghost btn-sm" href="admin.html?order=${encodeURIComponent(request.order_id)}#orders">Open order</a>${canMessage ? `<button class="btn btn-primary btn-sm" type="button" data-order-request-chat="${esc(request.id)}" data-message-customer data-message-company="${esc(order.company_id || '')}" data-message-user="${esc(customerId)}" data-message-order="${esc(request.order_id)}">Message customer</button>` : ''}</div></article>`;
         }).join('')}</div></section>`
         : '';
     if (!orders.length) {
@@ -811,7 +813,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         </div>
         <div class="admin-order-primary">
           <button class="btn btn-ghost btn-sm" data-order-detail="${id}" type="button">Details</button>
-          ${order.company_id ? `<button class="btn btn-ghost btn-sm" type="button" data-message-company="${esc(order.company_id)}" data-message-order="${id}">Message customer</button>` : ''}
+          ${order.user_id || order.company_id ? `<button class="btn btn-ghost btn-sm" type="button" data-message-customer data-message-company="${esc(order.company_id || '')}" data-message-user="${esc(order.user_id || '')}" data-message-order="${id}">Message customer</button>` : ''}
           ${primaryAction}
         </div>
         <details class="adm-order-manage">
@@ -1809,10 +1811,11 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         button.disabled = false;
       }
     });
-    delegate(box, 'click', '[data-message-company][data-message-order]', (event, button) => {
+    delegate(box, 'click', '[data-message-customer][data-message-order]', (event, button) => {
       event.preventDefault();
       onMessageCustomer?.({
-        companyId: button.dataset.messageCompany,
+        companyId: button.dataset.messageCompany || null,
+        userId: button.dataset.messageUser || null,
         orderId: button.dataset.messageOrder,
       });
     });

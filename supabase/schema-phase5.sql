@@ -28,7 +28,8 @@ alter table public.profiles add column if not exists notify_admin_messages boole
 alter table public.profiles alter column notify_admin_support_requests set default true;
 alter table public.profiles alter column notify_admin_messages set default true;
 alter table public.profiles add column if not exists support_inbox_seen_at timestamptz;
--- A company owns one durable support thread. Buyer activity reopens a completed thread.
+-- Legacy company summary projection. Canonical lifecycle moves to support_threads
+-- in migrate-support-participant-threads-2026-09-03.sql.
 alter table public.companies add column if not exists support_thread_status text not null default 'open';
 alter table public.companies drop constraint if exists companies_support_thread_status_check;
 alter table public.companies add constraint companies_support_thread_status_check
@@ -52,7 +53,9 @@ do $$ begin
   create type offer_audience as enum ('all','approved','pending','company');
 exception when duplicate_object then null; end $$;
 
--- ---------- messages: one support thread per company ----------
+-- ---------- messages: legacy company-scoped baseline ----------
+-- Apply migrate-support-participant-threads-2026-09-03.sql after the unified
+-- support/email migrations to add canonical participant/company thread identity.
 -- buyer ↔ MASEST staff. Author user_id is null for staff replies (staff act via service role).
 create table if not exists public.messages (
   id            uuid primary key default gen_random_uuid(),
@@ -142,8 +145,17 @@ alter table public.page_views    enable row level security;
 
 -- Company members may read their own messages/notifications (reads also go through functions).
 drop policy if exists messages_company on public.messages;
-create policy messages_company on public.messages
-  for select to authenticated using (company_id = public.current_company_id());
+do $$
+begin
+  -- Once canonical participant threads exist, their messages_support_scope policy
+  -- is authoritative. A later baseline re-run must not restore company-wide reads.
+  if to_regclass('public.support_threads') is null then
+    execute 'create policy messages_company on public.messages '
+      || 'for select to authenticated '
+      || 'using (company_id = public.current_company_id())';
+  end if;
+end;
+$$;
 
 drop policy if exists notifications_company on public.notifications;
 create policy notifications_company on public.notifications
