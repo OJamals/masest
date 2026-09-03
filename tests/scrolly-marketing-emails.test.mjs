@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   NURTURE_FLOW_EMAILS,
@@ -24,12 +25,54 @@ test('proof series follows the six landing-page scenes in order', () => {
   assert.equal(findScrollyMarketingEmail('missing'), null);
 });
 
-test('proof series uses twelve unique aligned R2 images and no Supabase media', () => {
+test('proof series uses twelve unique email-compatible R2 images and no Supabase media', () => {
   const urls = SCROLLY_MARKETING_EMAILS.flatMap(({ proof }) => [proof.before, proof.after]);
   assert.equal(new Set(urls).size, 12);
   for (const url of urls) {
-    assert.match(url, /^https:\/\/media\.masest\.co\/site\/img\/proof\/story\/.+-aligned-202609\.webp$/);
+    assert.match(url, /^https:\/\/media\.masest\.co\/site\/img\/proof\/story\/.+-aligned-202609\.jpg$/);
     assert.doesNotMatch(url, /supabase/i);
+  }
+});
+
+test('one canonical registry keeps homepage scenes and email proof data aligned', async () => {
+  const registry = JSON.parse(await readFile(new URL('../data/story-scenes.json', import.meta.url), 'utf8'));
+  const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const emailSource = await readFile(new URL('../functions/_lib/scrolly-marketing-emails.js', import.meta.url), 'utf8');
+
+  assert.equal(registry.version, 1);
+  assert.equal(registry.scenes.length, 6);
+  assert.match(emailSource, /story-scenes\.json/);
+  assert.doesNotMatch(emailSource, /-aligned-202609\.(?:webp|jpg)/);
+
+  for (const scene of registry.scenes) {
+    const start = homepage.indexOf(`id="${scene.anchor}"`);
+    const next = homepage.indexOf(`id="story-scene-${scene.sequence + 1}"`, start);
+    const section = homepage.slice(start, next < 0 ? homepage.length : next);
+    const campaign = findScrollyMarketingEmail(scene.id);
+    const webBefore = `/site/img/proof/story/${scene.proof.slug}-before-aligned-202609.webp`;
+    const webAfter = `/site/img/proof/story/${scene.proof.slug}-after-aligned-202609.webp`;
+
+    assert.ok(start >= 0, `${scene.id} missing homepage anchor`);
+    assert.ok(section.includes(scene.heading), `${scene.id} heading drifted`);
+    assert.ok(section.includes(`data-product-name="${scene.productName}"`), `${scene.id} product drifted`);
+    assert.ok(section.includes(webBefore), `${scene.id} before image drifted`);
+    assert.ok(section.includes(webAfter), `${scene.id} after image drifted`);
+    assert.equal(campaign.sequence, scene.sequence);
+    assert.equal(campaign.heading, scene.heading);
+    assert.equal(campaign.proof.label, scene.proof.label);
+    assert.match(campaign.proof.before, new RegExp(`${scene.proof.slug}-before-aligned-202609\\.jpg$`));
+    assert.match(campaign.proof.after, new RegExp(`${scene.proof.slug}-after-aligned-202609\\.jpg$`));
+  }
+});
+
+test('every email proof URL has a real JPEG source asset', async () => {
+  const registry = JSON.parse(await readFile(new URL('../data/story-scenes.json', import.meta.url), 'utf8'));
+  for (const scene of registry.scenes) {
+    for (const side of ['before', 'after']) {
+      const asset = new URL(`../img/proof/story/${scene.proof.slug}-${side}-aligned-202609.jpg`, import.meta.url);
+      const bytes = await readFile(asset);
+      assert.deepEqual([...bytes.subarray(0, 3)], [0xff, 0xd8, 0xff], `${scene.id} ${side} is not JPEG`);
+    }
   }
 });
 
@@ -48,6 +91,25 @@ test('rendered Klaviyo templates are static, accessible, and unsubscribe-safe', 
     assert.doesNotMatch(campaign.html, /supabase/i);
     assert.match(campaign.text, /Before: https:\/\/media\.masest\.co\//);
     assert.match(campaign.text, /After: https:\/\/media\.masest\.co\//);
+  }
+});
+
+test('plain-text proof evidence stays readable and before the legal footer', () => {
+  const rendered = [
+    ...renderAllScrollyMarketingEmails(),
+    ...renderAllNurtureFlowEmails(),
+  ];
+
+  for (const campaign of rendered) {
+    const lastEvidence = campaign.text.lastIndexOf('Open the aligned before-and-after:');
+    const browserLink = campaign.text.indexOf('View in browser:');
+    const legalFooter = campaign.text.indexOf('Advertisement.');
+
+    assert.ok(lastEvidence >= 0, `${campaign.id} missing proof evidence`);
+    assert.ok(lastEvidence < browserLink, `${campaign.id} proof follows browser/footer links`);
+    assert.ok(browserLink < legalFooter, `${campaign.id} legal footer order changed`);
+    assert.doesNotMatch(campaign.text, /&(?:rarr|nbsp|amp|lt|gt|quot);/i);
+    assert.doesNotMatch(campaign.text, /^\s{4,}\S/m);
   }
 });
 
@@ -93,7 +155,7 @@ test('flow-ready nurture templates use every aligned R2 pair with no accent line
   assert.equal(new Set(rendered.flatMap(({ sceneIds }) => sceneIds)).size, 6);
   for (const campaign of rendered) {
     assert.equal((campaign.html.match(/img\/proof\/story\//g) || []).length, 4);
-    assert.match(campaign.html, /\{\{ first_name\|default:"there" \}\}/);
+    assert.match(campaign.html, /\{\{ first_name\|default:'there' \}\}/);
     assert.match(campaign.html, /\{% unsubscribe_link %\}/);
     assert.doesNotMatch(campaign.html, /<hr\b|border(?:-top|-right|-bottom|-left)?:[1-9]|padding:0 1px/i);
     assert.doesNotMatch(campaign.html, /safety of water|without the hazard profile|minus the hazard profile/i);

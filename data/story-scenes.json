@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "id": "industrial-strength",
+      "sequence": 1,
+      "anchor": "story-scene-1",
+      "heading": "Industrial strength. Better chemistry.",
+      "productName": "VertKleen CRHD",
+      "proof": {
+        "slug": "kitchen-grease",
+        "label": "Commercial-kitchen grease · VertKleen CRHD",
+        "beforeAlt": "Commercial-kitchen surface before VertKleen CRHD cleaning",
+        "afterAlt": "Same commercial-kitchen surface after VertKleen CRHD cleaning"
+      }
+    },
+    {
+      "id": "outperform",
+      "sequence": 2,
+      "anchor": "story-scene-2",
+      "heading": "Built to outperform traditional cleaners.",
+      "productName": "VertKleen CR",
+      "proof": {
+        "slug": "cip-vessel",
+        "label": "CIP vessel residue · VertKleen CR",
+        "beforeAlt": "CIP vessel before VertKleen CR cleaning",
+        "afterAlt": "Same CIP vessel after VertKleen CR cleaning"
+      }
+    },
+    {
+      "id": "hmis-000",
+      "sequence": 3,
+      "anchor": "story-scene-3",
+      "heading": "Industrial results. HMIS 0-0-0.",
+      "productName": "VertKleen CR",
+      "proof": {
+        "slug": "labelle-fermenter",
+        "label": "LaBelle fermenter ring · VertKleen CR",
+        "beforeAlt": "LaBelle fermenter wall ring before VertKleen CR cleaning",
+        "afterAlt": "Same LaBelle fermenter after VertKleen CR cleaning"
+      }
+    },
+    {
+      "id": "whole-job-cost",
+      "sequence": 4,
+      "anchor": "story-scene-4",
+      "heading": "Less expensive by the finished job.",
+      "productName": "VertKleen Descaler",
+      "proof": {
+        "slug": "shower-track",
+        "label": "Shower-track calcium · VertKleen Descaler",
+        "beforeAlt": "Shower track before VertKleen Descaler cleaning",
+        "afterAlt": "Same shower track after VertKleen Descaler cleaning"
+      }
+    },
+    {
+      "id": "right-formula",
+      "sequence": 5,
+      "anchor": "story-scene-5",
+      "heading": "The right strength for the soil.",
+      "productName": "VertKleen AlumiBrite",
+      "proof": {
+        "slug": "airboat-panel",
+        "label": "Airboat aluminum · VertKleen AlumiBrite",
+        "beforeAlt": "Airboat aluminum panel before VertKleen AlumiBrite treatment",
+        "afterAlt": "Same airboat aluminum panel after VertKleen AlumiBrite treatment"
+      }
+    },
+    {
+      "id": "prove-it",
+      "sequence": 6,
+      "anchor": "story-scene-6",
+      "heading": "Put both cleaners on the same job.",
+      "productName": "VertKleen HCR",
+      "proof": {
+        "slug": "pool-cartridge",
+        "label": "Pool cartridge filter · VertKleen HCR",
+        "beforeAlt": "Pool cartridge filter before VertKleen HCR cleaning",
+        "afterAlt": "Same pool cartridge filter after VertKleen HCR cleaning"
+      }
+    }
+  ]
+}

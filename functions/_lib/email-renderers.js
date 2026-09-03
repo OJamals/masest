@@ -487,7 +487,7 @@ export function renderMarketingEmail({
     '',
     campaign.eyebrow ? text(campaign.eyebrow, 180).toUpperCase() : '',
     heading.toUpperCase(),
-    plainHtml(campaign.bodyHtml),
+    campaign.bodyText ? String(campaign.bodyText).trim() : plainHtml(campaign.bodyHtml),
     ctaUrl ? `${campaign.ctaText || 'Open'}: ${ctaUrl}` : '',
     moduleText ? `\n${moduleText}` : '',
     '',
