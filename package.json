@@ -15,6 +15,7 @@
     "build:reviews": "node tools/build-reviews.mjs",
     "build:marketing-emails": "node tools/export-scrolly-marketing-emails.mjs",
     "build:nurture-emails": "node tools/export-scrolly-marketing-emails.mjs --series=nurture",
+    "sync:klaviyo-templates": "node tools/sync-klaviyo-marketing-templates.mjs",
     "preseo-inject": "node tools/build-reviews.mjs",
     "seo-inject": "node tools/seo-inject.mjs",
     "verify:document-sources": "node tools/public-document-policy.mjs",
