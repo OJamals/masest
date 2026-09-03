@@ -759,6 +759,11 @@ test("approved documents publish while technical sheets remain request-only", ()
       false,
       "temporary review derivatives must not publish",
     );
+    assert.equal(
+      existsSync(new URL("dist/prototypes", root)),
+      false,
+      "internal design prototypes must not publish",
+    );
   } finally {
     rmSync(new URL("tmp/cf-build-policy-fixture", root), { recursive: true, force: true });
   }

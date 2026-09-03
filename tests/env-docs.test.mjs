@@ -7,6 +7,9 @@ import test from 'node:test';
 
 const env = readFileSync(new URL('../.env.example', import.meta.url), 'utf8');
 const pages = readFileSync(new URL('../CLOUDFLARE_PAGES.md', import.meta.url), 'utf8');
+const architecture = readFileSync(new URL('../docs/ARCHITECTURE.md', import.meta.url), 'utf8');
+const acceptance = readFileSync(new URL('../docs/PRODUCTION_ACCEPTANCE.md', import.meta.url), 'utf8');
+const roadmap = readFileSync(new URL('../docs/ROADMAP.md', import.meta.url), 'utf8');
 
 test('.env.example documents the Cloudflare email bindings and bridge secrets', () => {
   for (const key of ['EMAIL_REPLY_TO', 'MESSAGE_REPLY_DOMAIN', 'MESSAGE_REPLY_SECRET', 'EMAIL_INGRESS_SECRET', 'EMAIL_UNSUB_SECRET', 'ORDER_NOTIFY_EMAIL']) {
@@ -38,4 +41,13 @@ test('Cloudflare runbook documents Supabase Auth SMTP separately from app email'
   assert.match(pages, /where `send\.masest\.co` is\s+verified for Email Sending/);
   assert.match(pages, /smtp\.mx\.cloudflare\.net/);
   assert.match(pages, /Do not fix this by disabling email confirmation/);
+});
+
+test('current architecture, acceptance, and roadmap docs name the canonical email providers', () => {
+  for (const document of [architecture, acceptance, roadmap]) {
+    assert.doesNotMatch(document, /\bResend\b/);
+  }
+  assert.match(architecture, /Cloudflare Email Service/);
+  assert.match(architecture, /Klaviyo/);
+  assert.match(acceptance, /Cloudflare Email Routing/);
 });

@@ -69,14 +69,17 @@ test('dashboard reply continues the latest inbound RFC email thread', async () =
     },
     order() { return this; },
     limit() { return this; },
-    async maybeSingle() {
-      return {
-        data: {
+    then(resolve) {
+      return Promise.resolve({
+        data: [{
           email_message_id: null,
           email_references: '<root@example.com> <buyer-reply@example.com>',
-        },
+          sender_role: 'buyer',
+          body: 'Tomorrow works for me.',
+          created_at: '2026-09-03T14:31:00Z',
+        }],
         error: null,
-      };
+      }).then(resolve);
     },
   };
   await deliverSupportMessageEmail({}, { from: () => query }, {

@@ -128,12 +128,16 @@ test('renderNewsletterBody: handles empty, malformed, Unicode, and ampersands', 
 test('renderNewsletterEmail: subject + branded shell uses identical safe body output', () => {
   const body = 'Hello **world** <script>alert(1)</script> [read](/products)';
   const renderedBody = renderNewsletterBody(body);
-  const { subject, html } = renderNewsletterEmail({ subject: 'Field Notes', body_md: body });
+  const { subject, html, text } = renderNewsletterEmail({ subject: 'Field Notes', body_md: body });
   assert.equal(subject, 'Field Notes');
   assert.match(html, /Field Notes/);
   assert.ok(html.includes(renderedBody));
   assert.doesNotMatch(html, /<script\b/i);
-  assert.match(html, /MASEST/); // emailLayout shell
+  assert.match(html, /MASEST/);
+  assert.match(html, /\{% web_view_link %\}/);
+  assert.match(html, /\{% unsubscribe_link %\}/);
+  assert.match(html, /1361 Grand Cayman Dr/);
+  assert.match(text, /Hello world/);
 });
 
 test('resolveAudience: union of selected populations, deduped + lowercased', () => {

@@ -10,15 +10,17 @@ const messagesSrc = readFileSync(new URL("../functions/api/account/messages.js",
 const adminMessagesSrc = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
 const supportPublisherSrc = readFileSync(new URL("../functions/_lib/support-message-publisher.js", import.meta.url), "utf8");
 const supportEmailSrc = readFileSync(new URL("../functions/_lib/support-email.js", import.meta.url), "utf8");
+const emailRenderersSrc = readFileSync(new URL("../functions/_lib/email-renderers.js", import.meta.url), "utf8");
 const emailBridgeSrc = readFileSync(new URL("../shared/email-bridge.js", import.meta.url), "utf8");
 const messageRepliesSrc = readFileSync(new URL("../functions/_lib/message-replies.js", import.meta.url), "utf8");
 
-test("support notification emails escape customer and staff-supplied body", () => {
+test("support notification emails route customer and staff content through the canonical escaping renderer", () => {
   assert.match(messagesSrc, /publishSupportMessage/);
   assert.match(adminMessagesSrc, /publishSupportMessage/);
   assert.match(supportPublisherSrc, /deliverSupportMessageEmail/);
-  assert.match(supportEmailSrc, /htmlEscape\(String\(message\.body\)\.slice\(0, 4000\)\)/);
-  assert.match(supportEmailSrc, /htmlEscape\(order\.reference \|\| order\.id\)/);
+  assert.match(supportEmailSrc, /renderSupportEmail\(/);
+  assert.match(emailRenderersSrc, /const latest = bodyAsHtml\(message\.body\)/);
+  assert.match(emailRenderersSrc, /View order \$\{emailEscape\(orderReference\)\}/);
   assert.doesNotMatch(supportEmailSrc, /<blockquote[^>]*>\$\{message\.body\}/);
 });
 

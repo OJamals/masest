@@ -1,7 +1,7 @@
 // functions/api/admin/review-reminders.js — secret-guarded post-delivery review nudge.
 // Secret-gated automation-only route; no staff session required.
-import { adminClient, emailLayout, htmlEscape, json, readBody } from '../../_lib/supabase.js';
-import { htmlToText } from '../../_lib/email.js';
+import { adminClient, json, readBody } from '../../_lib/supabase.js';
+import { renderMarketingEmail } from '../../_lib/email-renderers.js';
 import { queueMarketingEmail } from '../../_lib/marketing-email.js';
 import { reviewToken, REMINDER_DELAY_DAYS } from '../../_lib/reviews.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
@@ -10,14 +10,6 @@ import { productIsPublished } from '../../_lib/product-publication.generated.js'
 
 const reviewSecret = (env) => env.REVIEW_TOKEN_SECRET || env.EMAIL_UNSUB_SECRET || '';
 const enc = encodeURIComponent;
-
-function reminderHtml(links) {
-  const rows = links.map((l) => `<li><a href="${l.url}">Review ${l.name}</a></li>`).join('');
-  return `<p>Thanks for your recent order. How did it work out?</p>
-<p>A quick rating helps other buyers — it takes under a minute:</p>
-<ul>${rows}</ul>
-<p style="color:#667">You're receiving this because you purchased from MASEST. This is the only reminder we'll send.</p>`;
-}
 
 export function reviewableItems(items) {
   const seen = new Set();
@@ -73,20 +65,36 @@ export async function onRequestPost({ request, env }) {
         continue;
       }
       const subject = 'How did your MASEST order work out?';
-      const html = emailLayout({
-        stream: 'marketing',
-        heading: 'How did your order work out?',
-        preheader: 'Share a quick VertKleen product review.',
-        bodyHtml: reminderHtml(links),
-        ctaText: links.length === 1 ? `Review ${htmlEscape(links[0].name)}` : undefined,
-        ctaUrl: links.length === 1 ? links[0].url : undefined,
+      const rendered = renderMarketingEmail({
+        kind: 'lead_nurture',
+        campaign: {
+          subject,
+          heading: 'How did your order work out?',
+          previewText: 'Share a quick VertKleen product review.',
+          eyebrow: 'One-minute review',
+          bodyHtml: '<p style="margin:0">Thanks for your recent order. A quick rating helps other buyers choose the right chemistry.</p>',
+          ctaText: links.length === 1 ? `Review ${links[0].name}` : undefined,
+          ctaUrl: links.length === 1 ? links[0].url : undefined,
+        },
+        modules: links.length > 1 ? [{
+          type: 'links',
+          heading: 'Review your products',
+          items: links.map((link) => ({
+            title: `Review ${link.name}`,
+            href: link.url,
+            body: 'Share your field experience.',
+          })),
+        }] : [],
+        recipientContext: {
+          reason: 'You received this one-time review request because you purchased from MASEST.',
+        },
       });
       const delivery = await queueMarketingEmail(env, {
         category: 'review_request',
         email,
-        subject,
-        html,
-        text: htmlToText(html),
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
         idempotencyKey: `review-reminder:${o.id}`,
         properties: { order_id: o.id, review_links: links },
       });

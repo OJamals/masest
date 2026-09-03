@@ -1,9 +1,15 @@
 // Blog newsletter: render the "new post" email + pure helpers for the send sweep.
 // Klaviyo owns consent, suppression, unsubscribe state, fanout, and delivery.
-import { emailLayout, htmlEscape } from './supabase.js';
+import { emailEscape } from './email-template.js';
+import { renderMarketingEmail } from './email-renderers.js';
 
 const BASE = 'https://masest.co';
 const MEDIA_BASE = 'https://media.masest.co/site';
+
+function imageDimension(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 && parsed <= 10000 ? Math.round(parsed) : 0;
+}
 
 function mediaUrl(value) {
   const raw = String(value || '').trim();
@@ -23,6 +29,8 @@ export function postFromEntry(row = {}) {
     excerpt: String(p.excerpt || ''),
     hero: String(p.hero || ''),
     hero_alt: String(p.hero_alt || ''),
+    hero_width: imageDimension(p.hero_width || p.hero_w),
+    hero_height: imageDimension(p.hero_height || p.hero_h),
     category: String(p.category || ''),
     author: String(p.author || ''),
     date: String(p.date || ''),
@@ -46,23 +54,25 @@ export function renderBlogEmail(post = {}) {
   const date = String(post.date || '');
   const url = `${BASE}/blog/${slug}`;
   const heroUrl = mediaUrl(post.hero);
-  const hero = heroUrl
-    ? `<img src="${htmlEscape(heroUrl)}" alt="${htmlEscape(post.hero_alt || title)}" width="524" style="width:100%;max-width:524px;height:auto;border-radius:10px;margin:0 0 18px;display:block">`
-    : '';
-  const eyebrow = category
-    ? `<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#0e7c86;font-weight:700;margin:0 0 6px">${htmlEscape(category)}</div>`
-    : '';
-  const byline = [author, date].filter(Boolean).map((s) => htmlEscape(s)).join(' &middot; ');
-  const bodyHtml = `${hero}${eyebrow}`
-    + `${byline ? `<div style="color:#667;font-size:13px;margin:0 0 14px">${byline}</div>` : ''}`
-    + `<p style="margin:0 0 8px">${htmlEscape(excerpt)}</p>`;
-  const html = emailLayout({
-    stream: 'marketing',
-    heading: title,
-    preheader: excerpt || title,
-    bodyHtml,
-    ctaText: 'Read the full post',
-    ctaUrl: url,
+  const byline = [author, date].filter(Boolean).map((value) => emailEscape(value)).join(' &middot; ');
+  const rendered = renderMarketingEmail({
+    kind: 'newsletter',
+    campaign: {
+      subject: `New from MASEST: ${title}`.slice(0, 180),
+      heading: title,
+      previewText: excerpt || title,
+      eyebrow: category || 'The VertKleen Briefing',
+      heroImage: heroUrl,
+      heroAlt: post.hero_alt || title,
+      heroWidth: imageDimension(post.hero_width) || 600,
+      heroHeight: imageDimension(post.hero_height) || 338,
+      bodyHtml: `${byline ? `<p style="margin:0 0 14px;color:#5f656d;font-size:13px">${byline}</p>` : ''}<p style="margin:0">${emailEscape(excerpt)}</p>`,
+      ctaText: 'Read the full post',
+      ctaUrl: url,
+    },
+    recipientContext: {
+      reason: 'You received this because you subscribed to the VertKleen Briefing or enabled marketing email in your MASEST account.',
+    },
   });
-  return { subject: `New from MASEST: ${title}`.slice(0, 180), html, url };
+  return { ...rendered, url };
 }

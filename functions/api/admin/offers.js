@@ -1,7 +1,8 @@
 // /api/admin/offers — staff broadcasts. GET → past sends · POST → in-app notification fan-out
 // (+ optional marketing email when a compliant marketing provider is configured).
-import { adminClient, requireStaff, json, readBody, emailLayout, htmlEscape, emailsByIds } from '../../_lib/supabase.js';
-import { htmlToText } from '../../_lib/email.js';
+import { adminClient, requireStaff, json, readBody, emailsByIds } from '../../_lib/supabase.js';
+import { emailEscape } from '../../_lib/email-template.js';
+import { renderMarketingEmail } from '../../_lib/email-renderers.js';
 import { queueMarketingEmail } from '../../_lib/marketing-email.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 
@@ -85,21 +86,28 @@ export async function onRequest({ request, env }) {
     if (body.send_email) {
       const emails = await memberEmails(sb, companyIds);
       if (emails.length) {
-        const html = emailLayout({
-          stream: 'marketing',
-          heading: title,
-          preheader: bodyText || title,
-          bodyHtml: `<p>${htmlEscape(String(body.body || ''))}</p>`,
-          ctaText: ctaUrl ? 'View' : undefined,
-          ctaUrl: ctaUrl || undefined,
+        const rendered = renderMarketingEmail({
+          kind: 'promotion',
+          campaign: {
+            subject: title,
+            heading: title,
+            previewText: bodyText || title,
+            eyebrow: 'VertKleen offer',
+            bodyHtml: `<p>${emailEscape(bodyText).replace(/\r?\n/g, '<br>')}</p>`,
+            ctaText: ctaUrl ? 'View offer' : undefined,
+            ctaUrl: ctaUrl || undefined,
+          },
+          recipientContext: {
+            reason: 'You received this offer because marketing email is enabled for your MASEST account.',
+          },
         });
         for (let offset = 0; offset < emails.length; offset += 5) {
           const results = await Promise.all(emails.slice(offset, offset + 5).map((email) => queueMarketingEmail(env, {
             category: 'offer',
             email,
-            subject: title,
-            html,
-            text: htmlToText(html),
+            subject: rendered.subject,
+            html: rendered.html,
+            text: rendered.text,
             idempotencyKey: `offer/${offer.id}/${email}`,
             properties: { offer_id: offer.id, cta_url: ctaUrl || '', audience },
           })));

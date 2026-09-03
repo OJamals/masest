@@ -1,0 +1,15 @@
+MASEST · ORDER MST-00000005
+REFUND ISSUED
+USD 289.00 is headed back to you.
+We issued the refund to the original payment method. Your bank may take 5–10 business days to post it.
+ORDER DATE: Sep 3, 2026
+
+REFUND SUMMARY
+1 × VertKleen HVAC HCR (VK-HCR-T16)  USD 289.00
+Total refunded: USD 289.00
+Remaining order total: USD 419.34
+Ship to: Omar Rahman, Sample Facility, 100 Industrial Way, Orlando, FL, 32801
+Purchase order: PO-100
+View refund details: https://masest.co/dashboard.html?order=order-1#orders
+Questions: https://masest.co/contact
+Required order notice · Privacy: https://masest.co/privacy.html

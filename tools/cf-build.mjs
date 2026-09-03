@@ -44,7 +44,7 @@ function unresolvedLocalImageReferences(content) {
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
   /^functions\//, /^cloudflare\//, /^supabase\//, /^tools\//, /^tests\//, /^factory\//, /^artifacts\//, /^node_modules(\/|$)/,
-  /^dist\//, /^tmp\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
+  /^dist\//, /^tmp\//, /^prototypes\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
   /^\.github\//, /^\.vscode\//, /^docs\/research\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,

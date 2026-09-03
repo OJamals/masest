@@ -6,12 +6,8 @@ import {
   sendEmail,
   sendEmailResult,
 } from './supabase.js';
-import {
-  shipmentEmailCta,
-  shipmentEmailHtml,
-  shipmentNotice,
-  technicalDocumentRequestNoteHtml,
-} from './order-email.js';
+import { renderCommerceEmail } from './email-renderers.js';
+import { shipmentNotice } from './order-email.js';
 import { orderReference } from './order-integrations.js';
 import { computeRefund, qboFullDocumentRefund } from './refund.js';
 import { linkOrderProviderObject } from './order-integrations.js';
@@ -418,7 +414,7 @@ async function rpcData(sb, name, args) {
 
 async function loadOrder(sb, orderId) {
   const { data: order, error: orderError } = await sb.from('orders')
-    .select('id,order_number,user_id,status,customer_email,subtotal,shipping,tax,total,currency,purchase_order_number,ship_address')
+    .select('id,order_number,user_id,company_id,status,customer_email,subtotal,shipping,tax,total,refunded_amount,currency,purchase_order_number,ship_address')
     .eq('id', orderId)
     .maybeSingle();
   if (orderError || !order) throw errorWithCode('effect_order_not_found');
@@ -461,85 +457,39 @@ async function sendOrderConfirmationEffect(env, sb, effectRow, send) {
   }
   if (!order.customer_email) throw errorWithCode('effect_order_email_missing');
   const pending = Boolean(effectRow.payload.pending);
-  const currency = (order.currency || 'usd').toUpperCase();
-  const money = (value) => `${currency} ${Number(value || 0).toFixed(2)}`;
   const reference = orderReference(order);
-  const ref = reference ? ` #${reference}` : '';
-  const rows = lines.map((line) =>
-    `<tr>`
-    + `<td style="padding:8px 0;border-bottom:1px solid #eef">${htmlEscape(line.name)} `
-    + `<span style="color:#789">(${htmlEscape(line.sku)})</span></td>`
-    + `<td style="padding:8px 0;border-bottom:1px solid #eef;text-align:center">${line.qty}</td>`
-    + `<td style="padding:8px 0;border-bottom:1px solid #eef;text-align:right">${money(line.unit_price * line.qty)}</td>`
-    + '</tr>').join('');
-  const address = addressOf(order);
-  const shipBlock = address
-    ? `<p style="margin:18px 0 0;color:#445"><b>Ship to</b><br>${[
-      address.line1,
-      address.line2,
-      [address.city, address.state, address.postal_code].filter(Boolean).join(', '),
-      address.country,
-    ].filter(Boolean).map(htmlEscape).join('<br>')}</p>`
-    : '';
   const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
-  const documentNote = technicalDocumentRequestNoteHtml(appUrl);
   const discount = Number(effectRow.payload.discount) || 0;
   const storeCredit = Math.max(0, Number(effectRow.payload.store_credit) || 0);
   const originalSubtotal = Math.round((Number(order.subtotal || 0) + storeCredit) * 100) / 100;
-  const cta = order.user_id
-    ? { text: 'View your order', url: `${appUrl}/dashboard.html#orders` }
-    : {
-      text: 'Get order help',
-      url: `${appUrl}/contact.html?message=${encodeURIComponent(`Question about order ${reference || order.id}`)}`,
-    };
-  const html = `
-  <div style="background:#f4f7f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif">
-    <div style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e4e6e9">
-      <div style="background:#0e7c86;padding:20px 28px">
-        <span style="color:#fff;font-size:20px;font-weight:800;letter-spacing:.04em">MASEST</span>
-        <span style="color:#bfe4e7;font-size:11px;letter-spacing:.16em;margin-left:8px">VERTKLEEN</span>
-      </div>
-      <div style="padding:28px;color:#223">
-        <h2 style="margin:0 0 4px;color:#15171c">${pending ? `Order received${htmlEscape(ref)}` : `Order confirmed${htmlEscape(ref)}`}</h2>
-        <p style="margin:0 0 20px;color:#556;font-size:14px;line-height:1.5">${pending
-          ? 'Thank you. Your bank payment is processing — we’ll email a confirmation once it clears (usually within a few business days). MASEST will reconcile freight and documentation before fulfillment.'
-          : 'Thank you. MASEST will reconcile freight and documentation before fulfillment. Your payment processor sends a separate card receipt.'}</p>
-        ${order.purchase_order_number ? `<p style="margin:0 0 20px;color:#556;font-size:14px"><b>Purchase order:</b> ${htmlEscape(order.purchase_order_number)}</p>` : ''}
-        ${documentNote}
-        <table style="width:100%;border-collapse:collapse;font-size:14px">
-          <thead><tr>
-            <th style="text-align:left;padding:6px 0;border-bottom:2px solid #d7e3e3">Product</th>
-            <th style="text-align:center;padding:6px 0;border-bottom:2px solid #d7e3e3">Qty</th>
-            <th style="text-align:right;padding:6px 0;border-bottom:2px solid #d7e3e3">Amount</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:10px">
-          <tr><td style="padding:3px 0;color:#556">Subtotal</td><td style="padding:3px 0;text-align:right">${money(originalSubtotal)}</td></tr>
-          ${storeCredit > 0 ? `<tr><td style="padding:3px 0;color:#556">Account credit</td><td style="padding:3px 0;text-align:right">&minus;${money(storeCredit)}</td></tr>` : ''}
-          ${discount > 0 ? `<tr><td style="padding:3px 0;color:#556">Discount</td><td style="padding:3px 0;text-align:right">&minus;${money(discount)}</td></tr>` : ''}
-          ${Number(order.shipping) > 0 ? `<tr><td style="padding:3px 0;color:#556">Shipping</td><td style="padding:3px 0;text-align:right">${money(order.shipping)}</td></tr>` : ''}
-          <tr><td style="padding:3px 0;color:#556">Tax</td><td style="padding:3px 0;text-align:right">${money(order.tax)}</td></tr>
-          <tr><td style="padding:6px 0;font-weight:bold;border-top:1px solid #ccd">Total</td><td style="padding:6px 0;text-align:right;font-weight:bold;border-top:1px solid #ccd">${money(order.total)}</td></tr>
-        </table>
-        ${shipBlock}
-        <div style="margin:24px 0 0">
-          <a href="${htmlEscape(cta.url)}" style="display:inline-block;background:#0e7c86;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px">${htmlEscape(cta.text)}</a>
-        </div>
-      </div>
-      <div style="background:#0b0d12;padding:18px 28px;color:#8a93a0;font-size:11px;line-height:1.7">
-        MASEST Consulting LLC &middot; Florida's Space Coast &middot; CAGE 0B2Q3 &middot; NAICS 424690<br>
-        HMIS 0-0-0 industrial cleaning chemistry. Questions? Reply to this email.
-      </div>
-    </div>
-  </div>`;
+  const rendered = renderCommerceEmail({
+    event: 'confirmed',
+    appUrl,
+    order: {
+      ...order,
+      reference,
+      subtotal: originalSubtotal,
+      shipping_address: addressOf(order),
+      viewUrl: order.user_id
+        ? `${appUrl}/dashboard.html#orders`
+        : `${appUrl}/contact.html?message=${encodeURIComponent(`Question about order ${reference || order.id}`)}`,
+      ctaText: order.user_id ? 'View your order' : 'Get order help',
+    },
+    items: lines,
+    payment: {
+      pending,
+      status: pending ? 'pending' : 'paid',
+      label: pending ? 'Bank payment processing' : 'Paid',
+    },
+    adjustments: { discount, storeCredit },
+    notes: ['MASEST will reconcile freight and required documentation before fulfillment.'],
+  });
   return send(env, {
     to: [order.customer_email],
     bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
-    subject: pending
-      ? `Your MASEST order${ref} is received (payment processing)`
-      : `Your MASEST order${ref} is confirmed`,
-    html,
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
     category: 'order',
     idempotencyKey: effectIdempotencyKey(effectRow),
   });
@@ -629,14 +579,29 @@ async function sendShipmentNotificationEffect(env, sb, effectRow, send) {
       link: '/dashboard.html#orders',
     }).then(() => {}, () => {});
   }
+  const event = projection.tracking_status === 'delivered'
+    ? 'delivered'
+    : projection.tracking_status === 'shipped'
+      ? 'shipped'
+      : 'delivery_update';
+  const rendered = renderCommerceEmail({
+    event,
+    appUrl,
+    order,
+    fulfillment: {
+      label: notice.label,
+      summary: notice.body,
+      carrier: order.carrier,
+      trackingNumber: order.tracking_number,
+      trackingUrl: order.tracking_url,
+      estimatedDelivery: order.estimated_delivery_at,
+    },
+  });
   return send(env, {
     to: recipients,
-    subject: `Order ${reference} ${notice.label}`,
-    html: emailLayout({
-      heading: `Order ${reference} ${notice.label}`,
-      bodyHtml: shipmentEmailHtml(order, notice.label, notice.body),
-      ...shipmentEmailCta(order, notice.label, appUrl),
-    }),
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
     category: 'order',
     idempotencyKey: effectIdempotencyKey(effectRow),
   });
@@ -832,16 +797,38 @@ async function sendRefundEmailEffect(env, sb, effectRow, send) {
   if (!recipients.length) return { skipped: 'no_recipient' };
   const reference = String(command.snapshot?.order_number || command.order_id);
   const amount = Number(command.amount_minor) / 100;
-  const currency = String(command.currency || 'usd').toUpperCase();
+  const currency = String(command.currency || 'usd');
   const fullyRefunded = command.provider_result?.fully_refunded === true;
+  const totalMinor = Number(command.snapshot?.total_minor);
+  const refundedBeforeMinor = Number(command.snapshot?.refunded_before_minor || 0);
+  const remainingTotal = Number.isSafeInteger(totalMinor)
+    ? Math.max(0, totalMinor - refundedBeforeMinor - Number(command.amount_minor)) / 100
+    : undefined;
+  const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
+  const rendered = renderCommerceEmail({
+    event: 'refunded',
+    appUrl,
+    order: {
+      id: command.order_id,
+      order_number: reference,
+      currency,
+      viewUrl: `${appUrl}/contact.html?message=${encodeURIComponent(`Question about refund for order ${reference}`)}`,
+      ctaText: 'Get refund help',
+    },
+    refund: {
+      amount,
+      currency,
+      remainingTotal,
+      methodLabel: 'the original payment method',
+    },
+    notes: fullyRefunded ? [] : ['This was a partial refund; unrefunded order items remain unchanged.'],
+  });
   return send(env, {
     to: recipients,
     bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
-    subject: `${fullyRefunded ? 'Refund' : 'Partial refund'} issued for MASEST order ${reference}`,
-    html: billingEmailHtml(env, `${fullyRefunded ? 'Refund' : 'Partial refund'} issued`, [
-      `A refund of <b>${htmlEscape(currency)} ${amount.toFixed(2)}</b> was issued for order <b>${htmlEscape(reference)}</b>.`,
-      'The amount is returning to the original payment method. Card refunds usually post within 5–10 business days.',
-    ]),
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
     category: 'order',
     idempotencyKey: effectIdempotencyKey(effectRow),
   });
@@ -854,18 +841,27 @@ async function sendCancellationEmailEffect(env, sb, effectRow, send) {
     if (!recipients.length) return { skipped: 'no_recipient' };
     const reference = String(command.snapshot?.order_number || command.order_id);
     const refunded = Number(command.amount_minor) / 100;
-    const currency = String(command.currency || 'usd').toUpperCase();
+    const currency = String(command.currency || 'usd');
+    const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
+    const rendered = renderCommerceEmail({
+      event: 'canceled',
+      appUrl,
+      order: {
+        id: command.order_id,
+        order_number: reference,
+        currency,
+        viewUrl: `${appUrl}/contact.html?message=${encodeURIComponent(`Question about canceled order ${reference}`)}`,
+        ctaText: 'Get order help',
+      },
+      refund: { amount: refunded, currency },
+      notes: command.reason ? [`Reason: ${command.reason}`] : [],
+    });
     return send(env, {
       to: recipients,
       bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
-      subject: `Your MASEST order ${reference} was cancelled`,
-      html: billingEmailHtml(env, `Order ${htmlEscape(reference)} cancelled`, [
-        `Order <b>${htmlEscape(reference)}</b> has been cancelled and nothing else will ship.`,
-        refunded > 0
-          ? `A refund of <b>${htmlEscape(currency)} ${refunded.toFixed(2)}</b> is returning to the original payment method.`
-          : 'No Stripe payment was captured for this cancellation.',
-        command.reason ? `Reason: ${htmlEscape(command.reason)}` : 'Reply to this email if you would like help reordering.',
-      ], { url: `${String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '')}/cart.html`, text: 'Start a new order' }),
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
       category: 'order',
       idempotencyKey: effectIdempotencyKey(effectRow),
     });
@@ -884,17 +880,28 @@ async function sendCancellationEmailEffect(env, sb, effectRow, send) {
   const recipients = [...new Set([order.customer_email, ...companyRecipients]
     .map((value) => String(value || '').trim().toLowerCase())
     .filter(Boolean))];
+  const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
+  const rendered = renderCommerceEmail({
+    event: 'canceled',
+    appUrl,
+    order: {
+      ...order,
+      reference,
+      shipping_address: addressOf(order),
+      viewUrl: order.user_id || order.company_id
+        ? `${appUrl}/dashboard.html#orders`
+        : `${appUrl}/contact.html?message=${encodeURIComponent(`Question about canceled order ${reference}`)}`,
+      ctaText: order.user_id || order.company_id ? 'View order' : 'Get order help',
+    },
+    refund: { amount: refunded, currency },
+    notes: reason ? [`Reason: ${reason}`] : [],
+  });
   return send(env, {
     to: recipients,
     bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
-    subject: `Your MASEST order ${reference} was cancelled`,
-    html: billingEmailHtml(env, `Order ${reference} cancelled`, [
-      `Order <b>${htmlEscape(reference)}</b> has been cancelled and nothing will ship.`,
-      refunded > 0
-        ? `A refund of <b>${currency} ${refunded.toFixed(2)}</b> is on its way back to your original payment method. Card refunds usually post within 5–10 business days.`
-        : 'No payment was captured for this order, so there is nothing to refund.',
-      reason ? `Reason: ${htmlEscape(reason)}` : 'Reply to this email if you would like help reordering.',
-    ], { url: `${String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '')}/cart.html`, text: 'Start a new order' }),
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
     category: 'order',
     idempotencyKey: effectIdempotencyKey(effectRow),
   });

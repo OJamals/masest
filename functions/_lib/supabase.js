@@ -11,7 +11,7 @@ import {
 } from './commerce-context.js';
 
 export { CommerceContextError } from './commerce-context.js';
-export { emailLayout } from './email-template.js';
+export { emailEscape as htmlEscape, emailLayout } from './email-template.js';
 
 // Service-role client — bypasses RLS. SERVER ONLY. Never return its key or use client-side.
 export function adminClient(env) {
@@ -407,9 +407,4 @@ export async function sendEmailResult(env, {
 
 export async function sendEmail(env, options) {
   return (await sendEmailResult(env, options)).ok;
-}
-
-// Minimal HTML escape for interpolating user/staff text into email bodies.
-export function htmlEscape(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }

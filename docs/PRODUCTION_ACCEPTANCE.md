@@ -109,7 +109,7 @@ Wait for explicit operator approval.
 - [ ] Create the matching QBO refund/credit memo, void, or clearly labeled cleanup state.
 - [ ] Send one authenticated customer chat message and one admin reply.
 - [ ] Verify the message appears in Admin → Messages and the reply appears in the customer chat thread.
-- [ ] If Resend Receiving is configured, reply directly to the admin email and verify it appears in Admin → Messages and the buyer dashboard thread.
+- [ ] If Cloudflare Email Routing is configured, reply directly to the threaded support email and verify it appears in Admin → Messages and the buyer dashboard thread.
 - [ ] Verify anonymous, buyer, company admin, staff read-only/support/finance/owner boundaries for protected surfaces and mutations.
 - [ ] Verify controlled failure paths: invalid checkout line, CMS validation rejection, unauthorized API call, and customer-chat authentication gating.
 - [ ] Run focused accessibility/performance checks: core public pages, dashboard/admin/CMS/CRM keyboard flow, mobile overflow, and no hung dashboard/API states.

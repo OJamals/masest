@@ -351,7 +351,7 @@ export async function publishKlaviyoCampaign(env, {
   if (!env?.KLAVIYO_PRIVATE_KEY || !listId) {
     return { ok: false, provider: 'klaviyo', retryable: false, error: 'klaviyo_campaign_not_configured' };
   }
-  if (!String(html || '').includes('{% unsubscribe %}')) {
+  if (!/href\s*=\s*["']\{% unsubscribe_link %\}["']/i.test(String(html || ''))) {
     return { ok: false, provider: 'klaviyo', retryable: false, error: 'marketing_unsubscribe_required' };
   }
   const campaignName = String(name || subject || 'MASEST campaign').trim().slice(0, 255);

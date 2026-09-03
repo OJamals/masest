@@ -1,0 +1,37 @@
+{
+  "support-thread.html": {
+    "subject": "Re: MASEST support · Northwind HVAC · Order MST-00000005",
+    "previewText": "New reply from MASEST Support — respond by email or continue online.",
+    "hasTextFallback": true
+  },
+  "order-confirmation.html": {
+    "subject": "Order MST-00000005 confirmed",
+    "previewText": "Payment complete — review items, total, and delivery details.",
+    "hasTextFallback": true
+  },
+  "shipment.html": {
+    "subject": "Order MST-00000005 is on the way",
+    "previewText": "UPS expects delivery Sep 8, 2026.",
+    "hasTextFallback": true
+  },
+  "refund.html": {
+    "subject": "USD 289.00 refund issued for order MST-00000005",
+    "previewText": "Refund sent to the original payment method; bank posting may take 5–10 business days.",
+    "hasTextFallback": true
+  },
+  "newsletter.html": {
+    "subject": "A practical heat-exchanger cleaning plan",
+    "previewText": "Scope deposits, circulation, rinse, and verification before shutdown day.",
+    "hasTextFallback": true
+  },
+  "blog-announcement.html": {
+    "subject": "New from MASEST: How to plan a heat-exchanger cleaning loop",
+    "previewText": "A field-ready sequence for deposit identification, circulation, rinse handling, and verification.",
+    "hasTextFallback": true
+  },
+  "product-offer.html": {
+    "subject": "A more complete industrial degreasing cycle",
+    "previewText": "Match chemistry to the full job.",
+    "hasTextFallback": true
+  }
+}

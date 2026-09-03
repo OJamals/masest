@@ -1,11 +1,10 @@
 import {
   adminClient,
   emailsByIds,
-  emailLayout,
-  htmlEscape,
   sendEmailResult,
 } from './supabase.js';
 import { htmlToText } from './email.js';
+import { renderSupportEmail } from './email-renderers.js';
 import { isStaffEmail } from './authz.js';
 import { adminMessageAlertKind, adminMessageRecipients } from './admin-message-notifications.js';
 import { shouldEmailSupportRecipient } from './message-notifications.js';
@@ -53,21 +52,6 @@ function threadHeaders(parent) {
   };
 }
 
-function threadSubject(companyName, hasParent) {
-  const company = String(companyName || 'Customer').replace(/[\r\n]+/g, ' ').trim().slice(0, 120) || 'Customer';
-  const base = `MASEST support · ${company}`;
-  return hasParent ? `Re: ${base}` : base;
-}
-
-function orderLine(order) {
-  if (!order?.id) return '';
-  const reference = htmlEscape(order.reference || order.id);
-  const status = order.status
-    ? ` · ${htmlEscape(String(order.status).replaceAll('_', ' '))}`
-    : '';
-  return `<p><strong>Order ${reference}</strong>${status}</p>`;
-}
-
 async function orderContext(sb, message) {
   if (!message?.order_id) return null;
   const contexts = await supportOrderContextsById(sb, [message.order_id]);
@@ -77,10 +61,10 @@ async function orderContext(sb, message) {
 async function threadParent(sb, message) {
   if (!message?.thread_id && !message?.company_id) return null;
   let query = sb.from('messages')
-    .select('id,email_message_id,email_references,created_at')
+    .select('id,email_message_id,email_references,sender_role,sender_name,body,created_at')
     .or('email_message_id.not.is.null,email_references.not.is.null')
     .order('created_at', { ascending: false })
-    .limit(1);
+    .limit(3);
   query = message.thread_id
     ? query.eq('thread_id', message.thread_id)
     : query.eq('company_id', message.company_id);
@@ -91,12 +75,20 @@ async function threadParent(sb, message) {
     const participantId = message.sender_role === 'staff' ? message.recipient_user_id : message.user_id;
     if (participantId) query = query.or(`user_id.eq.${participantId},recipient_user_id.eq.${participantId}`);
   }
-  const { data, error } = await query.maybeSingle();
+  const { data, error } = await query;
   if (error) throw error;
-  const messageId = data?.email_message_id || messageIds(data?.email_references).at(-1) || null;
+  const priorMessages = Array.isArray(data) ? data : [];
+  const parent = priorMessages.find((row) => row?.email_message_id || row?.email_references) || null;
+  const messageId = parent?.email_message_id || messageIds(parent?.email_references).at(-1) || null;
   return messageId ? {
     messageId,
-    references: data.email_references || null,
+    references: parent.email_references || null,
+    history: priorMessages.slice(0, 2).map(({ sender_role, sender_name, body, created_at }) => ({
+      sender_role,
+      sender_name,
+      body,
+      created_at,
+    })),
   } : null;
 }
 
@@ -251,21 +243,30 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
   const ctaPath = isStaffMessage
     ? (order ? `/dashboard.html?order=${encodeURIComponent(order.id)}#messages` : '/dashboard.html#messages')
     : '/admin.html#support';
-  const heading = isStaffMessage ? 'New message from MASEST' : 'New customer message';
-  const bodyHtml = `${orderLine(order)}<blockquote style="border-left:3px solid #0e7c86;padding-left:12px;color:#334;margin:12px 0;white-space:pre-wrap">${htmlEscape(String(message.body).slice(0, 4000))}</blockquote>`;
-  const threadName = order?.reference ? `${companyName} · Order ${order.reference}` : companyName;
+  const rendered = renderSupportEmail({
+    thread: {
+      headers: threading.headers,
+      viewUrl: `${appUrl}${ctaPath}`,
+    },
+    message,
+    priorMessages: parent?.history || [],
+    participant: { name: companyName },
+    order: order ? {
+      ...order,
+      viewUrl: isStaffMessage
+        ? `${appUrl}/dashboard.html?order=${encodeURIComponent(order.id)}#orders`
+        : `${appUrl}/admin.html?order=${encodeURIComponent(order.id)}#orders`,
+    } : null,
+    audience: isStaffMessage ? 'buyer' : 'staff',
+  });
   const send = dependencies.sendEmail || sendEmailResult;
   const delivery = await send(env, {
     to: recipients,
-    subject: threadSubject(threadName, Boolean(threading.headers['In-Reply-To'])),
-    html: emailLayout({
-      heading,
-      bodyHtml,
-      ctaText: isStaffMessage ? 'Open your messages' : 'Open customer support',
-      ctaUrl: `${appUrl}${ctaPath}`,
-    }),
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
     replyTo,
-    emailHeaders: threading.headers,
+    emailHeaders: rendered.headers,
     category: isStaffMessage ? 'messages' : 'staff_alert',
     idempotencyKey: `support-message/${message.id}/${message.sender_role}`,
   });

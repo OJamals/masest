@@ -39,7 +39,7 @@ test('publishKlaviyoCampaign creates template + campaign, assigns, queues send',
     name: 'Newsletter 42',
     subject: 'Field notes',
     previewText: 'Latest field notes',
-    html: '<html><a href="{% unsubscribe %}">Unsubscribe</a></html>',
+    html: '<html><a href="{% unsubscribe_link %}">Unsubscribe</a></html>',
     text: 'Field notes',
     listId: 'LIST_MAIN',
     fetchImpl,
@@ -69,6 +69,17 @@ test('publishKlaviyoCampaign fails closed without marketing unsubscribe control'
   let calls = 0;
   const result = await publishKlaviyoCampaign(env, {
     name: 'Bad', subject: 'Bad', html: '<p>No unsubscribe</p>',
+    fetchImpl: async () => { calls += 1; },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'marketing_unsubscribe_required');
+  assert.equal(calls, 0);
+});
+
+test('publishKlaviyoCampaign requires unsubscribe_link in an actual href', async () => {
+  let calls = 0;
+  const result = await publishKlaviyoCampaign(env, {
+    name: 'Bad', subject: 'Bad', html: '<p>{% unsubscribe_link %}</p>',
     fetchImpl: async () => { calls += 1; },
   });
   assert.equal(result.ok, false);

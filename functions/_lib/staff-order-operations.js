@@ -1,7 +1,8 @@
 import { recordAudit } from './audit.js';
 import { staffCan, staffCanWrite } from './authz.js';
 import { planNetSettlement } from './credit.js';
-import { shipmentEmailCta, shipmentEmailHtml, shipmentNotice } from './order-email.js';
+import { shipmentNotice } from './order-email.js';
+import { renderCommerceEmail } from './email-renderers.js';
 import { linkOrderProviderObject, orderReference } from './order-integrations.js';
 import { settledOrderStatus, shouldPromoteToFulfilled } from './order-lifecycle.js';
 import {
@@ -11,7 +12,7 @@ import {
   queueRefundCommand,
   retireCancellationReviewCommand,
 } from './order-reversal-commands.js';
-import { companyEmails, emailLayout, htmlEscape, sendEmail } from './supabase.js';
+import { companyEmails, sendEmail } from './supabase.js';
 
 export const ORDER_STATUSES = [
   'cart',
@@ -193,15 +194,27 @@ async function notifyCompany(sb, env, request, companyId, label, extra, order = 
   }).then(() => {}, () => {});
   const appUrl = env.APP_URL || new URL(request.url).origin;
   const emails = await companyEmails(sb, companyId, 'orders');
+  const rendered = renderCommerceEmail({
+    event: 'payment',
+    appUrl,
+    order: {
+      ...(order || {}),
+      viewUrl: `${appUrl}/dashboard.html#orders`,
+      ctaText: 'View your order',
+    },
+    payment: {
+      label,
+      heading: title,
+      summary: extra || `Your MASEST order status is now "${label}".`,
+      subject: title,
+      previewText: extra || title,
+    },
+  });
   await sendEmail(env, {
     to: emails,
-    subject: title,
-    html: emailLayout({
-      heading: title,
-      bodyHtml: `<p>${htmlEscape(extra || `Your MASEST order status is now "${label}".`)}</p>`,
-      ctaText: 'View your order',
-      ctaUrl: `${appUrl}/dashboard.html#orders`,
-    }),
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
     category: 'order',
   });
   return emails;
@@ -215,14 +228,30 @@ async function sendTrackingEmail(env, request, order, label, extra, recipients) 
 
   const appUrl = env.APP_URL || new URL(request.url).origin;
   const reference = orderReference(order);
+  const normalizedLabel = String(label || '').toLowerCase();
+  const event = normalizedLabel === 'delivered'
+    ? 'delivered'
+    : normalizedLabel === 'shipped'
+      ? 'shipped'
+      : 'delivery_update';
+  const rendered = renderCommerceEmail({
+    event,
+    appUrl,
+    order,
+    fulfillment: {
+      label,
+      summary: extra,
+      carrier: order?.carrier,
+      trackingNumber: order?.tracking_number,
+      trackingUrl: order?.tracking_url,
+      estimatedDelivery: order?.estimated_delivery_at,
+    },
+  });
   return sendEmail(env, {
     to: unique,
-    subject: `Order ${reference} ${label}`,
-    html: emailLayout({
-      heading: `Order ${reference} ${label}`,
-      bodyHtml: shipmentEmailHtml(order, label, extra),
-      ...shipmentEmailCta(order, label, appUrl),
-    }),
+    subject: rendered.subject || `Order ${reference} ${label}`,
+    html: rendered.html,
+    text: rendered.text,
     category: 'order',
   });
 }

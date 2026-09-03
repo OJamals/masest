@@ -79,6 +79,46 @@ test('the notification is skipped when the projection reports no notifiable tran
   assert.equal(sends, 0, 'no email may be sent for a non-transition');
 });
 
+test('a notifiable shipment uses the canonical order renderer and plain-text fallback', async () => {
+  let email;
+  const query = (data) => ({
+    select() { return this; },
+    eq() { return this; },
+    async maybeSingle() { return { data, error: null }; },
+  });
+  const sb = {
+    from(table) {
+      if (table === 'integration_effects') {
+        return query({ provider_result: { notify: true, order_id: 'order-1', tracking_status: 'shipped' } });
+      }
+      if (table === 'orders') {
+        return query({
+          id: 'order-1', order_number: 'MST-00000125', user_id: 'user-1', company_id: null,
+          customer_email: 'buyer@example.com', carrier: 'UPS', tracking_number: '1Z9',
+          tracking_url: 'https://www.ups.com/track?loc=en_US&tracknum=1Z9', estimated_delivery_at: '2026-09-08T12:00:00Z',
+        });
+      }
+      throw new Error(`unexpected table ${table}`);
+    },
+  };
+
+  const outcome = await deliverIntegrationEffect({
+    env,
+    sb,
+    effect: {
+      id: 'shipment-email-1', event_id: 'event-1', provider: 'shipstation', provider_event_id: 'se-event-1',
+      effect_key: 'shipment-notification', effect_type: 'shipment_notification',
+      depends_on_effect_key: 'tracking-projection', payload: { tracking_number: '1Z9', tracking_status: 'shipped' },
+    },
+  }, { sendEmail: async (_env, input) => { email = input; return true; } });
+
+  assert.equal(outcome.skipped, false);
+  assert.match(email.html, /https:\/\/media\.masest\.co\/site\/img\/masest-logo\.png/);
+  assert.match(email.html, /Track shipment/);
+  assert.match(email.html, /Required order notice/);
+  assert.match(email.text, /Tracking: 1Z9/);
+});
+
 test('shipment copy is keyed on the buyer-visible status', () => {
   assert.equal(shipmentNotice('delivered').label, 'delivered');
   assert.match(shipmentNotice('shipped', { carrier: 'UPS', trackingNumber: '1Z9' }).body, /UPS 1Z9/);

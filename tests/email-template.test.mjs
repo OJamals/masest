@@ -25,8 +25,11 @@ test('marketing shell uses same design + Klaviyo unsubscribe and preference link
     bodyHtml: '<p>New guide.</p>',
   });
   assert.match(html, /https:\/\/media\.masest\.co\/site\/img\/masest-logo\.png/);
-  assert.match(html, /\{% unsubscribe %\}/);
+  assert.match(html, /\{% unsubscribe_link %\}/);
+  assert.match(html, /\{% web_view_link %\}/);
   assert.match(html, /dashboard\.html#notifications/);
+  assert.match(html, /1361 Grand Cayman Dr/);
+  assert.match(html, /Merritt Island, FL 32952/);
   assert.doesNotMatch(html, /Required service email/);
 });
 

@@ -432,6 +432,11 @@ test('buyer confirmation labels account credit separately and restores original 
   });
 
   assert.equal(result.skipped, false);
+  assert.match(email.subject, /Order MST-00000123 confirmed/);
+  assert.match(email.html, /https:\/\/media\.masest\.co\/site\/img\/masest-logo\.png/);
+  assert.match(email.html, /Required order notice/);
+  assert.match(email.text, /ORDER SUMMARY/);
+  assert.doesNotMatch(email.html, /Unsubscribe|Advertisement/i);
   assert.match(email.html, /Subtotal<\/td><td[^>]*>USD 50\.00/);
   assert.match(email.html, /Account credit<\/td><td[^>]*>&minus;USD 10\.01/);
   assert.match(email.html, /Discount<\/td><td[^>]*>&minus;USD 2\.00/);

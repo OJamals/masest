@@ -80,8 +80,8 @@ follow-up controls, plus server-paginated company, quote, contact, and account d
 (`/api/checkout`, `_lib/checkout-session.js`), webhook (records order, decrements stock, "order received"
 notification, subscription branch + `customer.subscription.*` updates), branded order-confirmation email.
 
-**Lead intake:** `/api/quote` (own endpoint, replaced Formspree) → persists to `quotes` table + Resend
-sales-notify + buyer autoreply; honeypot + soft Turnstile. Surfaces in admin Quotes tab.
+**Lead intake:** `/api/quote` (own endpoint, replaced Formspree) → persists to `quotes` table + Cloudflare
+transactional sales-notify + buyer autoreply; honeypot + soft Turnstile. Surfaces in admin Quotes tab.
 
 **Other:** newsletter (Klaviyo), pageview beacon (`/api/track` + `js/track.js`), notifications (in-app + email).
 
@@ -182,7 +182,8 @@ bounded server pagination. The unchecked items below remain top-of-funnel work.
 - [ ] **Booking / scheduling** — let prospects book an audit/demo (embed Cal.com/Calendly, or build a
       slots table + confirmation email). Sync to the assigned rep.
 - [ ] **Lead magnets / gated content** — SDS pack, savings whitepaper, compliance guide behind an email
-      capture → push to Klaviyo + `quotes`/`leads` table; deliver via Resend.
+      capture → push consented contacts to Klaviyo + `quotes`/`leads` table; fulfill requested files through
+      Cloudflare transactional email.
 - [ ] **ROI / cost-savings calculator** — interactive tool (chemical/water/energy savings vs incumbent) that
       captures inputs + email; strong B2B lead magnet and sales talking point.
 - [ ] **Newsletter capture** — footer signup, exit-intent and scroll popups, post-purchase opt-in (Klaviyo lists).
@@ -205,7 +206,7 @@ Turn traffic and leads into orders and repeat revenue.
 - [ ] **A/B testing** — server-assigned variant cookie + variant rendering + conversion tracking; start with hero/CTA/PDP.
 - [ ] **Retargeting pixels** — Meta, Google Ads, LinkedIn Insight (consent-gated); server-side events where possible.
 
-**Lifecycle email automation** (Klaviyo flows, or Resend + a scheduled CF cron)
+**Lifecycle email automation** (Klaviyo for optional marketing; Cloudflare only for transactional events)
 - [ ] **Cart abandonment** (guest + logged-in), **browse abandonment**, **quote follow-up** sequence,
       **post-purchase** (reorder reminder timed to consumption), **win-back**, **subscription renewal/dunning**.
 
@@ -249,4 +250,5 @@ Turn traffic and leads into orders and repeat revenue.
 
 Each task: implement on `main`, follow the CF Functions + `_lib` conventions, add the table
 grant when creating tables, verify with `node --check` + a smoke call (expect 401 on gated endpoints), and
-confirm email paths via the Resend API. Keep changes small and committed per-feature.
+confirm transactional paths through the private Cloudflare service binding and marketing paths through
+Klaviyo previews or bounded test recipients. Keep changes small and committed per-feature.

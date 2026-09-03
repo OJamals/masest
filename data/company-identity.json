@@ -3,7 +3,7 @@
     "owner": "MASEST Consulting LLC",
     "revision": "1.0",
     "effective_date": "2026-08-21",
-    "rule": "Only this record may supply public organization schema. A street address remains unpublished until an owner confirms one canonical public address."
+    "rule": "Only this record may supply public organization schema and public business identity."
   },
   "legal_name": "MASEST Consulting LLC",
   "public_name": "MASEST",
@@ -15,11 +15,12 @@
   "location": {
     "locality": "Merritt Island",
     "region": "FL",
+    "postal_code": "32952",
     "country": "US"
   },
   "street_address": {
-    "status": "withheld_pending_confirmation",
-    "value": null
+    "status": "confirmed_public",
+    "value": "1361 Grand Cayman Dr"
   },
   "primary_contact": {
     "label": "Sales",

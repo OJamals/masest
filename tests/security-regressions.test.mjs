@@ -56,17 +56,16 @@ test("admin notifications escape staff-controlled email text", () => {
   const staffOperations = read("functions/_lib/staff-order-operations.js");
   const offers = read("functions/api/admin/offers.js");
   const emailTemplate = read("functions/_lib/email-template.js");
+  const emailRenderers = read("functions/_lib/email-renderers.js");
   // The dynamic `extra` body can carry staff input (e.g. a manual NET settlement
   // reference). Both notification paths must escape it before it reaches the email.
-  assert.match(staffOperations, /bodyHtml: `<p>\$\{htmlEscape\(extra \|\|/, "notifyCompany must escape extra");
-  // The shipment-email body moved into the shared builder so the automatic carrier-scan
-  // path and the manual staff update render identically — the escape moved with it.
-  const orderEmail = read("functions/_lib/order-email.js");
-  assert.match(orderEmail, /htmlEscape\(extra \|\| `Your order is now/, "shipmentEmailHtml must escape extra");
-  assert.match(staffOperations, /shipmentEmailHtml\(order, label, extra\)/, "tracking email must use the escaping builder");
+  assert.match(staffOperations, /summary:\s*extra \|\|/, "notifyCompany must pass extra through the typed renderer");
+  assert.match(emailRenderers, /emailEscape\(config\.summary\)/, "commerce renderer must escape status copy");
+  assert.match(staffOperations, /renderCommerceEmail\(/, "tracking email must use the escaping renderer");
   assert.match(offers, /heading:\s*title/);
-  assert.match(emailTemplate, /const safeHeading = escapeHtml\(heading\)/);
-  assert.match(offers, /htmlEscape\(String\(body\.body \|\| ''\)\)/);
+  assert.match(emailTemplate, /emailEscape\(heading\)/);
+  assert.match(offers, /emailEscape\(bodyText\)/);
+  assert.match(offers, /renderMarketingEmail\(/);
 });
 
 test("admin refund rejects non-Stripe and already-settled orders", () => {

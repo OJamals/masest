@@ -21,21 +21,29 @@ const updateSourceOptions = existsSync(updateSourceRoot)
   ? { sourceRoot: updateSourceRoot }
   : {};
 
-test("company identity has one legal owner, domain, sales route, and no unconfirmed street address", () => {
+test("company identity has one legal owner, domain, sales route, and confirmed public address", () => {
   assert.doesNotThrow(() => validateCompanyIdentity(COMPANY_IDENTITY));
   assert.equal(COMPANY_IDENTITY.legal_name, "MASEST Consulting LLC");
   assert.equal(COMPANY_IDENTITY.website, "https://masest.co/");
   assert.equal(COMPANY_IDENTITY.primary_contact.email, "sales@masest.co");
   assert.equal(COMPANY_IDENTITY.location.locality, "Merritt Island");
-  assert.equal(COMPANY_IDENTITY.street_address.status, "withheld_pending_confirmation");
-  assert.equal(COMPANY_IDENTITY.street_address.value, null);
+  assert.equal(COMPANY_IDENTITY.location.postal_code, "32952");
+  assert.equal(COMPANY_IDENTITY.street_address.status, "confirmed_public");
+  assert.equal(COMPANY_IDENTITY.street_address.value, "1361 Grand Cayman Dr");
 
   const org = organizationJsonLd();
   assert.equal(org.name, COMPANY_IDENTITY.legal_name);
   assert.equal(org.url, COMPANY_IDENTITY.website);
   assert.equal(org.contactPoint.email, COMPANY_IDENTITY.primary_contact.email);
   assert.equal(org.contactPoint.telephone, COMPANY_IDENTITY.primary_contact.phone_e164);
-  assert.equal(org.address, undefined);
+  assert.deepEqual(org.address, {
+    "@type": "PostalAddress",
+    streetAddress: "1361 Grand Cayman Dr",
+    addressLocality: "Merritt Island",
+    addressRegion: "FL",
+    postalCode: "32952",
+    addressCountry: "US",
+  });
   assert.doesNotMatch(org.description, /HMIS|safe|non[- ]toxic|certif/i);
 
   for (const file of ["about.html", "contact.html"]) {

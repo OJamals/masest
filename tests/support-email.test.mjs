@@ -22,6 +22,8 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
     company_name: 'Northwind HVAC',
     sender_role: 'staff',
     body: 'Your replacement is approved.',
+    sender_name: 'Maya',
+    created_at: '2026-09-03T14:42:00Z',
     order_id: ORDER_ID,
     recipient_user_id: BUYER_ID,
   }, {
@@ -39,6 +41,11 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
     threadParent: async () => ({
       messageId: '<prior-buyer-visible@example.com>',
       references: '<root-buyer-visible@example.com>',
+      history: [{
+        sender_role: 'buyer',
+        body: 'Is this the right chemistry?',
+        created_at: '2026-09-03T14:31:00Z',
+      }],
     }),
     sendEmail: async (_env, options) => {
       sent = options;
@@ -56,6 +63,11 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
   assert.equal(sent.emailHeaders['Thread-Topic'], undefined);
   assert.match(sent.subject, /^Re: MASEST support · Northwind HVAC · Order VK-1042$/);
   assert.match(sent.html, /Order VK-1042/);
+  assert.match(sent.html, /View conversation online/);
+  assert.match(sent.html, /Reply directly to this email/);
+  assert.match(sent.html, /Earlier in this conversation/);
+  assert.match(sent.html, /Is this the right chemistry\?/);
+  assert.match(sent.text, /Your replacement is approved/);
   assert.equal(sent.idempotencyKey, `support-message/${MESSAGE_ID}/staff`);
   assert.deepEqual(saved, {
     messageId: MESSAGE_ID,

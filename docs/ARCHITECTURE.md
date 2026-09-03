@@ -13,7 +13,7 @@ MASEST is a static Cloudflare Pages commerce site with Pages Functions for serve
   static public pages.
 - Quote CRM: `/api/quote`, `/api/admin/quotes`, `/api/admin/crm/*`, the quote pipeline, contacts/tasks/timeline
   workspaces, buyer message handoff, and bounded server pagination for large admin directories.
-- External services: Stripe for checkout/payment portal, Resend for transactional email, QuickBooks via QBO sync functions, and Supabase for auth/data.
+- External services: Stripe for checkout/payment portal; Cloudflare Email Service and Email Routing for transactional delivery plus support replies; Klaviyo for consent-aware marketing fanout; QuickBooks via QBO sync functions; and Supabase for auth/data.
 
 ## Target Structure
 

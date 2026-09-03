@@ -1,4 +1,5 @@
-import { adminClient, emailLayout, htmlEscape, sendEmail } from './supabase.js';
+import { adminClient, sendEmail } from './supabase.js';
+import { renderCommerceEmail } from './email-renderers.js';
 import { recordAudit } from './audit.js';
 import { linkOrderProviderObject } from './order-integrations.js';
 import { recordOrderFinancialEntry } from './order-financial-ledger.js';
@@ -191,21 +192,29 @@ async function sendReturnLabelEmail(env, order, { labelUrl, trackingNumber, retu
   if (!to) return false;
   const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
   const reference = text(order?.order_number, 60) || text(order?.id, 40);
-  const details = [
-    trackingNumber ? `<li><strong>Return tracking #:</strong> ${htmlEscape(trackingNumber)}</li>` : '',
-    reason ? `<li><strong>Reason on file:</strong> ${htmlEscape(reason)}</li>` : '',
-  ].filter(Boolean).join('');
+  const rendered = renderCommerceEmail({
+    event: 'return_label',
+    appUrl,
+    order: {
+      ...order,
+      reference,
+      viewUrl: `${appUrl}/dashboard.html#orders`,
+      ctaText: labelUrl ? 'Print return label' : 'View your orders',
+    },
+    fulfillment: {
+      labelUrl,
+      trackingNumber,
+      carrier: order?.carrier || 'Return carrier',
+    },
+    notes: reason ? [`Reason on file: ${reason}`] : [],
+  });
   try {
     return await sendEmail(env, {
       to: [to],
       bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
-      subject: `Your return label for MASEST order ${reference}`,
-      html: emailLayout({
-        heading: `Return label for order ${reference}`,
-        bodyHtml: `<p>Print the label below, tape it to the sealed carton, and drop it with the carrier. Keep the products in their original packaging where you can.</p>${details ? `<ul>${details}</ul>` : ''}<p>Once the carrier scans it we will confirm the return and process any refund.</p>`,
-        ctaText: labelUrl ? 'Print return label' : 'View your orders',
-        ctaUrl: labelUrl || `${appUrl}/dashboard.html#orders`,
-      }),
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
       category: 'order',
       // One send per label, so a retried staff click cannot spam the buyer.
       idempotencyKey: `return-label:${returnLabelId}`,

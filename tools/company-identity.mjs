@@ -54,6 +54,7 @@ export function validateCompanyIdentity(identity) {
   requiredText(identity.service_area, "service_area");
   requiredText(identity.location?.locality, "location.locality");
   requiredText(identity.location?.region, "location.region");
+  requiredText(identity.location?.postal_code, "location.postal_code");
   requiredText(identity.location?.country, "location.country");
 
   const address = identity.street_address;
@@ -119,6 +120,7 @@ export function organizationJsonLd() {
       streetAddress: identity.street_address.value,
       addressLocality: identity.location.locality,
       addressRegion: identity.location.region,
+      postalCode: identity.location.postal_code,
       addressCountry: identity.location.country,
     };
   }

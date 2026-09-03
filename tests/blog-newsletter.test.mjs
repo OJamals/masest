@@ -10,11 +10,13 @@ test('blog_newsletter is a marketing category (suppression + unsub apply)', () =
 });
 
 test('postFromEntry flattens a content_entries row', () => {
-  const p = postFromEntry({ slug: 's', title: 'T', payload: { title: 'PT', excerpt: 'e', hero: 'img/blog/x.webp', category: 'news' } });
+  const p = postFromEntry({ slug: 's', title: 'T', payload: { title: 'PT', excerpt: 'e', hero: 'img/blog/x.webp', hero_width: 1440, hero_height: 811, category: 'news' } });
   assert.equal(p.slug, 's');
   assert.equal(p.title, 'PT'); // payload title wins
   assert.equal(p.excerpt, 'e');
   assert.equal(p.hero, 'img/blog/x.webp');
+  assert.equal(p.hero_width, 1440);
+  assert.equal(p.hero_height, 811);
 });
 
 test('unsentPosts filters out already-sent slugs', () => {
@@ -24,18 +26,23 @@ test('unsentPosts filters out already-sent slugs', () => {
 });
 
 test('renderBlogEmail: hero, title, excerpt, escaped CTA to the live post', () => {
-  const { subject, html, url } = renderBlogEmail({
+  const { subject, html, text, url } = renderBlogEmail({
     slug: 'hmis-000-explained', title: 'What HMIS 0-0-0 Means', excerpt: 'Lower hazard.',
     hero: 'img/blog/hmis-000-explained.webp', hero_alt: 'HCR jug', category: 'technical',
+    hero_width: 1440, hero_height: 811,
     author: 'MASEST', date: '2026-07-01',
   });
   assert.equal(url, 'https://masest.co/blog/hmis-000-explained');
   assert.match(subject, /New from MASEST: What HMIS 0-0-0 Means/);
   assert.match(html, /https:\/\/media\.masest\.co\/site\/img\/blog\/hmis-000-explained\.webp/);
+  assert.match(html, /hmis-000-explained\.webp" width="600" height="338"/);
   assert.match(html, /What HMIS 0-0-0 Means/);
   assert.match(html, /Lower hazard\./);
   assert.match(html, /Read the full post/);
   assert.match(html, /href="https:\/\/masest\.co\/blog\/hmis-000-explained"/);
+  assert.match(html, /\{% unsubscribe_link %\}/);
+  assert.match(html, /1361 Grand Cayman Dr/);
+  assert.match(text, /Read the full post: https:\/\/masest\.co\/blog\/hmis-000-explained/);
 });
 
 test('renderBlogEmail: escapes HTML in title/excerpt (no injection)', () => {
@@ -46,11 +53,11 @@ test('renderBlogEmail: escapes HTML in title/excerpt (no injection)', () => {
   assert.ok(subject.includes('<script>')); // subject is plain-text (Resend), not HTML
 });
 
-test('renderBlogEmail: no hero keeps only the shared R2 logo', () => {
+test('renderBlogEmail: no hero keeps shared R2 header and footer logos only', () => {
   const { html } = renderBlogEmail({ slug: 'x', title: 'T', excerpt: 'e', hero: '' });
   const images = html.match(/<img\b[^>]*>/g) || [];
-  assert.equal(images.length, 1);
-  assert.match(images[0], /https:\/\/media\.masest\.co\/site\/img\/masest-logo\.png/);
+  assert.equal(images.length, 2);
+  assert.ok(images.every((image) => /https:\/\/media\.masest\.co\/site\/img\/masest-logo\.png/.test(image)));
 });
 
 test('klaviyoListProfiles: paginates links.next, dedupes, lowercases', async () => {

@@ -11,6 +11,7 @@ const STRIPE_WEBHOOK = read("functions/api/stripe-webhook.js");
 const CHECKOUT_FULFILLMENT = read("functions/_lib/checkout-fulfillment-contract.js");
 const ORDER_SHAPE = read("functions/_lib/order-shape.js");
 const STRIPE_EFFECTS = read("functions/_lib/integration-effects.js");
+const EMAIL_RENDERERS = read("functions/_lib/email-renderers.js");
 const ACCOUNT_ORDERS = read("functions/api/account/orders.js");
 const ADMIN_ORDERS = read("functions/api/admin/orders.js");
 const STAFF_ORDER_OPERATIONS = read("functions/_lib/staff-order-operations.js");
@@ -34,8 +35,9 @@ test("shipping and purchase-order references reach confirmations and order views
   // Checkout is card/ACH only, so it carries the PO into the Stripe session rather than
   // rendering a confirmation itself — the paid-order email is built in integration-effects.
   assert.match(CHECKOUT, /purchaseOrderNumber,/);
-  assert.match(STRIPE_EFFECTS, /Purchase order:/);
-  assert.match(STRIPE_EFFECTS, />Shipping<\/td>/);
+  assert.match(STRIPE_EFFECTS, /shipping_address:\s*addressOf\(order\)/);
+  assert.match(EMAIL_RENDERERS, /order\.purchase_order_number/);
+  assert.match(EMAIL_RENDERERS, /\['Shipping', order\.shipping\]/);
   assert.match(ACCOUNT_ORDERS, /currency,purchase_order_number,/);
   assert.match(ADMIN_ORDERS, /currency,purchase_order_number,/);
   assert.match(DASHBOARD, /Purchase order:/);
@@ -49,15 +51,17 @@ test("tracking updates email buyer + company recipients once, deduplicated", () 
   // The recipient union is deduplicated inside sendTrackingEmail (Set over normalized emails).
   assert.match(STAFF_ORDER_OPERATIONS, /new Set\(\(recipients \|\| \[\]\)/);
   assert.match(STAFF_ORDER_OPERATIONS, /await sendOrderTrackingEmail\([\s\S]{0,180}\[order\?\.customer_email,\s*\.\.\.companyRecipients\]/);
-  assert.match(STAFF_ORDER_OPERATIONS, /htmlEscape/);
+  assert.match(STAFF_ORDER_OPERATIONS, /renderCommerceEmail\(/);
+  assert.match(EMAIL_RENDERERS, /emailEscape\(config\.summary\)/);
 });
 
 test("public order number is used across confirmation, tracking, dashboard, admin, and CSV", () => {
-  assert.match(STRIPE_EFFECTS, /select\('[^']*\border_number\b[^']*\bstatus\b/);
+  assert.match(STRIPE_EFFECTS, /select\('[^']*\border_number\b[^']*'\)/);
   assert.match(STRIPE_EFFECTS, /orderReference\(order\)/);
   assert.match(ACCOUNT_ORDERS, /select\('id,order_number,status,/);
   assert.match(ADMIN_ORDERS, /select\('id,order_number,status,/);
-  assert.match(STAFF_ORDER_OPERATIONS, /const reference = orderReference\(order\)[\s\S]*subject:\s*`Order \$\{reference\} \$\{label\}`/);
+  assert.match(STAFF_ORDER_OPERATIONS, /const reference = orderReference\(order\)[\s\S]*renderCommerceEmail\(/);
+  assert.match(EMAIL_RENDERERS, /subject:\s*`Order \$\{reference\}/);
   assert.match(ADMIN_ORDERS, /rows\.push\(\[o\.order_number \|\| o\.id,/);
   assert.match(DASHBOARD, /o\.order_number \|\| o\.id/);
   assert.match(ADMIN_ORDER_UI, /order\.order_number \|\| order\.id/);
