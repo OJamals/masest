@@ -615,6 +615,7 @@
 .story .act {
   position: relative;
   z-index: 4;
+  pointer-events: none;
 }
 
 .story .stage {
@@ -633,6 +634,7 @@
   grid-column: 1;
   width: min(100%, 510px);
   padding-top: 0;
+  pointer-events: auto;
 }
 
 .kicker {

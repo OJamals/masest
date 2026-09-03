@@ -367,6 +367,44 @@ test("native range overrides scroll reveal per scene and remains reversible", as
   expect(await range.inputValue()).toBe("73");
 });
 
+for (const viewport of [
+  { name: "desktop", width: 1440, height: 900 },
+  { name: "compact", width: 390, height: 844 },
+]) {
+  test(`${viewport.name} comparison range receives a real pointer drag above scene layers`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await openStory(page);
+    await scrollAct(page, 1, .42);
+
+    const range = page.locator(".story-object__range");
+    await range.fill("50");
+    const box = await range.boundingBox();
+    expect(box).not.toBeNull();
+
+    const hitTarget = await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x, y);
+      return target?.className || target?.tagName || "";
+    }, {
+      x: box.x + box.width * .5,
+      y: box.y + box.height * .5,
+    });
+    expect(hitTarget).toContain("story-object__range");
+
+    await page.mouse.move(box.x + box.width * .5, box.y + box.height * .5);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * .8, box.y + box.height * .5, { steps: 12 });
+    await page.mouse.up();
+
+    const value = Number(await range.inputValue());
+    expect(value).toBeGreaterThan(70);
+    expect(value).toBeLessThan(90);
+    await expect(range).toHaveAttribute("aria-valuetext", `${value}% after image revealed`);
+    await expect.poll(() => page.locator(".story-object__media").evaluate((media) => (
+      getComputedStyle(media).getPropertyValue("--story-reveal").trim()
+    ))).toBe(`${value}%`);
+  });
+}
+
 test("pool-cartridge uses pre-registered pixels without runtime rotation", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
