@@ -75,6 +75,34 @@ async function bootAsStaff(page) {
   });
 }
 
+function participantThread({
+  threadId,
+  companyId,
+  companyName,
+  userId,
+  fullName,
+  email = `${userId}@example.test`,
+  lastBody,
+  lastAt,
+  unanswered = false,
+  status = "open",
+  orderScope = null,
+} = {}) {
+  return {
+    thread_id: threadId,
+    participant_user_id: userId,
+    participant: { id: userId, full_name: fullName, email },
+    company_id: companyId,
+    company_name: companyName,
+    scope: "participant",
+    last_body: lastBody,
+    last_at: lastAt,
+    unanswered,
+    status,
+    ...(orderScope ? { order_scope: orderScope } : {}),
+  };
+}
+
 test("#support-settings opens the console on its settings view, not a page", async ({ page }) => {
   await bootAsStaff(page);
   await page.goto(`${BASE_URL}/admin.html#support-settings`);
@@ -143,8 +171,8 @@ test("at phone width support moves from the full inbox to a full conversation", 
     contentType: "application/json",
     body: JSON.stringify({
       threads: [
-        { company_id: "c1", company_name: "Acme HVAC", last_body: "Chiller loop is fouling again.", last_at: "2026-08-07T10:00:00Z", unanswered: true, status: "open" },
-        { company_id: "c2", company_name: "Northbay", last_body: "Thanks, received.", last_at: "2026-08-06T10:00:00Z", unanswered: false, status: "open" },
+        participantThread({ threadId: "t1", companyId: "c1", companyName: "Acme HVAC", userId: "u1", fullName: "Avery Buyer", lastBody: "Chiller loop is fouling again.", lastAt: "2026-08-07T10:00:00Z", unanswered: true }),
+        participantThread({ threadId: "t2", companyId: "c2", companyName: "Northbay", userId: "u2", fullName: "Noah Buyer", lastBody: "Thanks, received.", lastAt: "2026-08-06T10:00:00Z" }),
       ],
     }),
   }));
@@ -161,11 +189,12 @@ test("at phone width support moves from the full inbox to a full conversation", 
   await expect(conversation).toBeHidden();
   await expect(page.locator(".site-support__launcher i")).toHaveClass(/ph-x/);
 
-  await page.locator('[data-company-id="c1"]').click();
+  await page.locator('[data-support-thread-id="t1"]').click();
   await expect(drawer).toHaveAttribute("data-thread-selected", "true");
   await expect(listPane).toBeHidden();
   await expect(conversation).toBeVisible();
-  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Acme HVAC");
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Avery Buyer");
+  await expect(page.locator(".site-support__conversation-party")).toContainText("Acme HVAC");
   await expect(page.locator("[data-support-back]")).toBeVisible();
 
   await page.locator("[data-support-back]").click();
@@ -284,7 +313,7 @@ test("Accounts user detail opens the same new-chat composer with that user prese
   await expect(drawer).toBeVisible();
   await expect(drawer).toHaveAttribute("data-view", "compose");
   await expect(page.locator(".site-support__new-chat-selected")).toContainText("Avery Buyer");
-  await expect(page.locator("#siteSupportNewChatOrder option")).toContainText(["General account conversation", "Order VK-1001 · delivered"]);
+  await expect(page.locator("#siteSupportNewChatOrder option")).toContainText(["General conversation", "Order VK-1001 · delivered"]);
   await expect(page.locator("#siteSupportNewChatMessage")).toBeFocused();
   expect(customerSearches).toBe(0);
   expect(userDetailRequests).toBeGreaterThanOrEqual(2);
@@ -334,8 +363,8 @@ test("support search filters by customer and recent message without hiding the i
     contentType: "application/json",
     body: JSON.stringify({
       threads: [
-        { company_id: "c1", company_name: "Acme HVAC", last_body: "Chiller loop is fouling again.", last_at: "2026-08-07T10:00:00Z", unanswered: true, status: "open" },
-        { company_id: "c2", company_name: "Northbay Foods", last_body: "Thanks, received.", last_at: "2026-08-06T10:00:00Z", unanswered: false, status: "open" },
+        participantThread({ threadId: "t1", companyId: "c1", companyName: "Acme HVAC", userId: "u1", fullName: "Avery Buyer", lastBody: "Chiller loop is fouling again.", lastAt: "2026-08-07T10:00:00Z", unanswered: true }),
+        participantThread({ threadId: "t2", companyId: "c2", companyName: "Northbay Foods", userId: "u2", fullName: "Noah Buyer", lastBody: "Thanks, received.", lastAt: "2026-08-06T10:00:00Z" }),
       ],
     }),
   }));
@@ -364,43 +393,44 @@ test("the latest conversation request wins when staff switch threads quickly", a
   const slowStarted = new Promise((resolve) => { markSlowStarted = resolve; });
   const slowFinished = new Promise((resolve) => { markSlowFinished = resolve; });
   const threads = [
-    { company_id: "c1", company_name: "Acme HVAC", last_body: "First thread", last_at: "2026-08-07T10:00:00Z", unanswered: true, status: "open" },
-    { company_id: "c2", company_name: "Northbay Foods", last_body: "Second thread", last_at: "2026-08-06T10:00:00Z", unanswered: false, status: "open" },
+    participantThread({ threadId: "t1", companyId: "c1", companyName: "Acme HVAC", userId: "u1", fullName: "Avery Buyer", lastBody: "First thread", lastAt: "2026-08-07T10:00:00Z", unanswered: true }),
+    participantThread({ threadId: "t2", companyId: "c2", companyName: "Northbay Foods", userId: "u2", fullName: "Noah Buyer", lastBody: "Second thread", lastAt: "2026-08-06T10:00:00Z" }),
   ];
 
   await page.route("**/api/admin/messages**", async (route) => {
-    const companyId = new URL(route.request().url()).searchParams.get("company_id");
-    if (!companyId) {
+    const threadId = new URL(route.request().url()).searchParams.get("thread_id");
+    if (!threadId) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ threads }) });
       return;
     }
-    if (companyId === "c1") {
+    if (threadId === "t1") {
       markSlowStarted();
       await slowGate;
     }
+    const thread = threads.find((item) => item.thread_id === threadId);
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        thread: threads.find((thread) => thread.company_id === companyId),
-        messages: [{ id: companyId, sender_role: "buyer", body: `${companyId} message`, created_at: "2026-08-07T10:00:00Z" }],
+        thread,
+        messages: [{ id: threadId, sender_role: "buyer", body: `${threadId} message`, created_at: "2026-08-07T10:00:00Z" }],
       }),
     });
-    if (companyId === "c1") markSlowFinished();
+    if (threadId === "t1") markSlowFinished();
   });
 
   await page.goto(`${BASE_URL}/admin.html#support`);
   await expect(page.locator(".site-support__thread")).toHaveCount(2);
-  await page.locator('[data-company-id="c1"]').click();
+  await page.locator('[data-support-thread-id="t1"]').click();
   await slowStarted;
-  await page.locator('[data-company-id="c2"]').click();
-  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Northbay Foods");
-  await expect(page.locator(".site-support__messages")).toContainText("c2 message");
+  await page.locator('[data-support-thread-id="t2"]').click();
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Noah Buyer");
+  await expect(page.locator(".site-support__messages")).toContainText("t2 message");
 
   releaseSlow();
   await slowFinished;
-  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Northbay Foods");
-  await expect(page.locator(".site-support__messages")).toContainText("c2 message");
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Noah Buyer");
+  await expect(page.locator(".site-support__messages")).toContainText("t2 message");
 });
 
 test("the latest inbox refresh wins when an older list response arrives late", async ({ page }) => {
@@ -428,14 +458,16 @@ test("the latest inbox refresh wins when an older list response arrives late", a
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        threads: [{
-          company_id: snapshot.toLocaleLowerCase().split(" ")[0],
-          company_name: snapshot,
-          last_body: "Support request",
-          last_at: "2026-08-07T10:00:00Z",
+        threads: [participantThread({
+          threadId: `t-${requestNumber}`,
+          companyId: `c-${requestNumber}`,
+          companyName: snapshot,
+          userId: `u-${requestNumber}`,
+          fullName: `${snapshot} buyer`,
+          lastBody: "Support request",
+          lastAt: "2026-08-07T10:00:00Z",
           unanswered: true,
-          status: "open",
-        }],
+        })],
       }),
     });
     if (requestNumber === 2) markSlowFinished();
@@ -466,7 +498,7 @@ test("closed support fetches only counts, open support fetches threads, and hidd
       contentType: "application/json",
       body: JSON.stringify(summary
         ? { summary: { open: 4, unanswered: 2 } }
-        : { threads: [{ company_id: "c1", company_name: "Acme HVAC", last_body: "Need help", last_at: "2026-08-07T10:00:00Z", unanswered: true, status: "open" }] }),
+        : { threads: [participantThread({ threadId: "t1", companyId: "c1", companyName: "Acme HVAC", userId: "u1", fullName: "Avery Buyer", lastBody: "Need help", lastAt: "2026-08-07T10:00:00Z", unanswered: true })] }),
     });
   });
 
@@ -499,34 +531,37 @@ test("resolved chats remain recoverable and reopening returns them to Open", asy
   await bootAsStaff(page);
   await page.unroute("**/api/admin/messages**");
 
-  const statuses = new Map([["c1", "open"], ["c2", "complete"], ["c3", "open"]]);
+  const statuses = new Map([["t1", "open"], ["t2", "complete"], ["t3", "open"]]);
   const requestedViews = [];
-  const thread = (companyId) => ({
-    company_id: companyId,
-    company_name: companyId === "c1" ? "Acme HVAC" : "Northbay Foods",
-    last_body: companyId === "c1" ? "Need help today." : "Resolved yesterday.",
-    last_at: companyId === "c1" ? "2026-08-30T14:30:00Z" : "2026-08-29T14:30:00Z",
-    unanswered: companyId === "c1",
-    status: statuses.get(companyId),
+  const thread = (threadId) => participantThread({
+    threadId,
+    companyId: threadId === "t1" ? "c1" : "c2",
+    companyName: threadId === "t1" ? "Acme HVAC" : "Northbay Foods",
+    userId: threadId === "t1" ? "u1" : "u2",
+    fullName: threadId === "t1" ? "Avery Buyer" : "Noah Buyer",
+    lastBody: threadId === "t1" ? "Need help today." : "Resolved yesterday.",
+    lastAt: threadId === "t1" ? "2026-08-30T14:30:00Z" : "2026-08-29T14:30:00Z",
+    unanswered: threadId === "t1",
+    status: statuses.get(threadId),
   });
 
   await page.route("**/api/admin/messages**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const companyId = url.searchParams.get("company_id");
+    const threadId = url.searchParams.get("thread_id");
     if (request.method() === "PATCH") {
       const body = request.postDataJSON();
-      statuses.set(body.company_id, body.status);
+      statuses.set(body.thread_id, body.status);
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: body.status }) });
       return;
     }
-    if (companyId) {
+    if (threadId) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          thread: thread(companyId),
-          messages: [{ id: `m-${companyId}`, sender_role: "buyer", body: "Customer message", created_at: "2026-08-29T14:30:00Z" }],
+          thread: thread(threadId),
+          messages: [{ id: `m-${threadId}`, sender_role: "buyer", body: "Customer message", created_at: "2026-08-29T14:30:00Z" }],
         }),
       });
       return;
@@ -539,30 +574,30 @@ test("resolved chats remain recoverable and reopening returns them to Open", asy
     const view = url.searchParams.get("status") || "open";
     requestedViews.push(view);
     const threads = [...statuses.keys()]
-      .filter((companyId) => view === "complete" ? statuses.get(companyId) === "complete" : statuses.get(companyId) !== "complete")
+      .filter((candidate) => view === "complete" ? statuses.get(candidate) === "complete" : statuses.get(candidate) !== "complete")
       .map(thread);
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ threads }) });
   });
 
   await page.goto(`${BASE_URL}/admin.html#support`);
-  await expect(page.locator('[data-company-id="c1"]')).toBeVisible();
-  await expect(page.locator('[data-company-id="c1"] time')).toHaveAttribute("datetime", "2026-08-30T14:30:00Z");
+  await expect(page.locator('[data-support-thread-id="t1"]')).toBeVisible();
+  await expect(page.locator('[data-support-thread-id="t1"] time')).toHaveAttribute("datetime", "2026-08-30T14:30:00Z");
 
-  await page.locator('[data-company-id="c1"]').click();
+  await page.locator('[data-support-thread-id="t1"]').click();
   await page.getByRole("button", { name: "Mark resolved" }).click();
-  await expect(page.locator('[data-company-id="c1"]')).toHaveCount(0);
+  await expect(page.locator('[data-support-thread-id="t1"]')).toHaveCount(0);
   await expect(page.locator(".site-support__conversation-empty h3")).toHaveText("No conversation selected");
 
   await page.getByRole("button", { name: "Resolved", exact: true }).click();
   await expect(page.locator("#siteSupportTitle")).toHaveText("Resolved chats");
-  await expect(page.locator('[data-company-id="c2"]')).toBeVisible();
+  await expect(page.locator('[data-support-thread-id="t2"]')).toBeVisible();
   expect(requestedViews).toContain("complete");
 
-  await page.locator('[data-company-id="c2"]').click();
+  await page.locator('[data-support-thread-id="t2"]').click();
   await page.getByRole("button", { name: "Reopen" }).click();
   await expect(page.getByRole("button", { name: "Open", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator('[data-company-id="c2"]')).toBeVisible();
-  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Northbay Foods");
+  await expect(page.locator('[data-support-thread-id="t2"]')).toBeVisible();
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Noah Buyer");
 });
 
 test("reply drafts survive thread switches and context jumps use canonical admin workspaces", async ({ page }) => {
@@ -574,8 +609,8 @@ test("reply drafts survive thread switches and context jumps use canonical admin
   const sent = [];
   const detailRequests = [];
   const threads = [
-    { company_id: "c1", company_name: "Acme HVAC", last_body: "Order question", last_at: "2026-08-30T14:30:00Z", unanswered: true, status: "open" },
-    { company_id: "c2", company_name: "Northbay Foods", last_body: "Second chat", last_at: "2026-08-29T14:30:00Z", unanswered: false, status: "open" },
+    participantThread({ threadId: "t1", companyId: "c1", companyName: "Acme HVAC", userId: "u1", fullName: "Avery Buyer", email: "buyer@example.test", lastBody: "Order question", lastAt: "2026-08-30T14:30:00Z", unanswered: true }),
+    participantThread({ threadId: "t2", companyId: "c2", companyName: "Northbay Foods", userId: "u2", fullName: "Noah Buyer", lastBody: "Second chat", lastAt: "2026-08-29T14:30:00Z" }),
   ];
 
   await page.route("**/api/admin/orders**", async (route) => {
@@ -633,7 +668,7 @@ test("reply drafts survive thread switches and context jumps use canonical admin
   await page.route("**/api/admin/messages**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const companyId = url.searchParams.get("company_id");
+    const threadId = url.searchParams.get("thread_id");
     if (request.method() === "POST") {
       sent.push(request.postDataJSON());
       await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ id: "m-new", created_at: "2026-08-30T15:00:00Z" }) });
@@ -642,14 +677,14 @@ test("reply drafts survive thread switches and context jumps use canonical admin
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(companyId ? {
-        thread: threads.find((item) => item.company_id === companyId),
+      body: JSON.stringify(threadId ? {
+        thread: threads.find((item) => item.thread_id === threadId),
         messages: [{
-          id: `m-${companyId}`,
+          id: `m-${threadId}`,
           sender_role: "buyer",
-          body: `${companyId} message`,
-          order_id: companyId === "c1" ? orderId : null,
-          order: companyId === "c1" ? {
+          body: `${threadId} message`,
+          order_id: threadId === "t1" ? orderId : null,
+          order: threadId === "t1" ? {
             id: orderId,
             reference: "SO-42",
             status: "cancelled",
@@ -662,15 +697,21 @@ test("reply drafts survive thread switches and context jumps use canonical admin
   });
 
   await page.goto(`${BASE_URL}/admin.html#support`);
-  await page.locator('[data-company-id="c1"]').click();
+  await page.locator('[data-support-thread-id="t1"]').click();
   const reply = page.locator("#siteSupportReply");
   await reply.fill("Saved Acme draft");
-  await page.locator('[data-company-id="c2"]').click();
-  await page.locator('[data-company-id="c1"]').click();
+  await page.locator('[data-support-thread-id="t2"]').click();
+  await page.locator('[data-support-thread-id="t1"]').click();
   await expect(reply).toHaveValue("Saved Acme draft");
   await reply.press("Control+Enter");
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toEqual({ company_id: "c1", body: "Saved Acme draft", order_id: null });
+  expect(sent[0]).toEqual({
+    thread_id: "t1",
+    company_id: "c1",
+    recipient_user_id: "u1",
+    body: "Saved Acme draft",
+    order_id: null,
+  });
   await expect(reply).toHaveValue("");
 
   await page.getByRole("link", { name: "View account" }).click();
@@ -678,26 +719,28 @@ test("reply drafts survive thread switches and context jumps use canonical admin
   await expect(page.locator(".site-support__drawer")).toBeHidden();
 
   await page.locator(".site-support__launcher").click();
-  await page.locator('[data-company-id="c1"]').click();
+  await page.locator('[data-support-thread-id="t1"]').click();
   await page.getByRole("link", { name: "View order SO-42" }).click();
   await expect(page.locator('[data-panel="orders"]')).toHaveAttribute("data-active", "true");
   await expect(page.locator("#ordSearch")).toHaveValue(orderId);
   await expect.poll(() => detailRequests).toContain(orderId);
 });
 
-test("Admin Orders opens and replies through the order-scoped support conversation", async ({ page }) => {
+test("Admin Orders starts an order-scoped participant chat through canonical support", async ({ page }) => {
   await bootAsStaff(page);
   await page.unroute("**/api/admin/orders**");
   await page.unroute("**/api/admin/messages**");
 
   const orderId = "22222222-2222-4222-8222-222222222222";
   const companyId = "c-order";
+  const userId = "u-order";
   const messageRequests = [];
   const sent = [];
   const order = {
     id: orderId,
     order_number: "MST-2042",
     company_id: companyId,
+    user_id: userId,
     companies: { name: "Great Lakes Facilities" },
     customer_email: "buyer@example.test",
     status: "paid",
@@ -715,6 +758,17 @@ test("Admin Orders opens and replies through the order-scoped support conversati
     status: "paid",
     admin_url: `/admin.html?order=${orderId}#orders`,
   };
+  const supportThread = participantThread({
+    threadId: "t-order",
+    companyId,
+    companyName: "Great Lakes Facilities",
+    userId,
+    fullName: "Avery Buyer",
+    email: "buyer@example.test",
+    lastBody: "Friday shipment confirmed.",
+    lastAt: "2026-08-30T15:00:00Z",
+    orderScope: orderContext,
+  });
 
   await page.route("**/api/admin/orders**", (route) => {
     const url = new URL(route.request().url());
@@ -740,6 +794,16 @@ test("Admin Orders opens and replies through the order-scoped support conversati
     });
   });
 
+  await page.route(`**/api/admin/users?detail=${userId}`, (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      profile: { id: userId, full_name: "Avery Buyer", email: "buyer@example.test" },
+      company: { id: companyId, name: "Great Lakes Facilities", status: "approved" },
+      orders: [{ id: orderId, order_number: "MST-2042", status: "paid" }],
+    }),
+  }));
+
   await page.route("**/api/admin/messages**", (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -748,7 +812,7 @@ test("Admin Orders opens and replies through the order-scoped support conversati
       return route.fulfill({
         status: 201,
         contentType: "application/json",
-        body: JSON.stringify({ id: "staff-reply", created_at: "2026-08-30T15:00:00Z", order_id: orderId }),
+        body: JSON.stringify({ thread_id: "t-order", id: "staff-reply", created_at: "2026-08-30T15:00:00Z", order_id: orderId }),
       });
     }
     if (url.searchParams.get("summary") === "1") {
@@ -758,24 +822,27 @@ test("Admin Orders opens and replies through the order-scoped support conversati
         body: JSON.stringify({ summary: { open: 1, unanswered: 1 } }),
       });
     }
+    const threadId = url.searchParams.get("thread_id");
+    if (!threadId) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ threads: [supportThread] }),
+      });
+    }
     messageRequests.push(url.search);
     return route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        thread: {
-          company_id: companyId,
-          company_name: "Great Lakes Facilities",
-          status: "open",
-          order_scope: orderContext,
-        },
+        thread: supportThread,
         messages: [{
-          id: "buyer-question",
-          sender_role: "buyer",
-          body: "Can this ship Friday?",
+          id: "staff-reply",
+          sender_role: "staff",
+          body: "Friday shipment confirmed.",
           order_id: orderId,
           order: orderContext,
-          created_at: "2026-08-30T14:30:00Z",
+          created_at: "2026-08-30T15:00:00Z",
         }],
       }),
     });
@@ -787,21 +854,26 @@ test("Admin Orders opens and replies through the order-scoped support conversati
   await orderCard.getByRole("button", { name: "Message customer" }).click();
 
   await expect(page.locator(".site-support__drawer")).toBeVisible();
-  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Great Lakes Facilities");
-  await expect(page.locator(".site-support__order-scope")).toContainText("Replying about order MST-2042");
-  await expect.poll(() => messageRequests.some((search) => (
-    search.includes(`company_id=${companyId}`) && search.includes(`order_id=${orderId}`)
-  ))).toBe(true);
+  await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "compose");
+  await expect(page.locator(".site-support__new-chat-selected")).toContainText("Avery Buyer");
+  await expect(page.locator("#siteSupportNewChatOrder")).toHaveValue(orderId);
 
-  const reply = page.locator("#siteSupportReply");
-  await reply.fill("Friday shipment confirmed.");
-  await reply.press("Control+Enter");
+  const firstMessage = page.locator("#siteSupportNewChatMessage");
+  await firstMessage.fill("Friday shipment confirmed.");
+  await firstMessage.press("Control+Enter");
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]).toEqual({
     company_id: companyId,
+    recipient_user_id: userId,
     body: "Friday shipment confirmed.",
     order_id: orderId,
+    start_thread: true,
   });
+  await expect(page.locator(".site-support__conversation-head h3")).toHaveText("Avery Buyer");
+  await expect(page.locator(".site-support__order-scope")).toContainText("Replying about order MST-2042");
+  await expect.poll(() => messageRequests.some((search) => (
+    search.includes("thread_id=t-order") && search.includes(`order_id=${orderId}`)
+  ))).toBe(true);
 });
 
 test("support list load failures offer an in-place retry", async ({ page }) => {
@@ -817,7 +889,7 @@ test("support list load failures offer an in-place retry", async ({ page }) => {
     return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ threads: [{ company_id: "c1", company_name: "Acme HVAC", last_body: "Need help", last_at: "2026-08-30T14:30:00Z", unanswered: true, status: "open" }] }),
+      body: JSON.stringify({ threads: [participantThread({ threadId: "t1", companyId: "c1", companyName: "Acme HVAC", userId: "u1", fullName: "Avery Buyer", lastBody: "Need help", lastAt: "2026-08-30T14:30:00Z", unanswered: true })] }),
     });
   });
 
@@ -826,5 +898,5 @@ test("support list load failures offer an in-place retry", async ({ page }) => {
   await expect(retry).toBeVisible();
   available = true;
   await retry.click();
-  await expect(page.locator('[data-company-id="c1"]')).toBeVisible();
+  await expect(page.locator('[data-support-thread-id="t1"]')).toBeVisible();
 });
