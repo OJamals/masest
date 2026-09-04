@@ -1,6 +1,6 @@
-import { api } from '../auth.js?v=20260903d';
-import { dateTime, esc } from '../util.js?v=20260903d';
-import { formatStripeMinor } from './stripe-money.js?v=20260903d';
+import { api } from '../auth.js?v=20260904a';
+import { dateTime, esc } from '../util.js?v=20260904a';
+import { formatStripeMinor } from './stripe-money.js?v=20260904a';
 
 const $ = (id) => document.getElementById(id);
 

@@ -4,15 +4,15 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260903d';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260904a';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260903d';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260903d';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260903d';
+} from './rich-editor.js?v=20260904a';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260904a';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260904a';
 
 const SECTIONS = [
   ['compose', 'Compose'],
@@ -20,6 +20,15 @@ const SECTIONS = [
   ['recipients', 'Recipients'],
   ['settings', 'Settings'],
 ];
+
+export function recipientSourceLabel(value) {
+  const source = String(value || '').trim().toLowerCase();
+  if (!source) return '—';
+  if (source.endsWith('_migration')) return 'Imported contact';
+  if (source === 'footer_newsletter') return 'Website signup';
+  const words = source.replaceAll('_', ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 function statusBadge(status) {
   return `<span class="badge" data-s="${esc(status)}">${esc(String(status || 'draft').replaceAll('_', ' '))}</span>`;
@@ -261,7 +270,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       if (!rows.length) { list.innerHTML = admEmpty('ph-address-book', 'No recipients yet', 'Account signups and website subscribers appear here. Add or import extra addresses as needed.'); return; }
       list.innerHTML = `<table class="adm-table"><thead><tr><th>Email</th><th>Name</th><th>Source</th><th>Subscribed</th><th></th></tr></thead><tbody>${rows.map((r) => `
         <tr>
-          <td>${esc(r.email)}</td><td>${esc(r.name || '')}</td><td>${esc(r.source || '')}</td>
+          <td>${esc(r.email)}</td><td>${esc(r.name || '')}</td><td>${esc(recipientSourceLabel(r.source))}</td>
           <td><input type="checkbox" name="recipient_subscribed" aria-label="Include ${esc(r.email)} in newsletters" data-nl-recip-sub="${esc(r.email)}" data-capability="admin.write"${r.subscribed ? ' checked' : ''}></td>
           <td><button class="btn btn-ghost btn-sm" type="button" aria-label="Remove ${esc(r.email)} from imported recipients" data-nl-recip-remove="${esc(r.email)}" data-capability="admin.write"><i class="ph ph-trash" aria-hidden="true"></i></button></td>
         </tr>`).join('')}</tbody></table>`;
