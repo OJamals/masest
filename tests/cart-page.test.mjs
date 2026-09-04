@@ -231,13 +231,17 @@ test("cart holds product lines until catalog names and pricing resolve", async (
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage();
+    let releaseProducts;
+    const productsBlocked = new Promise(resolve => {
+      releaseProducts = resolve;
+    });
     try {
       await page.addInitScript(() => {
         window.MASEST_ENABLE_LOCAL_API = true;
         localStorage.setItem("masest_cart", JSON.stringify({ "HCRCIP-1G": 1 }));
       });
       await page.route("**/api/products", async route => {
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await productsBlocked;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -251,10 +255,12 @@ test("cart holds product lines until catalog names and pricing resolve", async (
       assert.equal(await page.getByText("Pending review", { exact: true }).count(), 0);
       assert.equal(await page.getByText("HCRCIP-1G", { exact: true }).count(), 0);
 
+      releaseProducts();
       await page.locator(".cart-line").waitFor();
       assert.notEqual((await page.locator(".cart-line h2").textContent()).trim(), "HCRCIP-1G");
       assert.equal((await page.locator(".cart-line p").textContent()).trim(), "$28.99 each");
     } finally {
+      releaseProducts?.();
       await browser.close();
     }
   });
