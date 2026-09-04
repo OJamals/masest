@@ -17,6 +17,7 @@ test('SES runtime policy locks sender while permitting the verified sandbox reci
   assert.deepEqual(send.Resource, [
     'arn:aws:ses:us-east-1:791359098991:identity/marketing.masest.co',
     'arn:aws:ses:us-east-1:791359098991:identity/masest.co',
+    'arn:aws:ses:us-east-1:791359098991:identity/aoaljamal@gmail.com',
     'arn:aws:ses:us-east-1:791359098991:configuration-set/masest-marketing',
     'arn:aws:ses:us-east-1:791359098991:contact-list/masest-marketing',
   ]);
