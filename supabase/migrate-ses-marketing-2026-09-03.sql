@@ -1,5 +1,29 @@
 -- Consolidate marketing consent in Supabase while Amazon SES owns transport.
 -- One RPC atomically updates account preference, send audience, and suppression.
+create table if not exists public.marketing_consent_events (
+  event_id text primary key check (char_length(event_id) between 1 and 160),
+  recipient text not null check (char_length(recipient) between 3 and 254),
+  enabled boolean not null,
+  source text not null,
+  occurred_at timestamptz not null,
+  provider_sync_state text not null default 'not_required',
+  provider_sync_attempts integer not null default 0,
+  provider_sync_available_at timestamptz not null default now(),
+  provider_sync_lease_token uuid,
+  provider_sync_lease_expires_at timestamptz,
+  provider_sync_error text,
+  provider_synced_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table public.marketing_consent_events
+  add column if not exists provider_sync_state text not null default 'not_required',
+  add column if not exists provider_sync_attempts integer not null default 0,
+  add column if not exists provider_sync_available_at timestamptz not null default now(),
+  add column if not exists provider_sync_lease_token uuid,
+  add column if not exists provider_sync_lease_expires_at timestamptz,
+  add column if not exists provider_sync_error text,
+  add column if not exists provider_synced_at timestamptz;
+
 create or replace function public.set_marketing_email_preferences(
   p_emails jsonb,
   p_enabled boolean,
@@ -15,6 +39,7 @@ set search_path = public, pg_temp
 as $$
 declare
   v_count integer := 0;
+  v_email text;
 begin
   if p_enabled is null or jsonb_typeof(coalesce(p_emails, 'null'::jsonb)) <> 'array' then
     raise exception 'invalid_marketing_preference';
@@ -33,6 +58,12 @@ begin
   select count(*)::integer into v_count from pg_temp.marketing_preference_emails;
   if v_count = 0 then raise exception 'invalid_marketing_email'; end if;
   if p_user_id is not null and v_count <> 1 then raise exception 'account_preference_requires_one_email'; end if;
+
+  for v_email in
+    select selected.email from pg_temp.marketing_preference_emails selected order by selected.email
+  loop
+    perform pg_advisory_xact_lock(hashtextextended(v_email, 0));
+  end loop;
 
   if p_user_id is not null then
     update public.profiles
@@ -63,8 +94,43 @@ begin
     insert into public.email_suppressions (email, reason, stream)
     select email, 'user_preference', 'marketing'
     from pg_temp.marketing_preference_emails
-    on conflict (email, stream) do update set reason = excluded.reason;
+      on conflict (email, stream) do update set reason = excluded.reason;
   end if;
+
+  insert into public.marketing_consent_events (
+    event_id, recipient, enabled, source, occurred_at, provider_sync_state,
+    provider_sync_available_at
+  )
+  select
+    'db:' || gen_random_uuid()::text,
+    email,
+    p_enabled,
+    left(coalesce(nullif(btrim(p_source), ''), 'preference'), 80),
+    clock_timestamp(),
+    'pending',
+    now()
+  from pg_temp.marketing_preference_emails;
+
+  with ranked as (
+    select
+      event.event_id,
+      row_number() over (
+        partition by event.recipient
+        order by event.occurred_at desc, event.enabled asc, event.created_at desc, event.event_id desc
+      ) as position
+    from public.marketing_consent_events event
+    join pg_temp.marketing_preference_emails selected on selected.email = event.recipient
+  )
+  update public.marketing_consent_events event
+  set
+    provider_sync_state = 'superseded',
+    provider_sync_lease_token = null,
+    provider_sync_lease_expires_at = null,
+    provider_sync_error = null
+  from ranked
+  where event.event_id = ranked.event_id
+    and ranked.position > 1
+    and event.provider_sync_state in ('pending', 'processing', 'retry');
 
   return v_count;
 end;
@@ -193,13 +259,35 @@ join public.profiles profile on profile.id = auth_user.id
 where auth_user.email is not null and profile.marketing_email_enabled is false
 on conflict (email, stream) do update set reason = excluded.reason;
 
+-- Seed each existing canonical recipient once. SES list starts OPT_OUT; Worker
+-- must explicitly mirror current DB consent before any campaign can claim it.
+insert into public.marketing_consent_events (
+  event_id, recipient, enabled, source, occurred_at, provider_sync_state,
+  provider_sync_available_at
+)
+select
+  'ses-bootstrap:' || md5(recipient.email),
+  recipient.email,
+  recipient.subscribed,
+  'ses_contact_bootstrap',
+  now(),
+  'pending',
+  now()
+from public.newsletter_recipients recipient
+where not exists (
+  select 1
+  from public.marketing_consent_events event
+  where event.recipient = recipient.email
+)
+on conflict (event_id) do nothing;
+
 -- Provider-neutral quote nurture uses the existing durable delivery ledger. Each
 -- source snapshots one message for one consented lead; available_at schedules it.
 alter table public.newsletter_delivery_sources
   drop constraint if exists newsletter_delivery_sources_source_type_check;
 alter table public.newsletter_delivery_sources
   add constraint newsletter_delivery_sources_source_type_check
-  check (source_type in ('newsletter', 'blog_post', 'nurture'));
+  check (source_type in ('newsletter', 'blog_post', 'nurture', 'offer', 'review', 'test'));
 
 create or replace function public.materialize_newsletter_deliveries(
   p_source_type text,
@@ -220,8 +308,14 @@ declare
   v_created boolean := false;
   v_inserted int := 0;
 begin
-  if p_source_type not in ('newsletter', 'blog_post', 'nurture') then
+  if p_source_type not in ('newsletter', 'blog_post', 'nurture', 'offer', 'review', 'test') then
     raise exception 'invalid_delivery_source_type';
+  end if;
+  if p_source_type in ('newsletter', 'offer') and (
+    p_parent_id is null
+    or p_parent_id !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  ) then
+    raise exception 'invalid_delivery_parent_id';
   end if;
 
   insert into public.newsletter_delivery_sources (

@@ -1,10 +1,10 @@
 // /api/admin/offers — staff broadcasts. GET → past sends · POST → in-app notification fan-out
-// (+ optional marketing email when a compliant marketing provider is configured).
+// (+ optional marketing email materialized once and drained by Cloudflare Queue).
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import { emailEscape } from '../../_lib/email-template.js';
 import { renderMarketingEmail } from '../../_lib/email-renderers.js';
-import { queueMarketingEmail } from '../../_lib/marketing-email.js';
-import { syncSesSuppressions } from '../../_lib/ses-email.js';
+import { materializeDeliverySource } from '../../_lib/newsletter-delivery.js';
+import { enqueueMarketingDelivery } from '../../_lib/marketing-delivery-queue.js';
 import { normalizeMarketingEmails } from '../../_lib/marketing-subscribers.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 
@@ -85,55 +85,52 @@ export async function onRequest({ request, env }) {
     let emailFailed = 0;
     let emailError = null;
     if (body.send_email) {
-      const suppressionSync = await syncSesSuppressions(env, sb);
-      if (!suppressionSync.ok) {
-        emailFailed = 1;
-        emailError = suppressionSync.error;
-      } else {
-        try {
-          const emails = await memberEmails(sb, companyIds);
-          if (emails.length) {
-            const rendered = renderMarketingEmail({
-              kind: 'promotion',
-              campaign: {
-                subject: title,
-                heading: title,
-                previewText: bodyText || title,
-                eyebrow: 'VertKleen offer',
-                bodyHtml: `<p>${emailEscape(bodyText).replace(/\r?\n/g, '<br>')}</p>`,
-                ctaText: ctaUrl ? 'View offer' : undefined,
-                ctaUrl: ctaUrl || undefined,
-              },
-              recipientContext: {
-                reason: 'You received this offer because marketing email is enabled for your MASEST account.',
-              },
-            });
-            for (let offset = 0; offset < emails.length; offset += 5) {
-              const results = await Promise.all(emails.slice(offset, offset + 5).map((email) => queueMarketingEmail(env, {
-                category: 'offer',
-                email,
-                subject: rendered.subject,
-                html: rendered.html,
-                text: rendered.text,
-                idempotencyKey: `offer/${offer.id}/${email}`,
-                properties: { offer_id: offer.id, cta_url: ctaUrl || '', audience },
-              })));
-              emailQueued += results.filter((result) => result.ok).length;
-              emailFailed += results.filter((result) => !result.ok).length;
-              emailError ||= results.find((result) => !result.ok)?.error || null;
-            }
-          } else {
-            emailError = 'no_email_recipients';
+      try {
+        const emails = await memberEmails(sb, companyIds);
+        if (emails.length) {
+          const rendered = renderMarketingEmail({
+            kind: 'promotion',
+            campaign: {
+              subject: title,
+              heading: title,
+              previewText: bodyText || title,
+              eyebrow: 'VertKleen offer',
+              bodyHtml: `<p>${emailEscape(bodyText).replace(/\r?\n/g, '<br>')}</p>`,
+              ctaText: ctaUrl ? 'View offer' : undefined,
+              ctaUrl: ctaUrl || undefined,
+            },
+            recipientContext: {
+              reason: 'You received this offer because marketing email is enabled for your MASEST account.',
+            },
+          });
+          const materialized = await materializeDeliverySource(sb, {
+            sourceType: 'offer',
+            sourceId: offer.id,
+            parentId: offer.id,
+            subject: rendered.subject,
+            html: rendered.html,
+            category: 'offer',
+            metadata: { cta_url: ctaUrl || '', audience },
+            emails,
+          });
+          if (materialized.error) throw new Error('offer_delivery_materialize_failed');
+          emailQueued = materialized.total;
+          if (emailQueued) {
+            const wake = await enqueueMarketingDelivery(env, { sourceType: 'offer', sourceId: offer.id });
+            if (!wake.ok) emailError = wake.error;
           }
-        } catch (error) {
-          emailFailed = 1;
-          emailError = error.message || 'marketing_company_emails_unavailable';
+        } else {
+          emailError = 'no_email_recipients';
         }
+      } catch (error) {
+        emailFailed = 1;
+        emailError = error.message || 'marketing_company_emails_unavailable';
       }
     }
 
     const emailStatus = !body.send_email ? 'not_requested'
-      : emailQueued && !emailFailed ? 'queued'
+      : emailQueued && !emailFailed && !emailError ? 'queued'
+        : emailQueued && !emailFailed ? 'pending_worker'
         : emailQueued ? 'partially_queued'
           : 'failed';
     await sb.from('offers').update({

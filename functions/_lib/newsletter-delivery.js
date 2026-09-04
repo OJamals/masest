@@ -1,7 +1,6 @@
-import { sendEmailResult } from './supabase.js';
-import { marketingEmailViewUrl } from './ses-email.js';
+import { marketingEmailViewUrl, sendSesMarketingEmail } from './ses-email.js';
 
-export const DELIVERY_CONCURRENCY = 5;
+export const DELIVERY_CONCURRENCY = 1;
 export const DELIVERY_BATCH_SIZE = 25;
 export const DELIVERY_MAX_BATCH_SIZE = 500;
 export const DELIVERY_LEASE_SECONDS = 5 * 60;
@@ -24,7 +23,9 @@ export function normalizeDeliveryEmails(emails = []) {
 
 export function deliveryIdentity(sourceType, sourceId, value) {
   const email = String(value || '').trim().toLowerCase();
-  if (!['newsletter', 'blog_post', 'nurture'].includes(sourceType)) throw new Error('invalid_delivery_source_type');
+  if (!['newsletter', 'blog_post', 'nurture', 'offer', 'review', 'test'].includes(sourceType)) {
+    throw new Error('invalid_delivery_source_type');
+  }
   if (!sourceId) throw new Error('delivery_source_id_required');
   if (!EMAIL_RE.test(email)) throw new Error('invalid_delivery_email');
   const prefix = sourceType === 'blog_post' ? 'blog-newsletter' : sourceType;
@@ -118,6 +119,7 @@ export async function runDeliveryWorker({
   store,
   send,
   sourceType = null,
+  sourceId = null,
   limit = DELIVERY_BATCH_SIZE,
   concurrency = DELIVERY_CONCURRENCY,
   leaseSeconds = DELIVERY_LEASE_SECONDS,
@@ -131,18 +133,20 @@ export async function runDeliveryWorker({
   const claimed = await store.claim({
     workerId: activeWorkerId,
     sourceType,
+    sourceId,
     limit: claimLimit,
     leaseSeconds: Math.max(30, Number(leaseSeconds) || DELIVERY_LEASE_SECONDS),
   });
-  const sendDelivery = send || (async (row) => sendEmailResult(row.env || {}, {
-    to: [row.normalized_email],
+  const sendDelivery = send || (async (row) => sendSesMarketingEmail(row.env || {}, {
+    to: row.normalized_email,
     subject: row.subject,
     html: row.html,
     category: row.category,
     idempotencyKey: row.provider_idempotency_key,
   }));
 
-  await mapConcurrent(claimed || [], maxConcurrency, async (row) => {
+  const sendable = (claimed || []).filter((row) => row.state === 'processing');
+  await mapConcurrent(sendable, maxConcurrency, async (row) => {
     let result;
     try {
       result = await sendDelivery(row);
@@ -154,13 +158,26 @@ export async function runDeliveryWorker({
   });
 
   const sources = new Map();
+  if (sourceType && sourceId) {
+    sources.set(`${sourceType}:${sourceId}`, {
+      source_type: sourceType,
+      source_id: sourceId,
+    });
+  }
   for (const row of claimed || []) {
     const key = `${row.source_type}:${row.source_id}`;
     if (!sources.has(key)) sources.set(key, row);
   }
   const summaries = [];
   for (const row of sources.values()) {
-    summaries.push(await store.reconcile(row.source_type, row.source_id));
+    try {
+      summaries.push(await store.reconcile(row.source_type, row.source_id));
+    } catch (error) {
+      const recovery = error instanceof Error ? error : new Error(String(error));
+      recovery.deliverySourceType = row.source_type;
+      recovery.deliverySourceId = row.source_id;
+      throw recovery;
+    }
   }
   return { claimed: claimed?.length || 0, workerId: activeWorkerId, summaries };
 }
@@ -226,10 +243,11 @@ function numericSummary(row = {}) {
 
 export function createSupabaseDeliveryStore(sb) {
   return {
-    async claim({ workerId: activeWorkerId, sourceType, limit, leaseSeconds }) {
+    async claim({ workerId: activeWorkerId, sourceType, sourceId = null, limit, leaseSeconds }) {
       const { data, error } = await sb.rpc('claim_newsletter_deliveries', {
         p_worker_id: activeWorkerId,
         p_source_type: sourceType,
+        p_source_id: sourceId || null,
         p_limit: limit,
         p_lease_seconds: leaseSeconds,
       });
@@ -259,10 +277,13 @@ export function createSupabaseDeliveryStore(sb) {
         }),
         getDeliverySource(sb, sourceType, sourceId),
       ]);
-      if (summaryError || sourceError || !source) {
-        throw new Error(`newsletter_delivery_reconcile_failed:${summaryError?.message || sourceError?.message || 'source_missing'}`);
+      if (summaryError || sourceError) {
+        throw new Error(`newsletter_delivery_reconcile_failed:${summaryError?.message || sourceError?.message}`);
       }
       const summary = numericSummary(firstRow(summaryData));
+      if (!source) {
+        return { sourceType, sourceId, ...summary, complete: true, missing: true };
+      }
       const completedAt = summary.complete ? new Date().toISOString() : null;
       const { error: sourceUpdateError } = await sb.from('newsletter_delivery_sources').update({
         status: summary.complete ? 'complete' : 'processing',
@@ -308,6 +329,16 @@ export function createSupabaseDeliveryStore(sb) {
           dead_count: summary.dead,
         }, { onConflict: 'slug' });
         if (error) throw new Error(`blog_delivery_parent_update_failed:${error.message || error}`);
+      } else if (sourceType === 'offer') {
+        const failed = summary.complete && summary.dead > 0;
+        const { error } = await sb.from('offers').update({
+          emailed: summary.sent > 0,
+          email_provider: 'ses',
+          email_status: summary.complete ? (failed ? 'partial_failure' : 'complete') : 'processing',
+          email_queued_count: summary.total,
+          email_failed_count: summary.dead,
+        }).eq('id', source.parent_id);
+        if (error) throw new Error(`offer_delivery_parent_update_failed:${error.message || error}`);
       }
       return { sourceType, sourceId, ...summary };
     },
@@ -319,21 +350,27 @@ function envNumber(env, name, fallback) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-export async function runSupabaseDeliveryWorker(env, sb, { sourceType } = {}) {
+export async function runSupabaseDeliveryWorker(env, sb, {
+  sourceType,
+  sourceId = null,
+  limit = envNumber(env, 'MARKETING_DELIVERY_BATCH_SIZE', DELIVERY_BATCH_SIZE),
+  concurrency = envNumber(env, 'MARKETING_DELIVERY_CONCURRENCY', DELIVERY_CONCURRENCY),
+} = {}) {
   return runDeliveryWorker({
     store: createSupabaseDeliveryStore(sb),
     sourceType,
-    limit: envNumber(env, 'NEWSLETTER_DELIVERY_BATCH_SIZE', DELIVERY_BATCH_SIZE),
-    concurrency: envNumber(env, 'NEWSLETTER_DELIVERY_CONCURRENCY', DELIVERY_CONCURRENCY),
-    leaseSeconds: envNumber(env, 'NEWSLETTER_DELIVERY_LEASE_SECONDS', DELIVERY_LEASE_SECONDS),
+    sourceId,
+    limit,
+    concurrency,
+    leaseSeconds: envNumber(env, 'MARKETING_DELIVERY_LEASE_SECONDS', DELIVERY_LEASE_SECONDS),
     send: async (row) => {
       const webViewUrl = await marketingEmailViewUrl(env, {
         email: row.normalized_email,
         sourceType: row.source_type,
         sourceId: row.source_id,
       });
-      return sendEmailResult(env, {
-        to: [row.normalized_email],
+      return sendSesMarketingEmail(env, {
+        to: row.normalized_email,
         subject: row.subject,
         html: row.html,
         category: row.category,

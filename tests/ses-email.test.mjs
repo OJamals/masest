@@ -6,6 +6,7 @@ import {
   marketingEmailViewUrl,
   sendSesMarketingEmail,
   sesMarketingConfigured,
+  syncSesMarketingContact,
   syncSesSuppressions,
 } from '../functions/_lib/ses-email.js';
 import { verifyEmailViewToken } from '../functions/_lib/email.js';
@@ -14,10 +15,12 @@ const ENV = {
   AWS_SES_ACCESS_KEY_ID: 'AKIA_TEST',
   AWS_SES_SECRET_ACCESS_KEY: 'secret-test-value',
   AWS_SES_REGION: 'us-east-1',
-  AWS_SES_FROM_EMAIL: 'dev@masest.co',
+  AWS_SES_FROM_EMAIL: 'news@marketing.masest.co',
   AWS_SES_FROM_NAME: 'MASEST · VertKleen',
   AWS_SES_REPLY_TO: 'dev@masest.co',
   AWS_SES_CONFIGURATION_SET: 'masest-marketing',
+  AWS_SES_CONTACT_LIST: 'masest-marketing',
+  AWS_SES_CONTACT_TOPIC: 'marketing',
   EMAIL_UNSUB_SECRET: 'unsubscribe-secret',
 };
 
@@ -76,7 +79,7 @@ test('online-view URL binds recipient and delivery source', async () => {
   ), false);
 });
 
-test('SES sends one signed multipart marketing message with RFC 8058 unsubscribe headers', async () => {
+test('SES sends one signed multipart message with native SES list management', async () => {
   const signed = [];
   let outbound;
   const result = await sendSesMarketingEmail(ENV, {
@@ -106,21 +109,76 @@ test('SES sends one signed multipart marketing message with RFC 8058 unsubscribe
   assert.equal(outbound.method, 'POST');
   const payload = JSON.parse(await outbound.text());
   assert.deepEqual(payload.Destination, { ToAddresses: ['reader@example.com'] });
-  assert.equal(payload.FromEmailAddress, 'MASEST · VertKleen <dev@masest.co>');
+  assert.equal(payload.FromEmailAddress, 'MASEST · VertKleen <news@marketing.masest.co>');
   assert.deepEqual(payload.ReplyToAddresses, ['dev@masest.co']);
   assert.equal(payload.ConfigurationSetName, 'masest-marketing');
+  assert.deepEqual(payload.ListManagementOptions, {
+    ContactListName: 'masest-marketing',
+    TopicName: 'marketing',
+  });
   assert.equal(payload.Content.Simple.Subject.Data, 'Field briefing');
   assert.equal(payload.Content.Simple.Body.Text.Charset, 'UTF-8');
   assert.equal(payload.Content.Simple.Body.Html.Charset, 'UTF-8');
   const headers = Object.fromEntries(payload.Content.Simple.Headers.map(({ Name, Value }) => [Name, Value]));
-  assert.match(headers['List-Unsubscribe'], /^<https:\/\/masest\.co\/api\/email\/unsubscribe\?/);
-  assert.equal(headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
+  assert.equal(headers['List-Unsubscribe'], undefined);
+  assert.equal(headers['List-Unsubscribe-Post'], undefined);
   assert.equal(headers['X-MASEST-Idempotency-Key'], 'newsletter:42:reader@example.com');
   assert.deepEqual(payload.EmailTags, [
     { Name: 'stream', Value: 'marketing' },
     { Name: 'category', Value: 'newsletter' },
   ]);
-  assert.doesNotMatch(JSON.stringify(payload), /secret-test-value|\{%|\{\{/);
+  assert.equal((payload.Content.Simple.Body.Html.Data.match(/\{\{amazonSESUnsubscribeUrl\}\}/g) || []).length, 1);
+  assert.equal((payload.Content.Simple.Body.Text.Data.match(/\{\{amazonSESUnsubscribeUrl\}\}/g) || []).length, 1);
+  assert.doesNotMatch(JSON.stringify(payload).replaceAll('{{amazonSESUnsubscribeUrl}}', ''), /secret-test-value|\{%|\{\{/);
+});
+
+test('SES contact sync updates then creates exact contact-list topic preference', async () => {
+  const signed = [];
+  const outbound = [];
+  const result = await syncSesMarketingContact(ENV, {
+    email: 'Reader@Example.com', enabled: false,
+  }, {
+    signer: fakeSigner(signed),
+    fetchImpl: async (request) => {
+      outbound.push({ method: request.method, url: request.url, body: await request.json() });
+      if (outbound.length === 1) return Response.json({ message: 'Not found' }, { status: 404 });
+      return new Response(null, { status: 200 });
+    },
+  });
+  assert.deepEqual(result, { ok: true, provider: 'ses', operation: 'created' });
+  assert.equal(outbound[0].method, 'PUT');
+  assert.match(outbound[0].url, /\/v2\/email\/contact-lists\/masest-marketing\/contacts\/reader%40example\.com$/);
+  assert.deepEqual(outbound[0].body, {
+    UnsubscribeAll: true,
+    TopicPreferences: [{ TopicName: 'marketing', SubscriptionStatus: 'OPT_OUT' }],
+  });
+  assert.equal(outbound[1].method, 'POST');
+  assert.match(outbound[1].url, /\/v2\/email\/contact-lists\/masest-marketing\/contacts$/);
+  assert.deepEqual(outbound[1].body, {
+    EmailAddress: 'reader@example.com',
+    UnsubscribeAll: true,
+    TopicPreferences: [{ TopicName: 'marketing', SubscriptionStatus: 'OPT_OUT' }],
+  });
+  assert.equal(signed.length, 2);
+});
+
+test('SES contact sync converges when another writer creates the contact first', async () => {
+  const outbound = [];
+  const result = await syncSesMarketingContact(ENV, {
+    email: 'race@example.com', enabled: true,
+  }, {
+    signer: fakeSigner([]),
+    fetchImpl: async (request) => {
+      outbound.push(request.method);
+      if (outbound.length === 1) return Response.json({ message: 'Not found' }, { status: 404 });
+      if (outbound.length === 2) {
+        return Response.json({ __type: 'AlreadyExistsException', message: 'Contact already exists' }, { status: 400 });
+      }
+      return new Response(null, { status: 200 });
+    },
+  });
+  assert.deepEqual(outbound, ['PUT', 'POST', 'PUT']);
+  assert.deepEqual(result, { ok: true, provider: 'ses', operation: 'updated_after_create_race' });
 });
 
 test('SES marketing send fails closed for invalid shape, missing placeholders, and missing config', async () => {
@@ -134,6 +192,7 @@ test('SES marketing send fails closed for invalid shape, missing placeholders, a
   assert.equal((await sendSesMarketingEmail({}, base)).error, 'ses_not_configured');
   assert.equal((await sendSesMarketingEmail(ENV, { ...base, to: ['a@b.co', 'b@c.co'] })).error, 'ses_single_recipient_required');
   assert.equal((await sendSesMarketingEmail(ENV, { ...base, html: '<p>No opt out</p>' })).error, 'marketing_unsubscribe_placeholder_required');
+  assert.equal((await sendSesMarketingEmail(ENV, { ...base, text: 'No opt out in plain text' })).error, 'marketing_placeholder_unresolved');
   assert.equal((await sendSesMarketingEmail(ENV, { ...base, idempotencyKey: '' })).error, 'marketing_idempotency_key_required');
 });
 

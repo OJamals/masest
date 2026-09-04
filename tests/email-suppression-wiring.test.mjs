@@ -33,9 +33,11 @@ test("sendEmail supports bcc (offer broadcast privacy)", () => {
 
 const OFFERS = readFileSync(new URL("../functions/api/admin/offers.js", import.meta.url), "utf8");
 
-test("offers use canonical SES marketing gateway", () => {
-  assert.match(OFFERS, /queueMarketingEmail\(/, "offers must call the canonical marketing gateway");
+test("offers materialize canonical delivery rows then wake the Cloudflare Queue", () => {
+  assert.match(OFFERS, /materializeDeliverySource\(/, "offers must materialize durable delivery rows");
+  assert.match(OFFERS, /enqueueMarketingDelivery\(/, "offers must wake the canonical marketing Queue");
   assert.match(OFFERS, /category:\s*'offer'/, "offers must tag category 'offer'");
+  assert.doesNotMatch(OFFERS, /queueMarketingEmail\(/, "offers must not send SES inline");
   assert.doesNotMatch(OFFERS, /sendEmail(?:Result)?\(/, "offers must not enter Cloudflare transactional sending");
   assert.doesNotMatch(OFFERS, /api\.resend\.com/, "offers must not call a retired provider directly");
 });

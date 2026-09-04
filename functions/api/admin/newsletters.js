@@ -1,12 +1,11 @@
-// /api/admin/newsletters — staff composer backed by Supabase delivery ledger + SES.
-import { adminClient, requireStaff, json, readBody, sendEmailResult } from '../../_lib/supabase.js';
+// /api/admin/newsletters — staff composer backed by Supabase + Cloudflare Queue + SES.
+import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
 import { renderNewsletterEmail, nextRunAt, dueNewsletters } from '../../_lib/newsletter.js';
 import {
   materializeDeliverySource,
-  runSupabaseDeliveryWorker,
 } from '../../_lib/newsletter-delivery.js';
+import { enqueueMarketingDelivery } from '../../_lib/marketing-delivery-queue.js';
 import { loadMarketingAudience } from '../../_lib/marketing-subscribers.js';
-import { syncSesSuppressions } from '../../_lib/ses-email.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
@@ -45,14 +44,7 @@ async function failQueue(sb, newsletterId, error) {
   }).eq('id', newsletterId).eq('status', 'queueing');
 }
 
-async function queueNewsletter(env, sb, newsletter, { scheduled = false, suppressionsSynced = false } = {}) {
-  if (!suppressionsSynced) {
-    const suppressionSync = await syncSesSuppressions(env, sb);
-    if (!suppressionSync.ok) {
-      await failQueue(sb, newsletter.id, suppressionSync.error);
-      return { error: suppressionSync.error, retryable: suppressionSync.retryable };
-    }
-  }
+async function queueNewsletter(env, sb, newsletter, { scheduled = false } = {}) {
   let emails;
   try {
     emails = await loadMarketingAudience(sb);
@@ -101,44 +93,24 @@ async function queueNewsletter(env, sb, newsletter, { scheduled = false, suppres
   }).eq('id', newsletter.id).eq('status', 'queueing');
   if (updateError) return { error: 'newsletter_queue_state_save_failed', retryable: true };
 
-  let processed = 0;
+  let wake = { ok: true, queued: false };
   if (!empty) {
-    try {
-      processed = (await runSupabaseDeliveryWorker(env, sb, { sourceType: 'newsletter' })).claimed;
-    } catch {
-      // Queue is durable; cron resumes. Returning 202 remains truthful.
-    }
+    wake = await enqueueMarketingDelivery(env, { sourceType: 'newsletter', sourceId });
   }
   return {
     queued: !empty,
     provider: 'ses',
     source_id: sourceId,
     total: materialized.total,
-    processed,
+    processed: 0,
+    queue_wake: wake.ok,
+    ...(wake.ok ? {} : { queue_error: wake.error, retryable: wake.retryable }),
     provider_status: empty ? 'complete' : 'processing',
   };
 }
 
-async function drainDeliveryQueues(env, sb) {
-  const results = [];
-  for (const sourceType of ['newsletter', 'blog_post', 'nurture']) {
-    results.push(await runSupabaseDeliveryWorker(env, sb, { sourceType }));
-  }
-  return results;
-}
-
 async function sweepDue(env) {
   const sb = adminClient(env);
-  const suppressionSync = await syncSesSuppressions(env, sb);
-  if (!suppressionSync.ok) {
-    return json(503, { error: suppressionSync.error, retryable: suppressionSync.retryable });
-  }
-  let drained;
-  try {
-    drained = await drainDeliveryQueues(env, sb);
-  } catch {
-    return json(503, { error: 'newsletter_delivery_worker_failed', retryable: true });
-  }
   const { data, error } = await sb.from('newsletters').select('*').eq('status', 'scheduled');
   if (error) return json(503, { error: 'unavailable' });
   const queued = [];
@@ -150,10 +122,7 @@ async function sweepDue(env) {
       continue;
     }
     if (!claim.newsletter) continue;
-    const result = await queueNewsletter(env, sb, claim.newsletter, {
-      scheduled: true,
-      suppressionsSynced: true,
-    });
+    const result = await queueNewsletter(env, sb, claim.newsletter, { scheduled: true });
     if (result.error) failed.push({ id: candidate.id, ...result });
     else queued.push({ id: candidate.id, ...result });
   }
@@ -161,7 +130,7 @@ async function sweepDue(env) {
     ok: !failed.length,
     queued,
     failed,
-    drained: drained.map(({ claimed, summaries }) => ({ claimed, summaries })),
+    drained: [],
   });
 }
 
@@ -268,17 +237,24 @@ export async function onRequest({ request, env }) {
     const to = String(body.to || user.email || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return json(400, { error: 'invalid_test_email' });
     const rendered = renderNewsletterEmail({ subject: body.subject, body_md: body.body_md });
-    const result = await sendEmailResult(env, {
-      to: [to],
+    const sourceId = crypto.randomUUID();
+    const materialized = await materializeDeliverySource(sb, {
+      sourceType: 'test',
+      sourceId,
+      parentId: sourceId,
       subject: `[TEST] ${rendered.subject}`,
       html: rendered.html,
-      text: rendered.text,
       category: 'newsletter',
-      idempotencyKey: `newsletter-test:${crypto.randomUUID()}:${to}`,
+      metadata: { requested_by: user.id },
+      emails: [to],
     });
-    return json(result.ok ? 202 : 502, result.ok
-      ? { ok: true, queued: true, provider: 'ses', provider_message_id: result.providerMessageId }
-      : { ok: false, error: result.error || 'ses_test_send_failed', retryable: result.retryable });
+    if (materialized.error || materialized.total !== 1) {
+      return json(503, { ok: false, error: 'ses_test_materialize_failed', retryable: true });
+    }
+    const wake = await enqueueMarketingDelivery(env, { sourceType: 'test', sourceId });
+    return json(wake.ok ? 202 : 503, wake.ok
+      ? { ok: true, queued: true, provider: 'ses', source_id: sourceId }
+      : { ok: false, error: wake.error, retryable: wake.retryable, source_id: sourceId });
   }
 
   if (action === 'send_now') {

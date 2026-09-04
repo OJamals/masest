@@ -61,7 +61,7 @@ create index if not exists newsletters_provider_campaign_idx
   where provider_campaign_id is not null;
 
 create table if not exists public.newsletter_delivery_sources (
-  source_type text not null check (source_type in ('newsletter', 'blog_post', 'nurture')),
+  source_type text not null check (source_type in ('newsletter', 'blog_post', 'nurture', 'offer', 'review', 'test')),
   source_id text not null,
   parent_id text not null,
   subject text not null,
@@ -92,6 +92,9 @@ create table if not exists public.newsletter_deliveries (
   lease_expires_at timestamptz,
   provider_idempotency_key text not null,
   provider_message_id text,
+  provider_status text,
+  provider_event_id text,
+  provider_occurred_at timestamptz,
   last_error text,
   sent_at timestamptz,
   created_at timestamptz not null default now(),
@@ -127,8 +130,14 @@ declare
   v_created boolean := false;
   v_inserted int := 0;
 begin
-  if p_source_type not in ('newsletter', 'blog_post', 'nurture') then
+  if p_source_type not in ('newsletter', 'blog_post', 'nurture', 'offer', 'review', 'test') then
     raise exception 'invalid_delivery_source_type';
+  end if;
+  if p_source_type in ('newsletter', 'offer') and (
+    p_parent_id is null
+    or p_parent_id !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  ) then
+    raise exception 'invalid_delivery_parent_id';
   end if;
 
   insert into public.newsletter_delivery_sources (
@@ -180,9 +189,11 @@ begin
 end;
 $$;
 
+drop function if exists public.claim_newsletter_deliveries(uuid, text, int, int);
 create or replace function public.claim_newsletter_deliveries(
   p_worker_id uuid,
   p_source_type text,
+  p_source_id text default null,
   p_limit int default 25,
   p_lease_seconds int default 300
 )
@@ -202,44 +213,105 @@ language sql
 security definer
 set search_path = public
 as $$
-  with candidates as (
+  with expired_candidates as (
     select delivery.id
     from public.newsletter_deliveries delivery
-    where delivery.source_type = p_source_type
-      and (
-        (delivery.state in ('pending', 'retry') and delivery.available_at <= now())
-        or (delivery.state = 'processing' and delivery.lease_expires_at <= now())
-      )
+    where (p_source_type is null or delivery.source_type = p_source_type)
+      and (p_source_id is null or delivery.source_id = p_source_id)
+      and delivery.state = 'processing'
+      and delivery.lease_expires_at <= now()
     order by delivery.available_at, delivery.created_at
     for update skip locked
+    limit least(greatest(coalesce(p_limit, 25), 1), 500)
+  ),
+  expired as (
+    update public.newsletter_deliveries delivery
+    set
+      state = 'dead',
+      last_error = 'ambiguous_processing_timeout',
+      lease_token = null,
+      lease_expires_at = null,
+      updated_at = now()
+    from expired_candidates
+    where delivery.id = expired_candidates.id
+    returning delivery.*
+  ),
+  candidates as (
+    select
+      delivery.id,
+      exists (
+        select 1 from public.email_suppressions suppression
+        where suppression.email = delivery.normalized_email
+          and suppression.stream = 'all'
+      ) or (
+        delivery.source_type <> 'test' and (
+          exists (
+            select 1 from public.email_suppressions suppression
+            where suppression.email = delivery.normalized_email
+              and suppression.stream = 'marketing'
+          )
+          or exists (
+            select 1 from public.newsletter_recipients recipient
+            where recipient.email = delivery.normalized_email
+              and recipient.subscribed = false
+          )
+        )
+      ) as blocked
+    from public.newsletter_deliveries delivery
+    where (
+        (p_source_type is null and delivery.source_type <> 'test')
+        or delivery.source_type = p_source_type
+      )
+      and (p_source_id is null or delivery.source_id = p_source_id)
+      and delivery.state in ('pending', 'retry')
+      and delivery.available_at <= now()
+      and (
+        delivery.source_type = 'test'
+        or coalesce((
+          select consent.provider_sync_state
+          from public.marketing_consent_events consent
+          where consent.recipient = delivery.normalized_email
+          order by consent.occurred_at desc, consent.enabled asc, consent.created_at desc, consent.event_id desc
+          limit 1
+        ), 'pending') in ('not_required', 'synced', 'superseded')
+      )
+    order by delivery.available_at, delivery.created_at
+    for update of delivery skip locked
     limit least(greatest(coalesce(p_limit, 25), 1), 500)
   ),
   claimed as (
     update public.newsletter_deliveries delivery
     set
-      state = 'processing',
-      attempts = delivery.attempts + 1,
-      lease_token = p_worker_id,
-      lease_expires_at = now() + make_interval(secs => greatest(coalesce(p_lease_seconds, 300), 30)),
+      state = case when candidates.blocked then 'suppressed' else 'processing' end,
+      attempts = delivery.attempts + case when candidates.blocked then 0 else 1 end,
+      lease_token = case when candidates.blocked then null else p_worker_id end,
+      lease_expires_at = case when candidates.blocked then null
+        else now() + make_interval(secs => greatest(coalesce(p_lease_seconds, 300), 30)) end,
+      last_error = case when candidates.blocked then 'marketing_suppressed' else delivery.last_error end,
       updated_at = now()
     from candidates
     where delivery.id = candidates.id
     returning delivery.*
+  ),
+  changed as (
+    select * from expired
+    union all
+    select * from claimed
   )
   select
-    claimed.id,
-    claimed.source_type,
-    claimed.source_id,
-    claimed.normalized_email,
-    claimed.state,
-    claimed.attempts,
-    claimed.provider_idempotency_key,
+    changed.id,
+    changed.source_type,
+    changed.source_id,
+    changed.normalized_email,
+    changed.state,
+    changed.attempts,
+    changed.provider_idempotency_key,
     source.subject,
     source.html,
     source.category
-  from claimed
+  from changed
   join public.newsletter_delivery_sources source
-    on source.source_type = claimed.source_type and source.source_id = claimed.source_id;
+    on source.source_type = changed.source_type and source.source_id = changed.source_id;
 $$;
 
 create or replace function public.finish_newsletter_delivery(
@@ -257,7 +329,9 @@ security definer
 set search_path = public
 as $$
 declare
-  v_updated int := 0;
+  v_delivery public.newsletter_deliveries%rowtype;
+  v_subject text;
+  v_category text;
 begin
   if p_state not in ('sent', 'suppressed', 'retry', 'dead') then
     raise exception 'invalid_delivery_transition';
@@ -268,13 +342,26 @@ begin
     last_error = left(p_error, 500),
     available_at = coalesce(p_available_at, available_at),
     provider_message_id = coalesce(p_provider_message_id, provider_message_id),
+    provider_status = case when p_state = 'sent' then 'sent' else provider_status end,
     sent_at = coalesce(p_sent_at, sent_at),
     lease_token = null,
     lease_expires_at = null,
     updated_at = now()
-  where id = p_id and state = 'processing' and lease_token = p_worker_id;
-  get diagnostics v_updated = row_count;
-  return v_updated = 1;
+  where id = p_id and state = 'processing' and lease_token = p_worker_id
+  returning * into v_delivery;
+  if not found then return false; end if;
+
+  if p_state = 'sent' and v_delivery.provider_message_id is not null then
+    select source.subject, source.category into v_subject, v_category
+    from public.newsletter_delivery_sources source
+    where source.source_type = v_delivery.source_type and source.source_id = v_delivery.source_id;
+    insert into public.email_events (
+      provider_message_id, to_email, category, subject, status
+    ) values (
+      v_delivery.provider_message_id, v_delivery.normalized_email, v_category, v_subject, 'sent'
+    );
+  end if;
+  return true;
 end;
 $$;
 
@@ -317,10 +404,10 @@ revoke all on public.newsletter_deliveries from anon, authenticated;
 grant select, insert, update, delete on public.newsletter_delivery_sources to service_role;
 grant select, insert, update, delete on public.newsletter_deliveries to service_role;
 revoke all on function public.materialize_newsletter_deliveries(text, text, text, text, text, text, jsonb, jsonb) from public, anon, authenticated;
-revoke all on function public.claim_newsletter_deliveries(uuid, text, int, int) from public, anon, authenticated;
+revoke all on function public.claim_newsletter_deliveries(uuid, text, text, int, int) from public, anon, authenticated;
 revoke all on function public.finish_newsletter_delivery(uuid, uuid, text, text, timestamptz, text, timestamptz) from public, anon, authenticated;
 revoke all on function public.newsletter_delivery_summary(text, text) from public, anon, authenticated;
 grant execute on function public.materialize_newsletter_deliveries(text, text, text, text, text, text, jsonb, jsonb) to service_role;
-grant execute on function public.claim_newsletter_deliveries(uuid, text, int, int) to service_role;
+grant execute on function public.claim_newsletter_deliveries(uuid, text, text, int, int) to service_role;
 grant execute on function public.finish_newsletter_delivery(uuid, uuid, text, text, timestamptz, text, timestamptz) to service_role;
 grant execute on function public.newsletter_delivery_summary(text, text) to service_role;

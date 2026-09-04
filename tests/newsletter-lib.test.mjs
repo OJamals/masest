@@ -176,7 +176,7 @@ test('dueNewsletters: scheduled + next_run_at in the past', () => {
   assert.deepEqual(dueNewsletters(rows, now).map((n) => n.id), [1, 4]);
 });
 
-test('sendEmailResult fails closed when SES is not configured', async () => {
+test('sendEmailResult routes marketing through the durable queue only', async () => {
   let calls = 0;
   const result = await sendEmailResult({}, {
     to: ['person@example.test'],
@@ -190,9 +190,8 @@ test('sendEmailResult fails closed when SES is not configured', async () => {
   assert.equal(calls, 0);
   assert.deepEqual(result, {
     ok: false,
-    provider: 'ses',
     retryable: false,
-    error: 'ses_not_configured',
+    error: 'marketing_queue_required',
   });
 });
 

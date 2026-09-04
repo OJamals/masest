@@ -25,7 +25,7 @@ test('marketing cannot leak through the transactional Cloudflare stream', () => 
   assert.match(src, /const policy = categoryPolicy\(category\)/);
   assert.match(src, /email_category_required/);
   assert.match(src, /policy\.stream === 'marketing'/);
-  assert.match(src, /marketingSender = sendSesMarketingEmail/);
-  assert.match(src, /toR\.length !== 1 \|\| bccR\.length/);
+  assert.match(src, /marketing_queue_required/);
+  assert.doesNotMatch(src, /sendSesMarketingEmail|marketingSender|sesSigner|webViewUrl/);
   assert.match(src, /stream: 'transactional'/);
 });

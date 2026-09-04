@@ -1,4 +1,5 @@
-import { materializeDeliverySource, runSupabaseDeliveryWorker } from './newsletter-delivery.js';
+import { materializeDeliverySource } from './newsletter-delivery.js';
+import { enqueueMarketingDelivery } from './marketing-delivery-queue.js';
 import { setMarketingPreference } from './marketing-subscribers.js';
 import { renderAllNurtureFlowEmails } from './scrolly-marketing-emails.js';
 
@@ -16,7 +17,7 @@ export async function enrollMarketingNurture(env, sb, {
   now = () => Date.now(),
   setPreference = setMarketingPreference,
   materialize = materializeDeliverySource,
-  runWorker = runSupabaseDeliveryWorker,
+  enqueue = enqueueMarketingDelivery,
 } = {}) {
   if (!consented) return { ok: true, skipped: 'consent_required', queued: 0 };
   const normalizedEmail = clean(email, 320).toLowerCase();
@@ -69,11 +70,12 @@ export async function enrollMarketingNurture(env, sb, {
     queued += result?.created ? 1 : 0;
   }
 
-  let started = 0;
-  try {
-    started = (await runWorker(env, sb, { sourceType: 'nurture' })).claimed || 0;
-  } catch {
-    // Durable rows remain claimable by hourly sweep.
-  }
-  return { ok: true, provider: 'ses', queued, started };
+  const wake = queued ? await enqueue(env, { sourceType: 'nurture' }) : { ok: true };
+  return {
+    ok: wake.ok,
+    provider: 'ses',
+    queued,
+    started: 0,
+    ...(wake.ok ? {} : { retryable: wake.retryable, error: wake.error }),
+  };
 }

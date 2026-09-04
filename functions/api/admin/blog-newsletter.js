@@ -1,12 +1,11 @@
-// Secret-gated published-blog sweep backed by Supabase delivery ledger + SES.
+// Secret-gated published-blog sweep backed by Supabase + Cloudflare Queue + SES.
 import { adminClient, json, readBody } from '../../_lib/supabase.js';
 import { postFromEntry, unsentPosts, renderBlogEmail } from '../../_lib/blog-newsletter.js';
 import {
   materializeDeliverySource,
-  runSupabaseDeliveryWorker,
 } from '../../_lib/newsletter-delivery.js';
+import { enqueueMarketingDelivery } from '../../_lib/marketing-delivery-queue.js';
 import { loadMarketingAudience } from '../../_lib/marketing-subscribers.js';
-import { syncSesSuppressions } from '../../_lib/ses-email.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
@@ -37,16 +36,6 @@ export async function onRequestPost({ request, env }) {
 
   const sb = adminClient(env);
   return recordAutomationRun(sb, 'blog_newsletter', async (run) => {
-    const suppressionSync = await syncSesSuppressions(env, sb);
-    if (!suppressionSync.ok) {
-      return json(503, { error: suppressionSync.error, retryable: suppressionSync.retryable });
-    }
-    try {
-      await runSupabaseDeliveryWorker(env, sb, { sourceType: 'blog_post' });
-    } catch {
-      return json(503, { error: 'blog_delivery_worker_failed', retryable: true });
-    }
-
     const { data: settings } = await sb.from('newsletter_settings')
       .select('auto_send_latest_blog').eq('id', 1).maybeSingle();
     if (!settings?.auto_send_latest_blog) {
@@ -116,20 +105,18 @@ export async function onRequestPost({ request, env }) {
       queued.push({ slug: post.slug, source_id: post.slug, total: materialized.total });
     }
 
-    let processed = 0;
+    let wake = { ok: true, queued: false };
     if (queued.some((item) => item.total > 0)) {
-      try {
-        processed = (await runSupabaseDeliveryWorker(env, sb, { sourceType: 'blog_post' })).claimed;
-      } catch {
-        // Durable rows remain claimable by next sweep.
-      }
+      wake = await enqueueMarketingDelivery(env, { sourceType: 'blog_post' });
+      if (!wake.ok) failed.push({ error: wake.error, retryable: wake.retryable });
     }
-    run.processed = processed;
+    run.processed = queued.reduce((total, item) => total + item.total, 0);
     return json(failed.length ? 503 : 202, {
       ok: !failed.length,
       provider: 'ses',
       queued,
-      processed,
+      processed: 0,
+      queue_wake: wake.ok,
       failed,
     });
   });

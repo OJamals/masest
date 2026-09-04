@@ -1,0 +1,39 @@
+{
+  "Version": "2012-10-17",
+  "Id": "masest-ses-events-policy",
+  "Statement": [
+    {
+      "Sid": "AccountAdministration",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::791359098991:root"
+      },
+      "Action": [
+        "SNS:GetTopicAttributes",
+        "SNS:SetTopicAttributes",
+        "SNS:AddPermission",
+        "SNS:RemovePermission",
+        "SNS:DeleteTopic",
+        "SNS:Subscribe",
+        "SNS:ListSubscriptionsByTopic",
+        "SNS:Publish"
+      ],
+      "Resource": "arn:aws:sns:us-east-1:791359098991:masest-ses-events"
+    },
+    {
+      "Sid": "AllowSesConfigurationSetPublish",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ses.amazonaws.com"
+      },
+      "Action": "SNS:Publish",
+      "Resource": "arn:aws:sns:us-east-1:791359098991:masest-ses-events",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceAccount": "791359098991",
+          "AWS:SourceArn": "arn:aws:ses:us-east-1:791359098991:configuration-set/masest-marketing"
+        }
+      }
+    }
+  ]
+}

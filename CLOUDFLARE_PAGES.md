@@ -17,12 +17,12 @@ Cloudflare Pages project:
 runs the complete verification gate, and then uploads `dist/` directly to the
 existing `masest-commerce` project with Wrangler.
 
-The Pages workflow does not deploy the separately versioned email Worker. When
-`workers/email-service/`, `shared/email-bridge.js`, or the Worker's package
-dependencies change, deploy the Worker first from a clean, verified checkout:
+The Pages workflow does not deploy separately versioned email Workers. Deploy any
+changed Worker first from a clean, verified checkout:
 
 ```bash
 npx wrangler deploy --config workers/email-service/wrangler.jsonc --keep-vars
+npx wrangler deploy --config workers/marketing-email/wrangler.jsonc --keep-vars
 ```
 
 Then push the same commit to `main` and let `verify.yml` publish Pages. Keeping
@@ -82,25 +82,35 @@ site.
 - `MESSAGE_REPLY_DOMAIN=reply.masest.co`
 - `MESSAGE_REPLY_SECRET`
 - `EMAIL_INGRESS_SECRET`
-- `EMAIL_UNSUB_SECRET` — signs one-click unsubscribe and online-view URLs
-- `AWS_SES_ACCESS_KEY_ID` — dedicated least-privilege IAM access key
-- `AWS_SES_SECRET_ACCESS_KEY` — matching IAM secret
-- `AWS_SES_REGION=us-east-1`
-- `AWS_SES_FROM_EMAIL=dev@masest.co`
-- `AWS_SES_FROM_NAME=MASEST · VertKleen`
-- `AWS_SES_REPLY_TO=dev@masest.co`
-- `AWS_SES_CONFIGURATION_SET=masest-marketing`
+- `EMAIL_UNSUB_SECRET` — signs MASEST preference and online-view URLs
 
 Required Pages binding:
 
 - `EMAIL_SERVICE` — service binding to `masest-email-service`.
+- `MARKETING_EMAIL_QUEUE` — Queue producer binding to `masest-marketing-email`.
 - `CONTENT_IMAGES` — R2 bucket binding to `masest-site-images` in production and preview.
 
-Email Worker owns restricted `EMAIL` binding, idempotency Durable Object,
+Transactional Email Worker owns restricted `EMAIL` binding, idempotency Durable Object,
 lifecycle queue, and inbound Email Routing handler for service/transactional mail,
-including requested quote follow-ups. Pages signs one-recipient Amazon SES calls for
-consented promotional offers, newsletters, nurture, and review solicitations. Supabase
-owns canonical consent, suppression, and durable delivery rows.
+including requested quote follow-ups. Pages materializes consented marketing rows and
+emits PII-free Queue wake signals. `masest-marketing-email` alone owns SES credentials,
+serial delivery, SES contact-list mirroring, suppression sync, and signed SNS lifecycle
+ingress. Supabase owns canonical consent, suppression, and durable delivery rows.
+
+Required `masest-marketing-email` Worker secrets:
+
+- `AWS_SES_ACCESS_KEY_ID`
+- `AWS_SES_SECRET_ACCESS_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `EMAIL_UNSUB_SECRET`
+
+Required Worker variable: exact `SES_SNS_TOPIC_ARN`. Checked-in non-secret variables
+set `AWS_SES_REGION=us-east-1`, sender `news@marketing.masest.co`, Reply-To
+`dev@masest.co`, and configuration set `masest-marketing`. Custom MAIL FROM uses
+`bounce.marketing.masest.co`, not the visible sending domain. Contact list
+`masest-marketing` uses topic `marketing` with default `OPT_OUT`; explicit Supabase
+consent must sync before campaign claim.
 
 After env var changes, run the `Verify` workflow on `main` so the new values bind.
 

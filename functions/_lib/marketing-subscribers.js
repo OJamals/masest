@@ -1,4 +1,5 @@
 import { adminClient } from './supabase.js';
+import { enqueueMarketingConsentSync } from './marketing-delivery-queue.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -21,7 +22,10 @@ export async function setMarketingPreferences(env, {
   userId = null,
   name = null,
   tags = [],
-} = {}, { sb = adminClient(env) } = {}) {
+} = {}, {
+  sb = adminClient(env),
+  enqueueConsent = enqueueMarketingConsentSync,
+} = {}) {
   const normalized = normalizeMarketingEmails(emails);
   if (!normalized.length || typeof enabled !== 'boolean') {
     return { ok: false, count: 0, retryable: false, error: 'invalid_marketing_preference' };
@@ -41,6 +45,7 @@ export async function setMarketingPreferences(env, {
   if (count !== normalized.length) {
     return { ok: false, count, retryable: true, error: 'marketing_preference_partial_write' };
   }
+  await enqueueConsent(env);
   return { ok: true, count };
 }
 

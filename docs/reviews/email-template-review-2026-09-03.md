@@ -24,7 +24,7 @@ This is consolidation, not a parallel email system. Delivery, sanitization, send
 - `functions/_lib/email-template.js` centralizes the MASEST logo, basic layout, CTA safety, HTML sanitization, and transactional-versus-marketing footer behavior.
 - `functions/_lib/support-email.js` already carries the important threading contract: stable subjects, `In-Reply-To`, `References`, thread-scoped signed `Reply-To`, canonical chat persistence, and inbound email replies.
 - `functions/_lib/order-email.js` already owns order-item and shipment fragments.
-- `functions/_lib/marketing-email.js` fails closed when SES config, category, idempotency, or unsubscribe content is absent.
+- `functions/_lib/ses-email.js` fails closed when SES config, recipient, idempotency, or unsubscribe content is absent; campaign callers now reach it only through the durable Queue worker.
 - `functions/_lib/blog-newsletter.js` already supports approved media from `media.masest.co`.
 - `functions/api/account/notification-prefs.js` correctly keeps transactional email mandatory while marketing and support-alert preferences remain user-controlled.
 
@@ -76,11 +76,11 @@ All three consume shared primitives for brand tokens, safe URLs, escaped text, a
 ## Implemented integration
 
 1. Shared email primitives now own official logo, safe URLs, responsive shell, required-service footer, provider-neutral marketing footer, and confirmed business identity.
-2. Contract tests cover unsafe URLs/media, bounded support history, multipart output, order/refund facts, and SES one-click unsubscribe headers.
+2. Contract tests cover unsafe URLs/media, bounded support history, multipart output, order/refund facts, and SES-native subscription management.
 3. Support delivery now uses the conversation renderer while preserving signed reply routing, `In-Reply-To`, `References`, and canonical chat persistence.
 4. Order confirmation, manual/automatic tracking, cancellation, refund, and return-label callers now use the commerce renderer.
 5. Newsletter, blog, offer, and review-reminder callers now use the marketing renderer and authored plain text.
-6. SES validation requires `{{unsubscribe_url}}`; browser copies use signed `{{web_view_url}}` links. Both bind to the exact recipient.
+6. SES validation requires `{{unsubscribe_url}}`; send-time rendering maps it to SES's native unsubscribe URL while browser copies use signed MASEST preference links. `{{web_view_url}}` links bind to exact recipient/source.
 7. Remaining account, quote, billing, and internal notices inherit the upgraded provider-neutral transactional shell.
 8. Consent-gated quote nurture uses durable scheduled rows; later messages stop automatically after opt-out.
 

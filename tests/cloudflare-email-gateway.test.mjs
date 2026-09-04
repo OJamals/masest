@@ -53,7 +53,7 @@ test('Pages sends transactional email only through the private Cloudflare servic
   });
 });
 
-test('Cloudflare transactional gateway fails closed when unbound and never receives marketing streams', async () => {
+test('Cloudflare transactional gateway fails closed when unbound and requires Queue ownership for marketing', async () => {
   const unconfigured = await sendEmailResult({}, {
     to: ['buyer@example.com'],
     subject: 'Order confirmed',
@@ -64,7 +64,6 @@ test('Cloudflare transactional gateway fails closed when unbound and never recei
   assert.deepEqual(unconfigured, { ok: false, retryable: false, error: 'email_not_configured' });
 
   let cloudflareCalls = 0;
-  let marketingCall = null;
   const marketing = await sendEmailResult({
     EMAIL_SERVICE: service(async () => { cloudflareCalls += 1; return Response.json({ ok: true }); }),
   }, {
@@ -74,29 +73,23 @@ test('Cloudflare transactional gateway fails closed when unbound and never recei
     category: 'offer',
     idempotencyKey: 'offer/1/buyer@example.com',
     suppressionLoader: async () => new Map(),
-    marketingSender: async (_env, options) => {
-      marketingCall = options;
-      return { ok: true, provider: 'ses', providerMessageId: 'ses-1', status: 200, retryable: false };
-    },
   });
   assert.equal(cloudflareCalls, 0);
-  assert.equal(marketing.provider, 'ses');
-  assert.equal(marketingCall.to, 'buyer@example.com');
+  assert.deepEqual(marketing, { ok: false, retryable: false, error: 'marketing_queue_required' });
 });
 
-test('marketing fails closed when suppression state cannot be read', async () => {
-  let sends = 0;
+test('marketing exits before direct suppression or provider work', async () => {
+  let suppressionReads = 0;
   const result = await sendEmailResult({}, {
     to: ['buyer@example.com'],
     subject: 'Offer',
     html: '<a href="{{unsubscribe_url}}">Unsubscribe</a>',
     category: 'offer',
     idempotencyKey: 'offer/2/buyer@example.com',
-    suppressionLoader: async () => { throw new Error('database unavailable'); },
-    marketingSender: async () => { sends += 1; return { ok: true }; },
+    suppressionLoader: async () => { suppressionReads += 1; return new Map(); },
   });
-  assert.equal(sends, 0);
-  assert.deepEqual(result, { ok: false, retryable: true, error: 'suppression_check_failed' });
+  assert.equal(suppressionReads, 0);
+  assert.deepEqual(result, { ok: false, retryable: false, error: 'marketing_queue_required' });
 });
 
 test('Cloudflare transactional gateway rejects missing or unknown categories', async () => {

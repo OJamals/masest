@@ -26,7 +26,7 @@ test('nurture enrollment skips every write without explicit form consent', async
   }, {
     setPreference: async () => { calls += 1; },
     materialize: async () => { calls += 1; },
-    runWorker: async () => { calls += 1; },
+    enqueue: async () => { calls += 1; },
   });
   assert.deepEqual(result, { ok: true, skipped: 'consent_required', queued: 0 });
   assert.equal(calls, 0);
@@ -36,7 +36,7 @@ test('nurture enrollment writes consent then materializes three scheduled SES de
   const now = Date.parse('2026-09-03T12:00:00.000Z');
   const preferences = [];
   const sources = [];
-  let workerCalls = 0;
+  const queueJobs = [];
   const result = await enrollMarketingNurture({ EMAIL_UNSUB_SECRET: 'secret' }, {}, {
     email: ' Buyer@Example.test ',
     quoteId: 'quote-42',
@@ -47,7 +47,7 @@ test('nurture enrollment writes consent then materializes three scheduled SES de
     now: () => now,
     setPreference: async (_env, value) => { preferences.push(value); return { ok: true, count: 1 }; },
     materialize: async (_sb, value) => { sources.push(value); return { created: true, total: 1, error: null }; },
-    runWorker: async (_env, _sb, value) => { workerCalls += 1; assert.deepEqual(value, { sourceType: 'nurture' }); return { claimed: 1 }; },
+    enqueue: async (_env, value) => { queueJobs.push(value); return { ok: true, queued: true }; },
   });
 
   assert.deepEqual(NURTURE_DELAY_DAYS, [0, 3, 8]);
@@ -70,8 +70,8 @@ test('nurture enrollment writes consent then materializes three scheduled SES de
   )));
   assert.ok(sources.every((source) => source.category === 'lead_nurture'));
   assert.ok(sources.every((source) => source.emails[0] === 'buyer@example.test'));
-  assert.equal(workerCalls, 1);
-  assert.deepEqual(result, { ok: true, provider: 'ses', queued: 3, started: 1 });
+  assert.deepEqual(queueJobs, [{ sourceType: 'nurture' }]);
+  assert.deepEqual(result, { ok: true, provider: 'ses', queued: 3, started: 0 });
 });
 
 test('nurture enrollment fails closed when canonical consent cannot persist', async () => {

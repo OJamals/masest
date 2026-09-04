@@ -16,6 +16,7 @@ test('marketing email normalization validates, lowercases, and deduplicates', ()
 
 test('marketing preference writes one atomic canonical RPC', async () => {
   const calls = [];
+  let wakes = 0;
   const sb = {
     async rpc(name, args) {
       calls.push({ name, args });
@@ -27,8 +28,9 @@ test('marketing preference writes one atomic canonical RPC', async () => {
     enabled: false,
     source: 'email_unsubscribe',
     userId: '00000000-0000-4000-8000-000000000001',
-  }, { sb });
+  }, { sb, enqueueConsent: async () => { wakes += 1; return { ok: true, queued: true }; } });
   assert.deepEqual(result, { ok: true, count: 1 });
+  assert.equal(wakes, 1);
   assert.deepEqual(calls, [{
     name: 'set_marketing_email_preferences',
     args: {

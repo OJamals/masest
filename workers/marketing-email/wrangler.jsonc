@@ -1,0 +1,47 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "masest-marketing-email",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-03",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "MARKETING_EMAIL_QUEUE",
+        "queue": "masest-marketing-email"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "masest-marketing-email",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 5,
+        "max_concurrency": 1,
+        "dead_letter_queue": "masest-marketing-email-dlq"
+      }
+    ]
+  },
+  "triggers": {
+    "crons": ["*/5 * * * *", "0 */6 * * *"]
+  },
+  "vars": {
+    "APP_URL": "https://masest.co",
+    "AWS_SES_REGION": "us-east-1",
+    "AWS_SES_FROM_EMAIL": "news@marketing.masest.co",
+    "AWS_SES_FROM_NAME": "MASEST · VertKleen",
+    "AWS_SES_REPLY_TO": "dev@masest.co",
+    "AWS_SES_CONFIGURATION_SET": "masest-marketing",
+    "AWS_SES_CONTACT_LIST": "masest-marketing",
+    "AWS_SES_CONTACT_TOPIC": "marketing",
+    "SES_SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:791359098991:masest-ses-events"
+  }
+}

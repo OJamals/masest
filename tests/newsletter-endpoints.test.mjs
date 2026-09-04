@@ -241,7 +241,8 @@ test('newsletters: send_now materializes durable SES deliveries', () => {
   assert.match(sendNow, /await queueNewsletter\(env, sb, claim\.newsletter\)/);
   assert.match(sendNow, /return json\(202,/);
   assert.match(source, /materializeDeliverySource/);
-  assert.match(source, /runSupabaseDeliveryWorker/);
+  assert.match(source, /enqueueMarketingDelivery/);
+  assert.doesNotMatch(source, /runSupabaseDeliveryWorker/);
   assert.match(source, /loadMarketingAudience/);
   assert.match(source, /provider: 'ses'/);
   assert.doesNotMatch(source, /klaviyo/i);
@@ -261,7 +262,8 @@ test('blog sweep materializes durable SES deliveries after claiming each post', 
   const materializeAt = source.indexOf('await materializeDeliverySource(sb, {');
   assert.ok(claimAt >= 0 && claimAt < materializeAt, 'blog post must be claimed before delivery materialization');
   assert.match(source, /materializeDeliverySource/);
-  assert.match(source, /runSupabaseDeliveryWorker/);
+  assert.match(source, /enqueueMarketingDelivery/);
+  assert.doesNotMatch(source, /runSupabaseDeliveryWorker/);
   assert.match(source, /loadMarketingAudience/);
   assert.match(source, /provider: 'ses'/);
   assert.doesNotMatch(source, /klaviyo/i);

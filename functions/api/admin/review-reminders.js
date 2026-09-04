@@ -2,7 +2,8 @@
 // Secret-gated automation-only route; no staff session required.
 import { adminClient, json, readBody } from '../../_lib/supabase.js';
 import { renderMarketingEmail } from '../../_lib/email-renderers.js';
-import { queueMarketingEmail } from '../../_lib/marketing-email.js';
+import { materializeDeliverySource } from '../../_lib/newsletter-delivery.js';
+import { enqueueMarketingDelivery } from '../../_lib/marketing-delivery-queue.js';
 import { reviewToken, REMINDER_DELAY_DAYS } from '../../_lib/reviews.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
@@ -89,20 +90,29 @@ export async function onRequestPost({ request, env }) {
           reason: 'You received this one-time review request because you purchased from MASEST.',
         },
       });
-      const delivery = await queueMarketingEmail(env, {
+      const delivery = await materializeDeliverySource(sb, {
+        sourceType: 'review',
+        sourceId: o.id,
+        parentId: o.id,
         category: 'review_request',
-        email,
         subject: rendered.subject,
         html: rendered.html,
-        text: rendered.text,
-        idempotencyKey: `review-reminder:${o.id}`,
-        properties: { order_id: o.id, review_links: links },
+        metadata: { order_id: o.id, review_links: links },
+        emails: [email],
       });
-      if (!delivery.ok) continue;
+      if (delivery.error || delivery.total !== 1) continue;
       await sb.from('orders').update({ review_reminded_at: new Date().toISOString() }).eq('id', o.id);
       queued += 1;
     }
+    const wake = queued
+      ? await enqueueMarketingDelivery(env, { sourceType: 'review' })
+      : { ok: true, queued: false };
     run.processed = (orders || []).length;
-    return json(200, { ok: true, processed: (orders || []).length, queued });
+    return json(wake.ok ? 200 : 503, {
+      ok: wake.ok,
+      processed: (orders || []).length,
+      queued,
+      ...(wake.ok ? {} : { error: wake.error, retryable: wake.retryable }),
+    });
   });
 }

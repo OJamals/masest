@@ -4,7 +4,6 @@
 // so every helper that needs a secret takes `env` explicitly.
 import { createClient } from '@supabase/supabase-js';
 import { filterByStream, categoryPolicy, unsubscribeToken, htmlToText } from './email.js';
-import { sendSesMarketingEmail } from './ses-email.js';
 import { isStaffEmail, platformStaffRole } from './authz.js';
 import {
   CommerceContextError,
@@ -314,9 +313,6 @@ export async function sendEmailResult(env, {
   attachments = [],
   fetchImpl = globalThis.fetch,
   suppressionLoader = loadSuppressed,
-  marketingSender = sendSesMarketingEmail,
-  sesSigner = null,
-  webViewUrl = '',
 }) {
   const allTo = Array.isArray(to) ? to : [];
   const allBcc = Array.isArray(bcc) ? bcc : [];
@@ -335,6 +331,9 @@ export async function sendEmailResult(env, {
   if (!allTo.length && !allBcc.length) {
     return { ok: false, retryable: false, error: 'email_recipient_required' };
   }
+  if (policy.stream === 'marketing') {
+    return { ok: false, retryable: false, error: 'marketing_queue_required' };
+  }
   const bindingFetch = emailConfigured(env) ? env.EMAIL_SERVICE.fetch.bind(env.EMAIL_SERVICE) : null;
   const serviceFetch = bindingFetch || (fetchImpl !== globalThis.fetch ? fetchImpl : null);
   if (policy.stream === 'transactional' && !serviceFetch) {
@@ -342,7 +341,7 @@ export async function sendEmailResult(env, {
   }
   let suppressed;
   try {
-    suppressed = await suppressionLoader(env, [...allTo, ...allBcc], { strict: policy.stream === 'marketing' });
+    suppressed = await suppressionLoader(env, [...allTo, ...allBcc], { strict: false });
   } catch {
     await logEmailEvent(env, {
       to_email: logTo, category, subject, status: 'failed', error: 'suppression_check_failed',
@@ -358,32 +357,6 @@ export async function sendEmailResult(env, {
     return { ok: false, suppressed: true, retryable: false, error: 'all_recipients_suppressed' };
   }
   const stableKey = await emailIdempotencyKey(idempotencyKey || `ephemeral/${crypto.randomUUID()}`);
-  if (policy.stream === 'marketing') {
-    if (toR.length !== 1 || bccR.length) {
-      return { ok: false, retryable: false, error: 'marketing_single_recipient_required' };
-    }
-    const result = await marketingSender(env, {
-      to: toR[0],
-      subject,
-      html,
-      text: text || '',
-      category,
-      idempotencyKey: stableKey,
-      replyTo,
-      webViewUrl,
-      fetchImpl,
-      signer: sesSigner,
-    });
-    await logEmailEvent(env, {
-      provider_message_id: result.providerMessageId || null,
-      to_email: toR[0],
-      category,
-      subject,
-      status: result.ok ? 'sent' : 'failed',
-      error: result.error || null,
-    });
-    return result;
-  }
   const sentTo = [...toR, ...bccR].join(', ');
   const reply = replyTo || env.EMAIL_REPLY_TO || null;
   // Always send multipart: a caller-supplied text wins, else derive one from the HTML.

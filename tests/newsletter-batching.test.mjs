@@ -5,6 +5,7 @@ import {
   DELIVERY_CONCURRENCY,
   DELIVERY_MAX_ATTEMPTS,
   DELIVERY_MAX_BATCH_SIZE,
+  createSupabaseDeliveryStore,
   deliveryIdentity,
   deliverySummary,
   deliveryTransition,
@@ -139,8 +140,8 @@ class MemoryDeliveryStore {
   }
 }
 
-test('worker starts at concurrency 5 and remains bounded for 1, 5, 6, 500, and over 500', async () => {
-  assert.equal(DELIVERY_CONCURRENCY, 5);
+test('worker defaults to SES-safe serial delivery and remains bounded for 1, 5, 6, 500, and over 500', async () => {
+  assert.equal(DELIVERY_CONCURRENCY, 1);
 
   for (const count of [1, 5, 6, 500, 501]) {
     const now = Date.parse('2026-07-19T12:00:00.000Z');
@@ -168,10 +169,10 @@ test('worker starts at concurrency 5 and remains bounded for 1, 5, 6, 500, and o
   }
 });
 
-test('duplicate workers cannot claim active leases; expired leases reuse the same idempotency key', async () => {
+test('duplicate workers cannot claim active leases', async () => {
   const now = Date.parse('2026-07-19T12:00:00.000Z');
   const store = new MemoryDeliveryStore(['one@example.test'], now);
-  const [claimed] = await store.claim({ workerId: 'crashed', limit: 1, leaseSeconds: 60 });
+  await store.claim({ workerId: 'active', limit: 1, leaseSeconds: 60 });
   const second = await runDeliveryWorker({
     store,
     workerId: 'duplicate-cron',
@@ -180,21 +181,63 @@ test('duplicate workers cannot claim active leases; expired leases reuse the sam
   });
   assert.equal(second.claimed, 0);
 
-  store.now += 60_000;
-  let retriedKey = null;
-  const retried = await runDeliveryWorker({
-    store,
-    workerId: 'retry-worker',
-    now: () => store.now,
-    send: async (row) => {
-      retriedKey = row.provider_idempotency_key;
-      return { ok: true };
+});
+
+test('exact-source jobs reconcile even when no delivery remains claimable', async () => {
+  const reconciled = [];
+  const result = await runDeliveryWorker({
+    sourceType: 'offer',
+    sourceId: 'offer-42',
+    store: {
+      claim: async () => [],
+      finish: async () => true,
+      reconcile: async (sourceType, sourceId) => {
+        reconciled.push([sourceType, sourceId]);
+        return { complete: true, sent: 1 };
+      },
     },
   });
-  assert.equal(retried.claimed, 1);
-  assert.equal(retriedKey, claimed.provider_idempotency_key);
-  assert.equal(store.rows[0].attempts, 2);
-  assert.equal(store.rows[0].state, 'sent');
+  assert.deepEqual(reconciled, [['offer', 'offer-42']]);
+  assert.deepEqual(result.summaries, [{ complete: true, sent: 1 }]);
+});
+
+test('deleted exact-source jobs terminate without permanent Queue retries', async () => {
+  const query = {
+    select() { return this; },
+    eq() { return this; },
+    async maybeSingle() { return { data: null, error: null }; },
+  };
+  const store = createSupabaseDeliveryStore({
+    async rpc() {
+      return {
+        data: [{ total: 0, pending: 0, processing: 0, retry: 0, sent: 0,
+          suppressed: 0, dead: 0, terminal: 0, complete: true }],
+        error: null,
+      };
+    },
+    from() { return query; },
+  });
+  const result = await store.reconcile('newsletter', 'deleted-source');
+  assert.equal(result.missing, true);
+  assert.equal(result.complete, true);
+  assert.equal(result.total, 0);
+});
+
+test('reconcile failures preserve exact source identity for Queue recovery', async () => {
+  const store = new MemoryDeliveryStore(['one@example.test'], Date.parse('2026-07-19T12:00:00.000Z'));
+  store.rows[0].source_type = 'offer';
+  store.rows[0].source_id = 'offer-42';
+  store.reconcile = async () => { throw new Error('projection_down'); };
+  await assert.rejects(runDeliveryWorker({
+    store,
+    sourceType: 'offer',
+    send: async () => ({ ok: true, providerMessageId: 'ses-1' }),
+  }), (error) => {
+    assert.equal(error.message, 'projection_down');
+    assert.equal(error.deliverySourceType, 'offer');
+    assert.equal(error.deliverySourceId, 'offer-42');
+    return true;
+  });
 });
 
 test('partial blog failure stays incomplete until retry becomes terminal', async () => {
@@ -233,12 +276,23 @@ test('partial blog failure stays incomplete until retry becomes terminal', async
 test('schema enforces unique ledger identities and lease-safe bounded claims', () => {
   const schema = readFileSync(new URL('../supabase/schema-newsletters.sql', import.meta.url), 'utf8');
   assert.match(schema, /state in \('pending', 'processing', 'sent', 'suppressed', 'retry', 'dead'\)/);
-  assert.match(schema, /source_type in \('newsletter', 'blog_post', 'nurture'\)/);
+  assert.match(schema, /source_type in \('newsletter', 'blog_post', 'nurture', 'offer', 'review', 'test'\)/);
   assert.match(schema, /p_metadata->>'available_at'/);
   assert.match(schema, /unique \(source_type, source_id, normalized_email\)/);
   assert.match(schema, /for update skip locked/i);
+  assert.match(schema, /ambiguous_processing_timeout/);
+  assert.doesNotMatch(schema, /or \(delivery\.state = 'processing' and delivery\.lease_expires_at <= now\(\)\)/);
+  assert.match(schema, /email_suppressions/);
   assert.match(schema, /limit least\(greatest\(coalesce\(p_limit, 25\), 1\), 500\)/);
   assert.match(schema, /finish_newsletter_delivery/);
   assert.match(schema, /newsletter_delivery_summary/);
   assert.match(schema, /grant execute on function public\.claim_newsletter_deliveries[\s\S]+to service_role/);
+  assert.match(schema, /consent\.provider_sync_state[\s\S]+in \('not_required', 'synced', 'superseded'\)/i);
+});
+
+test('delivery worker owns direct SES transport without per-recipient suppression egress', () => {
+  const source = readFileSync(new URL('../functions/_lib/newsletter-delivery.js', import.meta.url), 'utf8');
+  assert.match(source, /sendSesMarketingEmail\(env/);
+  assert.doesNotMatch(source, /sendEmailResult/);
+  assert.match(source, /row\.state === 'processing'/);
 });

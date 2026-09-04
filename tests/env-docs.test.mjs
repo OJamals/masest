@@ -27,10 +27,12 @@ test('.env.example documents least-privilege Amazon SES marketing config', () =>
     'AWS_SES_FROM_EMAIL',
     'AWS_SES_REPLY_TO',
     'AWS_SES_CONFIGURATION_SET',
+    'SES_SNS_TOPIC_ARN',
   ]) {
     assert.match(env, new RegExp(`^${key}=`, 'm'), `${key} missing from .env.example`);
   }
   assert.doesNotMatch(env, /^KLAVIYO_/m);
+  assert.match(env, /MARKETING_EMAIL_QUEUE is a Cloudflare Pages Queue producer binding/);
 });
 
 test('.env.example has no retired Crisp credentials', () => {

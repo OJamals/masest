@@ -6,6 +6,7 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const WEB_VIEW_BLOCK_RE = /<!--WEB_VIEW_START-->([\s\S]*?)<!--WEB_VIEW_END-->/g;
 const LEGACY_PROVIDER_PLACEHOLDER_RE = /\{%\s*(?:unsubscribe_link|web_view_link)\s*%\}/i;
 const UNRESOLVED_PLACEHOLDER_RE = /\{\{[^{}]+\}\}|\{%[^%]+%\}/;
+const SES_UNSUBSCRIBE_PLACEHOLDER = '{{amazonSESUnsubscribeUrl}}';
 
 function cleanHeader(value, max = 255) {
   return String(value || '').replace(/[\r\n]+/g, ' ').trim().slice(0, max);
@@ -56,19 +57,25 @@ export async function personalizeMarketingContent(env, {
   html = '',
   text = '',
   webViewUrl = '',
+  unsubscribeUrlValue = '',
 } = {}) {
   const normalizedEmail = recipient(email);
   if (!normalizedEmail) throw new Error('invalid_marketing_recipient');
   if (!env?.EMAIL_UNSUB_SECRET) throw new Error('unsubscribe_not_configured');
   const token = await unsubscribeToken(normalizedEmail, env.EMAIL_UNSUB_SECRET);
   const url = unsubscribeUrl(normalizedEmail, token);
+  const replacement = unsubscribeUrlValue || url;
   return {
     html: replaceWebViewBlock(html, webViewUrl, { html: true })
-      .replaceAll('{{unsubscribe_url}}', emailEscape(url)),
+      .replaceAll('{{unsubscribe_url}}', unsubscribeUrlValue ? replacement : emailEscape(replacement)),
     text: replaceWebViewBlock(text, webViewUrl)
-      .replaceAll('{{unsubscribe_url}}', url),
-    unsubscribeUrl: url,
+      .replaceAll('{{unsubscribe_url}}', replacement),
+    unsubscribeUrl: replacement,
   };
+}
+
+function hasUnresolvedPlaceholder(value) {
+  return UNRESOLVED_PLACEHOLDER_RE.test(String(value || '').replaceAll(SES_UNSUBSCRIBE_PLACEHOLDER, ''));
 }
 
 function errorMessage(payload, status) {
@@ -83,6 +90,105 @@ function defaultSigner(env, region) {
     region,
     service: 'ses',
   });
+}
+
+function sesContactSettings(env = {}) {
+  const contactListName = cleanHeader(env.AWS_SES_CONTACT_LIST || 'masest-marketing', 64);
+  const topicName = cleanHeader(env.AWS_SES_CONTACT_TOPIC || 'marketing', 64);
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(contactListName)) throw new Error('invalid_ses_contact_list');
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(topicName)) throw new Error('invalid_ses_contact_topic');
+  return { contactListName, topicName };
+}
+
+function sesFailure(response, body) {
+  return {
+    ok: false,
+    provider: 'ses',
+    status: response.status,
+    retryable: response.status === 429 || response.status >= 500,
+    error: errorMessage(body, response.status),
+  };
+}
+
+function isAlreadyExists(body) {
+  return /already\s*exists/i.test([
+    body?.__type,
+    body?.code,
+    body?.Code,
+    body?.message,
+    body?.Message,
+  ].filter(Boolean).join(' '));
+}
+
+export async function syncSesMarketingContact(env, {
+  email,
+  enabled,
+} = {}, {
+  fetchImpl = globalThis.fetch,
+  signer = null,
+} = {}) {
+  if (!String(env?.AWS_SES_ACCESS_KEY_ID || '').trim()
+    || !String(env?.AWS_SES_SECRET_ACCESS_KEY || '').trim()) {
+    return { ok: false, provider: 'ses', retryable: false, error: 'ses_not_configured' };
+  }
+  const normalizedEmail = recipient(email);
+  if (!normalizedEmail || typeof enabled !== 'boolean') {
+    return { ok: false, provider: 'ses', retryable: false, error: 'invalid_ses_contact' };
+  }
+
+  let settings;
+  try {
+    settings = sesContactSettings(env);
+  } catch (error) {
+    return { ok: false, provider: 'ses', retryable: false, error: cleanHeader(error, 200) };
+  }
+  const region = cleanHeader(env.AWS_SES_REGION || 'us-east-1', 64);
+  const activeSigner = signer || defaultSigner(env, region);
+  const base = `https://email.${region}.amazonaws.com/v2/email/contact-lists/${encodeURIComponent(settings.contactListName)}/contacts`;
+  const preference = {
+    UnsubscribeAll: !enabled,
+    TopicPreferences: [{
+      TopicName: settings.topicName,
+      SubscriptionStatus: enabled ? 'OPT_IN' : 'OPT_OUT',
+    }],
+  };
+
+  async function request(url, method, body) {
+    const signed = await activeSigner.sign(url, {
+      method,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const response = await fetchImpl(signed);
+    const responseBody = await response.json().catch(() => null);
+    return { response, responseBody };
+  }
+
+  try {
+    const updated = await request(`${base}/${encodeURIComponent(normalizedEmail)}`, 'PUT', preference);
+    if (updated.response.ok) return { ok: true, provider: 'ses', operation: 'updated' };
+    if (updated.response.status !== 404) return sesFailure(updated.response, updated.responseBody);
+
+    const created = await request(base, 'POST', { EmailAddress: normalizedEmail, ...preference });
+    if (created.response.ok) return { ok: true, provider: 'ses', operation: 'created' };
+    if (isAlreadyExists(created.responseBody)) {
+      const raced = await request(`${base}/${encodeURIComponent(normalizedEmail)}`, 'PUT', preference);
+      if (raced.response.ok) {
+        return { ok: true, provider: 'ses', operation: 'updated_after_create_race' };
+      }
+      return sesFailure(raced.response, raced.responseBody);
+    }
+    return sesFailure(created.response, created.responseBody);
+  } catch (error) {
+    return {
+      ok: false,
+      provider: 'ses',
+      network: true,
+      ambiguous: true,
+      retryable: true,
+      error: cleanHeader(error, 200) || 'ses_contact_sync_error',
+    };
+  }
 }
 
 export async function listSesSuppressions(env, {
@@ -210,18 +316,31 @@ export async function sendSesMarketingEmail(env, {
     html: rawHtml,
     text: String(text || ''),
     webViewUrl,
+    unsubscribeUrlValue: SES_UNSUBSCRIBE_PLACEHOLDER,
   });
-  const bodyText = personalized.text || `${htmlToText(personalized.html)}\n\nUnsubscribe: ${personalized.unsubscribeUrl}`;
-  if (UNRESOLVED_PLACEHOLDER_RE.test(personalized.html) || UNRESOLVED_PLACEHOLDER_RE.test(bodyText)) {
+  const fallbackText = htmlToText(personalized.html);
+  const bodyText = personalized.text || (fallbackText.includes(SES_UNSUBSCRIBE_PLACEHOLDER)
+    ? fallbackText
+    : `${fallbackText}\n\nUnsubscribe: ${personalized.unsubscribeUrl}`);
+  const htmlUnsubscribeCount = personalized.html.split(SES_UNSUBSCRIBE_PLACEHOLDER).length - 1;
+  const textUnsubscribeCount = bodyText.split(SES_UNSUBSCRIBE_PLACEHOLDER).length - 1;
+  if (htmlUnsubscribeCount !== 1 || textUnsubscribeCount !== 1
+    || hasUnresolvedPlaceholder(personalized.html) || hasUnresolvedPlaceholder(bodyText)) {
     return { ok: false, provider: 'ses', retryable: false, error: 'marketing_placeholder_unresolved' };
   }
 
   const region = cleanHeader(env.AWS_SES_REGION || 'us-east-1', 64);
-  const fromEmail = cleanHeader(env.AWS_SES_FROM_EMAIL || 'dev@masest.co', 320);
+  const fromEmail = cleanHeader(env.AWS_SES_FROM_EMAIL || 'news@marketing.masest.co', 320);
   const fromName = cleanHeader(env.AWS_SES_FROM_NAME || 'MASEST · VertKleen', 120);
   const reply = cleanHeader(replyTo || env.AWS_SES_REPLY_TO || env.EMAIL_REPLY_TO || 'dev@masest.co', 320);
   const configurationSet = cleanHeader(env.AWS_SES_CONFIGURATION_SET || 'masest-marketing', 64);
   const cleanCategory = cleanHeader(category || 'marketing', 64).replace(/[^A-Za-z0-9_-]/g, '_');
+  let contactSettings;
+  try {
+    contactSettings = sesContactSettings(env);
+  } catch (error) {
+    return { ok: false, provider: 'ses', retryable: false, error: cleanHeader(error, 200) };
+  }
   const payload = {
     FromEmailAddress: `${fromName} <${fromEmail}>`,
     Destination: { ToAddresses: [toEmail] },
@@ -233,14 +352,14 @@ export async function sendSesMarketingEmail(env, {
           Text: { Data: bodyText, Charset: 'UTF-8' },
           Html: { Data: personalized.html, Charset: 'UTF-8' },
         },
-        Headers: [
-          { Name: 'List-Unsubscribe', Value: `<${personalized.unsubscribeUrl}>` },
-          { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
-          { Name: 'X-MASEST-Idempotency-Key', Value: stableKey },
-        ],
+        Headers: [{ Name: 'X-MASEST-Idempotency-Key', Value: stableKey }],
       },
     },
     ConfigurationSetName: configurationSet,
+    ListManagementOptions: {
+      ContactListName: contactSettings.contactListName,
+      TopicName: contactSettings.topicName,
+    },
     EmailTags: [
       { Name: 'stream', Value: 'marketing' },
       { Name: 'category', Value: cleanCategory },
