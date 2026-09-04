@@ -7,6 +7,7 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { test, expect } from "./playwright-test.mjs";
+import { waitForHttpServer } from "./test-http-server.mjs";
 
 const PORT = 4231;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -17,12 +18,7 @@ test.beforeAll(async () => {
     cwd: new URL("..", import.meta.url).pathname,
     stdio: "ignore",
   });
-  for (let i = 0; i < 40; i += 1) {
-    const response = await fetch(`${BASE_URL}/contact.html`).catch(() => null);
-    if (response?.ok) return;
-    await new Promise((resolve) => setTimeout(resolve, 125));
-  }
-  throw new Error("static server did not start");
+  await waitForHttpServer(`${BASE_URL}/contact.html`);
 });
 
 test.afterAll(async () => {

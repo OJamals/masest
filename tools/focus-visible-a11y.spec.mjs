@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { test, expect } from "./playwright-test.mjs";
+import { waitForHttpServer } from "./test-http-server.mjs";
 
 // a11y guard: the commerce/shop pill controls suppress the default outline, so they need an
 // explicit :focus-visible ring or keyboard focus is invisible. Asserts the rules shipped and
@@ -13,12 +14,7 @@ test.beforeAll(async () => {
     cwd: new URL("..", import.meta.url).pathname,
     stdio: "ignore",
   });
-  for (let i = 0; i < 40; i += 1) {
-    const response = await fetch(`${BASE_URL}/products.html`).catch(() => null);
-    if (response?.ok) return;
-    await new Promise((resolve) => setTimeout(resolve, 125));
-  }
-  throw new Error("static server did not start");
+  await waitForHttpServer(`${BASE_URL}/products.html`);
 });
 
 test.afterAll(() => {

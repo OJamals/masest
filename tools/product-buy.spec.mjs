@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { test, expect } from "./playwright-test.mjs";
+import { waitForHttpServer } from "./test-http-server.mjs";
 import { PRODUCT_CATALOG_COPY } from "../js/main/catalog-data.js";
 
 const PORT = 4184;
@@ -13,13 +14,7 @@ test.beforeAll(async () => {
     stdio: "ignore",
   });
 
-  for (let i = 0; i < 40; i += 1) {
-    const response = await fetch(`${BASE_URL}/products/crhd.html`).catch(() => null);
-    if (response?.ok) return;
-    await new Promise((resolve) => setTimeout(resolve, 125));
-  }
-
-  throw new Error("static server did not start");
+  await waitForHttpServer(`${BASE_URL}/products/crhd.html`);
 });
 
 test.afterAll(async () => {

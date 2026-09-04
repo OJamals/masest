@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { test, expect } from "./playwright-test.mjs";
+import { waitForHttpServer } from "./test-http-server.mjs";
 
 // E2e coverage for two staff-console write flows that were previously only static-guarded:
 //   1. Quote -> NET order conversion  (admin.js renderQuotes() -> POST /api/admin/quotes action=convert)
@@ -18,12 +19,7 @@ test.beforeAll(async () => {
     cwd: new URL("..", import.meta.url).pathname,
     stdio: "ignore",
   });
-  for (let i = 0; i < 40; i += 1) {
-    const response = await fetch(`${BASE_URL}/admin.html`).catch(() => null);
-    if (response?.ok) return;
-    await new Promise((resolve) => setTimeout(resolve, 125));
-  }
-  throw new Error("static server did not start");
+  await waitForHttpServer(`${BASE_URL}/admin.html`);
 });
 
 test.afterAll(async () => {

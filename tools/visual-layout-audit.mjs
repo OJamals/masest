@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 import { wrapBrowserWithMediaIsolation } from "./test-media-isolation.mjs";
+import { waitForHttpServer } from "./test-http-server.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 const ROOT_PATH = fileURLToPath(ROOT);
@@ -416,12 +417,8 @@ async function withServer(fn) {
   let exited = false;
   const exitedOnce = once(server, "exit").then(() => { exited = true; }).catch(() => {});
   try {
-    for (let i = 0; i < 50; i += 1) {
-      const ok = await fetch(`${BASE_URL}/index.html`).then((r) => r.ok).catch(() => false);
-      if (ok) return await fn();
-      await new Promise((resolve) => setTimeout(resolve, 120));
-    }
-    throw new Error("static server did not start");
+    await waitForHttpServer(`${BASE_URL}/index.html`, { attempts: 50, delayMs: 120 });
+    return await fn();
   } finally {
     if (!exited) server.kill("SIGTERM");
     await Promise.race([exitedOnce, new Promise((resolve) => setTimeout(resolve, 1500))]);
