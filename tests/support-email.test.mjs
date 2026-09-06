@@ -12,6 +12,181 @@ const STAFF_ID = '00000000-0000-4000-8000-000000000004';
 const ORDER_ID = '00000000-0000-4000-8000-000000000003';
 const MESSAGE_ID = '00000000-0000-4000-8000-000000000005';
 const THREAD_ID = '00000000-0000-4000-8000-000000000006';
+const OTHER_USER_ID = '00000000-0000-4000-8000-000000000007';
+
+function senderResolutionDb({ buyerProfiles = [], staffProfiles = [], emails = {} } = {}) {
+  const queryCalls = [];
+  const authCalls = [];
+  const upsertCalls = [];
+  const violations = [];
+
+  function from(table) {
+    if (table !== 'profiles') {
+      violations.push(`unexpected table ${table}`);
+      throw new Error(`unexpected fake table ${table}`);
+    }
+    let selected = null;
+    const filters = [];
+    let settled = false;
+    let builder;
+    const target = {
+      select(columns) {
+        if (selected !== null) {
+          violations.push(`duplicate select on ${table}`);
+          throw new Error(`duplicate fake select on ${table}`);
+        }
+        selected = columns;
+        return builder;
+      },
+      eq(column, value) {
+        filters.push([column, value]);
+        return builder;
+      },
+      then(resolve, reject) {
+        if (settled) {
+          const error = new Error(`duplicate fake query settlement on ${table}`);
+          violations.push(error.message);
+          return Promise.reject(error).then(resolve, reject);
+        }
+        settled = true;
+        const call = { table, selected, filters };
+        queryCalls.push(call);
+        const buyerQuery = selected === 'id'
+          && filters.length === 1
+          && filters[0][0] === 'id'
+          && filters[0][1] === BUYER_ID;
+        const staffQuery = ['id,is_staff', 'id,is_staff,staff_role'].includes(selected)
+          && filters.length === 1
+          && filters[0][0] === 'is_staff'
+          && filters[0][1] === true;
+        if (!buyerQuery && !staffQuery) {
+          const error = new Error(`unexpected fake query ${JSON.stringify(call)}`);
+          violations.push(error.message);
+          return Promise.reject(error).then(resolve, reject);
+        }
+        return Promise.resolve({
+          data: buyerQuery ? buyerProfiles : staffProfiles,
+          error: null,
+        }).then(resolve, reject);
+      },
+    };
+    builder = new Proxy(target, {
+      get(object, property, receiver) {
+        if (Reflect.has(object, property)) return Reflect.get(object, property, receiver);
+        if (typeof property === 'symbol') return undefined;
+        return (...args) => {
+          violations.push(`unexpected method ${String(property)}(${JSON.stringify(args)}) on ${table}`);
+          throw new Error(`unexpected fake method ${String(property)} on ${table}`);
+        };
+      },
+    });
+    return builder;
+  }
+
+  const sb = {
+    from,
+    auth: {
+      admin: {
+        async getUserById(id) {
+          authCalls.push(id);
+          if (!Object.hasOwn(emails, id)) {
+            violations.push(`unexpected Auth getUserById(${id})`);
+            return { data: null, error: new Error('unexpected fake Auth lookup') };
+          }
+          return { data: { user: { id, email: emails[id] } }, error: null };
+        },
+      },
+    },
+    async rpc(name, args) {
+      if (name !== 'upsert_email_inbound_message') {
+        violations.push(`unexpected RPC ${name}`);
+        throw new Error(`unexpected fake RPC ${name}`);
+      }
+      upsertCalls.push(args);
+      return {
+        data: {
+          message_id: `00000000-0000-4000-8000-${String(upsertCalls.length).padStart(12, '0')}`,
+          inserted: true,
+        },
+        error: null,
+      };
+    },
+    assertClean({ upserts = 0, staffColumns = 'id,is_staff,staff_role' } = {}) {
+      assert.equal(upsertCalls.length, upserts, 'unexpected canonical message upsert count');
+      assert.deepEqual(violations, [], violations.join('\n'));
+      const normalizedQueries = queryCalls.map((call) => JSON.stringify(call)).sort();
+      assert.deepEqual(normalizedQueries, [
+        JSON.stringify({ table: 'profiles', selected: 'id', filters: [['id', BUYER_ID]] }),
+        JSON.stringify({ table: 'profiles', selected: staffColumns, filters: [['is_staff', true]] }),
+      ].sort());
+      const expectedAuthCalls = [...new Set([
+        ...buyerProfiles.map((profile) => profile.id),
+        ...staffProfiles.map((profile) => profile.id),
+      ])].sort();
+      assert.deepEqual([...authCalls].sort(), expectedAuthCalls);
+    },
+    upsertCalls,
+  };
+  return sb;
+}
+
+function inboundReply(sender, suffix) {
+  return {
+    id: `email-${suffix}`,
+    from: sender,
+    to: [`reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`],
+    text: 'Reply from email',
+    headers: { 'message-id': `<incoming-${suffix}@example.test>` },
+  };
+}
+
+function replyThread() {
+  return {
+    id: THREAD_ID,
+    participant_user_id: BUYER_ID,
+    company_id: COMPANY_ID,
+  };
+}
+
+function parentFromBuyer() {
+  return {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'buyer',
+    user_id: BUYER_ID,
+    recipient_user_id: null,
+    order_id: ORDER_ID,
+  };
+}
+
+function parentFromStaff(overrides = {}) {
+  return {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    user_id: STAFF_ID,
+    recipient_user_id: BUYER_ID,
+    order_id: ORDER_ID,
+    ...overrides,
+  };
+}
+
+async function routeWithResolvedSender({ db, sender, suffix, parent, env = {} }) {
+  const deliveries = [];
+  const result = await routeInboundMessageReply(env, inboundReply(sender, suffix), {
+    sb: db,
+    messageIdFromReplyAddress: async () => MESSAGE_ID,
+    replyMessage: async () => parent,
+    replyThread: async () => replyThread(),
+    deliverMessage: async (_env, _sb, message) => {
+      deliveries.push(message);
+      return { ok: true };
+    },
+  });
+  return { result, deliveries };
+}
 
 test('staff message uses canonical email gateway with exact buyer, order, and RFC thread', async () => {
   let sent;
@@ -242,4 +417,224 @@ test('unrecognized inbound sender never enters support chat', async () => {
   });
   assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
   assert.equal(upserts, 0);
+});
+
+test('write-capable database platform staff email replies route as staff', async (t) => {
+  for (const role of ['owner', 'finance', 'support']) {
+    await t.test(role, async () => {
+      const address = `${role}@example.test`;
+      const db = senderResolutionDb({
+        staffProfiles: [{ id: STAFF_ID, is_staff: true, staff_role: role }],
+        emails: { [STAFF_ID]: address },
+      });
+      const { result, deliveries } = await routeWithResolvedSender({
+        db,
+        sender: address,
+        suffix: `staff-${role}`,
+        parent: parentFromBuyer(),
+      });
+
+      db.assertClean({ upserts: 1 });
+      assert.equal(deliveries.length, 1);
+      assert.equal(db.upsertCalls[0].p_sender_role, 'staff');
+      assert.equal(db.upsertCalls[0].p_recipient_user_id, BUYER_ID);
+      assert.deepEqual(result, { routed: true, duplicate: false });
+    });
+  }
+});
+
+test('read-only platform staff email reply never creates a message or delivery', async () => {
+  const address = 'read-only@example.test';
+  const db = senderResolutionDb({
+    staffProfiles: [{ id: STAFF_ID, is_staff: true, staff_role: 'read_only' }],
+    emails: { [STAFF_ID]: address },
+  });
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: address,
+    suffix: 'read-only',
+    parent: parentFromBuyer(),
+  });
+
+  db.assertClean({ upserts: 0 });
+  assert.equal(deliveries.length, 0);
+  assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+});
+
+test('missing, unknown, malformed, or non-staff database roles fail closed', async (t) => {
+  const cases = [
+    ['missing role', null, true],
+    ['unknown role', 'warehouse', true],
+    ['malformed role', ['owner'], true],
+    ['is_staff false', 'owner', false],
+  ];
+  for (const [name, staffRole, isStaff] of cases) {
+    await t.test(name, async () => {
+      const address = `${name.replaceAll(' ', '-')}@example.test`;
+      const db = senderResolutionDb({
+        staffProfiles: [{ id: STAFF_ID, is_staff: isStaff, staff_role: staffRole }],
+        emails: { [STAFF_ID]: address },
+      });
+      const { result, deliveries } = await routeWithResolvedSender({
+        db,
+        sender: address,
+        suffix: name.replaceAll(' ', '-'),
+        parent: parentFromBuyer(),
+      });
+
+      db.assertClean({ upserts: 0 });
+      assert.equal(deliveries.length, 0);
+      assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+    });
+  }
+});
+
+test('exact ADMIN_EMAILS sender remains root staff without a profile', async () => {
+  const db = senderResolutionDb();
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: 'Root Operator <ROOT@example.test>',
+    suffix: 'root-operator',
+    parent: parentFromBuyer(),
+    env: { ADMIN_EMAILS: 'root@example.test, another@example.test' },
+  });
+
+  db.assertClean({ upserts: 1 });
+  assert.equal(deliveries.length, 1);
+  assert.equal(db.upsertCalls[0].p_sender_role, 'staff');
+  assert.equal(db.upsertCalls[0].p_user_id, null);
+  assert.deepEqual(result, { routed: true, duplicate: false });
+});
+
+test('ADMIN_EMAILS matching stays exact and unrelated senders remain rejected', async () => {
+  const db = senderResolutionDb();
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: 'root+unlisted@example.test',
+    suffix: 'unrelated-root-alias',
+    parent: parentFromBuyer(),
+    env: { ADMIN_EMAILS: 'root@example.test' },
+  });
+
+  db.assertClean({ upserts: 0 });
+  assert.equal(deliveries.length, 0);
+  assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+});
+
+test('buyer replies still require the exact participant address and parent recipient', async (t) => {
+  const address = 'buyer@example.test';
+
+  await t.test('exact participant and recipient routes as buyer', async () => {
+    const db = senderResolutionDb({
+      buyerProfiles: [{ id: BUYER_ID }],
+      emails: { [BUYER_ID]: address },
+    });
+    const { result, deliveries } = await routeWithResolvedSender({
+      db,
+      sender: address,
+      suffix: 'buyer-exact',
+      parent: parentFromStaff(),
+    });
+
+    db.assertClean({ upserts: 1 });
+    assert.equal(deliveries.length, 1);
+    assert.equal(db.upsertCalls[0].p_sender_role, 'buyer');
+    assert.equal(db.upsertCalls[0].p_user_id, BUYER_ID);
+    assert.deepEqual(result, { routed: true, duplicate: false });
+  });
+
+  await t.test('participant address cannot reply to a message for another recipient', async () => {
+    const db = senderResolutionDb({
+      buyerProfiles: [{ id: BUYER_ID }],
+      emails: { [BUYER_ID]: address },
+    });
+    const { result, deliveries } = await routeWithResolvedSender({
+      db,
+      sender: address,
+      suffix: 'buyer-wrong-recipient',
+      parent: parentFromStaff({ recipient_user_id: OTHER_USER_ID }),
+    });
+
+    db.assertClean({ upserts: 0 });
+    assert.equal(deliveries.length, 0);
+    assert.deepEqual(result, { routed: false, reason: 'sender_not_recipient' });
+  });
+
+  await t.test('non-participant address is rejected', async () => {
+    const db = senderResolutionDb({
+      buyerProfiles: [{ id: BUYER_ID }],
+      emails: { [BUYER_ID]: address },
+    });
+    const { result, deliveries } = await routeWithResolvedSender({
+      db,
+      sender: 'other-buyer@example.test',
+      suffix: 'buyer-unrelated',
+      parent: parentFromStaff(),
+    });
+
+    db.assertClean({ upserts: 0 });
+    assert.equal(deliveries.length, 0);
+    assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+  });
+});
+
+test('read-only platform staff retains an independently valid buyer reply path', async () => {
+  const address = 'dual-buyer-staff@example.test';
+  const db = senderResolutionDb({
+    buyerProfiles: [{ id: BUYER_ID }],
+    staffProfiles: [{ id: BUYER_ID, is_staff: true, staff_role: 'read_only' }],
+    emails: { [BUYER_ID]: address },
+  });
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: address,
+    suffix: 'dual-buyer-staff',
+    parent: parentFromStaff(),
+  });
+
+  db.assertClean({ upserts: 1 });
+  assert.equal(deliveries.length, 1);
+  assert.equal(db.upsertCalls[0].p_sender_role, 'buyer');
+  assert.equal(db.upsertCalls[0].p_user_id, BUYER_ID);
+  assert.deepEqual(result, { routed: true, duplicate: false });
+});
+
+test('read-only alert recipient receives configured alert but cannot author a reply', async () => {
+  const address = 'read-only-alert@example.test';
+  let alertRecipients;
+  const alert = await deliverSupportMessageEmail({}, {}, {
+    id: MESSAGE_ID,
+    company_id: COMPANY_ID,
+    company_name: 'Example Buyer',
+    sender_role: 'buyer',
+    user_id: BUYER_ID,
+    body: 'Please review this request.',
+  }, {
+    adminRecipients: async () => [address],
+    orderContext: async () => null,
+    replyAddress: async () => `reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`,
+    threadParent: async () => null,
+    sendEmail: async (_env, options) => {
+      alertRecipients = options.to;
+      return { ok: true, providerMessageId: '<read-only-alert@example.test>' };
+    },
+    saveDelivery: async () => {},
+  });
+  assert.equal(alert.ok, true);
+  assert.deepEqual(alertRecipients, [address]);
+
+  const db = senderResolutionDb({
+    staffProfiles: [{ id: STAFF_ID, is_staff: true, staff_role: 'read_only' }],
+    emails: { [STAFF_ID]: address },
+  });
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: address,
+    suffix: 'read-only-alert-reply',
+    parent: parentFromBuyer(),
+  });
+
+  db.assertClean({ upserts: 0 });
+  assert.equal(deliveries.length, 0);
+  assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
 });

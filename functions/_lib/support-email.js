@@ -5,7 +5,7 @@ import {
 } from './supabase.js';
 import { htmlToText } from './email.js';
 import { renderSupportEmail } from './email-renderers.js';
-import { isStaffEmail } from './authz.js';
+import { isStaffEmail, platformStaffRole, staffCanWrite } from './authz.js';
 import { adminMessageAlertKind, adminMessageRecipients } from './admin-message-notifications.js';
 import { shouldEmailSupportRecipient } from './message-notifications.js';
 import {
@@ -131,14 +131,17 @@ async function senderIdentity(sb, sender, thread, env) {
       : Promise.resolve({ data: [], error: null });
   const [{ data: buyers, error: buyerError }, { data: staff, error: staffError }] = await Promise.all([
     buyerQuery,
-    sb.from('profiles').select('id,is_staff').eq('is_staff', true),
+    sb.from('profiles').select('id,is_staff,staff_role').eq('is_staff', true),
   ]);
   if (buyerError) throw buyerError;
   if (staffError) throw staffError;
   const profiles = [...(buyers || []), ...(staff || [])];
   const emails = await emailsByIds(sb, profiles.map((profile) => profile.id));
   const staffProfile = (staff || []).find((profile) => emailAddress(emails[profile.id]) === address);
-  if (staffProfile || isStaffEmail(address, env)) {
+  const staffRole = typeof staffProfile?.staff_role === 'string'
+    ? platformStaffRole(staffProfile)
+    : null;
+  if (staffCanWrite(staffRole) || isStaffEmail(address, env)) {
     return { role: 'staff', userId: staffProfile?.id || null };
   }
   const buyer = (buyers || []).find((profile) => emailAddress(emails[profile.id]) === address);
