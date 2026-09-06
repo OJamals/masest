@@ -96,7 +96,9 @@ test("every staff-gated admin route returns 401 for anon and 403 for non-staff",
 test("admin staff guard precedes any DB access inside the handler", () => {
   for (const name of ADMIN_ROUTES) {
     const src = read(name);
-    const handlerMatch = src.match(/export\s+(?:async\s+)?function\s+onRequest\w*/);
+    const handlerMatch = name === 'messages.js'
+      ? src.match(/export\s+(?:async\s+)?function\s+handleAdminMessages/)
+      : src.match(/export\s+(?:async\s+)?function\s+onRequest\w*/);
     assert.ok(handlerMatch, `admin/${name} must export an onRequest* handler`);
     const handler = src.slice(handlerMatch.index);
     const dataIdx = handler.search(DB_ACCESS);

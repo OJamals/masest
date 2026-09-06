@@ -99,11 +99,17 @@ function threadResponse(thread, order = null) {
   };
 }
 
-export async function onRequest({ request, env }) {
-  const { user, staff, role } = await requireStaff(request, env);
+export async function handleAdminMessages({ request, env }, dependencies = {}) {
+  const getStaffContext = dependencies.requireStaff || requireStaff;
+  const getAdminClient = dependencies.adminClient || adminClient;
+  const parseBody = dependencies.readBody || readBody;
+  const publishMessage = dependencies.publishSupportMessage || publishSupportMessage;
+  const now = dependencies.now || (() => new Date());
+
+  const { user, staff, role } = await getStaffContext(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
-  const sb = adminClient(env);
+  const sb = getAdminClient(env);
 
   if (request.method === 'GET') {
     const params = new URL(request.url).searchParams;
@@ -209,14 +215,14 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'PATCH') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
-    const body = await readBody(request);
+    const body = await parseBody(request);
     let threadId = String(body.thread_id || '').trim() || null;
     if (!threadId && body.company_id) {
       try { threadId = (await loadThread(sb, { companyId: String(body.company_id) }))?.id || null; }
       catch (error) { return internalServerError('admin.messages.status_context', error); }
     }
     if (!threadId) return json(400, { error: 'thread_id_required' });
-    const patch = supportThreadPatch(body.status, user.id);
+    const patch = supportThreadPatch(body.status, user.id, now().toISOString());
     if (!patch) return json(400, { error: 'invalid_status' });
     const { data, error } = await sb.from('support_threads').update(patch)
       .eq('id', threadId).select('id,status').maybeSingle();
@@ -227,7 +233,7 @@ export async function onRequest({ request, env }) {
 
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
-    const body = await readBody(request);
+    const body = await parseBody(request);
     const text = String(body.body || '').trim();
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
@@ -266,7 +272,7 @@ export async function onRequest({ request, env }) {
 
     let publication;
     try {
-      publication = await publishSupportMessage({
+      publication = await publishMessage({
         ...env,
         APP_URL: env.APP_URL || new URL(request.url).origin,
       }, sb, {
@@ -308,4 +314,16 @@ export async function onRequest({ request, env }) {
   }
 
   return json(405, { error: 'method_not_allowed' });
+}
+
+export function createAdminMessagesHandler(dependencies = {}) {
+  return (context) => handleAdminMessages(context, dependencies);
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  const staffContext = await requireStaff(request, env);
+  return handleAdminMessages(context, {
+    requireStaff: async () => staffContext,
+  });
 }

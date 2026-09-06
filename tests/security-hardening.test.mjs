@@ -69,7 +69,12 @@ for (const path of ['functions/api/account/team.js', 'functions/api/account/mess
   test(`${path} rate-limits its email-sending mutation`, () => {
     const src = read(path);
     assert.match(src, /import\s*\{[^}]*\}\s*from\s*['"][^'"]*ratelimit\.js['"]/, 'must import the rate limiter');
-    assert.match(src, /await\s+rateLimit\(/, 'must call rateLimit before sending');
+    if (path.endsWith('/messages.js')) {
+      assert.match(src, /dependencies\.rateLimit \|\| rateLimit/, 'must retain the injectable production rate limiter');
+      assert.match(src, /await\s+checkRateLimit\(/, 'must call the selected rate limiter before sending');
+    } else {
+      assert.match(src, /await\s+rateLimit\(/, 'must call rateLimit before sending');
+    }
     assert.match(src, /json\(429,\s*\{\s*error:\s*'rate_limited'/, 'must return 429 when throttled');
   });
 }

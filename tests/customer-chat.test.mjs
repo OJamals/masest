@@ -152,7 +152,8 @@ test("customer chat posts to the authenticated message thread and receives staff
   assert.match(chat, /source: "customer_chat"/);
   assert.match(chat, /POLL_MS/);
   assert.match(messages, /body\.source === 'customer_chat'/);
-  assert.match(messages, /publishSupportMessage\(/);
+  assert.match(messages, /dependencies\.publishSupportMessage \|\| publishSupportMessage/);
+  assert.match(messages, /publication = await publishMessage\(/);
   assert.match(supportPublisher, /appendSupportMessage/);
   assert.match(messages, /source,/);
   assert.match(admin, /source === 'customer_chat'/);

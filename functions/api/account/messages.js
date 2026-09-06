@@ -23,8 +23,14 @@ async function visibleSupportThreadIds(sb, userId, companyId) {
   return [participantResult.data?.id, companyResult.data?.id].filter(Boolean);
 }
 
-export async function onRequest({ request, env }) {
-  const ctx = await requireCommerceUser(request, env);
+export async function handleAccountMessages({ request, env }, dependencies = {}) {
+  const getCommerceContext = dependencies.requireCommerceUser || requireCommerceUser;
+  const checkRateLimit = dependencies.rateLimit || rateLimit;
+  const parseBody = dependencies.readBody || readBody;
+  const publishMessage = dependencies.publishSupportMessage || publishSupportMessage;
+  const now = dependencies.now || (() => new Date());
+
+  const ctx = await getCommerceContext(request, env);
   if (ctx.error) return ctx.error;
   const { user, companyId, sb } = ctx;
 
@@ -74,10 +80,10 @@ export async function onRequest({ request, env }) {
   }
 
   if (request.method === 'POST') {
-    const body = await readBody(request);
+    const body = await parseBody(request);
     if (body.action === 'chat_presence') {
       if (typeof body.chat_open !== 'boolean') return json(400, { error: 'chat_open_required' });
-      const seenAt = body.chat_open ? new Date().toISOString() : null;
+      const seenAt = body.chat_open ? now().toISOString() : null;
       const { error } = await sb.from('profiles').update({
         support_chat_open: body.chat_open,
         support_chat_seen_at: seenAt,
@@ -89,7 +95,7 @@ export async function onRequest({ request, env }) {
 
     // Throttle customer messages. The durable chat row remains canonical; its
     // counterpart email is delivered through the shared support-email module.
-    const rl = await rateLimit(env, 'support-message', user.id || clientIp(request), { limit: 10, windowSec: 60 });
+    const rl = await checkRateLimit(env, 'support-message', user.id || clientIp(request), { limit: 10, windowSec: 60 });
     if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
     const text = String(body.body || '').trim();
     if (!text) return json(400, { error: 'empty_message' });
@@ -103,7 +109,7 @@ export async function onRequest({ request, env }) {
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
     let publication;
     try {
-      publication = await publishSupportMessage({
+      publication = await publishMessage({
         ...env,
         APP_URL: env.APP_URL || new URL(request.url).origin,
       }, sb, {
@@ -131,4 +137,16 @@ export async function onRequest({ request, env }) {
   }
 
   return json(405, { error: 'method_not_allowed' });
+}
+
+export function createAccountMessagesHandler(dependencies = {}) {
+  return (context) => handleAccountMessages(context, dependencies);
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  const commerceContext = await requireCommerceUser(request, env);
+  return handleAccountMessages(context, {
+    requireCommerceUser: async () => commerceContext,
+  });
 }
