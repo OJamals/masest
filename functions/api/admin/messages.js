@@ -18,11 +18,39 @@ import {
   resolveSupportRecipient,
   SUPPORT_PAGE_SIZE,
   supportOrderContextsById,
-  supportThreadListStatus,
-  supportThreadPatch,
 } from '../../_lib/support-messages.js';
+import {
+  normalizeSupportTicketCategory,
+  normalizeSupportTicketPriority,
+  normalizeSupportTicketStatus,
+  normalizeSupportTicketSubject,
+  normalizeSupportTicketVersion,
+  projectAdminSupportTicket,
+  supportTicketById,
+  supportTicketForThread,
+  supportTicketLegacyStatus,
+  supportTicketTransition,
+  SUPPORT_TICKET_SELECT,
+  updateSupportTicket,
+} from '../../_lib/support-tickets.js';
 
-const THREAD_SELECT = 'id,participant_user_id,company_id,status,completed_at,completed_by,last_message_at,last_message_body,last_sender_role,last_order_id';
+// Thread fields are identity plus conversation-wide latest-message projections.
+// Ticket status/version below is the only workflow authority during the UI transition.
+const THREAD_SELECT = 'id,participant_user_id,company_id,last_message_at,last_message_body,last_sender_role,last_order_id';
+
+function ticketListStatus(value) {
+  const status = String(value || 'open').trim();
+  return ['open', 'complete'].includes(status) ? status : null;
+}
+
+function currentTicketPerThread(rows) {
+  const seen = new Set();
+  return (rows || []).filter((ticket) => {
+    if (!ticket?.thread_id || seen.has(ticket.thread_id)) return false;
+    seen.add(ticket.thread_id);
+    return true;
+  });
+}
 
 async function hydrateThreads(sb, rows, { includeEmails = false } = {}) {
   const threads = rows || [];
@@ -78,14 +106,12 @@ async function loadThread(sb, { threadId = null, companyId = null } = {}) {
     company_name: company.name || null,
     company_status: company.status || null,
     scope: 'company',
-    status: 'open',
-    completed_at: null,
     participant: null,
   } : null;
 }
 
-function threadResponse(thread, order = null) {
-  return {
+function threadResponse(thread, order = null, ticket = null) {
+  const response = {
     thread_id: thread.id || null,
     company_id: thread.company_id || null,
     company_name: thread.company_name || 'Customer',
@@ -93,10 +119,15 @@ function threadResponse(thread, order = null) {
     participant_user_id: thread.participant_user_id || null,
     participant: thread.participant || null,
     scope: thread.scope,
-    status: thread.status || 'open',
-    completed_at: thread.completed_at || null,
+    status: ticket ? supportTicketLegacyStatus(ticket) : 'open',
+    completed_at: ticket?.resolved_at || null,
     order_scope: order,
   };
+  if (ticket) {
+    response.ticket_id = ticket.id;
+    response.ticket = projectAdminSupportTicket(ticket);
+  }
+  return response;
 }
 
 export async function handleAdminMessages({ request, env }, dependencies = {}) {
@@ -104,7 +135,11 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
   const getAdminClient = dependencies.adminClient || adminClient;
   const parseBody = dependencies.readBody || readBody;
   const publishMessage = dependencies.publishSupportMessage || publishSupportMessage;
-  const now = dependencies.now || (() => new Date());
+  const findTicket = dependencies.supportTicketById || supportTicketById;
+  const findThreadTicket = dependencies.supportTicketForThread || supportTicketForThread;
+  const patchTicket = dependencies.updateSupportTicket || updateSupportTicket;
+  const getThread = dependencies.loadThread || loadThread;
+  const getRecipient = dependencies.resolveSupportRecipient || resolveSupportRecipient;
 
   const { user, staff, role } = await getStaffContext(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
@@ -114,10 +149,24 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
   if (request.method === 'GET') {
     const params = new URL(request.url).searchParams;
     const threadId = String(params.get('thread_id') || '').trim() || null;
+    const ticketId = String(params.get('ticket_id') || '').trim() || null;
     const companyId = String(params.get('company_id') || '').trim() || null;
-    if (threadId || companyId) {
+    if (ticketId || threadId || companyId) {
+      let ticket = null;
       let thread;
-      try { thread = await loadThread(sb, { threadId, companyId }); }
+      try {
+        if (ticketId) {
+          ticket = await findTicket(sb, ticketId);
+          if (!ticket) {
+            return json(404, { error: 'ticket_not_found' });
+          }
+        }
+        thread = await getThread(sb, {
+          threadId: ticket?.thread_id || threadId,
+          companyId: ticket ? null : companyId,
+        });
+        if (!ticket && thread?.id) ticket = await findThreadTicket(sb, thread.id);
+      }
       catch (error) { return internalServerError('admin.messages.thread_context', error); }
       if (!thread) return json(404, { error: 'thread_not_found' });
       const before = params.get('before');
@@ -131,17 +180,20 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
       let rows = [];
       if (thread.id) {
         let query = sb.from('messages')
-          .select('id,thread_id,sender_role,user_id,recipient_user_id,body,order_id,created_at,read_by_staff,source,external_message_id,email_delivery_id,email_message_id,email_references')
+          .select('id,thread_id,ticket_id,sender_role,user_id,recipient_user_id,body,order_id,created_at,read_by_staff,source,external_message_id,email_delivery_id,email_message_id,email_references')
           .eq('thread_id', thread.id)
           .order('created_at', { ascending: false })
           .limit(SUPPORT_PAGE_SIZE + 1);
+        if (ticketId) query = query.eq('ticket_id', ticket.id);
         if (orderContext.orderId) query = query.eq('order_id', orderContext.orderId);
         if (before) query = query.lt('created_at', before);
         const result = await query;
         if (result.error) return internalServerError('admin.messages.thread_read', result.error);
         rows = result.data || [];
         let readQuery = sb.from('messages').update({ read_by_staff: true })
-          .eq('thread_id', thread.id).eq('sender_role', 'buyer').eq('read_by_staff', false);
+          .eq('thread_id', thread.id)
+          .eq('sender_role', 'buyer').eq('read_by_staff', false);
+        if (ticketId) readQuery = readQuery.eq('ticket_id', ticket.id);
         if (orderContext.orderId) readQuery = readQuery.eq('order_id', orderContext.orderId);
         await readQuery;
       }
@@ -152,7 +204,7 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
         page.messages = page.messages.map((message) => ({ ...message, participant: thread.participant }));
         return json(200, {
           ...page,
-          thread: threadResponse(thread, orderContext.order || null),
+          thread: threadResponse(thread, orderContext.order || null, ticket),
         });
       } catch (error) {
         return internalServerError('admin.messages.order_context', error);
@@ -160,50 +212,65 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
     }
 
     if (params.get('summary') === '1') {
-      const openThreads = sb.from('support_threads')
+      const openTickets = sb.from('support_tickets')
         .select('id', { count: 'exact', head: true })
         .not('last_message_at', 'is', null)
-        .neq('status', 'complete');
-      const unansweredThreads = sb.from('support_threads')
+        .neq('status', 'resolved');
+      const unansweredTickets = sb.from('support_tickets')
         .select('id', { count: 'exact', head: true })
         .not('last_message_at', 'is', null)
-        .neq('status', 'complete')
+        .neq('status', 'resolved')
         .eq('last_sender_role', 'buyer');
-      const [openResult, unansweredResult] = await Promise.all([openThreads, unansweredThreads]);
+      const [openResult, unansweredResult] = await Promise.all([openTickets, unansweredTickets]);
       if (openResult.error) return internalServerError('admin.messages.summary_open', openResult.error);
       if (unansweredResult.error) return internalServerError('admin.messages.summary_unanswered', unansweredResult.error);
       return json(200, { summary: { open: openResult.count || 0, unanswered: unansweredResult.count || 0 } });
     }
 
-    const listStatus = supportThreadListStatus(params.get('status'));
+    const listStatus = ticketListStatus(params.get('status'));
     if (!listStatus) return json(400, { error: 'invalid_status' });
-    let query = sb.from('support_threads')
-      .select(THREAD_SELECT)
+    let query = sb.from('support_tickets')
+      .select(SUPPORT_TICKET_SELECT)
       .not('last_message_at', 'is', null);
-    query = listStatus === 'complete' ? query.eq('status', 'complete') : query.neq('status', 'complete');
+    query = listStatus === 'complete' ? query.eq('status', 'resolved') : query.neq('status', 'resolved');
     const { data, error } = await query.order('last_message_at', { ascending: false }).limit(500);
-    if (error) return internalServerError('admin.messages.thread_list', error);
+    if (error) return internalServerError('admin.messages.ticket_list', error);
     let hydrated;
     let orderContexts;
     try {
-      hydrated = await hydrateThreads(sb, data || []);
-      orderContexts = await supportOrderContextsById(sb, hydrated.map((thread) => thread.last_order_id));
+      const tickets = currentTicketPerThread(data || []).map(projectAdminSupportTicket);
+      const threadIds = tickets.map((ticket) => ticket.thread_id);
+      const threadResult = threadIds.length
+        ? await sb.from('support_threads').select(THREAD_SELECT).in('id', threadIds)
+        : { data: [], error: null };
+      if (threadResult.error) throw threadResult.error;
+      const threadsById = new Map(
+        (await hydrateThreads(sb, threadResult.data || [])).map((thread) => [thread.id, thread]),
+      );
+      hydrated = tickets.map((ticket) => ({ ticket, thread: threadsById.get(ticket.thread_id) }))
+        .filter((item) => item.thread);
+      orderContexts = await supportOrderContextsById(
+        sb,
+        hydrated.map(({ ticket }) => ticket.primary_order_id),
+      );
     } catch (contextError) {
       return internalServerError('admin.messages.thread_context', contextError);
     }
-    const threads = hydrated.map((thread) => ({
+    const threads = hydrated.map(({ ticket, thread }) => ({
       thread_id: thread.id,
+      ticket_id: ticket.id,
+      ticket,
       company_id: thread.company_id || null,
       company_name: thread.company_name || null,
       participant_user_id: thread.participant_user_id || null,
       participant: thread.participant,
       scope: thread.scope,
-      last_body: thread.last_message_body || '',
-      last_at: thread.last_message_at,
-      status: thread.status || 'open',
-      completed_at: thread.completed_at || null,
-      unanswered: listStatus !== 'complete' && thread.last_sender_role === 'buyer',
-      order: thread.last_order_id ? orderContexts.get(thread.last_order_id) || null : null,
+      last_body: ticket.last_message_body || '',
+      last_at: ticket.last_message_at,
+      status: supportTicketLegacyStatus(ticket),
+      completed_at: ticket.resolved_at || null,
+      unanswered: listStatus !== 'complete' && ticket.last_sender_role === 'buyer',
+      order: ticket.primary_order_id ? orderContexts.get(ticket.primary_order_id) || null : null,
     }));
     return json(200, {
       threads,
@@ -216,19 +283,66 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
   if (request.method === 'PATCH') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
     const body = await parseBody(request);
+    const explicitTicketId = String(body.ticket_id || '').trim() || null;
+    let transition;
+    if (explicitTicketId) {
+      const status = body.status === undefined ? null : normalizeSupportTicketStatus(body.status);
+      const priority = body.priority === undefined ? null : normalizeSupportTicketPriority(body.priority);
+      if (body.status !== undefined && !status) return json(400, { error: 'invalid_status' });
+      if (body.priority !== undefined && !priority) return json(400, { error: 'invalid_priority' });
+      if (!status && !priority) return json(400, { error: 'ticket_update_required' });
+      transition = { status, priority };
+    } else {
+      transition = supportTicketTransition(body.status);
+      if (!transition) return json(400, { error: 'invalid_status' });
+    }
     let threadId = String(body.thread_id || '').trim() || null;
     if (!threadId && body.company_id) {
-      try { threadId = (await loadThread(sb, { companyId: String(body.company_id) }))?.id || null; }
+      try { threadId = (await getThread(sb, { companyId: String(body.company_id) }))?.id || null; }
       catch (error) { return internalServerError('admin.messages.status_context', error); }
     }
-    if (!threadId) return json(400, { error: 'thread_id_required' });
-    const patch = supportThreadPatch(body.status, user.id, now().toISOString());
-    if (!patch) return json(400, { error: 'invalid_status' });
-    const { data, error } = await sb.from('support_threads').update(patch)
-      .eq('id', threadId).select('id,status').maybeSingle();
-    if (error) return internalServerError('admin.messages.status_update', error);
-    if (!data) return json(404, { error: 'thread_not_found' });
-    return json(200, { thread_id: data.id, status: data.status });
+    if (!explicitTicketId && !threadId) return json(400, { error: 'thread_id_required' });
+
+    let ticket;
+    try {
+      ticket = explicitTicketId
+        ? await findTicket(sb, explicitTicketId)
+        : await findThreadTicket(sb, threadId);
+    } catch (error) {
+      return internalServerError('admin.messages.status_context', error);
+    }
+    if (!ticket) {
+      return json(404, { error: explicitTicketId ? 'ticket_not_found' : 'thread_not_found' });
+    }
+    const expectedVersion = explicitTicketId
+      ? normalizeSupportTicketVersion(body.version)
+      : ticket.version;
+    if (!expectedVersion) return json(400, { error: 'ticket_version_required' });
+
+    let updated;
+    try {
+      updated = await patchTicket(sb, {
+        ticketId: ticket.id,
+        expectedVersion,
+        actorId: user.id,
+        status: transition.status,
+        priority: transition.priority,
+      });
+    } catch (error) {
+      if (String(error?.message || '').includes('ticket_version_conflict')) {
+        return json(409, { error: 'ticket_version_conflict' });
+      }
+      if (String(error?.message || '').includes('support_ticket_not_found')) {
+        return json(404, { error: 'ticket_not_found' });
+      }
+      return internalServerError('admin.messages.status_update', error);
+    }
+    return json(200, {
+      thread_id: updated.thread_id,
+      ticket_id: updated.id,
+      status: supportTicketLegacyStatus(updated),
+      ticket: updated,
+    });
   }
 
   if (request.method === 'POST') {
@@ -238,30 +352,53 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
     const requestedThreadId = String(body.thread_id || '').trim() || null;
+    const requestedTicketId = String(body.ticket_id || '').trim() || null;
     const requestedCompanyId = String(body.company_id || '').trim() || null;
     const explicitRecipientId = String(body.recipient_user_id || '').trim() || null;
-    if (body.start_thread === true && !explicitRecipientId) {
+    const legacyStartThread = body.start_thread === true;
+    const startTicket = body.start_ticket === true
+      || body.action === 'start_ticket';
+    if ((legacyStartThread || startTicket)
+      && !explicitRecipientId && !requestedThreadId && !requestedTicketId) {
       return json(400, { error: 'recipient_user_id_required' });
     }
 
+    let ticket = null;
     let thread = null;
-    if (requestedThreadId) {
-      try { thread = await loadThread(sb, { threadId: requestedThreadId }); }
+    if (requestedTicketId || requestedThreadId) {
+      try {
+        if (requestedTicketId) {
+          ticket = await findTicket(sb, requestedTicketId);
+          if (!ticket) {
+            return json(404, { error: 'ticket_not_found' });
+          }
+        }
+        thread = await getThread(sb, { threadId: ticket?.thread_id || requestedThreadId });
+      }
       catch (error) { return internalServerError('admin.messages.thread_context', error); }
       if (!thread) return json(404, { error: 'thread_not_found' });
     }
 
+    const companyWideTicket = Boolean(
+      ticket && thread?.company_id && !thread.participant_user_id,
+    );
     let recipient = null;
-    const recipientUserId = thread?.participant_user_id || explicitRecipientId || null;
+    const recipientUserId = companyWideTicket
+      ? null
+      : (thread?.participant_user_id || explicitRecipientId || null);
     let companyId = thread?.company_id || requestedCompanyId || null;
-    if (!recipientUserId) return json(400, { error: 'recipient_user_id_required' });
-    try {
-      recipient = await resolveSupportRecipient(sb, { companyId, userId: recipientUserId });
-    } catch (error) {
-      return internalServerError('admin.messages.recipient_read', error);
+    if (!recipientUserId && !companyWideTicket) {
+      return json(400, { error: 'recipient_user_id_required' });
     }
-    if (!recipient) return json(404, { error: 'recipient_not_found' });
-    companyId = recipient.company_id || null;
+    if (recipientUserId) {
+      try {
+        recipient = await getRecipient(sb, { companyId, userId: recipientUserId });
+      } catch (error) {
+        return internalServerError('admin.messages.recipient_read', error);
+      }
+      if (!recipient) return json(404, { error: 'recipient_not_found' });
+      companyId = recipient.company_id || null;
+    }
 
     const orderContext = await resolveSupportOrderId(sb, {
       orderId: body.order_id,
@@ -269,6 +406,19 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
       userId: recipientUserId,
     });
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
+    if (ticket?.primary_order_id && orderContext.orderId
+      && ticket.primary_order_id !== orderContext.orderId) {
+      return json(404, { error: 'ticket_not_found' });
+    }
+    const subject = normalizeSupportTicketSubject(
+      body.subject,
+      ticket?.subject || text,
+    );
+    if (!subject) return json(400, { error: 'invalid_ticket_subject' });
+    const category = body.category === undefined
+      ? (ticket?.category || 'general')
+      : normalizeSupportTicketCategory(body.category);
+    if (!category) return json(400, { error: 'invalid_ticket_category' });
 
     let publication;
     try {
@@ -279,13 +429,21 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
         companyId,
         recipientUserId,
         threadUserId: recipientUserId,
+        threadId: thread?.id || null,
+        ticketId: ticket?.id || null,
         senderRole: 'staff',
         body: text,
         orderId: orderContext.orderId,
         source: 'admin',
-        reopen: body.start_thread === true,
+        reopen: legacyStartThread ? true : null,
+        subject,
+        category,
+        startTicket,
       });
     } catch (error) {
+      if (String(error?.message || '').includes('support_ticket_routing_not_enabled')) {
+        return json(409, { error: 'support_ticket_routing_not_enabled' });
+      }
       return internalServerError('admin.messages.reply_insert', error);
     }
     const { message: data, emailDelivery } = publication;
@@ -302,7 +460,7 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
         link: messageLink,
       }).then(() => {}, () => {});
     }
-    return json(201, {
+    const response = {
       id: data.id,
       thread_id: data.thread_id,
       created_at: data.created_at,
@@ -310,7 +468,12 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
       recipient_user_id: data.recipient_user_id || recipientUserId,
       email_delivery: emailDelivery,
       summary_synced: true,
-    });
+    };
+    if (data.ticket_id) {
+      response.ticket_id = data.ticket_id;
+      response.ticket = data.ticket ? projectAdminSupportTicket(data.ticket) : null;
+    }
+    return json(201, response);
   }
 
   return json(405, { error: 'method_not_allowed' });
