@@ -10,7 +10,9 @@ const SUPPORT_MESSAGES = readFileSync(new URL("../functions/_lib/support-message
 
 test("buyer POST records chat presence and uses shared support email delivery", () => {
   assert.match(ACCOUNT, /publishSupportMessage/);
-  assert.match(SUPPORT_PUBLISHER, /deliverSupportMessageEmail/);
+  assert.match(SUPPORT_PUBLISHER, /assert_email_effects_ready/);
+  assert.match(SUPPORT_PUBLISHER, /emailDelivery: \{ ok: true, queued: true \}/);
+  assert.doesNotMatch(SUPPORT_PUBLISHER, /deliverSupportMessageEmail/);
   assert.match(ACCOUNT, /action === 'chat_presence'/);
   assert.match(ACCOUNT, /support_chat_open/);
   assert.match(SUPPORT_EMAIL, /adminMessageAlertKind/);
@@ -20,6 +22,7 @@ test("buyer POST records chat presence and uses shared support email delivery", 
 test("staff messages target a company user and shared delivery honors buyer presence", () => {
   assert.match(ADMIN, /recipient_user_id/);
   assert.match(ADMIN, /publishSupportMessage/);
+  assert.match(SUPPORT_PUBLISHER, /assert_email_effects_ready/);
   assert.match(SUPPORT_EMAIL, /shouldEmailSupportRecipient/);
   assert.match(SUPPORT_MESSAGES, /support_chat_open/);
   assert.match(SUPPORT_EMAIL, /emailsByIds/);

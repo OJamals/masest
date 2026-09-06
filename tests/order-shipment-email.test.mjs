@@ -45,12 +45,9 @@ test("shipping and purchase-order references reach confirmations and order views
 });
 
 test("tracking updates email buyer + company recipients once, deduplicated", () => {
-  assert.match(STAFF_ORDER_OPERATIONS, /function sendTrackingEmail/);
-  assert.match(STAFF_ORDER_OPERATIONS, /function notifyBuyerTracking/);
-  assert.match(STAFF_ORDER_OPERATIONS, /order\?\.customer_email/);
-  // The recipient union is deduplicated inside sendTrackingEmail (Set over normalized emails).
-  assert.match(STAFF_ORDER_OPERATIONS, /new Set\(\(recipients \|\| \[\]\)/);
-  assert.match(STAFF_ORDER_OPERATIONS, /await sendOrderTrackingEmail\([\s\S]{0,180}\[order\?\.customer_email,\s*\.\.\.companyRecipients\]/);
+  assert.match(STAFF_ORDER_OPERATIONS, /update_order_tracking_with_email/);
+  assert.match(STAFF_ORDER_OPERATIONS, /p_operation_id/);
+  assert.match(STAFF_ORDER_OPERATIONS, /email_queued/);
   assert.match(STAFF_ORDER_OPERATIONS, /renderCommerceEmail\(/);
   assert.match(EMAIL_RENDERERS, /emailEscape\(config\.summary\)/);
 });

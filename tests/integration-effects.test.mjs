@@ -78,6 +78,59 @@ test('generic atomic local effects preserve response-loss protection', () => {
   assert.doesNotMatch(sql, /stripe_webhook_effects|apply_stripe_stock_effect|deliver_stripe_notification_effect/);
 });
 
+test('support message effects are durable and use the canonical worker handler', () => {
+  const effects = read('functions/_lib/integration-effects.js');
+  const migration = read('supabase/migrate-durable-support-message-effects-2026-09-05.sql');
+  assert.match(effects, /support_message_email/);
+  assert.match(effects, /deliverSupportMessageEmail/);
+  assert.match(read('functions/_lib/support-email.js'), /support-message\/\$\{message\.id\}\/\$\{message\.sender_role\}/);
+  assert.match(migration, /after insert on public\.messages/i);
+  assert.match(migration, /public\.ingest_integration_event/i);
+  assert.match(migration, /support_message_email/i);
+  assert.match(migration, /support-message-/i);
+  assert.match(effects, /quote_intake_email/);
+  assert.match(read('functions/_lib/quote-intake-effects.js'), /quote-intake\/\$\{quote\.id\}\/autoreply/);
+  assert.match(migration, /quotes_intake_email_effect/i);
+});
+
+test('support effect preserves retryable provider outage and accepted delivery state', async () => {
+  const { deliverIntegrationEffect } = await import('../functions/_lib/integration-effects.js');
+  const message = { id: 'message-1', sender_role: 'staff' };
+  const sb = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: message, error: null }) }) }) }) };
+  const effect = { effect_type: 'support_message_email', provider: 'masest', payload: { message_id: message.id } };
+  const failed = await assert.rejects(
+    () => deliverIntegrationEffect({ env: {}, sb, effect }, {
+      supportDelivery: async () => ({ ok: false, retryable: true, error: 'provider_unavailable' }),
+    }),
+    /support_email_delivery_failed/,
+  );
+  assert.equal(failed, undefined);
+  const accepted = await deliverIntegrationEffect({ env: {}, sb, effect }, {
+    supportDelivery: async () => ({ ok: true, providerMessageId: 'provider-1' }),
+  });
+  assert.deepEqual(accepted, {
+    providerRecorded: false,
+    providerResult: { provider_message_id: 'provider-1' },
+    skipped: false,
+  });
+});
+
+test('quote intake worker renders only the frozen effect snapshot', async () => {
+  const { deliverIntegrationEffect } = await import('../functions/_lib/integration-effects.js');
+  const sent = [];
+  const base = { id: 'quote-1', email: 'frozen@example.test', name: 'Frozen Name', company: 'Frozen Co', type: 'sample', priority: 'urgent', lead_score: 90, payload: { current_chemical: 'X' } };
+  const sb = {};
+  const result = await deliverIntegrationEffect({ env: { SALES_EMAIL: 'sales@example.test' }, sb, effect: {
+    effect_type: 'quote_intake_email', provider: 'masest', payload: { quote_id: 'quote-1', kind: 'internal' }, source_snapshot: base,
+  } }, { sendEmail: async (_env, options) => { sent.push(options); return { ok: true, providerMessageId: 'mail-1' }; } });
+  assert.equal(result.skipped, false);
+  assert.match(sent[0].subject, /Frozen Co/);
+  assert.match(sent[0].html, /Cleaner used now/);
+  await assert.rejects(() => deliverIntegrationEffect({ env: {}, sb, effect: {
+    effect_type: 'quote_intake_email', provider: 'masest', payload: { quote_id: 'quote-1', kind: 'internal' }, source_snapshot: { ...base, id: 'other' },
+  } }, { sendEmail: async () => { throw new Error('must not send'); } }), /quote_intake_missing/);
+});
+
 test('cutover removes legacy table/RPCs only after exact parity and rollback reconstructs them', () => {
   const cutover = read('supabase/cutover-integration-effects.sql');
   const rollback = read('supabase/rollback-integration-effects-cutover.sql');

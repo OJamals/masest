@@ -51,9 +51,9 @@ test("staff orders API can update tracking metadata and notify buyers", () => {
   const ORDER_EMAIL = readFileSync(new URL('../functions/_lib/order-email.js', import.meta.url), 'utf8');
   assert.match(ORDER_EMAIL, /Your order was delivered\./);
   assert.match(ORDER_EMAIL, /Your order has shipped\./);
-  // One rich tracking email goes to buyer + company recipients (sendTrackingEmail), so
-  // the clickable tracking link is never shadowed by the generic notifyCompany email.
-  assert.match(STAFF_ORDER_OPERATIONS, /await sendOrderTrackingEmail\([\s\S]{0,180}\[order\?\.customer_email, \.\.\.companyRecipients\]/);
+  assert.match(STAFF_ORDER_OPERATIONS, /update_order_tracking_with_email/);
+  assert.match(STAFF_ORDER_OPERATIONS, /p_operation_id/);
+  assert.match(STAFF_ORDER_OPERATIONS, /email_queued/);
 });
 
 test("staff shipment tracking promotes settled orders while preserving open NET receivables", () => {
@@ -66,7 +66,7 @@ test("staff shipment tracking promotes settled orders while preserving open NET 
     STAFF_ORDER_OPERATIONS,
     /if\s*\(fulfilled\)\s*update\.status\s*=\s*'fulfilled'/
   );
-  assert.match(STAFF_ORDER_OPERATIONS, /rpc\('update_order_tracking_guarded'/);
+  assert.match(STAFF_ORDER_OPERATIONS, /rpc\('update_order_tracking_with_email'/);
 });
 
 test("staff console surfaces tracking controls on each order", () => {

@@ -1,6 +1,5 @@
 import { materializeDeliverySource } from './newsletter-delivery.js';
 import { enqueueMarketingDelivery } from './marketing-delivery-queue.js';
-import { setMarketingPreference } from './marketing-subscribers.js';
 import { renderAllNurtureFlowEmails } from './scrolly-marketing-emails.js';
 
 export const NURTURE_DELAY_DAYS = Object.freeze([0, 3, 8]);
@@ -10,12 +9,9 @@ const clean = (value, max) => String(value || '').trim().slice(0, max);
 export async function enrollMarketingNurture(env, sb, {
   email,
   quoteId,
-  name = '',
-  industry = '',
   consented = false,
+  consentAt = null,
 } = {}, {
-  now = () => Date.now(),
-  setPreference = setMarketingPreference,
   materialize = materializeDeliverySource,
   enqueue = enqueueMarketingDelivery,
 } = {}) {
@@ -26,24 +22,18 @@ export async function enrollMarketingNurture(env, sb, {
     return { ok: false, provider: 'ses', queued: 0, retryable: false, error: 'nurture_identity_required' };
   }
 
-  const preference = await setPreference(env, {
-    email: normalizedEmail,
-    enabled: true,
-    source: 'quote_marketing_consent',
-    name: clean(name, 120) || null,
-    tags: [clean(industry, 40)].filter(Boolean),
-  }, { sb });
-  if (!preference?.ok) {
-    return {
-      ok: false,
-      provider: 'ses',
-      queued: 0,
-      retryable: preference?.retryable === true,
-      error: preference?.error || 'marketing_preference_write_failed',
-    };
+  if (typeof sb?.from === 'function') {
+    const { data: currentRecipient, error: recipientError } = await sb.from('newsletter_recipients')
+      .select('subscribed').eq('email', normalizedEmail).maybeSingle();
+    if (recipientError) return { ok: false, provider: 'ses', queued: 0, retryable: true, error: 'marketing_preference_read_failed' };
+    if (currentRecipient?.subscribed !== true) {
+      return { ok: true, provider: 'ses', queued: 0, skipped: 'newer_unsubscribe' };
+    }
   }
 
-  const startedAt = now();
+  const consentTimestamp = consentAt ? Date.parse(consentAt) : NaN;
+  if (!Number.isFinite(consentTimestamp)) return { ok: false, provider: 'ses', queued: 0, retryable: false, error: 'nurture_consent_timestamp_required' };
+  const startedAt = consentTimestamp;
   const emails = renderAllNurtureFlowEmails();
   let queued = 0;
   for (let index = 0; index < emails.length; index += 1) {
@@ -70,7 +60,7 @@ export async function enrollMarketingNurture(env, sb, {
     queued += result?.created ? 1 : 0;
   }
 
-  const wake = queued ? await enqueue(env, { sourceType: 'nurture' }) : { ok: true };
+  const wake = queued || emails.length ? await enqueue(env, { sourceType: 'nurture' }) : { ok: true };
   return {
     ok: wake.ok,
     provider: 'ses',

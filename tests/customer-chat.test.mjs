@@ -158,13 +158,15 @@ test("customer chat posts to the authenticated message thread and receives staff
   assert.match(admin, /source === 'customer_chat'/);
 });
 
-test("customer chat records presence and delegates counterpart email to shared support delivery", () => {
+test("customer chat records presence and delegates counterpart email to the durable support effect", () => {
   assert.match(chat, /chat_presence/);
   assert.match(chat, /setChatPresence\(false\)/);
   assert.match(messages, /body\.action === 'chat_presence'/);
   assert.match(messages, /publishSupportMessage/);
   assert.match(adminMessages, /publishSupportMessage/);
-  assert.match(supportPublisher, /deliverSupportMessageEmail/);
+  assert.match(supportPublisher, /assert_email_effects_ready/);
+  assert.match(supportPublisher, /emailDelivery: \{ ok: true, queued: true \}/);
+  assert.doesNotMatch(supportPublisher, /deliverSupportMessageEmail/);
   assert.match(supportEmail, /adminMessageAlertKind/);
   assert.match(supportEmail, /shouldEmailSupportRecipient/);
   assert.match(phase5, /support_chat_open boolean not null default false/);

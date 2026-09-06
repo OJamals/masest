@@ -11,7 +11,13 @@ import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
 const MAX_POSTS_PER_RUN = 5;
 
+function preparationLeaseToken() {
+  if (typeof globalThis.crypto?.randomUUID !== 'function') throw new Error('preparation_lease_crypto_unavailable');
+  return globalThis.crypto.randomUUID();
+}
+
 export async function claimBlogNewsletter(sb, slug) {
+  const leaseToken = preparationLeaseToken();
   const { error } = await sb.from('blog_newsletter_sends').insert({
     slug,
     queued_at: new Date().toISOString(),
@@ -20,10 +26,25 @@ export async function claimBlogNewsletter(sb, slug) {
     provider_status: 'queueing',
     provider_error: null,
     recipient_count: 0,
+    preparation_lease_token: leaseToken,
+    preparation_lease_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    preparation_attempts: 1,
   });
-  if (!error) return { claimed: true, error: null };
+  if (!error) {
+    return { claimed: true, error: null, leaseToken };
+  }
   if (String(error.code || '') === '23505') return { claimed: false, error: null };
   return { claimed: false, error };
+}
+
+export async function recoverBlogNewsletter(sb, slug) {
+  const leaseToken = preparationLeaseToken();
+  const { data, error } = await sb.rpc('claim_blog_newsletter_preparation', {
+    p_slug: slug,
+    p_lease_token: leaseToken,
+    p_lease_seconds: 600,
+  });
+  return { claimed: Boolean(Array.isArray(data) ? data[0] : data), error: error || null, leaseToken };
 }
 
 export async function onRequestPost({ request, env }) {
@@ -47,11 +68,11 @@ export async function onRequestPost({ request, env }) {
       .eq('type', 'blog_post').eq('status', 'published').eq('locale', 'en')
       .order('published_at', { ascending: true });
     if (error) return json(500, { error: 'load_failed' });
-    const { data: ledger, error: ledgerError } = await sb.from('blog_newsletter_sends').select('slug');
+    const { data: ledger, error: ledgerError } = await sb.from('blog_newsletter_sends').select('slug,provider_status,preparation_lease_expires_at');
     if (ledgerError) return json(503, { error: 'ledger_unavailable' });
 
     const posts = (rows || []).map(postFromEntry).filter((post) => post.slug && post.excerpt);
-    const todo = unsentPosts(posts, (ledger || []).map((row) => row.slug)).slice(0, MAX_POSTS_PER_RUN);
+    const todo = unsentPosts(posts, ledger || [], Date.now()).slice(0, MAX_POSTS_PER_RUN);
     if (!todo.length) return json(200, { ok: true, queued: [], skipped: 'nothing_unsent' });
 
     let emails;
@@ -65,11 +86,20 @@ export async function onRequestPost({ request, env }) {
     const failed = [];
     for (const post of todo) {
       const claim = await claimBlogNewsletter(sb, post.slug);
+      let preparationLeaseToken = claim.leaseToken;
       if (claim.error) {
         failed.push({ slug: post.slug, error: 'blog_newsletter_claim_failed', retryable: true });
         continue;
       }
-      if (!claim.claimed) continue;
+      if (!claim.claimed) {
+        const recovery = await recoverBlogNewsletter(sb, post.slug);
+        if (recovery.error) {
+          failed.push({ slug: post.slug, error: 'blog_newsletter_recovery_failed', retryable: true });
+          continue;
+        }
+        if (!recovery.claimed) continue;
+        preparationLeaseToken = recovery.leaseToken;
+      }
       const rendered = renderBlogEmail(post);
       const materialized = await materializeDeliverySource(sb, {
         sourceType: 'blog_post',
@@ -80,25 +110,32 @@ export async function onRequestPost({ request, env }) {
         category: 'blog_newsletter',
         metadata: { canonical_url: rendered.url },
         emails,
+        leaseToken: preparationLeaseToken,
       });
       if (materialized.error) {
         await sb.from('blog_newsletter_sends').update({
           provider_status: 'failed_to_queue',
           provider_error: 'blog_delivery_materialize_failed',
-        }).eq('slug', post.slug).eq('provider_status', 'queueing');
+          preparation_lease_expires_at: new Date().toISOString(),
+        }).eq('slug', post.slug).eq('provider_status', 'queueing')
+          .eq('preparation_lease_token', preparationLeaseToken);
         failed.push({ slug: post.slug, error: 'blog_delivery_materialize_failed', retryable: true });
         continue;
       }
       const empty = materialized.total === 0;
-      const { error: saveError } = await sb.from('blog_newsletter_sends').update({
+      const { data: saved, error: saveError } = await sb.from('blog_newsletter_sends').update({
         provider: 'ses',
         provider_status: empty ? 'complete' : 'processing',
         provider_error: null,
         delivery_source_id: post.slug,
         delivery_total: materialized.total,
         ...(empty ? { sent_at: new Date().toISOString() } : {}),
-      }).eq('slug', post.slug).eq('provider_status', 'queueing');
-      if (saveError) {
+        preparation_lease_token: null,
+        preparation_lease_expires_at: null,
+      }).eq('slug', post.slug).eq('provider_status', 'queueing')
+        .eq('preparation_lease_token', preparationLeaseToken)
+        .select('slug').maybeSingle();
+      if (saveError || !saved) {
         failed.push({ slug: post.slug, error: 'blog_delivery_state_save_failed', retryable: true });
         continue;
       }

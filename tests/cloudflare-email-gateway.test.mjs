@@ -61,7 +61,7 @@ test('Cloudflare transactional gateway fails closed when unbound and requires Qu
     category: 'order',
     suppressionLoader: async () => new Map(),
   });
-  assert.deepEqual(unconfigured, { ok: false, retryable: false, error: 'email_not_configured' });
+  assert.deepEqual(unconfigured, { ok: false, retryable: true, error: 'email_not_configured' });
 
   let cloudflareCalls = 0;
   const marketing = await sendEmailResult({
@@ -163,4 +163,27 @@ test('private gateway caps combined visible and blind recipients at provider lim
 
   assert.equal(payload.to.length, 40);
   assert.equal(payload.bcc.length, 10);
+});
+
+test('private gateway fails closed when default suppression lookup fails', async () => {
+  let sends = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({ error: 'database unavailable' }, { status: 503 });
+  let result;
+  try {
+    result = await sendEmailResult({
+      SUPABASE_URL: 'https://example.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'service-role-test-key',
+      EMAIL_SERVICE: service(async () => { sends += 1; return Response.json({ ok: true }); }),
+    }, {
+      to: ['buyer@example.com'],
+      subject: 'Receipt',
+      html: '<p>Receipt</p>',
+      category: 'order',
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual(result, { ok: false, retryable: true, error: 'suppression_check_failed' });
+  assert.equal(sends, 0);
 });

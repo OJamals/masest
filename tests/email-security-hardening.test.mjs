@@ -17,7 +17,9 @@ const messageRepliesSrc = readFileSync(new URL("../functions/_lib/message-replie
 test("support notification emails route customer and staff content through the canonical escaping renderer", () => {
   assert.match(messagesSrc, /publishSupportMessage/);
   assert.match(adminMessagesSrc, /publishSupportMessage/);
-  assert.match(supportPublisherSrc, /deliverSupportMessageEmail/);
+  assert.match(supportPublisherSrc, /assert_email_effects_ready/);
+  assert.match(supportPublisherSrc, /emailDelivery: \{ ok: true, queued: true \}/);
+  assert.doesNotMatch(supportPublisherSrc, /deliverSupportMessageEmail/);
   assert.match(supportEmailSrc, /renderSupportEmail\(/);
   assert.match(emailRenderersSrc, /const latest = bodyAsHtml\(message\.body\)/);
   assert.match(emailRenderersSrc, /View order \$\{emailEscape\(orderReference\)\}/);

@@ -58,6 +58,8 @@ test('public intake acknowledges only a durable record and passes a stable ident
   });
   assert.equal(saved.intakeId, SUBMISSION_ID);
   assert.match(saved.fingerprint, /^[a-f0-9]{64}$/);
+  assert.equal(saved.row.lead_score, 38);
+  assert.equal(saved.row.priority, 'normal');
   assert.equal(saved.row.payload.submission_id, undefined);
 });
 
@@ -138,11 +140,7 @@ test('post-commit email or nurture failure cannot erase the durable acknowledgem
   assert.equal(result.body.quote_id, QUOTE_ID);
 });
 
-test('post-commit provider failures are surfaced to operations without changing the acknowledgement', async () => {
-  const warnings = [];
-  const originalWarn = console.warn;
-  console.warn = (...args) => warnings.push(args);
-  try {
+test('post-commit provider failures are recovered by durable effects without changing acknowledgement', async () => {
     const response = await createQuoteHandler(baseDependencies({
       sendEmail: async () => ({ ok: false, error: 'email_unavailable' }),
       enrollMarketingNurture: async () => ({ ok: false, error: 'nurture_unavailable' }),
@@ -151,13 +149,10 @@ test('post-commit provider failures are surfaced to operations without changing 
     const result = await json(response);
     assert.equal(result.status, 201);
     assert.equal(result.body.durable, true);
-    assert.deepEqual(warnings, [['quote_intake_follow_up_failed', QUOTE_ID]]);
-  } finally {
-    console.warn = originalWarn;
-  }
+    assert.equal(result.body.duplicate, false);
 });
 
-test('quote nurture requires explicit consent and receives stable quote identity', async () => {
+test('quote intake does not synchronously enroll nurture; durable trigger owns it', async () => {
   const enrollments = [];
   const handler = createQuoteHandler(baseDependencies({
     enrollMarketingNurture: async (_env, _sb, input) => { enrollments.push(input); return { ok: true }; },
@@ -166,14 +161,7 @@ test('quote nurture requires explicit consent and receives stable quote identity
   await handler({ request: request(), env: {} });
   await handler({ request: request({ marketing_email_enabled: 'on' }), env: {} });
 
-  assert.equal(enrollments.length, 1);
-  assert.deepEqual(enrollments[0], {
-    email: 'buyer@example.com',
-    quoteId: QUOTE_ID,
-    name: 'Buyer',
-    industry: undefined,
-    consented: true,
-  });
+  assert.equal(enrollments.length, 0);
 });
 
 test('the browser requires the durable acknowledgement before showing success', () => {

@@ -1,6 +1,7 @@
 import { AwsClient } from 'aws4fetch';
 import { emailViewToken, htmlToText, unsubscribeToken } from './email.js';
 import { EMAIL_BASE, emailEscape, emailSafeUrl } from './email-template.js';
+import { categoryPolicy } from './email-policy.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const WEB_VIEW_BLOCK_RE = /<!--WEB_VIEW_START-->([\s\S]*?)<!--WEB_VIEW_END-->/g;
@@ -299,6 +300,10 @@ export async function sendSesMarketingEmail(env, {
   if (!toEmail) {
     return { ok: false, provider: 'ses', retryable: false, error: 'ses_single_recipient_required' };
   }
+  const policy = categoryPolicy(category);
+  if (!policy || policy.stream !== 'marketing' || policy.provider !== 'ses') {
+    return { ok: false, provider: 'ses', retryable: false, error: 'ses_marketing_category_required' };
+  }
   const stableKey = cleanHeader(idempotencyKey, 255);
   if (!stableKey) {
     return { ok: false, provider: 'ses', retryable: false, error: 'marketing_idempotency_key_required' };
@@ -328,7 +333,6 @@ export async function sendSesMarketingEmail(env, {
     || hasUnresolvedPlaceholder(personalized.html) || hasUnresolvedPlaceholder(bodyText)) {
     return { ok: false, provider: 'ses', retryable: false, error: 'marketing_placeholder_unresolved' };
   }
-
   const region = cleanHeader(env.AWS_SES_REGION || 'us-east-1', 64);
   const fromEmail = cleanHeader(env.AWS_SES_FROM_EMAIL || 'news@marketing.masest.co', 320);
   const fromName = cleanHeader(env.AWS_SES_FROM_NAME || 'MASEST · VertKleen', 120);

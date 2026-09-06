@@ -1,5 +1,7 @@
 import { adminClient } from '../../../functions/_lib/supabase.js';
+import { recordAutomationRun } from '../../../functions/_lib/automation-runs.js';
 import { applyEmailLifecycleEvent } from '../../../functions/_lib/email-events.js';
+import { sweepNewsletterPreparation } from '../../../functions/_lib/newsletter-preparation.js';
 import { syncSesSuppressions } from '../../../functions/_lib/ses-email.js';
 import {
   consumeMarketingDeliveryBatch,
@@ -109,14 +111,36 @@ export async function runMarketingSchedule(controller, env, {
   createClient = adminClient,
   syncSuppressions = syncSesSuppressions,
   schedule = scheduleMarketingDeliveryWork,
+  sweep = sweepNewsletterPreparation,
+  recordRun = recordAutomationRun,
 } = {}) {
   if (controller?.cron === '0 */6 * * *') {
     const suppression = await syncSuppressions(env, createClient(env));
     if (!suppression.ok) throw new Error(suppression.error || 'ses_suppression_sync_failed');
     return { suppression, queued: [] };
   }
-  const queued = await schedule(env);
-  return { suppression: null, queued };
+  const sb = createClient(env);
+  let campaignSweep;
+  let campaignError = null;
+  try {
+    campaignSweep = await recordRun(sb, 'newsletter_sweep', () => sweep(env, { createClient }));
+    if (campaignSweep?.ok === false) {
+      campaignError = new Error(campaignSweep.error || 'newsletter_sweep_failed');
+    }
+  } catch (error) {
+    campaignError = error;
+  }
+
+  let queued;
+  let deliveryError = null;
+  try {
+    queued = await schedule(env);
+  } catch (error) {
+    deliveryError = error;
+  }
+  if (deliveryError) throw deliveryError;
+  if (campaignError) throw campaignError;
+  return { suppression: null, campaignSweep, queued };
 }
 
 export default {

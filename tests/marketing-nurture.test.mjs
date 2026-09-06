@@ -32,32 +32,24 @@ test('nurture enrollment skips every write without explicit form consent', async
   assert.equal(calls, 0);
 });
 
-test('nurture enrollment writes consent then materializes three scheduled SES deliveries', async () => {
+test('nurture enrollment materializes three scheduled SES deliveries from frozen consent', async () => {
   const now = Date.parse('2026-09-03T12:00:00.000Z');
-  const preferences = [];
+  const sb = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { subscribed: true }, error: null }) }) }) }) };
   const sources = [];
   const queueJobs = [];
-  const result = await enrollMarketingNurture({ EMAIL_UNSUB_SECRET: 'secret' }, {}, {
+  const result = await enrollMarketingNurture({ EMAIL_UNSUB_SECRET: 'secret' }, sb, {
     email: ' Buyer@Example.test ',
     quoteId: 'quote-42',
     name: 'Buyer',
     industry: 'Marine',
     consented: true,
+    consentAt: '2026-09-03T12:00:00.000Z',
   }, {
-    now: () => now,
-    setPreference: async (_env, value) => { preferences.push(value); return { ok: true, count: 1 }; },
     materialize: async (_sb, value) => { sources.push(value); return { created: true, total: 1, error: null }; },
     enqueue: async (_env, value) => { queueJobs.push(value); return { ok: true, queued: true }; },
   });
 
   assert.deepEqual(NURTURE_DELAY_DAYS, [0, 3, 8]);
-  assert.deepEqual(preferences, [{
-    email: 'buyer@example.test',
-    enabled: true,
-    source: 'quote_marketing_consent',
-    name: 'Buyer',
-    tags: ['Marine'],
-  }]);
   assert.equal(sources.length, 3);
   assert.deepEqual(sources.map((source) => source.sourceType), ['nurture', 'nurture', 'nurture']);
   assert.deepEqual(sources.map((source) => source.sourceId), [
@@ -74,20 +66,29 @@ test('nurture enrollment writes consent then materializes three scheduled SES de
   assert.deepEqual(result, { ok: true, provider: 'ses', queued: 3, started: 0 });
 });
 
-test('nurture enrollment fails closed when canonical consent cannot persist', async () => {
+test('nurture enrollment fails closed without frozen consent timestamp', async () => {
   let materialized = false;
   const result = await enrollMarketingNurture({}, {}, {
     email: 'buyer@example.test', quoteId: 'quote-1', consented: true,
   }, {
-    setPreference: async () => ({ ok: false, error: 'marketing_preference_write_failed', retryable: true }),
     materialize: async () => { materialized = true; },
   });
   assert.deepEqual(result, {
     ok: false,
     provider: 'ses',
     queued: 0,
-    retryable: true,
-    error: 'marketing_preference_write_failed',
+    retryable: false,
+    error: 'nurture_consent_timestamp_required',
   });
+  assert.equal(materialized, false);
+});
+
+test('nurture replay respects unsubscribe and performs no preference write', async () => {
+  let materialized = false;
+  const sb = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { subscribed: false }, error: null }) }) }) }) };
+  const result = await enrollMarketingNurture({}, sb, {
+    email: 'buyer@example.test', quoteId: 'quote-1', consented: true, consentAt: '2026-09-03T12:00:00Z',
+  }, { materialize: async () => { materialized = true; } });
+  assert.deepEqual(result, { ok: true, provider: 'ses', queued: 0, skipped: 'newer_unsubscribe' });
   assert.equal(materialized, false);
 });

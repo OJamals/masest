@@ -1,13 +1,12 @@
-# Hourly sweep: send any scheduled newsletter whose next_run_at is due, and reschedule
-# recurring ones. Server-side (functions/api/admin/newsletters.js action:sweep_due) does
-# the work behind a constant-time NEWSLETTER_CRON_SECRET; this job just pokes it.
+# Manual fallback for newsletter campaign sweeps. Production ownership is the
+# every-five-minute Cloudflare marketing-email worker cron, which runs the shared
+# preparation implementation directly. Keep this workflow_dispatch path for
+# operator recovery only.
 #
 # REQUIRED repo secret: NEWSLETTER_CRON_SECRET (same value in CF Pages prod env).
 name: Newsletter schedule sweep
 
 on:
-  schedule:
-    - cron: "5 * * * *"
   workflow_dispatch: {}
 
 concurrency:
@@ -23,10 +22,10 @@ jobs:
           NEWSLETTER_CRON_SECRET: ${{ secrets.NEWSLETTER_CRON_SECRET }}
         run: |
           if [ -z "$NEWSLETTER_CRON_SECRET" ]; then
-            echo "NEWSLETTER_CRON_SECRET not set — skipping."
-            exit 0
+            echo "NEWSLETTER_CRON_SECRET not set."
+            exit 1
           fi
           curl -fsS -X POST "https://masest.co/api/admin/newsletters" \
             -H "x-newsletter-cron-secret: $NEWSLETTER_CRON_SECRET" \
             -H "content-type: application/json" \
-            -d '{"action":"sweep_due"}' || echo "newsletter sweep call failed (non-fatal)"
+            -d '{"action":"sweep_due"}'

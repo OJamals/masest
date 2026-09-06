@@ -41,6 +41,7 @@ export const EMAIL_CATEGORY_POLICY = Object.freeze({
   review_request: MARKETING,
   blog_newsletter: MARKETING,
   newsletter: MARKETING,
+  lead_nurture: MARKETING,
 });
 
 export const MARKETING_CATEGORIES = new Set(

@@ -152,6 +152,7 @@ function manualOrderErrorCode(error, fallback) {
     'order_cancellation_in_progress',
     'tracking_update_forbidden',
     'tracking_fulfillment_not_settled',
+    'tracking_operation_id_conflict',
     'invalid_tracking_update',
     'order_not_found',
     'provider_object_already_claimed',
@@ -175,6 +176,7 @@ function manualOrderHttpStatus(code) {
     'order_cancellation_in_progress',
     'tracking_update_forbidden',
     'tracking_fulfillment_not_settled',
+    'tracking_operation_id_conflict',
     'provider_object_already_claimed',
   ].includes(code)) return 409;
   if (code.endsWith('_failed')) return 500;
@@ -293,8 +295,6 @@ export async function runStaffOrderOperation(
   const linkProviderObject = dependencies.linkOrderProviderObject || linkOrderProviderObject;
   const notifyOrderCompany = dependencies.notifyCompany || notifyCompany;
   const notifyOrderBuyer = dependencies.notifyBuyerTracking || notifyBuyerTracking;
-  const sendOrderTrackingEmail = dependencies.sendTrackingEmail || sendTrackingEmail;
-  const getCompanyEmails = dependencies.companyEmails || companyEmails;
 
   if (body?.action === 'accept_order') {
     if (!staffCan(role, 'order.write')) return response(403, { error: 'forbidden' });
@@ -868,8 +868,12 @@ export async function runStaffOrderOperation(
     };
     if (fulfilled) update.status = 'fulfilled';
 
-    const { data: order, error } = await sb.rpc('update_order_tracking_guarded', {
+    const operationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(body.operation_id || ''))
+      ? String(body.operation_id)
+      : crypto.randomUUID();
+    const { data: order, error } = await sb.rpc('update_order_tracking_with_email', {
       p_order_id: body.id,
+      p_operation_id: operationId,
       p_expected_status: current.status,
       p_tracking_status: trackingStatus,
       p_carrier: carrier,
@@ -904,17 +908,6 @@ export async function runStaffOrderOperation(
         link: '/dashboard.html#orders',
       }).then(() => {}, () => {});
     }
-    const companyRecipients = order?.company_id
-      ? await getCompanyEmails(sb, order.company_id, 'orders')
-      : [];
-    await sendOrderTrackingEmail(
-      env,
-      request,
-      order,
-      notice.label,
-      notice.body,
-      [order?.customer_email, ...companyRecipients],
-    );
     await audit(sb, {
       user,
       action: 'order.update_tracking',
@@ -922,7 +915,7 @@ export async function runStaffOrderOperation(
       targetId: body.id,
       detail: { company_id: order?.company_id, update },
     });
-    return response(200, { ok: true, order });
+    return response(200, { ok: true, order, email_queued: true, operation_id: operationId });
   }
 
   if (!ORDER_STATUSES.includes(body.status)) return response(400, { error: 'invalid_status' });

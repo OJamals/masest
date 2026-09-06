@@ -65,6 +65,7 @@ async function threadParent(sb, message) {
     .or('email_message_id.not.is.null,email_references.not.is.null')
     .order('created_at', { ascending: false })
     .limit(3);
+  if (message.created_at) query = query.lt('created_at', message.created_at);
   query = message.thread_id
     ? query.eq('thread_id', message.thread_id)
     : query.eq('company_id', message.company_id);
@@ -99,6 +100,17 @@ async function saveDelivery(sb, { messageId, deliveryId, emailMessageId, referen
     email_references: references,
   }).eq('id', messageId);
   if (error) throw error;
+}
+
+async function prepareSupportEmailDelivery(sb, messageId, envelope) {
+  const { data, error } = await sb.rpc('prepare_support_email_delivery', {
+    p_message_id: messageId,
+    p_envelope: envelope,
+  });
+  if (error || !data || typeof data !== 'object') {
+    throw Object.assign(new Error('support_email_envelope_prepare_failed'), { code: 'support_email_envelope_prepare_failed' });
+  }
+  return data;
 }
 
 async function saveProviderDelivery(sb, message, deliveryId, references, dependencies) {
@@ -213,7 +225,7 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     }
     recipients = [recipient.email];
   } else {
-    const kind = message.alert_kind || adminMessageAlertKind({
+    const kind = message.alert_kind || message.external_alert_kind || adminMessageAlertKind({
       previousMessage: message.previous_sender_role
         ? { sender_role: message.previous_sender_role }
         : null,
@@ -224,7 +236,7 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
   }
 
   const replyTo = await (dependencies.replyAddress || messageReplyAddress)(env, message.id);
-  if (!replyTo) return { ok: false, retryable: false, error: 'support_reply_address_not_configured' };
+  if (!replyTo) return { ok: false, retryable: true, error: 'support_reply_address_not_configured' };
   const [order, parent] = await Promise.all([
     (dependencies.orderContext || orderContext)(sb, message),
     (dependencies.threadParent || threadParent)(sb, message),
@@ -237,7 +249,13 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     },
     references: inheritedIds.join(' '),
   } : threadHeaders(parent);
-  const companyName = message.company_name || message.customer_name || message.company_id || 'Customer';
+  let companyName = message.company_name || message.customer_name || null;
+  if (!companyName && message.company_id) {
+    const { data: company, error: companyError } = await sb.from('companies').select('name').eq('id', message.company_id).maybeSingle();
+    if (companyError) throw companyError;
+    companyName = company?.name || null;
+  }
+  companyName ||= message.company_id || 'Customer';
   const isStaffMessage = message.sender_role === 'staff';
   const appUrl = String(env?.APP_URL || 'https://masest.co').replace(/\/+$/, '');
   const ctaPath = isStaffMessage
@@ -259,16 +277,28 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     } : null,
     audience: isStaffMessage ? 'buyer' : 'staff',
   });
-  const send = dependencies.sendEmail || sendEmailResult;
-  const delivery = await send(env, {
+  const envelope = await (dependencies.prepareDelivery || prepareSupportEmailDelivery)(sb, message.id, {
+    message_id: message.id,
     to: recipients,
     subject: rendered.subject,
     html: rendered.html,
     text: rendered.text,
-    replyTo,
-    emailHeaders: rendered.headers,
+    reply_to: replyTo,
+    headers: rendered.headers || {},
+    references: threading.references || null,
     category: isStaffMessage ? 'messages' : 'staff_alert',
-    idempotencyKey: `support-message/${message.id}/${message.sender_role}`,
+    idempotency_key: `support-message/${message.id}/${message.sender_role}`,
+  });
+  const send = dependencies.sendEmail || sendEmailResult;
+  const delivery = await send(env, {
+    to: envelope.to,
+    subject: envelope.subject,
+    html: envelope.html,
+    text: envelope.text,
+    replyTo: envelope.reply_to,
+    emailHeaders: envelope.headers,
+    category: envelope.category,
+    idempotencyKey: envelope.idempotency_key,
   });
   if (delivery === false || delivery?.ok === false) {
     return typeof delivery === 'object'
@@ -282,7 +312,7 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     sb,
     message,
     delivery.providerMessageId,
-    threading.references,
+    envelope.references,
     dependencies,
   );
   return { ...delivery, ...captured };
@@ -296,6 +326,10 @@ export async function routeInboundMessageReply(env, input, dependencies = {}) {
   )(env, input?.to || []);
   if (!replyMessageId) return { routed: false, reason: 'invalid_reply_address' };
   const sb = dependencies.sb || adminClient(env);
+  if (typeof sb.rpc === 'function') {
+    const { error } = await sb.rpc('assert_email_effects_ready');
+    if (error) throw Object.assign(new Error('durable_email_effects_not_ready'), { code: 'durable_email_effects_not_ready' });
+  }
   const parent = await (dependencies.replyMessage || loadReplyMessage)(sb, replyMessageId);
   if (!parent?.id) return { routed: false, reason: 'reply_message_not_found' };
   const thread = parent.thread_id
@@ -351,10 +385,5 @@ export async function routeInboundMessageReply(env, input, dependencies = {}) {
     body: result.body || body,
     email_references: result.email_references || emailReferences,
   };
-  const deliver = dependencies.deliverMessage || deliverSupportMessageEmail;
-  const delivery = await deliver(env, sb, message);
-  if (delivery === false || delivery?.ok === false) {
-    throw new Error(delivery?.error || 'inbound_delivery_failed');
-  }
   return { routed: true, duplicate: result.inserted === false };
 }

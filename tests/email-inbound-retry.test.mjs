@@ -18,7 +18,7 @@ const input = {
   text: 'Please update my order.',
 };
 
-function retryDependencies(deliverMessage) {
+function retryDependencies() {
   let upserts = 0;
   return {
     counters: { get upserts() { return upserts; } },
@@ -39,32 +39,30 @@ function retryDependencies(deliverMessage) {
         inserted: upserts++ === 0,
         company_name: 'Buyer Co',
       }),
-      deliverMessage,
     },
   };
 }
 
-test('inbound retry reconciles duplicate atomic chat append then retries email alert', async () => {
+test('inbound retry reconciles duplicate atomic chat append without synchronous email send', async () => {
   let sends = 0;
-  const fixture = retryDependencies(async () => {
+  const fixture = retryDependencies();
+  fixture.dependencies.deliverMessage = async () => {
     sends += 1;
-    if (sends === 1) throw new Error('response_lost_after_atomic_insert');
     return { ok: true };
-  });
-  await assert.rejects(routeInboundMessageReply({}, input, fixture.dependencies), /response_lost/);
+  };
+  assert.deepEqual(await routeInboundMessageReply({}, input, fixture.dependencies), { routed: true, duplicate: false });
   assert.deepEqual(await routeInboundMessageReply({}, input, fixture.dependencies), { routed: true, duplicate: true });
   assert.equal(fixture.counters.upserts, 2);
-  assert.equal(sends, 2);
+  assert.equal(sends, 0);
 });
 
-test('inbound email delivery failure remains retryable after atomic chat append', async () => {
-  let sends = 0;
-  const fixture = retryDependencies(async () => {
-    sends += 1;
-    return sends > 1 ? { ok: true } : { ok: false, error: 'inbound_delivery_failed' };
-  });
-  await assert.rejects(routeInboundMessageReply({}, input, fixture.dependencies), /inbound_delivery_failed/);
-  assert.deepEqual(await routeInboundMessageReply({}, input, fixture.dependencies), { routed: true, duplicate: true });
-  assert.equal(fixture.counters.upserts, 2);
-  assert.equal(sends, 2);
+test('inbound routing fails before upsert when durable readiness is unavailable', async () => {
+  let upserts = 0;
+  const fixture = retryDependencies();
+  fixture.dependencies.sb = { rpc: async () => ({ error: new Error('not ready') }) };
+  fixture.dependencies.upsertMessage = async () => { upserts += 1; };
+  await assert.rejects(routeInboundMessageReply({}, input, fixture.dependencies), (error) => (
+    error.code === 'durable_email_effects_not_ready'
+  ));
+  assert.equal(upserts, 0);
 });

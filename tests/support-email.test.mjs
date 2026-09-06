@@ -51,6 +51,7 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
       sent = options;
       return { ok: true, providerMessageId: 'cf-provider-out-2' };
     },
+    prepareDelivery: async (_sb, _id, envelope) => envelope,
     saveDelivery: async (_sb, input) => { saved = input; },
   });
 
@@ -134,6 +135,7 @@ test('buyer message emails opted-in admins through the same message-addressed th
       return { ok: true, providerMessageId: 'cf-provider-out-3' };
     },
     saveDelivery: async () => {},
+    prepareDelivery: async (_sb, _id, envelope) => envelope,
   });
   assert.equal(result.ok, true);
   assert.deepEqual(sent.to, ['support@masest.co']);
@@ -141,6 +143,39 @@ test('buyer message emails opted-in admins through the same message-addressed th
   assert.match(sent.subject, /^MASEST support · Northwind HVAC · Order VK-1042$/);
   assert.deepEqual(sent.emailHeaders, {});
   assert.match(sent.html, /Can you confirm tracking\?/);
+});
+
+test('support retry reuses the first persisted envelope after context changes', async () => {
+  let persisted;
+  const requests = [];
+  const base = { id: MESSAGE_ID, company_id: COMPANY_ID, sender_role: 'staff', recipient_user_id: BUYER_ID,
+    order_id: ORDER_ID, body: 'Original support update', company_name: 'Original Co' };
+  const dependencies = {
+    buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
+    replyAddress: async () => 'reply+stable@reply.masest.co',
+    orderContext: async () => ({ id: ORDER_ID, reference: 'ORIGINAL-ORDER', status: 'shipped' }),
+    threadParent: async () => null,
+    prepareDelivery: async (_sb, _id, envelope) => persisted || (persisted = envelope),
+    sendEmail: async (_env, options) => { requests.push(options); return { ok: true, providerMessageId: `provider-${requests.length}` }; },
+    saveDelivery: async () => {},
+  };
+  await deliverSupportMessageEmail({}, {}, base, dependencies);
+  await deliverSupportMessageEmail({}, {}, { ...base, body: 'Changed after retry', company_name: 'Changed Co' }, dependencies);
+  assert.deepEqual(requests[1], requests[0]);
+});
+
+test('support envelope storage is kept on the private effect preparation seam', async () => {
+  const migration = await (await import('node:fs/promises')).readFile(
+    new URL('../supabase/migrate-support-email-envelope-2026-09-05.sql', import.meta.url), 'utf8',
+  );
+  assert.match(migration, /alter table public\.integration_effects[\s\S]+delivery_request/);
+  assert.doesNotMatch(migration, /alter table public\.messages[\s\S]+email_delivery_request/);
+  assert.match(migration, /revoke all on function public\.prepare_support_email_delivery/);
+  assert.match(migration, /grant execute on function public\.prepare_support_email_delivery[^\n]+ to service_role/);
+  const durable = await (await import('node:fs/promises')).readFile(
+    new URL('../supabase/migrate-durable-support-message-effects-2026-09-05.sql', import.meta.url), 'utf8',
+  );
+  assert.match(durable, /to_regprocedure\('public\.prepare_support_email_delivery\(uuid,jsonb\)'\)/);
 });
 
 test('customer and staff email replies append through canonical chat with exact linked order', async () => {
@@ -214,8 +249,7 @@ test('customer and staff email replies append through canonical chat with exact 
       upserted.emailReferences,
       `<root@example.com> <outbound-parent@example.com> <incoming-${senderRole}@example.com>`,
     );
-    assert.equal(delivered.sender_role, senderRole);
-    assert.equal(delivered.order_id, ORDER_ID);
+    assert.equal(delivered, undefined);
   }
 });
 

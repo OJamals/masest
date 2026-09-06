@@ -205,9 +205,50 @@ export async function materializeDeliverySource(sb, {
   category,
   metadata = {},
   emails = [],
+  leaseToken = null,
 }) {
   const normalized = normalizeDeliveryEmails(emails);
-  const { data, error } = await sb.rpc('materialize_newsletter_deliveries', {
+  const campaignSource = sourceType === 'newsletter' || sourceType === 'blog_post';
+  const validLease = typeof leaseToken === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(leaseToken);
+  if (campaignSource && !validLease) {
+    return { created: false, total: 0, error: new Error('campaign_preparation_lease_required') };
+  }
+  const summarize = async (rpc, args) => {
+    const { data, error } = await sb.rpc(rpc, args);
+    if (error) return { created: false, total: 0, error };
+    const row = firstRow(data) || {};
+    return {
+      created: Boolean(row.created),
+      total: Number(row.total_count) || 0,
+      error: null,
+    };
+  };
+  if (sourceType === 'newsletter') {
+    return summarize('materialize_newsletter_deliveries_fenced', {
+      p_source_type: sourceType,
+      p_source_id: String(sourceId),
+      p_parent_id: String(parentId),
+      p_subject: String(subject || ''),
+      p_html: String(html || ''),
+      p_category: String(category || ''),
+      p_metadata: metadata,
+      p_emails: normalized,
+      p_lease_token: leaseToken,
+    });
+  }
+  if (sourceType === 'blog_post') {
+    return summarize('materialize_blog_newsletter_deliveries_fenced', {
+      p_source_id: String(sourceId),
+      p_subject: String(subject || ''),
+      p_html: String(html || ''),
+      p_category: String(category || ''),
+      p_metadata: metadata,
+      p_emails: normalized,
+      p_lease_token: leaseToken,
+    });
+  }
+  return summarize('materialize_newsletter_deliveries', {
     p_source_type: sourceType,
     p_source_id: String(sourceId),
     p_parent_id: String(parentId),
@@ -217,13 +258,6 @@ export async function materializeDeliverySource(sb, {
     p_metadata: metadata,
     p_emails: normalized,
   });
-  if (error) return { created: false, total: 0, error };
-  const row = firstRow(data) || {};
-  return {
-    created: Boolean(row.created),
-    total: Number(row.total_count) || 0,
-    error: null,
-  };
 }
 
 function numericSummary(row = {}) {

@@ -15,13 +15,20 @@ test('newsletter signup writes canonical local consent', () => {
 
 test('quote nurture is consent-gated and starts only after durable intake', () => {
   const source = read('functions/api/quote.js');
-  assert.match(source, /from\s+['"]\.\.\/_lib\/marketing-nurture\.js['"]/);
-  assert.match(source, /if \(marketingConsent\)/);
-  const durable = source.indexOf('durable = await persistIntake');
-  const consent = source.indexOf('if (marketingConsent)');
-  const enroll = source.indexOf('enrollLead(env');
-  const response = source.lastIndexOf('return json(durable.duplicate');
-  assert.ok(durable > -1 && consent > durable && enroll > consent && response > enroll);
+  const effects = read('functions/_lib/integration-effects.js');
+  const quoteEmail = read('functions/_lib/quote-intake-effects.js');
+  const migration = read('supabase/migrate-durable-support-message-effects-2026-09-05.sql');
+  assert.match(source, /save_quote_intake/);
+  assert.match(source, /assert_email_effects_ready/);
+  assert.doesNotMatch(source, /sendEmail|enrollMarketingNurture/);
+  assert.match(effects, /quote_intake_email/);
+  assert.match(effects, /quote_nurture_enrollment/);
+  assert.match(effects, /deliverQuoteIntakeEmail/);
+  assert.match(effects, /enrollMarketingNurture/);
+  assert.match(quoteEmail, /category:\s*'lead_internal'/);
+  assert.match(quoteEmail, /category:\s*'lead_autoreply'/);
+  assert.match(migration, /quotes_intake_email_effect/);
+  assert.match(migration, /marketing_email_enabled/);
 });
 
 test('newsletter.html is wired to shared signup', () => {

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { createQuoteHandler } from "../functions/api/quote.js";
+import { deliverQuoteIntakeEmail } from "../functions/_lib/quote-intake-effects.js";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const json = (path) => JSON.parse(read(path));
@@ -32,6 +33,7 @@ test("program intake captures fleet, pilot, supply, and training context", () =>
   const contact = read("contact.html");
   const engagement = read("js/main/engagement.js");
   const quote = read("functions/api/quote.js");
+  const quoteEffects = read("functions/_lib/quote-intake-effects.js");
 
   assert.match(contact, /data-intent="program"[^>]*>[\s\S]*?Program/);
   assert.match(contact, /data-intent-group="program"/);
@@ -45,13 +47,12 @@ test("program intake captures fleet, pilot, supply, and training context", () =>
   }
   assert.match(engagement, /const INTENTS = \[[^\]]*"program"/);
   assert.match(engagement, /program_assets:\s*"Sites, vehicles, or technicians"/);
-  assert.match(quote, /program_services:\s*'Program services'/);
+  assert.match(quoteEffects, /program_services:\s*'Program services'/);
   assert.match(quote, /Confirm current chemical inventory, pilot scope, training, and supply needs\./);
 });
 
 test("program requests persist a useful CRM next step and readable field labels", async () => {
   let saved;
-  const emails = [];
   const handler = createQuoteHandler({
     rateLimit: async () => ({ ok: true }),
     verifyTurnstile: async () => ({ status: "unconfigured" }),
@@ -60,8 +61,6 @@ test("program requests persist a useful CRM next step and readable field labels"
       saved = input;
       return { quoteId: "22222222-2222-4222-8222-222222222222", duplicate: false };
     },
-    sendEmail: async (_env, message) => { emails.push(message); return { ok: true }; },
-    enrollMarketingNurture: async () => ({ ok: true }),
   });
   const request = new Request("https://masest.test/api/quote", {
     method: "POST",
@@ -89,8 +88,17 @@ test("program requests persist a useful CRM next step and readable field labels"
   assert.equal(saved.row.next_step, "Confirm current chemical inventory, pilot scope, training, and supply needs.");
   assert.equal(saved.row.payload.program_assets, "42 service vehicles");
   assert.deepEqual(saved.row.payload.program_services, ["Technician training", "Container-return plan"]);
+  const emails = [];
+  await deliverQuoteIntakeEmail({}, {}, {
+    id: "22222222-2222-4222-8222-222222222222",
+    ...saved.row,
+  }, "internal", {
+    sendEmail: async (_env, message) => { emails.push(message); return { ok: true, providerMessageId: "provider-message" }; },
+  });
   assert.match(emails[0].html, /Sites, vehicles, or technicians/);
   assert.match(emails[0].html, /Program services/);
+  assert.doesNotMatch(emails[0].html, /<td[^>]*>program_assets<\/td>/);
+  assert.doesNotMatch(emails[0].html, /<td[^>]*>program_services<\/td>/);
 });
 
 test("marine page promotes one bounded sportfisher field record from canonical proof data", () => {

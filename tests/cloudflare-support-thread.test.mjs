@@ -42,6 +42,7 @@ test('support delivery keeps provider identity separate from Cloudflare-generate
       retryable: false,
     }),
     saveDelivery: async (_sb, value) => { saved = value; },
+    prepareDelivery: async (_sb, _id, envelope) => envelope,
   });
   assert.equal(replyTarget, MESSAGE_ID);
   assert.deepEqual(saved, {
@@ -99,6 +100,7 @@ test('dashboard reply continues the latest inbound RFC email thread', async () =
       return { ok: true, providerMessageId: 'cf-provider-2' };
     },
     saveDelivery: async () => {},
+    prepareDelivery: async (_sb, _id, envelope) => envelope,
   });
   assert.equal(usedReferenceFilter, true);
   assert.equal(sent.emailHeaders['In-Reply-To'], '<buyer-reply@example.com>');

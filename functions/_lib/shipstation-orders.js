@@ -1,5 +1,4 @@
-import { adminClient, sendEmail } from './supabase.js';
-import { renderCommerceEmail } from './email-renderers.js';
+import { adminClient } from './supabase.js';
 import { recordAudit } from './audit.js';
 import { linkOrderProviderObject } from './order-integrations.js';
 import { recordOrderFinancialEntry } from './order-financial-ledger.js';
@@ -187,43 +186,6 @@ function allocatedOrderItems(order, itemAllocations) {
 // The constant is the known-good production warehouse, kept as a guard against a typo'd or
 // half-configured env. A deliberate override is allowed (account rebuild, second warehouse)
 // via SHIPSTATION_WAREHOUSE_ALLOW_OVERRIDE so a provider-side change is not an outage.
-async function sendReturnLabelEmail(env, order, { labelUrl, trackingNumber, returnLabelId, reason }) {
-  const to = text(order?.customer_email, 254);
-  if (!to) return false;
-  const appUrl = String(env.APP_URL || 'https://masest.co').replace(/\/+$/, '');
-  const reference = text(order?.order_number, 60) || text(order?.id, 40);
-  const rendered = renderCommerceEmail({
-    event: 'return_label',
-    appUrl,
-    order: {
-      ...order,
-      reference,
-      viewUrl: `${appUrl}/dashboard.html#orders`,
-      ctaText: labelUrl ? 'Print return label' : 'View your orders',
-    },
-    fulfillment: {
-      labelUrl,
-      trackingNumber,
-      carrier: order?.carrier || 'Return carrier',
-    },
-    notes: reason ? [`Reason on file: ${reason}`] : [],
-  });
-  try {
-    return await sendEmail(env, {
-      to: [to],
-      bcc: env.ORDER_NOTIFY_EMAIL ? [env.ORDER_NOTIFY_EMAIL] : [],
-      subject: rendered.subject,
-      html: rendered.html,
-      text: rendered.text,
-      category: 'order',
-      // One send per label, so a retried staff click cannot spam the buyer.
-      idempotencyKey: `return-label:${returnLabelId}`,
-    });
-  } catch {
-    return false;
-  }
-}
-
 function configuredWarehouseId(env) {
   const warehouseId = text(env?.SHIPSTATION_WAREHOUSE_ID, 100);
   if (!warehouseId) throw new ShipStationError('shipstation_warehouse_required');
@@ -906,7 +868,7 @@ async function defaultCreateReturn(env, labelId, body) {
 }
 
 async function defaultFinalizeReturn(env, input) {
-  const { data, error } = await adminClient(env).rpc('finalize_shipstation_return_label', {
+  const { data, error } = await adminClient(env).rpc('finalize_shipstation_return_label_with_email', {
     p_order_id: input.orderId,
     p_outbound_label_id: input.outboundLabelId,
     p_return_label_id: input.returnLabelId,
@@ -915,13 +877,14 @@ async function defaultFinalizeReturn(env, input) {
     p_charge_event: input.chargeEvent,
     p_tracking_number: input.trackingNumber || null,
     p_reason: input.reason,
+    p_label_url: input.labelUrl || null,
   });
   if (error || data?.applied !== true) throw new ShipStationError('shipping_database_failed');
   return data;
 }
 
 async function defaultFinalizeReturnReconciliation(env, input) {
-  const { data, error } = await adminClient(env).rpc('finalize_shipstation_return_label_reconciliation', {
+  const { data, error } = await adminClient(env).rpc('finalize_shipstation_return_label_reconciliation_with_email', {
     p_order_id: input.orderId,
     p_outbound_label_id: input.outboundLabelId,
     p_return_label_id: input.returnLabelId,
@@ -930,9 +893,15 @@ async function defaultFinalizeReturnReconciliation(env, input) {
     p_charge_event: input.chargeEvent,
     p_tracking_number: input.trackingNumber || null,
     p_reason: input.reason,
+    p_label_url: input.labelUrl || null,
   });
   if (error || data?.applied !== true) throw new ShipStationError('shipping_database_failed');
   return data;
+}
+
+async function defaultAssertOrderEmailEffectsReady(env) {
+  const { data, error } = await adminClient(env).rpc('assert_order_email_effects_ready');
+  if (error || data?.ready !== true) throw new ShipStationError('shipping_database_failed');
 }
 
 async function defaultPersistLabel(env, id, patch) {
@@ -2497,6 +2466,8 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
   const claimReturn = dependencies.claimReturn || defaultClaimReturn;
   const createReturn = dependencies.createReturn || defaultCreateReturn;
   const finalizeReturn = dependencies.finalizeReturn || defaultFinalizeReturn;
+  const assertOrderEmailEffectsReady = dependencies.assertOrderEmailEffectsReady
+    || defaultAssertOrderEmailEffectsReady;
   const persistReturn = dependencies.persistReturn || defaultPersistReturn;
   const linkProviderObject = dependencies.linkProviderObject || defaultLinkProviderObject;
   const recordFinancialEntry = dependencies.recordFinancialEntry || defaultRecordFinancialEntry;
@@ -2576,6 +2547,9 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
     throw new ShipStationError('shipstation_return_locked');
   }
 
+  // The durable enqueue RPC must be ready before purchasing a provider label.
+  await assertOrderEmailEffectsReady(env);
+
   const requestBody = {
     charge_event: 'carrier_default',
     label_layout: '4x6',
@@ -2649,6 +2623,7 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
           currency,
           chargeEvent,
           trackingNumber,
+          labelUrl: text(label?.label_download?.pdf || label?.label_download?.href || label?.label_download, 1000) || null,
           reason,
         });
         const status = 'return_label_created';
@@ -2688,17 +2663,9 @@ export async function createOrderReturnLabel(env, input, context = {}, dependenc
           recognition_state: returnRecognitionState(chargeEvent),
           reason,
         });
-        // A return label nobody can print is not a return. Send it to the buyer as soon as it
-        // exists; best-effort, because the label is already bought and paid for either way.
-        const emailed = await (dependencies.sendReturnLabelEmail || sendReturnLabelEmail)(env, order, {
-          labelUrl: text(label?.label_download?.pdf || label?.label_download?.href || label?.label_download, 1000) || null,
-          trackingNumber,
-          returnLabelId,
-          reason,
-        });
         return {
           already_created: false,
-          emailed,
+          email_queued: true,
           ...safeLabel(label),
           label_id: returnLabelId,
           outbound_label_id: outboundLabelId,
@@ -2855,6 +2822,7 @@ export async function reconcileOrderReturnLabel(env, input, context = {}, depend
     currency,
     chargeEvent,
     trackingNumber,
+    labelUrl: text(label?.label_download?.pdf || label?.label_download?.href, 1000) || null,
     reason: operationReason,
   });
   await linkProviderObject(env, {
@@ -2892,15 +2860,9 @@ export async function reconcileOrderReturnLabel(env, input, context = {}, depend
     charge_event: chargeEvent,
     reason: operationReason,
   });
-  const emailed = await (dependencies.sendReturnLabelEmail || sendReturnLabelEmail)(env, order, {
-    labelUrl: text(label?.label_download?.pdf || label?.label_download?.href, 1000) || null,
-    trackingNumber,
-    returnLabelId,
-    reason: operationReason,
-  });
   const result = {
     reconciled: true,
-    emailed,
+    email_queued: true,
     ...safeLabel(label),
     label_id: returnLabelId,
     outbound_label_id: outboundLabelId,

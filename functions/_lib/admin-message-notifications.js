@@ -24,8 +24,11 @@ export async function adminMessageRecipients(sb, kind, env, now = Date.now()) {
   const column = PREF_COLUMNS[kind];
   if (!column) return [];
   const { data, error } = await sb.from('profiles').select('id,is_staff,support_inbox_seen_at').eq(column, true);
-  if (error || !data?.length) return [];
-  const emails = await emailsByIds(sb, data.map((profile) => profile.id));
+  // Empty eligibility is a successful, terminal skip. A profile lookup outage
+  // must remain retryable in the integration-effect worker.
+  if (error) throw error;
+  if (!data?.length) return [];
+  const emails = await emailsByIds(sb, data.map((profile) => profile.id), { strict: true });
   const recipients = data.flatMap((profile) => {
     const email = emails[profile.id];
     const currentlyStaff = profile.is_staff === true || isStaffEmail(email, env);

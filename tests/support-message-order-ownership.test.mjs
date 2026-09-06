@@ -225,7 +225,9 @@ test('staff replies validate and retain active order context', () => {
   assert.match(source, /orderId:\s*orderContext\.orderId/);
   assert.match(source, /userId:\s*recipientUserId/);
   assert.match(source, /threadUserId:\s*recipientUserId/);
-  assert.match(publisher, /deliverSupportMessageEmail/);
+  assert.match(publisher, /assert_email_effects_ready/);
+  assert.match(publisher, /emailDelivery: \{ ok: true, queued: true \}/);
+  assert.doesNotMatch(publisher, /deliverSupportMessageEmail/);
   assert.match(supportEmail, /dashboard\.html\?order=\$\{encodeURIComponent\(order\.id\)\}#messages/);
   assert.doesNotMatch(source, /from\('messages'\)\.insert/);
 });

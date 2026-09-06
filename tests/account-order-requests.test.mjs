@@ -36,6 +36,7 @@ function requestClient(rpcResult, { companyId = COMPANY_ID } = {}) {
       throw new Error(`unexpected direct table write: ${table}`);
     },
     async rpc(name, args) {
+      if (name === 'assert_email_effects_ready') return { data: true, error: null };
       calls.push({ name, args });
       return rpcResult;
     },
@@ -62,7 +63,6 @@ function postRequest() {
 }
 
 test('buyer order request and linked support message use one atomic RPC', async () => {
-  let deliveredMessage = null;
   const sb = requestClient({
     data: {
       duplicate: false,
@@ -73,10 +73,6 @@ test('buyer order request and linked support message use one atomic RPC', async 
     error: null,
   });
   const response = await handlerFor(sb, {
-    deliverSupportMessageEmail: async (_env, _sb, message) => {
-      deliveredMessage = message;
-      return { ok: true };
-    },
   })({ request: postRequest(), env: {} });
 
   assert.equal(response.status, 201);
@@ -88,8 +84,7 @@ test('buyer order request and linked support message use one atomic RPC', async 
   const payload = await response.json();
   assert.equal(payload.request.order_id, ORDER_ID);
   assert.equal(payload.chat_linked, true);
-  assert.equal(deliveredMessage.id, '66666666-6666-4666-8666-666666666666');
-  assert.deepEqual(payload.email_delivery, { ok: true });
+  assert.deepEqual(payload.email_delivery, { ok: true, queued: true });
 });
 
 test('buyer order request cannot report success when atomic chat handoff fails', async () => {

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -14,6 +15,8 @@ import {
   scheduleMarketingDeliveryWork,
 } from '../workers/marketing-email/src/core.js';
 import { runMarketingSchedule } from '../workers/marketing-email/src/index.js';
+
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('marketing queue jobs are versioned, bounded, and contain no recipient data', () => {
   assert.deepEqual(MARKETING_DELIVERY_SOURCE_TYPES, [
@@ -94,6 +97,16 @@ test('scheduler producer emits one PII-free global delivery sweep', async () => 
   });
   assert.deepEqual(result, { ok: true, queued: true });
   assert.deepEqual(sent, [{ version: 1, kind: 'marketing_delivery.sweep' }]);
+});
+
+test('worker owns the five-minute newsletter sweep while GHA remains manual fallback', () => {
+  const worker = read('workers/marketing-email/src/index.js');
+  const workflow = read('.github/workflows/newsletter-cron.yml');
+  assert.match(worker, /sweepNewsletterPreparation/);
+  assert.match(worker, /recordRun\(sb, 'newsletter_sweep'/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /schedule:/);
+  assert.doesNotMatch(workflow, /cron:/);
 });
 
 function queueMessage(body) {
@@ -261,12 +274,18 @@ test('malformed Queue jobs are poison ACKed; scheduler emits one consent wake an
 test('six-hour suppression reconciliation does not duplicate five-minute Queue wakes', async () => {
   let suppressionRuns = 0;
   let deliverySchedules = 0;
+  const automationRows = [];
   const dependencies = {
-    createClient: () => ({ marker: 'db' }),
+    createClient: () => ({
+      from() {
+        return { insert: async (row) => { automationRows.push(row); return { error: null }; } };
+      },
+    }),
     syncSuppressions: async () => {
       suppressionRuns += 1;
       return { ok: true, count: 0 };
     },
+    sweep: async () => ({ ok: true, queued: [], failed: [], drained: [] }),
     schedule: async () => {
       deliverySchedules += 1;
       return ['newsletter'];
@@ -282,8 +301,37 @@ test('six-hour suppression reconciliation does not duplicate five-minute Queue w
 
   assert.deepEqual(
     await runMarketingSchedule({ cron: '*/5 * * * *' }, {}, dependencies),
-    { suppression: null, queued: ['newsletter'] },
+    {
+      suppression: null,
+      campaignSweep: { ok: true, queued: [], failed: [], drained: [] },
+      queued: ['newsletter'],
+    },
   );
   assert.equal(suppressionRuns, 1);
   assert.equal(deliverySchedules, 1);
+  assert.deepEqual(automationRows.map(({ job, ok }) => ({ job, ok })), [{ job: 'newsletter_sweep', ok: true }]);
+});
+
+test('five-minute campaign sweep failure propagates after delivery recovery is queued', async () => {
+  const automationRows = [];
+  let deliverySchedules = 0;
+  const result = { ok: false, error: 'newsletter_delivery_source_lookup_failed', queued: [], failed: [{ id: 'campaign-1', error: 'newsletter_delivery_source_lookup_failed', retryable: true }], drained: [] };
+  const sb = {
+    from() {
+      return { insert: async (row) => { automationRows.push(row); return { error: null }; } };
+    },
+  };
+
+  await assert.rejects(
+    runMarketingSchedule({ cron: '*/5 * * * *' }, {}, {
+      createClient: () => sb,
+      sweep: async () => result,
+      schedule: async () => { deliverySchedules += 1; return ['all']; },
+    }),
+    /newsletter_delivery_source_lookup_failed/,
+  );
+  assert.equal(deliverySchedules, 1, 'delivery and consent queueing must continue after campaign failure');
+  assert.deepEqual(automationRows.map(({ job, ok, error_code }) => ({ job, ok, error_code })), [{
+    job: 'newsletter_sweep', ok: false, error_code: 'newsletter_delivery_source_lookup_failed',
+  }]);
 });

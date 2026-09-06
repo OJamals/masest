@@ -142,14 +142,18 @@ export async function requireStaff(request, env) {
 
 // Resolve auth emails for a known set of user ids via getUserById — O(ids), not
 // O(all-users). Best-effort: failed lookups are skipped. Returns { [id]: email }.
-export async function emailsByIds(sb, ids) {
+export async function emailsByIds(sb, ids, { strict = false } = {}) {
   const unique = [...new Set((ids || []).filter(Boolean))];
   const out = {};
   await Promise.all(unique.map(async (id) => {
     try {
-      const { data } = await sb.auth.admin.getUserById(id);
+      const { data, error } = await sb.auth.admin.getUserById(id);
+      if (error && strict) throw error;
       if (data?.user?.email) out[id] = data.user.email;
-    } catch { /* skip unresolved id */ }
+    } catch (error) {
+      if (strict) throw error;
+      /* skip unresolved id */
+    }
   }));
   return out;
 }
@@ -200,22 +204,31 @@ export function sanitizeNotificationPrefs(body) {
 // Member email addresses for a company. Best-effort, deduped. When `category` is
 // given, members who opted out of that category (notify_* === false) are excluded;
 // a missing/null preference counts as opted-in.
-export async function companyEmails(sb, companyId, category) {
+export async function companyEmails(sb, companyId, category, { strict = false } = {}) {
   if (!companyId) return [];
   const prefCol = NOTIFY_PREF_COLUMN[category];
   const cols = prefCol ? `id,${prefCol}` : 'id';
-  const { data: profiles } = await sb.from('profiles').select(cols).eq('company_id', companyId);
+  let profiles;
+  try {
+    const result = await sb.from('profiles').select(cols).eq('company_id', companyId);
+    if (result.error) throw result.error;
+    profiles = result.data;
+  } catch (error) {
+    if (strict) throw error;
+    return [];
+  }
   const ids = (profiles || [])
     .filter((p) => !prefCol || p[prefCol] !== false)
     .map((p) => p.id);
   if (!ids.length) return [];
-  const byId = await emailsByIds(sb, ids);
+  const byId = await emailsByIds(sb, ids, { strict });
   return [...new Set(Object.values(byId))];
 }
 
 // Transactional delivery uses the private Cloudflare Worker service binding below.
-// Load the subset of `emails` that are suppressed. Fails open (empty Set on error).
-// Returns Map<emailLower, Set<stream>> for the given addresses. Fails open (empty Map).
+// Load the subset of `emails` that are suppressed.
+// Returns Map<emailLower, Set<stream>> for the given addresses. Callers deciding
+// whether to send pass strict:true so a lookup outage cannot become a send.
 export async function loadSuppressed(env, emails, { strict = false } = {}) {
   try {
     const sb = adminClient(env);
@@ -337,12 +350,20 @@ export async function sendEmailResult(env, {
   const bindingFetch = emailConfigured(env) ? env.EMAIL_SERVICE.fetch.bind(env.EMAIL_SERVICE) : null;
   const serviceFetch = bindingFetch || (fetchImpl !== globalThis.fetch ? fetchImpl : null);
   if (policy.stream === 'transactional' && !serviceFetch) {
-    return { ok: false, retryable: false, error: 'email_not_configured' };
+    // A rollout can briefly expose the worker before its binding is attached.
+    // Keep durable intent retryable so the dispatcher does not consume it.
+    return { ok: false, retryable: true, error: 'email_not_configured' };
   }
   let suppressed;
   try {
-    suppressed = await suppressionLoader(env, [...allTo, ...allBcc], { strict: false });
+    suppressed = await suppressionLoader(env, [...allTo, ...allBcc], { strict: true });
   } catch {
+    await logEmailEvent(env, {
+      to_email: logTo, category, subject, status: 'failed', error: 'suppression_check_failed',
+    });
+    return { ok: false, retryable: true, error: 'suppression_check_failed' };
+  }
+  if (!(suppressed instanceof Map)) {
     await logEmailEvent(env, {
       to_email: logTo, category, subject, status: 'failed', error: 'suppression_check_failed',
     });

@@ -115,7 +115,10 @@ export async function onRequest({ request, env }) {
         orderId: orderContext.orderId,
         source,
       });
-    } catch {
+    } catch (error) {
+      if (error?.code === 'durable_email_effects_not_ready') {
+        return json(503, { error: 'durable_email_effects_not_ready', retryable: true });
+      }
       return json(500, { error: 'server_error' });
     }
     const { message: data, emailDelivery } = publication;

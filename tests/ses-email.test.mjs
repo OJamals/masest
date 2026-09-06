@@ -196,6 +196,37 @@ test('SES marketing send fails closed for invalid shape, missing placeholders, a
   assert.equal((await sendSesMarketingEmail(ENV, { ...base, idempotencyKey: '' })).error, 'marketing_idempotency_key_required');
 });
 
+test('SES marketing send enforces canonical marketing categories', async () => {
+  let sends = 0;
+  const base = {
+    to: 'reader@example.com',
+    subject: 'Briefing',
+    html: '<a href="{{unsubscribe_url}}">Unsubscribe</a>',
+    idempotencyKey: 'stable-key',
+    signer: fakeSigner([]),
+    fetchImpl: async () => { sends += 1; return Response.json({ MessageId: 'should-not-send' }); },
+  };
+  assert.equal((await sendSesMarketingEmail(ENV, { ...base, category: null })).error, 'ses_marketing_category_required');
+  assert.equal((await sendSesMarketingEmail(ENV, { ...base })).error, 'ses_marketing_category_required');
+  assert.equal((await sendSesMarketingEmail(ENV, { ...base, category: 'order' })).error, 'ses_marketing_category_required');
+  assert.equal((await sendSesMarketingEmail(ENV, { ...base, category: 'unknown' })).error, 'ses_marketing_category_required');
+  assert.equal(sends, 0);
+});
+
+test('SES accepts lead_nurture through the canonical marketing policy', async () => {
+  const result = await sendSesMarketingEmail(ENV, {
+    to: 'reader@example.com',
+    subject: 'Next steps',
+    html: '<a href="{{unsubscribe_url}}">Unsubscribe</a>',
+    category: 'lead_nurture',
+    idempotencyKey: 'nurture-1',
+    signer: fakeSigner([]),
+    fetchImpl: async () => Response.json({ MessageId: 'nurture-message' }),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.providerMessageId, 'nurture-message');
+});
+
 test('SES classifies explicit provider failures as retryable but network ambiguity as terminal', async () => {
   const base = {
     to: 'reader@example.com',

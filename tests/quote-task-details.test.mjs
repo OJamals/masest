@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createQuoteHandler } from '../functions/api/quote.js';
+import { deliverQuoteIntakeEmail } from '../functions/_lib/quote-intake-effects.js';
 import { QUOTE_TASK_DETAILS } from '../js/quote-task-details.js';
 
 function quoteRequest(body) {
@@ -28,11 +29,6 @@ test('quote task economics and operating boundaries are normalized, persisted, a
       inserts.push(row);
       return { quoteId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', duplicate: false };
     },
-    sendEmail: async (_env, message) => {
-      emails.push(message);
-      return { ok: true };
-    },
-    enrollMarketingNurture: async () => {},
   });
 
   const response = await handler({
@@ -77,8 +73,15 @@ test('quote task economics and operating boundaries are normalized, persisted, a
   assert.equal(inserts[0].payload.utm_source, 'industry-page', 'existing attribution must survive');
   assert.equal(inserts[0].current_chemical, undefined, 'task details belong in the existing payload');
 
+  const quote = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', ...inserts[0] };
+  const sendEmail = async (_env, message) => {
+    emails.push(message);
+    return { ok: true, providerMessageId: `message-${emails.length}` };
+  };
+  await deliverQuoteIntakeEmail({ SALES_EMAIL: 'sales@example.com' }, {}, quote, 'internal', { sendEmail });
+  await deliverQuoteIntakeEmail({}, {}, quote, 'autoreply', { sendEmail });
   assert.equal(emails.length, 2);
-  const internalHtml = emails[0].html;
+  const internalHtml = emails.find(({ category }) => category === 'lead_internal').html;
   for (const label of [
     'Cleaner used now',
     'Current mix',
@@ -92,6 +95,8 @@ test('quote task economics and operating boundaries are normalized, persisted, a
   ]) {
     assert.match(internalHtml, new RegExp(label));
   }
+  assert.doesNotMatch(internalHtml, /<td[^>]*>current_chemical<\/td>/);
+  assert.doesNotMatch(internalHtml, /<td[^>]*>labor_per_task<\/td>/);
   assert.doesNotMatch(internalHtml, /<img src=x/);
   assert.match(internalHtml, /&lt;img src=x onerror=alert\(1\)&gt;/);
 });

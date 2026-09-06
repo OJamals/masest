@@ -182,6 +182,7 @@ test('downloadOrderLabel proxies allowlisted bytes with no-store and no provider
     {},
     {
       loadOrder: async () => baseOrder,
+      assertOrderEmailEffectsReady: async () => {},
       getLabel: async () => { providerReads += 1; return providerLabel; },
       fetchDocument: async (url, options) => {
         fetched = { url, options };
@@ -434,6 +435,7 @@ test('createOrderReturnLabel atomically claims, links, and records pending carri
     { user: { id: 'staff-1' }, role: 'owner' },
     {
       loadOrder: async () => baseOrder,
+      assertOrderEmailEffectsReady: async () => {},
       claimReturn: async (_env, orderId, labelId) => { claim = { orderId, labelId }; return true; },
       createReturn: async (_env, labelId, body) => {
         providerCall = { labelId, body };
@@ -466,6 +468,32 @@ test('createOrderReturnLabel atomically claims, links, and records pending carri
   assert.equal(finance[0].amount, 9.87);
 });
 
+test('createOrderReturnLabel fails closed before provider purchase when durable enqueue RPC is unavailable', async () => {
+  let providerCalls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ message: 'missing migration' }), {
+    status: 503, headers: { 'content-type': 'application/json' },
+  });
+  try {
+    await assert.rejects(
+      createOrderReturnLabel(
+        { SHIPSTATION_API_KEY: 'secret', SUPABASE_URL: 'https://stub.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'service' },
+        { order_id: ORDER_ID, label_id: 'se-label-1', confirm: true, reason: 'Customer requested return' },
+        {},
+        {
+          loadOrder: async () => baseOrder,
+          claimReturn: async () => true,
+          createReturn: async () => { providerCalls += 1; return providerLabel; },
+        },
+      ),
+      (error) => error.code === 'shipping_database_failed',
+    );
+    assert.equal(providerCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('createOrderReturnLabel locks an invalid provider response for reconciliation', async () => {
   let patch;
   await assert.rejects(
@@ -475,6 +503,7 @@ test('createOrderReturnLabel locks an invalid provider response for reconciliati
       {},
       {
         loadOrder: async () => baseOrder,
+        assertOrderEmailEffectsReady: async () => {},
         claimReturn: async () => true,
         createReturn: async () => ({ is_return_label: true }),
         persistReturn: async (_env, _id, value) => { patch = value; },
@@ -604,6 +633,7 @@ test('createOrderReturnLabel ignores an old-outbound return link after replaceme
     { user: { id: 'staff-1' } },
     {
       loadOrder: async () => replacementOrder,
+      assertOrderEmailEffectsReady: async () => {},
       claimReturn: async () => { claims += 1; return true; },
       createReturn: async (_env, labelId) => {
         providerCalls += 1;
@@ -666,6 +696,7 @@ test('createOrderReturnLabel targets an explicit older split without using the l
     { user: { id: 'staff-1', email: 'staff@example.com' } },
     {
       loadOrder: async () => splitOrder,
+      assertOrderEmailEffectsReady: async () => {},
       claimReturn: async (_env, orderId, labelId, detail) => {
         assert.equal(orderId, ORDER_ID);
         assert.equal(labelId, 'se-label-1');

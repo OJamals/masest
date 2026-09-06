@@ -20,6 +20,8 @@ test('email category policy owns provider + preference semantics', () => {
   assert.equal(categoryStream('lead_followup'), 'transactional');
   assert.equal(categoryStream('lead_followup_reminder'), 'transactional');
   assert.equal(categoryStream('billing'), 'transactional');
+  assert.equal(categoryStream('lead_nurture'), 'marketing');
+  assert.ok(MARKETING_CATEGORIES.has('lead_nurture'));
   assert.equal(categoryStream('unknown'), null);
   assert.ok(MARKETING_CATEGORIES.has('review_request'));
   assert.equal(Object.isFrozen(EMAIL_CATEGORY_POLICY), true);

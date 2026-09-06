@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {
   renderNewsletterBody, renderNewsletterEmail, resolveAudience, nextRunAt, dueNewsletters,
 } from '../functions/_lib/newsletter.js';
+import { unsentPosts } from '../functions/_lib/blog-newsletter.js';
 import { loadMarketingAudience } from '../functions/_lib/marketing-subscribers.js';
 import { allUserEmails, sendEmailResult } from '../functions/_lib/supabase.js';
+import { materializeDeliverySource } from '../functions/_lib/newsletter-delivery.js';
 
 test('renderNewsletterBody: markdown constructs', () => {
   const html = renderNewsletterBody([
@@ -176,6 +178,19 @@ test('dueNewsletters: scheduled + next_run_at in the past', () => {
   assert.deepEqual(dueNewsletters(rows, now).map((n) => n.id), [1, 4]);
 });
 
+test('unsentPosts: failed preparation is retryable while active and completed ledger rows stay excluded', () => {
+  const posts = [{ slug: 'failed' }, { slug: 'active' }, { slug: 'sent' }, { slug: 'legacy' }];
+  assert.deepEqual(
+    unsentPosts(posts, [
+      { slug: 'failed', provider_status: 'failed_to_queue' },
+      { slug: 'active', provider_status: 'queueing', preparation_lease_expires_at: '2099-01-01T00:00:00Z' },
+      { slug: 'sent', provider_status: 'complete' },
+      { slug: 'legacy' },
+    ]).map((post) => post.slug),
+    ['failed'],
+  );
+});
+
 test('sendEmailResult routes marketing through the durable queue only', async () => {
   let calls = 0;
   const result = await sendEmailResult({}, {
@@ -193,6 +208,56 @@ test('sendEmailResult routes marketing through the durable queue only', async ()
     retryable: false,
     error: 'marketing_queue_required',
   });
+});
+
+test('materializeDeliverySource fences campaigns and omits lease fields for legacy sources', async () => {
+  const calls = [];
+  const sb = {
+    async rpc(name, args) {
+      calls.push({ name, args });
+      return { data: [{ created: true, total_count: 1 }], error: null };
+    },
+  };
+  const leaseToken = '11111111-1111-4111-8111-111111111111';
+
+  const campaign = await materializeDeliverySource(sb, {
+    sourceType: 'newsletter',
+    sourceId: 'campaign:occurrence',
+    parentId: 'campaign-id',
+    subject: 'Briefing',
+    html: '<p>Hello</p>',
+    category: 'newsletter',
+    emails: ['buyer@example.test'],
+    leaseToken,
+  });
+  assert.deepEqual(campaign, { created: true, total: 1, error: null });
+  assert.equal(calls[0].name, 'materialize_newsletter_deliveries_fenced');
+  assert.equal(calls[0].args.p_lease_token, leaseToken);
+
+  const legacy = await materializeDeliverySource(sb, {
+    sourceType: 'order',
+    sourceId: 'order-1',
+    parentId: 'order-1',
+    subject: 'Order update',
+    html: '<p>Ready</p>',
+    category: 'order',
+    emails: ['buyer@example.test'],
+    leaseToken: 'unexpected-non-uuid-token',
+  });
+  assert.deepEqual(legacy, { created: true, total: 1, error: null });
+  assert.equal(calls[1].name, 'materialize_newsletter_deliveries');
+  assert.equal(Object.hasOwn(calls[1].args, 'p_lease_token'), false);
+
+  const rejected = await materializeDeliverySource(sb, {
+    sourceType: 'blog_post',
+    sourceId: 'post-1',
+    subject: 'Post',
+    html: '<p>Post</p>',
+    category: 'newsletter',
+    leaseToken: '11111111-1111-1111-1111-111111111111',
+  });
+  assert.equal(rejected.error?.message, 'campaign_preparation_lease_required');
+  assert.equal(calls.length, 2);
 });
 
 test('strict audience reads distinguish source failure from an empty audience', async () => {

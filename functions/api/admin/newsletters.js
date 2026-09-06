@@ -1,137 +1,23 @@
 // /api/admin/newsletters — staff composer backed by Supabase + Cloudflare Queue + SES.
 import { adminClient, requireStaff, json, readBody } from '../../_lib/supabase.js';
-import { renderNewsletterEmail, nextRunAt, dueNewsletters } from '../../_lib/newsletter.js';
-import {
-  materializeDeliverySource,
-} from '../../_lib/newsletter-delivery.js';
+import { renderNewsletterEmail } from '../../_lib/newsletter.js';
+import { materializeDeliverySource } from '../../_lib/newsletter-delivery.js';
 import { enqueueMarketingDelivery } from '../../_lib/marketing-delivery-queue.js';
-import { loadMarketingAudience } from '../../_lib/marketing-subscribers.js';
+import {
+  claimNewsletter,
+  recoverNewsletterPreparation,
+  queueNewsletter,
+  sweepNewsletterPreparation,
+} from '../../_lib/newsletter-preparation.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { timingSafeEqual } from '../../_lib/secret.js';
 import { recordAutomationRun } from '../../_lib/automation-runs.js';
 
-const SENDABLE_NEWSLETTER_STATES = ['draft', 'scheduled', 'failed'];
-
-export async function claimNewsletter(sb, id, allowedStatuses = SENDABLE_NEWSLETTER_STATES) {
-  const statuses = [...new Set(allowedStatuses)].filter((status) => typeof status === 'string' && status);
-  if (!id || !statuses.length) return { newsletter: null, error: new Error('newsletter_claim_invalid') };
-  const { data, error } = await sb.from('newsletters')
-    .update({
-      status: 'queueing',
-      provider_error: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .in('status', statuses)
-    .select('*')
-    .maybeSingle();
-  return { newsletter: data || null, error: error || null };
-}
-
-function sourceIdFor(newsletter) {
-  if (newsletter.schedule?.mode !== 'recurring') return String(newsletter.id);
-  const occurrence = newsletter.schedule.next_run_at || newsletter.schedule.send_at || newsletter.updated_at;
-  return `${newsletter.id}:${String(occurrence || 'recurring')}`;
-}
-
-async function failQueue(sb, newsletterId, error) {
-  await sb.from('newsletters').update({
-    provider: 'ses',
-    status: 'failed',
-    provider_status: 'failed_to_queue',
-    provider_error: String(error || 'newsletter_queue_failed').slice(0, 500),
-    updated_at: new Date().toISOString(),
-  }).eq('id', newsletterId).eq('status', 'queueing');
-}
-
-async function queueNewsletter(env, sb, newsletter, { scheduled = false } = {}) {
-  let emails;
-  try {
-    emails = await loadMarketingAudience(sb);
-  } catch (error) {
-    await failQueue(sb, newsletter.id, error.message);
-    return { error: error.message || 'marketing_audience_unavailable', retryable: true };
-  }
-  const rendered = renderNewsletterEmail(newsletter);
-  const sourceId = sourceIdFor(newsletter);
-  const nextSchedule = scheduled && newsletter.schedule?.mode === 'recurring'
-    ? { ...newsletter.schedule, next_run_at: nextRunAt(newsletter.schedule, Date.now()) }
-    : null;
-  const materialized = await materializeDeliverySource(sb, {
-    sourceType: 'newsletter',
-    sourceId,
-    parentId: newsletter.id,
-    subject: rendered.subject,
-    html: rendered.html,
-    category: 'newsletter',
-    metadata: { next_schedule: nextSchedule },
-    emails,
-  });
-  if (materialized.error) {
-    await failQueue(sb, newsletter.id, 'newsletter_delivery_materialize_failed');
-    return { error: 'newsletter_delivery_materialize_failed', retryable: true };
-  }
-
-  const empty = materialized.total === 0;
-  const { error: updateError } = await sb.from('newsletters').update({
-    provider: 'ses',
-    provider_campaign_id: null,
-    provider_message_id: null,
-    provider_template_id: null,
-    provider_status: empty ? 'complete' : 'processing',
-    provider_error: null,
-    status: empty ? (nextSchedule ? 'scheduled' : 'sent') : 'sending',
-    schedule: nextSchedule || newsletter.schedule || {},
-    delivery_source_id: empty ? null : sourceId,
-    delivery_summary: empty ? {
-      total: 0, pending: 0, processing: 0, retry: 0,
-      sent: 0, suppressed: 0, dead: 0, terminal: 0, complete: true,
-    } : {},
-    recipient_count: 0,
-    ...(empty && !nextSchedule ? { sent_at: new Date().toISOString() } : {}),
-    updated_at: new Date().toISOString(),
-  }).eq('id', newsletter.id).eq('status', 'queueing');
-  if (updateError) return { error: 'newsletter_queue_state_save_failed', retryable: true };
-
-  let wake = { ok: true, queued: false };
-  if (!empty) {
-    wake = await enqueueMarketingDelivery(env, { sourceType: 'newsletter', sourceId });
-  }
-  return {
-    queued: !empty,
-    provider: 'ses',
-    source_id: sourceId,
-    total: materialized.total,
-    processed: 0,
-    queue_wake: wake.ok,
-    ...(wake.ok ? {} : { queue_error: wake.error, retryable: wake.retryable }),
-    provider_status: empty ? 'complete' : 'processing',
-  };
-}
+export { claimNewsletter, recoverNewsletterPreparation, queueNewsletter };
 
 async function sweepDue(env) {
-  const sb = adminClient(env);
-  const { data, error } = await sb.from('newsletters').select('*').eq('status', 'scheduled');
-  if (error) return json(503, { error: 'unavailable' });
-  const queued = [];
-  const failed = [];
-  for (const candidate of dueNewsletters(data || [], Date.now())) {
-    const claim = await claimNewsletter(sb, candidate.id, ['scheduled']);
-    if (claim.error) {
-      failed.push({ id: candidate.id, error: 'newsletter_claim_failed', retryable: true });
-      continue;
-    }
-    if (!claim.newsletter) continue;
-    const result = await queueNewsletter(env, sb, claim.newsletter, { scheduled: true });
-    if (result.error) failed.push({ id: candidate.id, ...result });
-    else queued.push({ id: candidate.id, ...result });
-  }
-  return json(failed.length ? 503 : 200, {
-    ok: !failed.length,
-    queued,
-    failed,
-    drained: [],
-  });
+  const result = await sweepNewsletterPreparation(env);
+  return json(result.ok ? 200 : 503, result);
 }
 
 export async function onRequest({ request, env }) {

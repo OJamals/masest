@@ -13,6 +13,10 @@ import { computeRefund, qboFullDocumentRefund } from './refund.js';
 import { linkOrderProviderObject } from './order-integrations.js';
 import { getAccessToken, voidQboInvoice } from './qbo.js';
 import { voidOrderLabel } from './shipstation-orders.js';
+import { deliverSupportMessageEmail } from './support-email.js';
+import { deliverQuoteIntakeEmail } from './quote-intake-effects.js';
+import { enrollMarketingNurture } from './marketing-nurture.js';
+import { deliverOrderEmailEffect } from './order-email-effects.js';
 import Stripe from 'stripe';
 
 async function defaultCreateStripeRefund(env, { paymentIntent, amountCents, idempotencyKey }) {
@@ -77,6 +81,11 @@ const PAYLOAD_KEYS = Object.freeze({
   order_cancellation_email: new Set(['order_id', 'command_id', 'reason']),
   quote_message: new Set(['quote_id', 'company_id']),
   quote_offer_email: new Set(['quote_id', 'email', 'product']),
+  support_message_email: new Set(['message_id']),
+  quote_intake_email: new Set(['quote_id', 'kind']),
+  quote_nurture_enrollment: new Set(['quote_id', 'consent_at']),
+  order_tracking_email: new Set(['order_id', 'operation_id']),
+  return_label_email: new Set(['order_id', 'return_id']),
   qbo_change_projection: new Set([
     'realm_id',
     'entity_name',
@@ -113,6 +122,11 @@ const EFFECT_PROVIDERS = Object.freeze({
   order_cancellation_email: MASEST,
   quote_message: MASEST,
   quote_offer_email: MASEST,
+  support_message_email: MASEST,
+  quote_intake_email: MASEST,
+  quote_nurture_enrollment: MASEST,
+  order_tracking_email: MASEST,
+  return_label_email: MASEST,
 });
 
 function effect(effectKey, effectType, payload, dependsOnEffectKey = null) {
@@ -1049,6 +1063,65 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
   // sendEmailResult keeps the retryable/non-retryable distinction that the boolean
   // sendEmail throws away; handlers may still return their own {skipped} object.
   const send = dependencies.sendEmail || sendEmailResult;
+  if (effectRow.effect_type === 'support_message_email') {
+    if (effectRow.provider !== 'masest') throw errorWithCode('unsupported_integration_provider');
+    const messageId = String(effectRow.payload?.message_id || '').trim();
+    if (!messageId) throw errorWithCode('support_message_missing');
+    const { data: message, error } = await sb.from('messages').select('*').eq('id', messageId).maybeSingle();
+    if (error) throw errorWithCode('support_message_load_failed');
+    if (!message) throw errorWithCode('support_message_missing');
+    const delivery = await (dependencies.supportDelivery || deliverSupportMessageEmail)(env, sb, message, { sendEmail: send });
+    if (delivery?.skipped) return { providerRecorded: false, providerResult: delivery, skipped: true };
+    if (delivery?.ok) {
+      return {
+        providerRecorded: false,
+        providerResult: delivery.providerMessageId
+          ? { provider_message_id: String(delivery.providerMessageId).slice(0, 512) }
+          : {},
+        skipped: false,
+      };
+    }
+    if (delivery?.retryable === false) {
+      return { providerRecorded: false, providerResult: { skipped: delivery.error || 'support_email_not_deliverable' }, skipped: true };
+    }
+    throw errorWithCode('support_email_delivery_failed');
+  }
+  if (effectRow.effect_type === 'quote_intake_email') {
+    if (effectRow.provider !== 'masest') throw errorWithCode('unsupported_integration_provider');
+    const quoteId = String(effectRow.payload?.quote_id || '').trim();
+    const kind = String(effectRow.payload?.kind || '').trim();
+    if (!quoteId || !['internal', 'autoreply'].includes(kind)) throw errorWithCode('quote_intake_effect_invalid');
+    const quote = effectRow.source_snapshot;
+    if (!quote || String(quote.id) !== quoteId) throw errorWithCode('quote_intake_missing');
+    const delivery = await deliverQuoteIntakeEmail(env, sb, quote, kind, {
+      sendEmail: send,
+      salesRecipients: dependencies.salesRecipients,
+    });
+    if (delivery?.ok) return { providerRecorded: false, providerResult: delivery.providerMessageId ? { provider_message_id: delivery.providerMessageId } : {}, skipped: false };
+    if (delivery?.retryable === false) return { providerRecorded: false, providerResult: { skipped: delivery.error || 'quote_email_not_deliverable' }, skipped: true };
+    throw errorWithCode('quote_intake_email_failed');
+  }
+  if (effectRow.effect_type === 'quote_nurture_enrollment') {
+    if (effectRow.provider !== 'masest') throw errorWithCode('unsupported_integration_provider');
+    const quoteId = String(effectRow.payload?.quote_id || '').trim();
+    const quote = effectRow.source_snapshot;
+    if (!quote || String(quote.id) !== quoteId) throw errorWithCode('quote_nurture_missing');
+    if (quote.payload?.marketing_email_enabled !== true) return { providerRecorded: false, providerResult: { skipped: 'consent_required' }, skipped: true };
+    const result = await enrollMarketingNurture(env, sb, {
+      email: quote.email, quoteId: quote.id, consented: true,
+      consentAt: effectRow.payload?.consent_at,
+    });
+    if (result?.ok) return { providerRecorded: false, providerResult: { queued: Number(result.queued || 0) }, skipped: Boolean(result.skipped) };
+    if (result?.retryable === false) return { providerRecorded: false, providerResult: { skipped: result.error || 'nurture_not_deliverable' }, skipped: true };
+    throw errorWithCode('quote_nurture_failed');
+  }
+  if (effectRow.effect_type === 'order_tracking_email' || effectRow.effect_type === 'return_label_email') {
+    if (effectRow.provider !== 'masest') throw errorWithCode('unsupported_integration_provider');
+    const result = await deliverOrderEmailEffect({ env, sb, effect: effectRow }, { sendEmail: send });
+    if (result?.skipped) return { providerRecorded: false, providerResult: { skipped: result.skipped }, skipped: true };
+    if (result?.ok) return { providerRecorded: false, providerResult: result.providerMessageId ? { provider_message_id: result.providerMessageId } : {}, skipped: false };
+    throw errorWithCode('order_email_delivery_failed');
+  }
   const localProjectionRpc = {
     shipstation_tracking_projection: 'apply_shipstation_tracking_integration_effect',
     qbo_change_projection: 'apply_qbo_change_integration_effect',
@@ -1208,7 +1281,7 @@ function errorCode(error) {
 
 async function integrationEventForEffect(sb, effectRow) {
   const { data, error } = await sb.from('integration_events')
-    .select('provider,environment_or_tenant,provider_event_id,provider_event_type')
+    .select('provider,environment_or_tenant,provider_event_id,provider_event_type,metadata')
     .eq('id', effectRow.event_id)
     .maybeSingle();
   if (error || !data) throw errorWithCode('integration_event_not_found');

@@ -1,8 +1,7 @@
 // /api/quote - public contact/quote intake. A durable, idempotent lead record is the
 // acknowledgement boundary; email and nurture delivery happen only after that commit.
-import { adminClient, emailLayout, htmlEscape, json, sendEmail } from '../_lib/supabase.js';
+import { adminClient, json } from '../_lib/supabase.js';
 import { clientIp, rateLimit } from '../_lib/ratelimit.js';
-import { enrollMarketingNurture } from '../_lib/marketing-nurture.js';
 import {
   RequestBodyTooLargeError,
   readBoundedFormData,
@@ -17,33 +16,6 @@ const TASK_FIELD_LIMITS = Object.fromEntries(
   QUOTE_TASK_DETAILS.map(({ name, limit }) => [name, limit]),
 );
 
-const LABELS = {
-  name: 'Name',
-  company: 'Company',
-  email: 'Email',
-  phone: 'Phone',
-  type: 'Request type',
-  product: 'Product',
-  industry: 'Industry',
-  volume: 'Volume',
-  location: 'Location',
-  timeline: 'Timeline',
-  system: 'System / asset',
-  audit_timeframe: 'Preferred timeframe',
-  samples: 'Sample products',
-  ship_to: 'Ship-to address',
-  territory: 'Territory / region',
-  program_assets: 'Sites, vehicles, or technicians',
-  pilot_size: 'First pilot scope',
-  current_sku_count: 'Current chemical count',
-  monthly_usage: 'Estimated monthly usage',
-  preferred_packs: 'Preferred packs',
-  current_vendor: 'Current supplier or program',
-  program_services: 'Program services',
-  marketing_email_enabled: 'Marketing email consent',
-  ...Object.fromEntries(QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label])),
-  message: 'Notes',
-};
 
 function fieldValues(value) {
   return (Array.isArray(value) ? value : [value])
@@ -107,24 +79,6 @@ function priorityForScore(leadScore) {
   return 'low';
 }
 
-function salesRecipients(env) {
-  return String(env.SALES_EMAIL || env.ORDER_NOTIFY_EMAIL || env.CONTACT_EMAIL || env.ADMIN_EMAILS || env.ADMIN_EMAIL || 'matthew@masest.co')
-    .split(',')
-    .map((email) => email.trim())
-    .filter(Boolean);
-}
-
-function displayRows(payload) {
-  return Object.entries(payload)
-    .filter(([, value]) => String(Array.isArray(value) ? value.join(', ') : value || '').trim())
-    .map(([key, value]) => {
-      const label = LABELS[key] || key;
-      const display = Array.isArray(value) ? value.join(', ') : value;
-      return `<tr><td style="padding:6px 10px;color:#667">${htmlEscape(label)}</td><td style="padding:6px 10px">${htmlEscape(display)}</td></tr>`;
-    })
-    .join('');
-}
-
 function stableJson(value) {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -161,8 +115,6 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   const verifyCaptcha = dependencies.verifyTurnstile || verifyTurnstile;
   const getAdminClient = dependencies.adminClient || adminClient;
   const persistIntake = dependencies.saveIntake || saveQuoteIntake;
-  const sendMessage = dependencies.sendEmail || sendEmail;
-  const enrollLead = dependencies.enrollMarketingNurture || enrollMarketingNurture;
   const ct = request.headers.get('content-type') || '';
   const rl = await checkRateLimit(env, 'quote', clientIp(request), { limit: 8, windowSec: 60 });
   if (!rl.ok) return json(429, { error: 'rate_limited' }, { 'Retry-After': String(rl.retryAfter || 60) });
@@ -236,7 +188,7 @@ export async function handleQuote({ request, env }, dependencies = {}) {
     source: 'contact',
     status: 'new',
     lead_score: leadScore,
-    priority: priorityForScore(leadScore),
+    priority,
     pipeline_stage: pipelineStage,
     next_step: nextStep,
   };
@@ -244,6 +196,10 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   let sb;
   try {
     sb = getAdminClient(env);
+    if (typeof sb?.rpc === 'function') {
+      const readiness = await sb.rpc('assert_email_effects_ready');
+      if (readiness?.error) return json(503, { error: 'durable_email_effects_not_ready', retryable: true });
+    }
     durable = await persistIntake(sb, {
       intakeId,
       fingerprint: await quoteIntakeFingerprint(row),
@@ -255,49 +211,6 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   }
   if (durable?.error === 'idempotency_conflict') return json(409, { error: durable.error });
   if (!durable?.quoteId) return json(503, { error: 'intake_unavailable', retryable: true });
-
-  if (!durable.duplicate) {
-    const reqLabel = type.charAt(0).toUpperCase() + type.slice(1);
-    const rows = displayRows(payload);
-    const followUpTasks = [
-      sendMessage(env, {
-        to: salesRecipients(env),
-        subject: `New ${priority} ${reqLabel} request - ${company || name}`,
-        category: 'lead_internal',
-        html: emailLayout({
-          heading: `New ${reqLabel} request`,
-          bodyHtml: `
-            <p><b>Lead score:</b> ${leadScore} (${htmlEscape(priority)})</p>
-            <table style="border-collapse:collapse">${rows}</table>
-          `,
-        }),
-      }),
-      sendMessage(env, {
-        to: [email],
-        subject: 'We received your MASEST request',
-        category: 'lead_autoreply',
-        html: emailLayout({
-          heading: `Thanks for reaching out, ${name}`,
-          bodyHtml: '<p>We received your request. A MASEST team member will review it and follow up with next steps.</p>',
-          ctaText: 'Visit MASEST',
-          ctaUrl: env.SITE_URL || 'https://masest.co',
-        }),
-      }),
-    ];
-    if (marketingConsent) {
-      followUpTasks.push(enrollLead(env, sb, {
-        email,
-        quoteId: durable.quoteId,
-        name,
-        industry: fields.industry,
-        consented: true,
-      }));
-    }
-    const followUps = await Promise.allSettled(followUpTasks);
-    if (followUps.some((result) => result.status === 'rejected' || result.value?.ok === false)) {
-      console.warn('quote_intake_follow_up_failed', durable.quoteId);
-    }
-  }
 
   return json(durable.duplicate ? 200 : 201, {
     ok: true,

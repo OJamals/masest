@@ -38,8 +38,15 @@ export function postFromEntry(row = {}) {
 }
 
 // Published posts not yet recorded as sent (dedup guard). Pure.
-export function unsentPosts(posts, sentSlugs) {
-  const sent = new Set(sentSlugs || []);
+export function unsentPosts(posts, sentSlugs, nowMs = Date.now()) {
+  const sent = new Set();
+  for (const row of sentSlugs || []) {
+    const slug = typeof row === 'string' ? row : row?.slug;
+    const status = typeof row === 'string' ? 'sent' : row?.provider_status;
+    const expires = typeof row === 'string' ? null : Date.parse(row?.preparation_lease_expires_at || '');
+    const active = status === 'queueing' && Number.isFinite(expires) && expires > nowMs;
+    if (slug && status !== 'failed_to_queue' && (status !== 'queueing' || active)) sent.add(slug);
+  }
   return (posts || []).filter((p) => p && p.slug && !sent.has(p.slug));
 }
 

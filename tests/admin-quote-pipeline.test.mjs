@@ -26,13 +26,6 @@ test("quote schema supports CRM pipeline fields", () => {
   assert.match(QUOTE_SCHEMA, /quotes_status_priority_due_idx/i);
 });
 
-test("public quote intake assigns score and default priority", () => {
-  assert.match(QUOTE_INTAKE, /function\s+scoreLead/);
-  assert.match(QUOTE_INTAKE, /function\s+priorityForScore/);
-  assert.match(QUOTE_INTAKE, /lead_score:\s*leadScore/);
-  assert.match(QUOTE_INTAKE, /priority:\s*priorityForScore\(leadScore\)/);
-});
-
 test("public sample intake defaults to the Sample / Audit CRM stage", () => {
   assert.match(QUOTE_INTAKE, /function\s+pipelineStageForType/);
   assert.match(QUOTE_INTAKE, /type\s*===\s*'sample'\s*\?\s*'sample_audit'\s*:\s*'new'/);

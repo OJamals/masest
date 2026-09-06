@@ -280,6 +280,9 @@ export async function onRequest({ request, env }) {
         reopen: body.start_thread === true,
       });
     } catch (error) {
+      if (error?.code === 'durable_email_effects_not_ready') {
+        return json(503, { error: 'durable_email_effects_not_ready', retryable: true });
+      }
       return internalServerError('admin.messages.reply_insert', error);
     }
     const { message: data, emailDelivery } = publication;

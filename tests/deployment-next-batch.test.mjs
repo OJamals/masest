@@ -37,6 +37,7 @@ test('business creation is one guarded database transaction', () => {
 
 test('newsletter campaigns persist durable SES deliveries and reconcile state', () => {
   const endpoint = read('functions/api/admin/newsletters.js');
+  const preparation = read('functions/_lib/newsletter-preparation.js');
   const provider = read('functions/_lib/ses-email.js');
   const schema = read('supabase/schema-newsletters.sql');
   assert.match(endpoint, /materializeDeliverySource/);
@@ -46,7 +47,7 @@ test('newsletter campaigns persist durable SES deliveries and reconcile state', 
   assert.match(worker, /consumeMarketingDeliveryBatch/);
   assert.match(worker, /verifySnsEnvelope/);
   assert.match(endpoint, /provider: 'ses'/);
-  assert.match(endpoint, /status:[^\n]+: 'sending'/);
+  assert.match(preparation, /status: empty \? \(nextSchedule \? 'scheduled' : 'sent'\) : 'sending'/);
   assert.match(endpoint, /return json\(202/);
   assert.match(endpoint, /json\(503/);
   assert.match(provider, /AwsClient/);
