@@ -162,6 +162,33 @@ async function one(client, text, params = []) {
   return result.rows[0];
 }
 
+async function fixtureState(client) {
+  const rows = async (text) => (await client.query(text)).rows;
+  return {
+    companies: await rows('select * from public.companies order by id'),
+    supportThreads: await rows('select * from public.support_threads order by id'),
+    messages: await rows('select * from public.messages order by id'),
+    supportTickets: await rows('select * from public.support_tickets order by id'),
+    supportTicketEvents: await rows('select * from public.support_ticket_events order by id'),
+    integrationEvents: await rows('select * from public.integration_events order by id'),
+    integrationEffects: await rows('select * from public.integration_effects order by id'),
+    notifications: await rows('select * from public.notifications order by id'),
+    orders: await rows('select * from public.orders order by id'),
+    orderRequests: await rows('select * from public.order_requests order by id'),
+    quotes: await rows('select * from public.quotes order by id'),
+    quoteProjections: await rows(`
+      select effect.id, effect.event_id, effect.status, effect.attempt_count,
+             effect.lease_owner, effect.lease_expires_at,
+             effect.provider_succeeded_at, effect.provider_result,
+             event.status as event_status, event.processed_at as event_processed_at
+        from public.integration_effects effect
+        join public.integration_events event on event.id = effect.event_id
+       where effect.effect_type = 'quote_message'
+       order by effect.id
+    `),
+  };
+}
+
 async function main() {
   const bindir = process.env.PG_BIN || run('pg_config', ['--bindir']).trim();
   const temp = await mkdtemp(join(tmpdir(), 'masest-support-effects-'));
@@ -237,7 +264,15 @@ async function main() {
     const quoteRollbackClaims = await client.query(`select * from public.claim_integration_effects('proof-quote-rollback',25,60)`);
     const quoteRollbackEffect = quoteRollbackClaims.rows.find((row) => row.event_id === quoteRollbackEvent.id);
     assert.ok(quoteRollbackEffect, 'generic batch did not claim the rollback quote-message effect');
-    const beforeEffectFailure = await one(client, `select count(*)::int message_count, (select count(*)::int from public.integration_events) event_count, (select count(*)::int from public.integration_effects) effect_count, (select count(*)::int from public.order_requests) request_count, (select count(*)::int from public.support_tickets) ticket_count, (select version from public.support_tickets where id=$1) ticket_version, (select jsonb_build_object('status',status,'provider_succeeded_at',provider_succeeded_at,'provider_result',provider_result) from public.integration_effects where id=$2) quote_state`, [append.result.ticket_id, quoteRollbackEffect.id]);
+    const beforeEffectFailure = await fixtureState(client);
+    await client.query('begin');
+    await client.query(`update public.messages set body='Snapshot sensitivity mutation' where id=$1`, [append.result.id]);
+    await client.query(`insert into public.support_ticket_events(ticket_id,idempotency_key,event_type,detail) values ($1,'proof-snapshot-sensitivity','private_note_added','{}')`, [append.result.ticket_id]);
+    const changedFixtureState = await fixtureState(client);
+    assert.notDeepEqual(changedFixtureState.messages, beforeEffectFailure.messages, 'rollback snapshot is blind to message mutations');
+    assert.notDeepEqual(changedFixtureState.supportTicketEvents, beforeEffectFailure.supportTicketEvents, 'rollback snapshot is blind to ticket-event mutations');
+    await client.query('rollback');
+    assert.deepEqual(await fixtureState(client), beforeEffectFailure, 'snapshot sensitivity transaction did not restore fixture state');
     await client.query(`create function public.proof_reject_support_effect() returns trigger language plpgsql as $$ begin raise exception 'proof_effect_failure'; end $$`);
     await client.query(`create trigger proof_reject_support_effect before insert on public.integration_effects for each row when (new.effect_type='support_message_email') execute function public.proof_reject_support_effect()`);
     await assert.rejects(
@@ -254,10 +289,10 @@ async function main() {
     );
     await client.query('drop trigger proof_reject_support_effect on public.integration_effects');
     await client.query('drop function public.proof_reject_support_effect()');
-    const afterEffectFailure = await one(client, `select count(*)::int message_count, (select count(*)::int from public.integration_events) event_count, (select count(*)::int from public.integration_effects) effect_count, (select count(*)::int from public.order_requests) request_count, (select count(*)::int from public.support_tickets) ticket_count, (select version from public.support_tickets where id=$1) ticket_version, (select jsonb_build_object('status',status,'provider_succeeded_at',provider_succeeded_at,'provider_result',provider_result) from public.integration_effects where id=$2) quote_state`, [append.result.ticket_id, quoteRollbackEffect.id]);
+    const afterEffectFailure = await fixtureState(client);
     assert.deepEqual(afterEffectFailure, beforeEffectFailure, 'effect failure did not roll back message/ticket/event/order-request/quote state');
 
-    const beforeNotificationFailure = await one(client, `select count(*)::int message_count, (select count(*)::int from public.integration_events) event_count, (select count(*)::int from public.integration_effects) effect_count, (select count(*)::int from public.notifications) notification_count, (select count(*)::int from public.support_tickets) ticket_count, (select version from public.support_tickets where id=$1) ticket_version`, [append.result.ticket_id]);
+    const beforeNotificationFailure = await fixtureState(client);
     await client.query(`create function public.proof_reject_support_notification() returns trigger language plpgsql as $$ begin raise exception 'proof_notification_failure'; end $$`);
     await client.query(`create trigger proof_reject_support_notification before insert on public.notifications for each row execute function public.proof_reject_support_notification()`);
     await assert.rejects(
@@ -266,7 +301,7 @@ async function main() {
     );
     await client.query('drop trigger proof_reject_support_notification on public.notifications');
     await client.query('drop function public.proof_reject_support_notification()');
-    const afterNotificationFailure = await one(client, `select count(*)::int message_count, (select count(*)::int from public.integration_events) event_count, (select count(*)::int from public.integration_effects) effect_count, (select count(*)::int from public.notifications) notification_count, (select count(*)::int from public.support_tickets) ticket_count, (select version from public.support_tickets where id=$1) ticket_version`, [append.result.ticket_id]);
+    const afterNotificationFailure = await fixtureState(client);
     assert.deepEqual(afterNotificationFailure, beforeNotificationFailure, 'notification failure did not roll back message/ticket/effect state');
 
     const staff = await one(client, `select public.append_support_message($1,null,'staff','Staff atomic notification proof',$3,'dashboard',false,$2,$2,$4,$5,'Staff reply','general',false,2) result`, [ids.company, ids.buyer, ids.order, ids.thread, append.result.ticket_id]);
@@ -329,15 +364,17 @@ async function main() {
 
     const envelopeA = {
       request: {
-        to: ['buyer@example.test'], subject: 'Proof A', html: '<p>Proof A</p>', text: 'Proof A',
-        idempotencyKey: `support-message/${target}/staff`,
+        to: ['staff@example.test'], subject: 'Proof A', html: '<p>Proof A</p>', text: 'Proof A',
+        replyTo: 'reply+proof@reply.masest.co', emailHeaders: {}, category: 'staff_alert',
+        idempotencyKey: `support-message/${target}/buyer`,
       },
       references: null,
     };
     const envelopeB = {
       request: {
         to: ['changed@example.test'], subject: 'Proof B', html: '<p>Proof B</p>', text: 'Proof B',
-        idempotencyKey: `support-message/${target}/staff`,
+        replyTo: 'reply+changed@reply.masest.co', emailHeaders: {}, category: 'staff_alert',
+        idempotencyKey: `support-message/${target}/buyer`,
       },
       references: null,
     };

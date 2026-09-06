@@ -1311,13 +1311,15 @@ export async function processClaimedIntegrationEffect({
   }
   const deliverEffect = dependencies.deliverEffect || deliverIntegrationEffect;
   const loadEvent = dependencies.loadEvent || integrationEventForEffect;
+  let providerAcknowledged = false;
+  let providerCallSkipped = false;
+  let skipped = false;
   try {
     const integrationEvent = claimedEffect.provider
       ? {}
       : await loadEvent(sb, claimedEffect);
     const effectRow = { ...claimedEffect, ...integrationEvent };
     let outcome = null;
-    let providerCallSkipped = false;
     if (!effectRow.provider_succeeded_at) {
       outcome = await deliverEffect({ env, sb, effect: effectRow });
       if (!outcome?.providerRecorded) {
@@ -1328,6 +1330,8 @@ export async function processClaimedIntegrationEffect({
         });
         if (recorded !== true) throw errorWithCode('effect_success_record_failed');
       }
+      skipped = Boolean(outcome?.skipped);
+      providerAcknowledged = !skipped;
     } else {
       providerCallSkipped = true;
       outcome = {
@@ -1335,6 +1339,7 @@ export async function processClaimedIntegrationEffect({
         providerResult: effectRow.provider_result || {},
         skipped: Boolean(effectRow.provider_result?.skipped),
       };
+      skipped = outcome.skipped;
     }
     const completed = await rpcData(sb, 'complete_integration_effect', {
       p_effect_id: effectRow.id,
@@ -1345,9 +1350,9 @@ export async function processClaimedIntegrationEffect({
       state: outcome?.skipped ? 'skipped' : 'delivered',
       effectId: effectRow.id,
       ...(outcome?.skipped ? { reason: outcome.providerResult?.skipped } : {}),
-      providerAcknowledged: !providerCallSkipped && !outcome?.skipped,
+      providerAcknowledged,
       providerCallSkipped,
-      skipped: Boolean(outcome?.skipped),
+      skipped,
     };
   } catch (error) {
     const maxAttempts = error?.terminal
@@ -1365,9 +1370,9 @@ export async function processClaimedIntegrationEffect({
       state: status === 'dead' ? 'dead' : 'queued',
       effectId: claimedEffect.id,
       reason,
-      providerAcknowledged: false,
-      providerCallSkipped: false,
-      skipped: false,
+      providerAcknowledged,
+      providerCallSkipped,
+      skipped,
     };
   }
 }
@@ -1407,11 +1412,11 @@ export async function runIntegrationEffectsWorker({
       effect: claimedEffect,
       workerId,
     }, dependencies);
+    if (result.skipped) summary.skipped += 1;
+    if (result.providerAcknowledged) summary.providerAcknowledged += 1;
+    if (result.providerCallSkipped) summary.providerCallSkipped += 1;
     if (result.state === 'delivered' || result.state === 'skipped') {
       summary.completed += 1;
-      if (result.skipped) summary.skipped += 1;
-      if (result.providerAcknowledged) summary.providerAcknowledged += 1;
-      if (result.providerCallSkipped) summary.providerCallSkipped += 1;
     } else if (result.state === 'dead') {
       summary.dead += 1;
     } else {

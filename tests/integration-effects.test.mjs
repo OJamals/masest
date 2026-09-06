@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { runIntegrationEffectsWorker } from '../functions/_lib/integration-effects.js';
+
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Stripe webhook and generic worker use integration event/effect contracts only', () => {
@@ -89,6 +91,97 @@ test('generic atomic local effects preserve response-loss protection', () => {
   assert.match(sql, /deliver_integration_notification_effect[\s\S]*returns jsonb/i);
   assert.match(sql, /jsonb_build_object\('skipped', 'order_terminal'\)/i);
   assert.doesNotMatch(sql, /stripe_webhook_effects|apply_stripe_stock_effect|deliver_stripe_notification_effect/);
+});
+
+test('generic worker preserves completed provider-stage counters when final completion retries', async (t) => {
+  const cases = [
+    {
+      name: 'accepted provider success was durably recorded',
+      effect: {},
+      outcome: {
+        providerRecorded: false,
+        providerResult: { provider_message_id: 'provider-1' },
+        skipped: false,
+      },
+      expected: { providerAcknowledged: 1, providerCallSkipped: 0, skipped: 0 },
+      expectedRecordCalls: 1,
+    },
+    {
+      name: 'pre-recorded provider success bypassed the provider call',
+      effect: {
+        provider_succeeded_at: '2026-09-06T12:00:00.000Z',
+        provider_result: { provider_message_id: 'provider-1' },
+      },
+      outcome: null,
+      expected: { providerAcknowledged: 0, providerCallSkipped: 1, skipped: 0 },
+      expectedRecordCalls: 0,
+    },
+    {
+      name: 'policy skip was durably recorded',
+      effect: {},
+      outcome: {
+        providerRecorded: false,
+        providerResult: { skipped: 'recipient_opted_out' },
+        skipped: true,
+      },
+      expected: { providerAcknowledged: 0, providerCallSkipped: 0, skipped: 1 },
+      expectedRecordCalls: 1,
+    },
+  ];
+
+  for (const entry of cases) {
+    await t.test(entry.name, async () => {
+      let claims = 0;
+      let providerCalls = 0;
+      let recordCalls = 0;
+      const effect = {
+        id: '00000000-0000-4000-8000-000000000041',
+        event_id: '00000000-0000-4000-8000-000000000042',
+        effect_type: 'order_confirmation',
+        lease_owner: 'worker-stage-proof',
+        attempt_count: 1,
+        provider: 'stripe',
+        ...entry.effect,
+      };
+      const sb = {
+        async rpc(name) {
+          if (name === 'claim_integration_effects') {
+            claims += 1;
+            return { data: claims === 1 ? [effect] : [], error: null };
+          }
+          if (name === 'record_integration_effect_success') {
+            recordCalls += 1;
+            return { data: true, error: null };
+          }
+          if (name === 'complete_integration_effect') {
+            return { data: false, error: null };
+          }
+          if (name === 'fail_integration_effect') {
+            return { data: 'pending', error: null };
+          }
+          throw new Error(`unexpected RPC ${name}`);
+        },
+      };
+      const summary = await runIntegrationEffectsWorker({
+        env: {}, sb, workerId: 'worker-stage-proof', limit: 1,
+      }, {
+        deliverEffect: async () => {
+          providerCalls += 1;
+          return entry.outcome;
+        },
+      });
+
+      assert.equal(summary.claimed, 1);
+      assert.equal(summary.completed, 0);
+      assert.equal(summary.retried, 1);
+      assert.equal(summary.dead, 0);
+      assert.equal(summary.providerAcknowledged, entry.expected.providerAcknowledged);
+      assert.equal(summary.providerCallSkipped, entry.expected.providerCallSkipped);
+      assert.equal(summary.skipped, entry.expected.skipped);
+      assert.equal(providerCalls, entry.outcome ? 1 : 0);
+      assert.equal(recordCalls, entry.expectedRecordCalls);
+    });
+  }
 });
 
 test('cutover removes legacy table/RPCs only after exact parity and rollback reconstructs them', () => {
