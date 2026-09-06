@@ -4,6 +4,8 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { createAccountMessagesHandler } from '../functions/api/account/messages.js';
 import { createAdminMessagesHandler } from '../functions/api/admin/messages.js';
+import { appendSupportMessage } from '../functions/_lib/support-messages.js';
+import { publishSupportMessage } from '../functions/_lib/support-message-publisher.js';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
@@ -13,16 +15,19 @@ const OTHER_COMPANY_ID = '55555555-5555-4555-8555-555555555555';
 const USER_THREAD_ID = '66666666-6666-4666-8666-666666666666';
 const COMPANY_THREAD_ID = '77777777-7777-4777-8777-777777777777';
 const ORDER_ID = '88888888-8888-4888-8888-888888888888';
+const TICKET_ID = '99999999-9999-4999-8999-999999999999';
+const OTHER_TICKET_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const NOW = '2026-09-06T14:15:16.000Z';
 
-const THREAD_SELECT = 'id,participant_user_id,company_id,status,completed_at,completed_by,last_message_at,last_message_body,last_sender_role,last_order_id';
-const BUYER_MESSAGE_SELECT = 'id,thread_id,sender_role,body,order_id,source,created_at';
-const STAFF_MESSAGE_SELECT = 'id,thread_id,sender_role,user_id,recipient_user_id,body,order_id,created_at,read_by_staff,source,external_message_id,email_delivery_id,email_message_id,email_references';
+const THREAD_SELECT = 'id,participant_user_id,company_id,last_message_at,last_message_body,last_sender_role,last_order_id';
+const BUYER_MESSAGE_SELECT = 'id,thread_id,ticket_id,sender_role,body,order_id,source,created_at';
+const STAFF_MESSAGE_SELECT = 'id,thread_id,ticket_id,sender_role,user_id,recipient_user_id,body,order_id,created_at,read_by_staff,source,external_message_id,email_delivery_id,email_message_id,email_references';
 const ORDER_SELECT = 'id,order_number,status,company_id,user_id,customer_email';
 const ORDER_CONTEXT_SELECT = 'id,order_number,status,company_id';
 const PROFILE_SELECT = 'id,full_name,company_id';
 const RECIPIENT_SELECT = 'id,company_id,full_name,notify_messages,support_chat_open,support_chat_seen_at';
 const COMPANY_SELECT = 'id,name,status';
+const SUPPORT_TICKET_SELECT = 'id,ticket_number,thread_id,subject,status,priority,category,assigned_to,primary_order_id,first_response_at,resolved_at,last_message_at,last_message_body,last_sender_role,created_at,updated_at,version';
 
 function op(method, ...args) {
   return { method, args };
@@ -191,6 +196,29 @@ function orderRow(overrides = {}) {
   };
 }
 
+function supportTicket(overrides = {}) {
+  return {
+    id: TICKET_ID,
+    ticket_number: 123,
+    thread_id: USER_THREAD_ID,
+    subject: 'Pump-room scaling',
+    status: 'open',
+    priority: 'normal',
+    category: 'technical',
+    assigned_to: null,
+    primary_order_id: null,
+    first_response_at: null,
+    resolved_at: null,
+    last_message_at: NOW,
+    last_message_body: 'Need help',
+    last_sender_role: 'buyer',
+    created_at: '2026-09-06T14:00:00.000Z',
+    updated_at: NOW,
+    version: 7,
+    ...overrides,
+  };
+}
+
 function foreignOrder() {
   return orderRow({ company_id: OTHER_COMPANY_ID, user_id: OTHER_USER_ID });
 }
@@ -243,6 +271,7 @@ function buyerHandler(sb, { context = buyerContext(sb), body = {}, rateLimitResu
         emailDelivery: { ok: true },
       };
     },
+    supportTicketsForThreads: async () => [],
     now: now || (() => new Date(NOW)),
   });
   const assertBoundaries = ({ auth = 1, parsedBody = 0, rateLimit = 0, publication = 0 } = {}) => {
@@ -254,7 +283,15 @@ function buyerHandler(sb, { context = buyerContext(sb), body = {}, rateLimitResu
   return { handler, authCalls, bodyCalls, publicationCalls, assertBoundaries };
 }
 
-function adminHandler(sb, { context = staffContext(), body = {}, publisher, now } = {}) {
+function adminHandler(sb, {
+  context = staffContext(),
+  body = {},
+  publisher,
+  now,
+  findThreadTicket = async (_sb, threadId) => supportTicket({ thread_id: threadId }),
+  findTicket = async () => supportTicket(),
+  patchTicket,
+} = {}) {
   const authCalls = [];
   const bodyCalls = [];
   const publicationCalls = [];
@@ -283,6 +320,9 @@ function adminHandler(sb, { context = staffContext(), body = {}, publisher, now 
         emailDelivery: { ok: true },
       };
     },
+    supportTicketById: findTicket,
+    supportTicketForThread: findThreadTicket,
+    ...(patchTicket ? { updateSupportTicket: patchTicket } : {}),
     now: now || (() => new Date(NOW)),
   });
   const assertBoundaries = ({ auth = 1, adminClient = 1, parsedBody = 0, publication = 0 } = {}) => {
@@ -345,7 +385,7 @@ test('buyer with no support threads receives an empty inbox', async () => {
 
   assert.deepEqual(await responseShape(response), {
     status: 200,
-    body: { messages: [], has_more: false, next_before: null, order_scope: null },
+    body: { messages: [], has_more: false, next_before: null, tickets: [], ticket: null, order_scope: null },
   });
   assertBoundaries();
   sb.assertClean();
@@ -420,6 +460,8 @@ test('buyer inbox combines participant and Company threads and marks only staff 
       messages: [{ ...older, order: null }, { ...newer, order: null }],
       has_more: false,
       next_before: null,
+      tickets: [],
+      ticket: null,
       order_scope: null,
     },
   });
@@ -450,7 +492,10 @@ test('buyer peek reads the participant thread without writing read receipts', as
 
   assert.deepEqual(await responseShape(response), {
     status: 200,
-    body: { messages: [{ ...row, order: null }], has_more: false, next_before: null, order_scope: null },
+    body: {
+      messages: [{ ...row, order: null }], has_more: false, next_before: null,
+      tickets: [], ticket: null, order_scope: null,
+    },
   });
   assert.equal(sb.calls.some((call) => call.ops?.some((entry) => entry.method === 'update')), false);
   assertBoundaries();
@@ -500,11 +545,39 @@ test('buyer GET retains valid order scope in query, read receipt, and response',
       messages: [{ ...row, order: orderContext }],
       has_more: false,
       next_before: null,
+      tickets: [],
+      ticket: null,
       order_scope: orderContext,
     },
   });
   assertBoundaries();
   sb.assertClean();
+});
+
+test('buyer GET scopes an explicit owned ticket and returns only its safe projection', async () => {
+  const filters = [];
+  const builder = {
+    select() { return this; }, in() { return this; }, order() { return this; }, limit() { return this; },
+    eq(column, value) { filters.push([column, value]); return this; },
+    lt() { return this; },
+    then(resolve, reject) { return Promise.resolve({ data: [], error: null }).then(resolve, reject); },
+  };
+  const handler = createAccountMessagesHandler({
+    requireCommerceUser: async () => buyerContext({ from: () => builder }),
+    visibleSupportThreadIds: async () => [USER_THREAD_ID],
+    supportTicketsForThreads: async () => [supportTicket({ assigned_to: STAFF_ID, version: 9 })],
+  });
+
+  const response = await handler({
+    request: routeRequest(`account/messages?peek=1&ticket_id=${TICKET_ID}`), env: {},
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(filters, [['ticket_id', TICKET_ID]]);
+  assert.equal(payload.ticket.id, TICKET_ID);
+  assert.equal(payload.ticket.assigned_to, undefined);
+  assert.equal(payload.ticket.version, undefined);
 });
 
 test('buyer cannot read a foreign or absent order scope', async (t) => {
@@ -620,6 +693,11 @@ test('retail buyer without a Company can publish general support', async () => {
     body: 'Retail support',
     orderId: null,
     source: 'dashboard',
+    ticketId: null,
+    threadId: null,
+    subject: 'Retail support',
+    category: 'general',
+    startTicket: false,
   });
   assertBoundaries({ parsedBody: 1, rateLimit: 1, publication: 1 });
   sb.assertClean();
@@ -656,6 +734,11 @@ test('buyer publisher receives exact actor, thread, order, source, body, and def
     body: 'Valve leaking',
     orderId: ORDER_ID,
     source: 'customer_chat',
+    ticketId: null,
+    threadId: null,
+    subject: 'Valve leaking',
+    category: 'general',
+    startTicket: false,
   });
   assertBoundaries({ parsedBody: 1, rateLimit: 1, publication: 1 });
   sb.assertClean();
@@ -769,11 +852,11 @@ test('owner summary returns exact open and unanswered counts', async () => {
   const summarySelect = [
     op('select', 'id', { count: 'exact', head: true }),
     op('not', 'last_message_at', 'is', null),
-    op('neq', 'status', 'complete'),
+    op('neq', 'status', 'resolved'),
   ];
   const sb = strictSupabase([
-    query('support_threads', summarySelect, { data: null, count: 7, error: null }),
-    query('support_threads', [...summarySelect, op('eq', 'last_sender_role', 'buyer')], {
+    query('support_tickets', summarySelect, { data: null, count: 7, error: null }),
+    query('support_tickets', [...summarySelect, op('eq', 'last_sender_role', 'buyer')], {
       data: null, count: 3, error: null,
     }),
   ]);
@@ -791,6 +874,17 @@ test('owner summary returns exact open and unanswered counts', async () => {
 
 test('staff list hydrates participants, companies, and order context without Auth lookups', async () => {
   const rows = [participantThread({ last_order_id: ORDER_ID }), companyThread()];
+  const tickets = [
+    supportTicket({ primary_order_id: ORDER_ID }),
+    supportTicket({
+      id: OTHER_TICKET_ID,
+      ticket_number: 124,
+      thread_id: COMPANY_THREAD_ID,
+      subject: 'Company question',
+      last_message_body: 'Company question',
+      last_sender_role: 'staff',
+    }),
+  ];
   const orderContext = {
     id: ORDER_ID,
     reference: 'MST-1042',
@@ -799,10 +893,13 @@ test('staff list hydrates participants, companies, and order context without Aut
     admin_url: `/admin.html?order=${ORDER_ID}#orders`,
   };
   const sb = strictSupabase([
-    query('support_threads', [
-      op('select', THREAD_SELECT), op('not', 'last_message_at', 'is', null),
-      op('neq', 'status', 'complete'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
-    ], { data: rows, error: null }),
+    query('support_tickets', [
+      op('select', SUPPORT_TICKET_SELECT), op('not', 'last_message_at', 'is', null),
+      op('neq', 'status', 'resolved'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
+    ], { data: tickets, error: null }),
+    query('support_threads', [op('select', THREAD_SELECT), op('in', 'id', [USER_THREAD_ID, COMPANY_THREAD_ID])], {
+      data: rows, error: null,
+    }),
     query('profiles', [op('select', PROFILE_SELECT), op('in', 'id', [USER_ID])], {
       data: [{ id: USER_ID, full_name: 'Ada Buyer', company_id: COMPANY_ID }], error: null,
     }),
@@ -817,10 +914,11 @@ test('staff list hydrates participants, companies, and order context without Aut
 
   const response = await handler({ request: routeRequest('admin/messages?status=open'), env: {} });
 
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: {
-      threads: [
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    payload.threads.map(({ ticket_id, ticket, ...thread }) => thread),
+    [
         {
           thread_id: USER_THREAD_ID,
           company_id: COMPANY_ID,
@@ -829,7 +927,7 @@ test('staff list hydrates participants, companies, and order context without Aut
           participant: { id: USER_ID, full_name: 'Ada Buyer', email: null },
           scope: 'user',
           last_body: 'Need help',
-          last_at: '2026-09-06T14:00:00.000Z',
+          last_at: NOW,
           status: 'open',
           completed_at: null,
           unanswered: true,
@@ -843,16 +941,17 @@ test('staff list hydrates participants, companies, and order context without Aut
           participant: null,
           scope: 'company',
           last_body: 'Company question',
-          last_at: '2026-09-06T14:00:00.000Z',
+          last_at: NOW,
           status: 'open',
           completed_at: null,
           unanswered: false,
           order: null,
         },
       ],
-      summary: { open: 2, unanswered: 1 },
-    },
-  });
+  );
+  assert.deepEqual(payload.threads.map(({ ticket_id }) => ticket_id), [TICKET_ID, OTHER_TICKET_ID]);
+  assert.deepEqual(payload.threads.map(({ ticket }) => ticket.version), [7, 7]);
+  assert.deepEqual(payload.summary, { open: 2, unanswered: 1 });
   assert.deepEqual(sb.authCalls, []);
   assertBoundaries();
   sb.assertClean();
@@ -863,11 +962,17 @@ test('read-only staff can list completed threads with the resolved summary contr
   const row = participantThread({
     status: 'complete', completed_at: completedAt, completed_by: STAFF_ID, last_sender_role: 'staff',
   });
+  const ticket = supportTicket({
+    status: 'resolved', resolved_at: completedAt, last_sender_role: 'staff',
+  });
   const sb = strictSupabase([
-    query('support_threads', [
-      op('select', THREAD_SELECT), op('not', 'last_message_at', 'is', null),
-      op('eq', 'status', 'complete'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
-    ], { data: [row], error: null }),
+    query('support_tickets', [
+      op('select', SUPPORT_TICKET_SELECT), op('not', 'last_message_at', 'is', null),
+      op('eq', 'status', 'resolved'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
+    ], { data: [ticket], error: null }),
+    query('support_threads', [op('select', THREAD_SELECT), op('in', 'id', [USER_THREAD_ID])], {
+      data: [row], error: null,
+    }),
     query('profiles', [op('select', PROFILE_SELECT), op('in', 'id', [USER_ID])], {
       data: [{ id: USER_ID, full_name: 'Ada Buyer', company_id: COMPANY_ID }], error: null,
     }),
@@ -879,10 +984,9 @@ test('read-only staff can list completed threads with the resolved summary contr
 
   const response = await handler({ request: routeRequest('admin/messages?status=complete'), env: {} });
 
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: {
-      threads: [{
+  const payload = await response.json();
+  assert.equal(response.status, 200);
+  assert.deepEqual(payload.threads.map(({ ticket_id, ticket: projectedTicket, ...thread }) => thread), [{
         thread_id: USER_THREAD_ID,
         company_id: COMPANY_ID,
         company_name: 'Acme HVAC',
@@ -890,15 +994,15 @@ test('read-only staff can list completed threads with the resolved summary contr
         participant: { id: USER_ID, full_name: 'Ada Buyer', email: null },
         scope: 'user',
         last_body: 'Need help',
-        last_at: '2026-09-06T14:00:00.000Z',
+        last_at: NOW,
         status: 'complete',
         completed_at: completedAt,
         unanswered: false,
         order: null,
-      }],
-      summary: { resolved: 1 },
-    },
-  });
+      }]);
+  assert.equal(payload.threads[0].ticket_id, TICKET_ID);
+  assert.equal(payload.threads[0].ticket.status, 'resolved');
+  assert.deepEqual(payload.summary, { resolved: 1 });
   assert.deepEqual(sb.authCalls, []);
   assertBoundaries();
   sb.assertClean();
@@ -948,16 +1052,16 @@ test('staff detail returns the exact participant thread and marks only buyer mes
 
   const response = await handler({ request: routeRequest(`admin/messages?thread_id=${USER_THREAD_ID}`), env: {} });
 
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: {
-      messages: [
-        { ...older, order: null, participant },
-        { ...newer, order: null, participant },
-      ],
-      has_more: false,
-      next_before: null,
-      thread: {
+  const payload = await response.json();
+  const { ticket_id: ticketId, ticket, ...legacyThread } = payload.thread;
+  assert.equal(response.status, 200);
+  assert.deepEqual(payload.messages, [
+    { ...older, order: null, participant },
+    { ...newer, order: null, participant },
+  ]);
+  assert.equal(payload.has_more, false);
+  assert.equal(payload.next_before, null);
+  assert.deepEqual(legacyThread, {
         thread_id: USER_THREAD_ID,
         company_id: COMPANY_ID,
         company_name: 'Acme HVAC',
@@ -968,9 +1072,10 @@ test('staff detail returns the exact participant thread and marks only buyer mes
         status: 'open',
         completed_at: null,
         order_scope: null,
-      },
-    },
   });
+  assert.equal(ticketId, TICKET_ID);
+  assert.equal(ticket.id, TICKET_ID);
+  assert.equal(ticket.version, 7);
   assertBoundaries();
   sb.assertClean();
 });
@@ -1042,25 +1147,29 @@ test('staff detail rejects order scope outside the selected participant and Comp
 
 test('staff PATCH preserves open, escalated, and complete lifecycle transitions', async (t) => {
   const cases = [
-    ['open', { status: 'open', completed_at: null, completed_by: null }],
-    ['escalated', { status: 'escalated', completed_at: null, completed_by: null }],
-    ['complete', { status: 'complete', completed_at: NOW, completed_by: STAFF_ID }],
+    ['open', { status: 'open', priority: 'normal', resolved_at: null }],
+    ['escalated', { status: 'open', priority: 'high', resolved_at: null }],
+    ['complete', { status: 'resolved', priority: 'normal', resolved_at: NOW }],
   ];
-  for (const [status, patch] of cases) {
+  for (const [status, updatedFields] of cases) {
     await t.test(status, async () => {
-      const sb = strictSupabase([
-        single('support_threads', [
-          op('update', patch), op('eq', 'id', USER_THREAD_ID), op('select', 'id,status'),
-        ], { data: { id: USER_THREAD_ID, status }, error: null }),
-      ]);
+      const sb = strictSupabase();
+      let updateInput;
       const { handler, assertBoundaries } = adminHandler(sb, {
         body: { thread_id: USER_THREAD_ID, status },
+        patchTicket: async (_sb, input) => {
+          updateInput = input;
+          return supportTicket({ ...updatedFields, version: 8 });
+        },
       });
       const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-      assert.deepEqual(await responseShape(response), {
-        status: 200,
-        body: { thread_id: USER_THREAD_ID, status },
-      });
+      const payload = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(payload.thread_id, USER_THREAD_ID);
+      assert.equal(payload.ticket_id, TICKET_ID);
+      assert.equal(payload.status, status);
+      assert.equal(updateInput.expectedVersion, 7);
+      assert.equal(updateInput.actorId, STAFF_ID);
       assertBoundaries({ parsedBody: 1 });
       sb.assertClean();
     });
@@ -1085,14 +1194,10 @@ test('staff PATCH validates thread identity and lifecycle status before database
 });
 
 test('staff PATCH returns thread_not_found when the selected thread disappeared', async () => {
-  const patch = { status: 'open', completed_at: null, completed_by: null };
-  const sb = strictSupabase([
-    single('support_threads', [
-      op('update', patch), op('eq', 'id', USER_THREAD_ID), op('select', 'id,status'),
-    ], { data: null, error: null }),
-  ]);
+  const sb = strictSupabase();
   const { handler, assertBoundaries } = adminHandler(sb, {
     body: { thread_id: USER_THREAD_ID, status: 'open' },
+    findThreadTicket: async () => null,
   });
   const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
 
@@ -1102,14 +1207,10 @@ test('staff PATCH returns thread_not_found when the selected thread disappeared'
 });
 
 test('staff PATCH masks database update errors', async () => {
-  const patch = { status: 'open', completed_at: null, completed_by: null };
-  const sb = strictSupabase([
-    single('support_threads', [
-      op('update', patch), op('eq', 'id', USER_THREAD_ID), op('select', 'id,status'),
-    ], { data: null, error: new Error('database secret detail') }),
-  ]);
+  const sb = strictSupabase();
   const { handler, assertBoundaries } = adminHandler(sb, {
     body: { thread_id: USER_THREAD_ID, status: 'open' },
+    patchTicket: async () => { throw new Error('database secret detail'); },
   });
   const originalConsoleError = console.error;
   console.error = () => {};
@@ -1136,6 +1237,73 @@ test('staff POST requires an explicit recipient when starting a thread', async (
   });
   assertBoundaries({ parsedBody: 1 });
   sb.assertClean();
+});
+
+test('legacy New chat composer keeps default-ticket routing and explicit reopen through the real append helper', async () => {
+  let rpcCall;
+  const sb = {
+    async rpc(name, args) {
+      rpcCall = { name, args };
+      return {
+        data: {
+          id: 'legacy-new-chat-message', thread_id: USER_THREAD_ID, ticket_id: TICKET_ID,
+          created_at: NOW, order_id: null, recipient_user_id: USER_ID,
+          ticket: supportTicket(),
+        },
+        error: null,
+      };
+    },
+    from(table) {
+      assert.equal(table, 'notifications');
+      return { async insert() { return { data: null, error: null }; } };
+    },
+  };
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => sb,
+    readBody: async () => ({
+      recipient_user_id: USER_ID,
+      body: 'Welcome to MASEST support.',
+      start_thread: true,
+    }),
+    resolveSupportRecipient: async () => ({ id: USER_ID, company_id: COMPANY_ID }),
+    publishSupportMessage: (env, client, input) => publishSupportMessage(env, client, input, {
+      append: appendSupportMessage,
+      deliver: async () => ({ ok: true, skipped: 'test_delivery' }),
+    }),
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
+
+  assert.equal(response.status, 201);
+  assert.equal(rpcCall.name, 'append_support_message');
+  assert.equal(rpcCall.args.p_contract_version, 2);
+  assert.equal(rpcCall.args.p_start_ticket, false);
+  assert.equal(rpcCall.args.p_reopen, true);
+  assert.equal(rpcCall.args.p_recipient_user_id, USER_ID);
+});
+
+test('explicit staff ticket creation reports the pre-activation gate without masking it', async () => {
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => ({}),
+    readBody: async () => ({
+      recipient_user_id: USER_ID,
+      body: 'A distinct issue',
+      start_ticket: true,
+    }),
+    resolveSupportRecipient: async () => ({ id: USER_ID, company_id: COMPANY_ID }),
+    publishSupportMessage: async () => {
+      throw new Error('support_ticket_routing_not_enabled');
+    },
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
+
+  assert.deepEqual(await responseShape(response), {
+    status: 409,
+    body: { error: 'support_ticket_routing_not_enabled' },
+  });
 });
 
 test('staff POST returns thread_not_found for a missing selected thread', async () => {
@@ -1247,11 +1415,16 @@ test('selected staff thread fixes participant and Company identity for ordered r
     companyId: COMPANY_ID,
     recipientUserId: USER_ID,
     threadUserId: USER_ID,
+    threadId: USER_THREAD_ID,
+    ticketId: null,
     senderRole: 'staff',
     body: 'Order update is ready',
     orderId: ORDER_ID,
     source: 'admin',
-    reopen: false,
+    reopen: null,
+    subject: 'Order update is ready',
+    category: 'general',
+    startTicket: false,
   });
   assertBoundaries({ parsedBody: 1, publication: 1 });
   sb.assertClean();
@@ -1319,9 +1492,9 @@ test('staff publication insert errors expose only server_error', async () => {
 
 test('staff database errors expose only server_error', async () => {
   const sb = strictSupabase([
-    query('support_threads', [
-      op('select', THREAD_SELECT), op('not', 'last_message_at', 'is', null),
-      op('neq', 'status', 'complete'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
+    query('support_tickets', [
+      op('select', SUPPORT_TICKET_SELECT), op('not', 'last_message_at', 'is', null),
+      op('neq', 'status', 'resolved'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
     ], { data: null, error: new Error('database secret detail') }),
   ]);
   const { handler, assertBoundaries } = adminHandler(sb);
@@ -1335,4 +1508,454 @@ test('staff database errors expose only server_error', async () => {
   }
   assertBoundaries();
   sb.assertClean();
+});
+
+test('buyer can explicitly start a distinct ticket and receives only the buyer-safe projection', async () => {
+  let publishedInput;
+  const ticket = supportTicket();
+  const handler = createAccountMessagesHandler({
+    requireCommerceUser: async () => buyerContext({}),
+    rateLimit: async () => ({ ok: true }),
+    readBody: async () => ({
+      action: 'start_ticket',
+      body: '  Pump pressure changed  ',
+      subject: '  Pump-room scaling  ',
+      category: 'technical',
+    }),
+    publishSupportMessage: async (_env, _sb, input) => {
+      publishedInput = input;
+      return {
+        message: {
+          id: 'message-ticket',
+          thread_id: USER_THREAD_ID,
+          ticket_id: TICKET_ID,
+          ticket,
+          created_at: NOW,
+          order_id: null,
+        },
+        emailDelivery: { ok: true },
+      };
+    },
+  });
+
+  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+  const payload = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.deepEqual(publishedInput, {
+    companyId: COMPANY_ID,
+    userId: USER_ID,
+    threadUserId: USER_ID,
+    senderRole: 'buyer',
+    body: 'Pump pressure changed',
+    orderId: null,
+    source: 'dashboard',
+    ticketId: null,
+    threadId: null,
+    subject: 'Pump-room scaling',
+    category: 'technical',
+    startTicket: true,
+  });
+  assert.equal(payload.ticket_id, TICKET_ID);
+  assert.deepEqual(payload.ticket, {
+    id: TICKET_ID,
+    ticket_number: 123,
+    display_number: 'MAS-000123',
+    thread_id: USER_THREAD_ID,
+    subject: 'Pump-room scaling',
+    status: 'open',
+    priority: 'normal',
+    category: 'technical',
+    primary_order_id: null,
+    first_response_at: null,
+    resolved_at: null,
+    last_message_at: NOW,
+    last_message_body: 'Need help',
+    last_sender_role: 'buyer',
+    needs_staff_reply: true,
+    created_at: '2026-09-06T14:00:00.000Z',
+    updated_at: NOW,
+  });
+  assert.equal(Object.hasOwn(payload.ticket, 'assigned_to'), false);
+  assert.equal(Object.hasOwn(payload.ticket, 'version'), false);
+});
+
+test('explicit buyer ticket creation reports the pre-activation gate without masking it', async () => {
+  const handler = createAccountMessagesHandler({
+    requireCommerceUser: async () => buyerContext({}),
+    rateLimit: async () => ({ ok: true }),
+    readBody: async () => ({
+      action: 'start_ticket',
+      body: 'A distinct issue',
+    }),
+    publishSupportMessage: async () => {
+      throw new Error('support_ticket_routing_not_enabled');
+    },
+  });
+
+  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+
+  assert.deepEqual(await responseShape(response), {
+    status: 409,
+    body: { error: 'support_ticket_routing_not_enabled' },
+  });
+});
+
+test('buyer explicit ticket ownership fails closed before publication', async () => {
+  let published = false;
+  const handler = createAccountMessagesHandler({
+    requireCommerceUser: async () => buyerContext({}),
+    rateLimit: async () => ({ ok: true }),
+    readBody: async () => ({ body: 'Wrong ticket', ticket_id: TICKET_ID }),
+    supportTicketById: async () => supportTicket({ thread_id: COMPANY_THREAD_ID }),
+    visibleSupportThreadIds: async () => [USER_THREAD_ID],
+    publishSupportMessage: async () => { published = true; },
+  });
+
+  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+
+  assert.deepEqual(await responseShape(response), { status: 404, body: { error: 'ticket_not_found' } });
+  assert.equal(published, false);
+});
+
+test('buyer can reply to an exact visible company-wide ticket through its canonical thread', async () => {
+  let publishedInput;
+  const handler = createAccountMessagesHandler({
+    requireCommerceUser: async () => buyerContext({}),
+    rateLimit: async () => ({ ok: true }),
+    readBody: async () => ({ body: 'Company-wide reply', ticket_id: TICKET_ID, action: 'start_ticket' }),
+    supportTicketById: async () => supportTicket({ thread_id: COMPANY_THREAD_ID }),
+    visibleSupportThreadIds: async () => [USER_THREAD_ID, COMPANY_THREAD_ID],
+    publishSupportMessage: async (_env, _sb, input) => {
+      publishedInput = input;
+      return {
+        message: {
+          id: 'message-company-ticket', thread_id: COMPANY_THREAD_ID, ticket_id: TICKET_ID,
+          ticket: supportTicket({ thread_id: COMPANY_THREAD_ID }), created_at: NOW, order_id: null,
+        },
+        emailDelivery: { ok: true },
+      };
+    },
+  });
+
+  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+
+  assert.equal(response.status, 201);
+  assert.equal(publishedInput.ticketId, TICKET_ID);
+  assert.equal(publishedInput.threadId, COMPANY_THREAD_ID);
+  assert.equal(publishedInput.startTicket, true);
+  assert.equal(publishedInput.userId, USER_ID);
+  assert.equal((await response.json()).ticket.thread_id, COMPANY_THREAD_ID);
+});
+
+test('staff explicit ticket reply keeps exact ticket and ignores spoofed thread identity', async () => {
+  let publishedInput;
+  const thread = {
+    ...participantThread({ company_id: null }),
+    company_name: null,
+    company_status: null,
+    participant: { id: USER_ID, full_name: 'Ada Buyer', email: 'buyer@example.test' },
+    scope: 'user',
+  };
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => ({
+      from: () => ({ insert: () => Promise.resolve({ error: null }) }),
+    }),
+    readBody: async () => ({
+      ticket_id: TICKET_ID,
+      start_ticket: true,
+      thread_id: COMPANY_THREAD_ID,
+      recipient_user_id: OTHER_USER_ID,
+      body: ' Exact reply ',
+    }),
+    supportTicketById: async () => supportTicket(),
+    loadThread: async (_sb, { threadId }) => {
+      assert.equal(threadId, USER_THREAD_ID);
+      return thread;
+    },
+    resolveSupportRecipient: async (_sb, input) => {
+      assert.deepEqual(input, { companyId: null, userId: USER_ID });
+      return { id: USER_ID, company_id: null, email: 'buyer@example.test' };
+    },
+    publishSupportMessage: async (_env, _sb, input) => {
+      publishedInput = input;
+      return {
+        message: {
+          id: 'message-ticket', thread_id: USER_THREAD_ID, ticket_id: TICKET_ID,
+          ticket: supportTicket({ last_sender_role: 'staff' }), created_at: NOW,
+          order_id: null, recipient_user_id: USER_ID,
+        },
+        emailDelivery: { ok: true },
+      };
+    },
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
+  const payload = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(publishedInput.ticketId, TICKET_ID);
+  assert.equal(publishedInput.threadId, USER_THREAD_ID);
+  assert.equal(publishedInput.recipientUserId, USER_ID);
+  assert.equal(payload.ticket_id, TICKET_ID);
+  assert.equal(payload.ticket.version, 7);
+});
+
+test('staff exact company-wide ticket reply ignores forged routing hints and guesses no email identity', async () => {
+  let rpcCall;
+  let recipientLookups = 0;
+  let deliveredMessage;
+  const companyTicket = supportTicket({ thread_id: COMPANY_THREAD_ID });
+  const companyWide = {
+    ...companyThread(),
+    company_name: 'Acme HVAC', company_status: 'approved', scope: 'company', participant: null,
+  };
+  const sb = {
+    async rpc(name, args) {
+      rpcCall = { name, args };
+      return {
+        data: {
+          id: 'company-wide-staff-message', thread_id: COMPANY_THREAD_ID,
+          ticket_id: TICKET_ID, company_id: COMPANY_ID, recipient_user_id: null,
+          created_at: NOW, order_id: null, ticket: companyTicket,
+        },
+        error: null,
+      };
+    },
+  };
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => sb,
+    readBody: async () => ({
+      ticket_id: TICKET_ID,
+      company_id: OTHER_COMPANY_ID,
+      recipient_user_id: OTHER_USER_ID,
+      body: 'Company-wide follow-up',
+    }),
+    supportTicketById: async () => companyTicket,
+    loadThread: async () => companyWide,
+    resolveSupportRecipient: async () => {
+      recipientLookups += 1;
+      throw new Error('must not guess a company recipient');
+    },
+    publishSupportMessage: (env, client, input) => publishSupportMessage(env, client, input, {
+      append: appendSupportMessage,
+      deliver: async (_env, _client, message) => {
+        deliveredMessage = message;
+        return { ok: false, skipped: 'recipient_not_found', retryable: false };
+      },
+    }),
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
+  const payload = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(recipientLookups, 0);
+  assert.equal(rpcCall.name, 'append_support_message');
+  assert.equal(rpcCall.args.p_thread_id, COMPANY_THREAD_ID);
+  assert.equal(rpcCall.args.p_ticket_id, TICKET_ID);
+  assert.equal(rpcCall.args.p_company_id, COMPANY_ID);
+  assert.equal(rpcCall.args.p_recipient_user_id, null);
+  assert.equal(rpcCall.args.p_thread_user_id, null);
+  assert.equal(deliveredMessage.recipient_user_id, null);
+  assert.deepEqual(payload.email_delivery, {
+    ok: false, skipped: 'recipient_not_found', retryable: false,
+  });
+});
+
+test('staff start_ticket on an existing thread delegates fresh episode selection to SQL', async () => {
+  let publishedInput;
+  let ticketLookups = 0;
+  const thread = {
+    ...participantThread(),
+    company_name: 'Acme HVAC',
+    company_status: 'approved',
+    participant: { id: USER_ID, full_name: 'Ada Buyer', email: 'buyer@example.test' },
+    scope: 'user',
+  };
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => ({
+      from: () => ({ insert: () => Promise.resolve({ error: null }) }),
+    }),
+    readBody: async () => ({
+      thread_id: USER_THREAD_ID,
+      start_ticket: true,
+      subject: 'A separate issue',
+      body: 'Start a distinct support episode.',
+    }),
+    supportTicketForThread: async () => { ticketLookups += 1; return supportTicket(); },
+    loadThread: async () => thread,
+    resolveSupportRecipient: async () => ({ id: USER_ID, company_id: COMPANY_ID }),
+    publishSupportMessage: async (_env, _sb, input) => {
+      publishedInput = input;
+      return {
+        message: {
+          id: 'new-ticket-message', thread_id: USER_THREAD_ID, ticket_id: TICKET_ID,
+          ticket: supportTicket({ subject: 'A separate issue' }), created_at: NOW,
+          order_id: null, recipient_user_id: USER_ID,
+        },
+        emailDelivery: { ok: true },
+      };
+    },
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
+
+  assert.equal(response.status, 201);
+  assert.equal(ticketLookups, 0);
+  assert.equal(publishedInput.threadId, USER_THREAD_ID);
+  assert.equal(publishedInput.ticketId, null);
+  assert.equal(publishedInput.startTicket, true);
+});
+
+test('legacy staff thread detail keeps thread-wide history until the ticket UI cutover', async () => {
+  const ticketFilters = [];
+  let selected = false;
+  const rows = [
+    { id: 'message-one', thread_id: USER_THREAD_ID, ticket_id: TICKET_ID, sender_role: 'buyer', body: 'First ticket', order_id: null, created_at: NOW },
+    { id: 'message-two', thread_id: USER_THREAD_ID, ticket_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', sender_role: 'staff', body: 'Second ticket', order_id: null, created_at: NOW },
+  ];
+  const makeBuilder = () => ({
+    select() { selected = true; return this; },
+    update() { selected = false; return this; },
+    eq(column, value) { if (column === 'ticket_id') ticketFilters.push(value); return this; },
+    order() { return this; },
+    limit() { return this; },
+    lt() { return this; },
+    then(resolve, reject) {
+      return Promise.resolve(selected ? { data: rows, error: null } : { data: [], error: null }).then(resolve, reject);
+    },
+  });
+  const thread = {
+    ...participantThread(),
+    company_name: 'Acme HVAC', company_status: 'approved', scope: 'user', participant: null,
+  };
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => ({ from: () => makeBuilder() }),
+    loadThread: async () => thread,
+    supportTicketForThread: async () => supportTicket(),
+  });
+
+  const response = await handler({
+    request: new Request(`https://masest.test/api/admin/messages?thread_id=${USER_THREAD_ID}`),
+    env: {},
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(payload.messages.map((message) => message.ticket_id).sort(), [
+    TICKET_ID,
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  ].sort());
+  assert.deepEqual(ticketFilters, []);
+});
+
+test('explicit ticket status update requires a version and reports stale compare-and-swap', async () => {
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => ({}),
+    readBody: async () => ({ ticket_id: TICKET_ID, status: 'resolved', version: 6 }),
+    supportTicketById: async () => supportTicket(),
+    updateSupportTicket: async () => {
+      throw Object.assign(new Error('ticket_version_conflict'), { code: 'P0001' });
+    },
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
+
+  assert.deepEqual(await responseShape(response), {
+    status: 409,
+    body: { error: 'ticket_version_conflict' },
+  });
+});
+
+test('explicit ticket status update rejects a missing version before mutation', async () => {
+  let mutations = 0;
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => ({}),
+    readBody: async () => ({ ticket_id: TICKET_ID, status: 'resolved' }),
+    supportTicketById: async () => supportTicket(),
+    updateSupportTicket: async () => { mutations += 1; },
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
+
+  assert.deepEqual(await responseShape(response), {
+    status: 400,
+    body: { error: 'ticket_version_required' },
+  });
+  assert.equal(mutations, 0);
+});
+
+test('explicit ticket PATCH accepts canonical waiting status and priority without legacy remapping', async () => {
+  let updateInput;
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => ({}),
+    readBody: async () => ({
+      ticket_id: TICKET_ID,
+      status: 'waiting_on_customer',
+      priority: 'urgent',
+      version: 7,
+    }),
+    supportTicketById: async () => supportTicket(),
+    updateSupportTicket: async (_sb, input) => {
+      updateInput = input;
+      return supportTicket({ status: 'waiting_on_customer', priority: 'urgent', version: 8 });
+    },
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(updateInput, {
+    ticketId: TICKET_ID,
+    expectedVersion: 7,
+    actorId: STAFF_ID,
+    status: 'waiting_on_customer',
+    priority: 'urgent',
+  });
+});
+
+test('legacy thread status control selects one ticket server-side and still uses CAS', async () => {
+  let updateInput;
+  const thread = participantThread();
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => staffContext(),
+    adminClient: () => ({}),
+    readBody: async () => ({ thread_id: USER_THREAD_ID, status: 'escalated' }),
+    loadThread: async (_sb, { threadId }) => {
+      assert.equal(threadId, USER_THREAD_ID);
+      return thread;
+    },
+    supportTicketForThread: async (_sb, threadId) => {
+      assert.equal(threadId, USER_THREAD_ID);
+      return supportTicket();
+    },
+    updateSupportTicket: async (_sb, input) => {
+      updateInput = input;
+      return supportTicket({ priority: 'high', version: 8 });
+    },
+  });
+
+  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(updateInput, {
+    ticketId: TICKET_ID,
+    expectedVersion: 7,
+    actorId: STAFF_ID,
+    status: 'open',
+    priority: 'high',
+  });
+  assert.equal(payload.thread_id, USER_THREAD_ID);
+  assert.equal(payload.ticket_id, TICKET_ID);
+  assert.equal(payload.status, 'escalated');
+  assert.equal(payload.ticket.version, 8);
 });

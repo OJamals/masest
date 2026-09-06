@@ -10,8 +10,11 @@ import {
   normalizeSupportTicketPriority,
   normalizeSupportTicketStatus,
   normalizeSupportTicketSubject,
+  normalizeSupportTicketVersion,
   projectAdminSupportTicket,
   projectBuyerSupportTicket,
+  supportTicketLegacyStatus,
+  supportTicketTransition,
 } from '../functions/_lib/support-tickets.js';
 
 const ticket = {
@@ -139,4 +142,23 @@ test('admin ticket projection adds only managed staff fields', () => {
 test('needs_staff_reply is false for staff-latest or resolved tickets', () => {
   assert.equal(projectBuyerSupportTicket({ ...ticket, last_sender_role: 'staff' }).needs_staff_reply, false);
   assert.equal(projectBuyerSupportTicket({ ...ticket, status: 'resolved' }).needs_staff_reply, false);
+});
+
+test('ticket version compare-and-swap input is a positive integer without coercion', () => {
+  assert.equal(normalizeSupportTicketVersion(1), 1);
+  assert.equal(normalizeSupportTicketVersion(42), 42);
+  for (const invalid of [0, -1, 1.5, '4', null, undefined, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.equal(normalizeSupportTicketVersion(invalid), null);
+  }
+});
+
+test('legacy admin lifecycle values map onto ticket status and priority', () => {
+  assert.deepEqual(supportTicketTransition('open'), { status: 'open', priority: 'normal' });
+  assert.deepEqual(supportTicketTransition('escalated'), { status: 'open', priority: 'high' });
+  assert.deepEqual(supportTicketTransition('complete'), { status: 'resolved', priority: null });
+  assert.equal(supportTicketTransition('closed'), null);
+
+  assert.equal(supportTicketLegacyStatus({ status: 'resolved', priority: 'urgent' }), 'complete');
+  assert.equal(supportTicketLegacyStatus({ status: 'open', priority: 'high' }), 'escalated');
+  assert.equal(supportTicketLegacyStatus({ status: 'waiting_on_customer', priority: 'normal' }), 'open');
 });

@@ -5,6 +5,7 @@ import {
   deliverSupportMessageEmail,
   routeInboundMessageReply,
 } from '../functions/_lib/support-email.js';
+import { renderSupportEmail } from '../functions/_lib/email-renderers.js';
 
 const COMPANY_ID = '00000000-0000-4000-8000-000000000001';
 const BUYER_ID = '00000000-0000-4000-8000-000000000002';
@@ -13,6 +14,7 @@ const ORDER_ID = '00000000-0000-4000-8000-000000000003';
 const MESSAGE_ID = '00000000-0000-4000-8000-000000000005';
 const THREAD_ID = '00000000-0000-4000-8000-000000000006';
 const OTHER_USER_ID = '00000000-0000-4000-8000-000000000007';
+const TICKET_ID = '00000000-0000-4000-8000-000000000008';
 
 function senderResolutionDb({ buyerProfiles = [], staffProfiles = [], emails = {} } = {}) {
   const queryCalls = [];
@@ -157,6 +159,7 @@ function parentFromBuyer() {
     user_id: BUYER_ID,
     recipient_user_id: null,
     order_id: ORDER_ID,
+    ticket_id: TICKET_ID,
   };
 }
 
@@ -169,6 +172,7 @@ function parentFromStaff(overrides = {}) {
     user_id: STAFF_ID,
     recipient_user_id: BUYER_ID,
     order_id: ORDER_ID,
+    ticket_id: TICKET_ID,
     ...overrides,
   };
 }
@@ -331,6 +335,7 @@ test('customer and staff email replies append through canonical chat with exact 
           user_id: STAFF_ID,
           recipient_user_id: BUYER_ID,
           order_id: ORDER_ID,
+          ticket_id: TICKET_ID,
         }
       : {
           id: MESSAGE_ID,
@@ -340,6 +345,7 @@ test('customer and staff email replies append through canonical chat with exact 
           user_id: BUYER_ID,
           recipient_user_id: null,
           order_id: ORDER_ID,
+          ticket_id: TICKET_ID,
         };
     const result = await routeInboundMessageReply({}, {
       id: `email-${senderRole}`,
@@ -384,6 +390,7 @@ test('customer and staff email replies append through canonical chat with exact 
     assert.equal(upserted.senderRole, senderRole);
     assert.equal(upserted.threadId, THREAD_ID);
     assert.equal(upserted.orderId, ORDER_ID);
+    assert.equal(upserted.ticketId, TICKET_ID);
     assert.equal(upserted.recipientUserId, senderRole === 'staff' ? BUYER_ID : null);
     assert.equal(
       upserted.emailReferences,
@@ -392,6 +399,122 @@ test('customer and staff email replies append through canonical chat with exact 
     assert.equal(delivered.sender_role, senderRole);
     assert.equal(delivered.order_id, ORDER_ID);
   }
+});
+
+test('signed parent ticket is invariant when inbound subject and threading headers are changed, stripped, or forged', async () => {
+  const parent = parentFromStaff();
+  const inputs = [
+    { subject: 'Re: [MAS-999999] forged', headers: {} },
+    { subject: 'totally unrelated', headers: { references: '<forged@example.test>' } },
+    { subject: '', headers: { 'in-reply-to': '<attacker@example.test>', 'message-id': '<new@example.test>' } },
+  ];
+  for (const [index, override] of inputs.entries()) {
+    let upserted;
+    await routeInboundMessageReply({}, {
+      id: `subject-invariant-${index}`,
+      from: 'buyer@example.com',
+      to: [`reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`],
+      text: 'Authoritative parent remains unchanged.',
+      ...override,
+    }, {
+      sb: {},
+      messageIdFromReplyAddress: async () => MESSAGE_ID,
+      replyMessage: async () => parent,
+      replyThread: async () => replyThread(),
+      senderIdentity: async () => ({ role: 'buyer', userId: BUYER_ID }),
+      upsertMessage: async (_sb, input) => {
+        upserted = input;
+        return { id: `routed-${index}`, inserted: true, ticket_id: TICKET_ID };
+      },
+      deliverMessage: async () => ({ ok: true }),
+    });
+    assert.equal(upserted.ticketId, TICKET_ID);
+    assert.equal(upserted.orderId, ORDER_ID);
+  }
+});
+
+test('support delivery loads the exact message ticket and renderer escapes ticket display subject', async () => {
+  let requestedTicketId;
+  let sent;
+  await deliverSupportMessageEmail({}, {}, {
+    id: MESSAGE_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    company_name: 'Northwind HVAC',
+    sender_role: 'staff',
+    recipient_user_id: BUYER_ID,
+    body: 'Use the attached process guidance.',
+  }, {
+    buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
+    ticketContext: async (_sb, ticketId) => {
+      requestedTicketId = ticketId;
+      return { id: ticketId, ticket_number: 123, subject: 'Pump-room <scaling & "biofilm">' };
+    },
+    orderContext: async () => null,
+    threadParent: async () => null,
+    replyAddress: async () => 'reply+safe@reply.masest.co',
+    sendEmail: async (_env, options) => { sent = options; return { ok: true, providerMessageId: '<delivery@example.test>' }; },
+    saveDelivery: async () => {},
+  });
+  assert.equal(requestedTicketId, TICKET_ID);
+  assert.equal(sent.subject, '[MAS-000123] MASEST support · Pump-room <scaling & "biofilm">');
+  assert.match(sent.html, /\[MAS-000123\]/);
+  assert.match(sent.html, /Pump-room &lt;scaling &amp; &quot;biofilm&quot;&gt;/);
+
+  const rendered = renderSupportEmail({
+    thread: { headers: { 'In-Reply-To': '<parent@example.test>' } },
+    message: { sender_role: 'staff', body: 'Reply' },
+    participant: { name: 'Northwind HVAC' },
+    ticket: { display_number: 'MAS-000123', subject: 'Pump-room scaling' },
+  });
+  assert.equal(rendered.subject, 'Re: [MAS-000123] MASEST support · Pump-room scaling');
+});
+
+test('support delivery query does not inherit parent headers or history from another ticket', async () => {
+  const filters = [];
+  const priorOtherTicket = [{
+    id: 'old-message',
+    email_message_id: '<old-ticket@example.test>',
+    email_references: '<old-root@example.test>',
+    sender_role: 'buyer',
+    body: 'Old ticket history',
+    created_at: '2026-09-01T12:00:00Z',
+  }];
+  const builder = {
+    select() { return this; },
+    or() { return this; },
+    order() { return this; },
+    limit() { return this; },
+    eq(column, value) { filters.push([column, value]); return this; },
+    neq() { return this; },
+    is() { return this; },
+    then(resolve, reject) {
+      const exactTicket = filters.some(([column, value]) => column === 'ticket_id' && value === TICKET_ID);
+      return Promise.resolve({ data: exactTicket ? [] : priorOtherTicket, error: null }).then(resolve, reject);
+    },
+  };
+  let sent;
+  await deliverSupportMessageEmail({}, { from: () => builder }, {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    company_name: 'Northwind HVAC',
+    sender_role: 'staff',
+    recipient_user_id: BUYER_ID,
+    body: 'First message in this ticket.',
+  }, {
+    buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
+    ticketContext: async () => ({ id: TICKET_ID, ticket_number: 124, subject: 'New issue' }),
+    orderContext: async () => null,
+    replyAddress: async () => 'reply+safe@reply.masest.co',
+    sendEmail: async (_env, options) => { sent = options; return { ok: true, providerMessageId: 'delivery-2' }; },
+    saveDelivery: async () => {},
+  });
+
+  assert.deepEqual(filters, [['thread_id', THREAD_ID], ['ticket_id', TICKET_ID]]);
+  assert.deepEqual(sent.emailHeaders, {});
+  assert.doesNotMatch(sent.html, /Old ticket history/);
 });
 
 test('unrecognized inbound sender never enters support chat', async () => {

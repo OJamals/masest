@@ -11,6 +11,7 @@ import {
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const ORDER_ID = '22222222-2222-4222-8222-222222222222';
 const THREAD_ID = '33333333-3333-4333-8333-333333333333';
+const TICKET_ID = '44444444-4444-4444-8444-444444444444';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -82,12 +83,18 @@ test('order context accepts exact user ownership without a company', async () =>
   assert.deepEqual(filters, [['id', ORDER_ID]]);
 });
 
-test('support append targets one canonical participant thread', async () => {
+test('support append targets one canonical participant thread and exact ticket', async () => {
   let call;
   await appendSupportMessage({
     async rpc(name, args) {
       call = { name, args };
-      return { data: { id: 'message-1', thread_id: THREAD_ID }, error: null };
+      return {
+        data: {
+          id: 'message-1', thread_id: THREAD_ID, ticket_id: TICKET_ID,
+          ticket: { id: TICKET_ID, thread_id: THREAD_ID },
+        },
+        error: null,
+      };
     },
   }, {
     companyId: null,
@@ -100,6 +107,9 @@ test('support append targets one canonical participant thread', async () => {
   assert.equal(call.name, 'append_support_message');
   assert.equal(call.args.p_thread_user_id, USER_ID);
   assert.equal(call.args.p_company_id, null);
+  assert.equal(call.args.p_contract_version, 2);
+  assert.equal(call.args.p_start_ticket, false);
+  assert.equal(call.args.p_ticket_id, null);
 });
 
 test('support schema owns user and business scopes through one thread table', () => {
@@ -150,14 +160,16 @@ test('admin thread lists avoid per-thread auth email lookups', () => {
   assert.match(admin, /hydrateThreads\(sb, rows, \{ includeEmails = false \} = \{\}\)/);
   assert.match(admin, /includeEmails \? await emailsByIds\(sb, userIds\) : \{\}/);
   assert.match(admin, /hydrateThreads\(sb, \[data\], \{ includeEmails: true \}\)/);
-  assert.match(admin, /hydrated = await hydrateThreads\(sb, data \|\| \[\]\);/);
+  assert.match(admin, /await hydrateThreads\(sb, threadResult\.data \|\| \[\]\)/);
+  assert.match(admin, /sb\.from\('support_tickets'\)/);
 });
 
-test('staff replies always target one user and therefore one email recipient', () => {
+test('staff participant replies target one user while exact company tickets keep a null recipient', () => {
   const admin = read('functions/api/admin/messages.js');
   const supportUi = read('js/admin-support.js');
 
-  assert.match(admin, /if \(!recipientUserId\) return json\(400, \{ error: 'recipient_user_id_required' \}\);/);
+  assert.match(admin, /companyWideTicket/);
+  assert.match(admin, /if \(!recipientUserId && !companyWideTicket\)/);
   assert.match(supportUi, /selected\.participant_user_id/);
   assert.match(supportUi, /data-support-start-customer/);
   assert.match(supportUi, /Start a customer chat to reply by chat and email\./);

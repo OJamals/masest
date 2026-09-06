@@ -4,9 +4,11 @@ import test from 'node:test';
 import {
   messagePage,
   presenceIsFresh,
-  supportThreadListStatus,
-  supportThreadPatch,
 } from '../functions/_lib/support-messages.js';
+import {
+  supportTicketLegacyStatus,
+  supportTicketTransition,
+} from '../functions/_lib/support-tickets.js';
 import { createSupportPoller, filterSupportThreads } from '../js/admin-support.js';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -24,22 +26,17 @@ test('message pages retain the newest rows and expose an older-page cursor', () 
   });
 });
 
-test('support lifecycle persists escalation and completion metadata', () => {
-  assert.deepEqual(supportThreadPatch('escalated', 'staff-1', '2026-07-11T04:00:00.000Z'), {
-    status: 'escalated',
-    completed_at: null,
-    completed_by: null,
-  });
-  assert.equal(supportThreadPatch('complete', 'staff-1', '2026-07-11T04:00:00.000Z').completed_by, 'staff-1');
-  assert.equal(supportThreadPatch('bogus', 'staff-1'), null);
+test('support lifecycle maps legacy controls onto ticket status and priority', () => {
+  assert.deepEqual(supportTicketTransition('escalated'), { status: 'open', priority: 'high' });
+  assert.deepEqual(supportTicketTransition('complete'), { status: 'resolved', priority: null });
+  assert.equal(supportTicketTransition('bogus'), null);
+  assert.equal(supportTicketLegacyStatus({ status: 'resolved', priority: 'high' }), 'complete');
 });
 
-test('support thread lists fail closed to open or complete lifecycle views', () => {
-  assert.equal(supportThreadListStatus(null), 'open');
-  assert.equal(supportThreadListStatus('open'), 'open');
-  assert.equal(supportThreadListStatus('complete'), 'complete');
-  assert.equal(supportThreadListStatus('escalated'), null);
-  assert.equal(supportThreadListStatus('complete,open'), null);
+test('ticket lifecycle projections keep legacy open and escalated labels deterministic', () => {
+  assert.equal(supportTicketLegacyStatus({ status: 'open', priority: 'normal' }), 'open');
+  assert.equal(supportTicketLegacyStatus({ status: 'waiting_on_customer', priority: 'urgent' }), 'escalated');
+  assert.equal(supportTicketLegacyStatus({ status: 'resolved', priority: 'normal' }), 'complete');
 });
 
 test('presence expires when a close/unload signal is lost', () => {
@@ -233,11 +230,13 @@ test('support thread cards give customer and message copy the full list width', 
   assert.match(styles, /\.site-support__meta \{[^}]*display:\s*flex;[^}]*justify-content:\s*flex-end;/);
 });
 
-test('staff-started messages reopen the canonical thread and expose user/order references', () => {
+test('staff-started messages preserve legacy reopen without requesting a distinct ticket', () => {
   const adminMessages = read('functions/api/admin/messages.js');
   const users = read('functions/api/admin/users.js');
 
-  assert.match(adminMessages, /reopen:\s*body\.start_thread === true/);
+  assert.match(adminMessages, /const legacyStartThread = body\.start_thread === true/);
+  assert.match(adminMessages, /reopen:\s*legacyStartThread \? true : null/);
+  assert.match(adminMessages, /const startTicket = body\.start_ticket === true/);
   assert.match(adminMessages, /recipient_user_id/);
   assert.match(adminMessages, /hydrateThreads/);
   assert.match(adminMessages, /participant_user_id/);

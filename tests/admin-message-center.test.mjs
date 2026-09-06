@@ -53,7 +53,7 @@ test('admin message recipients exclude active inboxes and revoked staff', async 
   ]);
 });
 
-test('support API persists thread lifecycle and admin message preferences', () => {
+test('support API persists ticket lifecycle and admin message preferences', () => {
   const account = read('functions/api/account/messages.js');
   const admin = read('functions/api/admin/messages.js');
   const settings = read('functions/api/admin/message-settings.js');
@@ -66,7 +66,10 @@ test('support API persists thread lifecycle and admin message preferences', () =
   assert.doesNotMatch(admin, /appendSupportMessage/);
   assert.match(admin, /request\.method === 'PATCH'/);
   assert.match(admin, /support_threads/);
-  assert.match(admin, /supportThreadPatch/);
+  assert.match(admin, /updateSupportTicket/);
+  assert.match(admin, /ticket_version_conflict/);
+  assert.doesNotMatch(admin, /supportThreadPatch/);
+  assert.doesNotMatch(admin, /from\('support_threads'\)\.update/);
   assert.match(settings, /ADMIN_MESSAGE_PREF_COLUMNS/);
   assert.match(notifications, /notify_admin_support_requests/);
   assert.match(notifications, /notify_admin_messages/);

@@ -10,6 +10,7 @@ const parent = {
   recipient_user_id: 'user-1',
   user_id: 'staff-1',
   order_id: 'order-1',
+  ticket_id: '00000000-0000-4000-8000-000000000010',
 };
 const input = {
   id: 'email-1',
@@ -35,6 +36,7 @@ function retryDependencies(deliverMessage) {
         user_id: 'user-1',
         recipient_user_id: null,
         order_id: parent.order_id,
+        ticket_id: parent.ticket_id,
         body: input.text,
         inserted: upserts++ === 0,
         company_name: 'Buyer Co',
