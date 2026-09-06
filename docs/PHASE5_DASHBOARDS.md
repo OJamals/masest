@@ -35,9 +35,10 @@ New tables `messages`, `notifications`, `offers`, `page_views`; new columns
 ## Owner steps to make it fully live
 
 1. **Run the migrations.** Apply `supabase/schema-phase5.sql`, then the support/email
-   migrations listed in `docs/email-architecture.md`. The final
-   `migrate-support-participant-threads-2026-09-03.sql` migration backfills exact
-   participant and company-wide thread identities transactionally and is safe to re-run.
+   migrations listed in `docs/email-architecture.md`. Apply
+   `migrate-support-participant-threads-2026-09-03.sql` first to backfill exact participant
+   and company-wide thread identities, then `migrate-support-tickets-2026-09-06.sql` to add
+   ticket episodes and deterministic legacy links. Both are transactional and safe to re-run.
 2. **Set `ADMIN_EMAILS`** in the **Cloudflare Pages** dashboard (project `masest-commerce` → Settings →
    Environment variables, set for **Production and Preview**), comma-separated. This is the *authoritative*
    staff gate — any signed-in Supabase user whose email is listed can use `admin.html` and `/api/admin/*`.

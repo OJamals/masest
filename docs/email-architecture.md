@@ -120,6 +120,7 @@ Apply these migrations before release:
 - `supabase/migrate-cloudflare-email-service-2026-08-31.sql`
 - `supabase/migrate-email-inbound-reference-regex-2026-09-01.sql`
 - `supabase/migrate-support-participant-threads-2026-09-03.sql`
+- `supabase/migrate-support-tickets-2026-09-06.sql`
 - `supabase/schema-notification-prefs.sql`
 - `supabase/schema-email.sql`
 - `supabase/schema-newsletters.sql`
@@ -137,3 +138,31 @@ belongs to one user, may reference that user's current or past orders, and keeps
 the same identity when a reply returns through `reply.masest.co`. Company-wide
 business conversations use the same table with no participant. Legacy company
 summary columns remain a compatibility projection; they do not own chat state.
+
+`support_tickets` adds independently managed work episodes beneath that stable
+transport identity; it does not add a conversation table, Order-specific route, or
+email ingress. Until the ticket-routing cutover, the existing `support_threads`
+lifecycle remains the runtime compatibility owner. After cutover, the ticket alone
+owns status, priority, category, assignment, and resolution; the thread continues to
+own participant and transport identity. The default interface may show one active
+ticket per thread, while the schema permits a signed reply to reopen its exact
+historical ticket.
+
+Signed reply addresses continue to resolve the canonical parent Support Message.
+That parent message supplies both thread and ticket identity; neither a `MAS-…`
+display number nor caller-supplied ticket ID is a routing or authorization credential.
+Buyer-facing authenticated APIs expose explicit safe ticket/message fields. Ticket
+events and private notes remain service-role-only and are never readable through the
+current authenticated table RLS.
+
+Ticket lifecycle is `open` → `waiting_on_customer` → `open` → `resolved`. A resolved
+ticket returns to `open` only for an explicit reply or reopen. Escalation is priority
+`high` or `urgent`, not another status. `needs_staff_reply` is derived from the latest
+message sender while the ticket is unresolved.
+
+The migration is additive: it retains thread lifecycle columns and permits nullable
+message ticket linkage during rollout. If application cutover must be rolled back,
+keep the ticket tables, event history, and message links in place and return runtime
+routing to the existing thread fields. Do not drop or rewrite ticket data as an
+operational rollback; a later reviewed migration may retire compatibility fields only
+after all runtimes have completed the cutover.
