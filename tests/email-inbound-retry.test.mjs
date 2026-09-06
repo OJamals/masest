@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { routeInboundMessageReply } from '../functions/_lib/support-email.js';
+import { createEmailInboundHandler } from '../functions/api/email/inbound.js';
 
 const parent = {
   id: '00000000-0000-4000-8000-000000000009',
@@ -78,5 +79,36 @@ test('inbound legacy duplicate exposes operator attention without fabricating re
     email_delivery: {
       state: 'dead', effect_id: null, reason: 'legacy_delivery_effect_missing',
     },
+    reason: 'legacy_delivery_effect_missing',
   });
+});
+
+test('inbound Request boundary preserves safe durable-delivery operator attention', async (t) => {
+  for (const [deliveryReason, publicReason] of [
+    ['legacy_delivery_effect_missing', 'legacy_delivery_effect_missing'],
+    ['support_delivery_status_unavailable', 'support_delivery_status_unavailable'],
+    ['Database connection failed: private detail', 'support_delivery_attention_required'],
+  ]) {
+    await t.test(publicReason, async () => {
+      const fixture = retryDependencies(async () => ({
+        state: 'dead', effect_id: null, reason: deliveryReason,
+      }));
+      const handler = createEmailInboundHandler({
+        verifiedJson: async () => input,
+        routeInbound: (env, value) => routeInboundMessageReply(env, value, fixture.dependencies),
+      });
+      const response = await handler({
+        request: new Request('https://masest.test/api/email/inbound', { method: 'POST' }),
+        env: {},
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        ok: true,
+        routed: true,
+        duplicate: false,
+        reason: publicReason,
+      });
+    });
+  }
 });

@@ -10,7 +10,10 @@ import { clientIp, rateLimit } from '../../_lib/ratelimit.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
 import { orderLifecycle } from '../../_lib/order-lifecycle.js';
 import { orderReference } from '../../_lib/order-integrations.js';
-import { deliverSupportMessageEmail } from '../../_lib/support-email.js';
+import {
+  attemptSupportMessageDelivery,
+  createSupportDeliveryWorkerId,
+} from '../../_lib/support-delivery.js';
 import { projectBuyerSupportTicket } from '../../_lib/support-tickets.js';
 
 const BODY_MAX_BYTES = 8 * 1024;
@@ -91,7 +94,8 @@ export async function handleAccountOrderRequests({ request, env }, dependencies 
   const parseBody = dependencies.readBoundedJson || readBoundedJson;
   const getUser = dependencies.userFromRequest || userFromRequest;
   const getAdminClient = dependencies.adminClient || adminClient;
-  const deliverMessage = dependencies.deliverSupportMessageEmail || deliverSupportMessageEmail;
+  const attemptDelivery = dependencies.attemptSupportMessageDelivery || attemptSupportMessageDelivery;
+  const createDeliveryWorkerId = dependencies.createDeliveryWorkerId || createSupportDeliveryWorkerId;
   const now = dependencies.now || Date.now;
 
   const { user } = await getUser(request, env);
@@ -176,9 +180,18 @@ export async function handleAccountOrderRequests({ request, env }, dependencies 
   let emailDelivery = null;
   if (result.message) {
     try {
-      emailDelivery = await deliverMessage(env, sb, result.message);
+      emailDelivery = await attemptDelivery({
+        env,
+        sb,
+        message: result.message,
+        workerId: createDeliveryWorkerId('order-request'),
+      });
     } catch {
-      emailDelivery = { ok: false, retryable: true, error: 'support_email_delivery_failed' };
+      emailDelivery = {
+        state: 'dead',
+        effect_id: null,
+        reason: 'support_delivery_status_unavailable',
+      };
     }
   }
 

@@ -35,10 +35,11 @@ test('support delivery is a minimal local-provider effect handled by the shared 
   const effects = read('functions/_lib/integration-effects.js');
 
   assert.match(effects, /support_message_email:\s*new Set\(\['message_id'\]\)/);
-  assert.match(effects, /MASEST:[\s\S]*support_message_email/);
+  assert.match(effects, /support_message_email:\s*MASEST/);
   assert.match(effects, /export async function processClaimedIntegrationEffect/);
-  assert.match(effects, /effect\.aggregate_type\s*!==\s*'support_ticket'/);
-  assert.match(effects, /message\.ticket_id\s*!==\s*effect\.aggregate_id/);
+  assert.match(effects, /effectRow\.aggregate_type\s*!==\s*'support_ticket'/);
+  assert.match(effects, /effectRow\.effect_key\s*!==\s*'email-counterpart'/);
+  assert.match(effects, /message\.ticket_id\s*!==\s*effectRow\.aggregate_id/);
   assert.match(effects, /deliverSupportMessageEmail/);
   assert.doesNotMatch(effects, /from ['"]\.\/support-email\.js['"]/);
 });

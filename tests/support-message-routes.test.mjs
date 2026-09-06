@@ -17,6 +17,7 @@ const COMPANY_THREAD_ID = '77777777-7777-4777-8777-777777777777';
 const ORDER_ID = '88888888-8888-4888-8888-888888888888';
 const TICKET_ID = '99999999-9999-4999-8999-999999999999';
 const OTHER_TICKET_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const EFFECT_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const NOW = '2026-09-06T14:15:16.000Z';
 
 const THREAD_SELECT = 'id,participant_user_id,company_id,last_message_at,last_message_body,last_sender_role,last_order_id';
@@ -344,7 +345,7 @@ function publisherSuccess(overrides = {}) {
       recipient_user_id: null,
       ...overrides,
     },
-    emailDelivery: { ok: true, delivered: true },
+    emailDelivery: { state: 'delivered', effect_id: EFFECT_ID },
   });
 }
 
@@ -358,7 +359,7 @@ function publisherRetryableEmailFailure(overrides = {}) {
       recipient_user_id: null,
       ...overrides,
     },
-    emailDelivery: { ok: false, retryable: true, error: 'support_email_delivery_failed' },
+    emailDelivery: { state: 'queued', effect_id: EFFECT_ID, reason: 'support_email_delivery_failed' },
   });
 }
 
@@ -681,7 +682,7 @@ test('retail buyer without a Company can publish general support', async () => {
     status: 201,
     body: {
       id: 'message-1', thread_id: USER_THREAD_ID, created_at: NOW, order_id: null,
-      email_delivery: { ok: true, delivered: true }, summary_synced: true,
+      email_delivery: { state: 'delivered', effect_id: EFFECT_ID }, summary_synced: true,
     },
   });
   const publication = publicationCalls.find((call) => call.kind === 'publication');
@@ -720,7 +721,7 @@ test('buyer publisher receives exact actor, thread, order, source, body, and def
     status: 201,
     body: {
       id: 'message-1', thread_id: USER_THREAD_ID, created_at: NOW, order_id: ORDER_ID,
-      email_delivery: { ok: true, delivered: true }, summary_synced: true,
+      email_delivery: { state: 'delivered', effect_id: EFFECT_ID }, summary_synced: true,
     },
   });
   const publication = publicationCalls.find((call) => call.kind === 'publication');
@@ -773,7 +774,7 @@ test('buyer retains the canonical message when email delivery is retryable', asy
     status: 201,
     body: {
       id: 'message-1', thread_id: USER_THREAD_ID, created_at: NOW, order_id: null,
-      email_delivery: { ok: false, retryable: true, error: 'support_email_delivery_failed' },
+      email_delivery: { state: 'queued', effect_id: EFFECT_ID, reason: 'support_email_delivery_failed' },
       summary_synced: true,
     },
   });
@@ -1269,7 +1270,8 @@ test('legacy New chat composer keeps default-ticket routing and explicit reopen 
     resolveSupportRecipient: async () => ({ id: USER_ID, company_id: COMPANY_ID }),
     publishSupportMessage: (env, client, input) => publishSupportMessage(env, client, input, {
       append: appendSupportMessage,
-      deliver: async () => ({ ok: true, skipped: 'test_delivery' }),
+      createWorkerId: () => 'support-immediate/legacy-chat',
+      attemptDelivery: async () => ({ state: 'skipped', effect_id: 'effect-legacy', reason: 'test_delivery' }),
     }),
   });
 
@@ -1394,7 +1396,7 @@ test('selected staff thread fixes participant and Company identity while SQL own
       created_at: NOW,
       order_id: ORDER_ID,
       recipient_user_id: USER_ID,
-      email_delivery: { ok: true, delivered: true },
+      email_delivery: { state: 'delivered', effect_id: EFFECT_ID },
       summary_synced: true,
     },
   });
@@ -1730,9 +1732,10 @@ test('staff exact company-wide ticket reply ignores forged routing hints and gue
     },
     publishSupportMessage: (env, client, input) => publishSupportMessage(env, client, input, {
       append: appendSupportMessage,
-      deliver: async (_env, _client, message) => {
+      createWorkerId: () => 'support-immediate/company-wide',
+      attemptDelivery: async ({ message }) => {
         deliveredMessage = message;
-        return { ok: false, skipped: 'recipient_not_found', retryable: false };
+        return { state: 'skipped', effect_id: 'effect-company-wide', reason: 'recipient_not_found' };
       },
     }),
   });
@@ -1750,7 +1753,7 @@ test('staff exact company-wide ticket reply ignores forged routing hints and gue
   assert.equal(rpcCall.args.p_thread_user_id, null);
   assert.equal(deliveredMessage.recipient_user_id, null);
   assert.deepEqual(payload.email_delivery, {
-    ok: false, skipped: 'recipient_not_found', retryable: false,
+    state: 'skipped', effect_id: 'effect-company-wide', reason: 'recipient_not_found',
   });
 });
 

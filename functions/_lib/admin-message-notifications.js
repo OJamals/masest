@@ -20,12 +20,26 @@ export function sanitizeAdminMessagePrefs(body) {
   return out;
 }
 
-export async function adminMessageRecipients(sb, kind, env, now = Date.now()) {
+export async function adminMessageRecipients(
+  sb,
+  kind,
+  env,
+  now = Date.now(),
+  { strictEmailLookup = false } = {},
+) {
   const column = PREF_COLUMNS[kind];
   if (!column) return [];
   const { data, error } = await sb.from('profiles').select('id,is_staff,support_inbox_seen_at').eq(column, true);
-  if (error || !data?.length) return [];
-  const emails = await emailsByIds(sb, data.map((profile) => profile.id));
+  if (error) {
+    if (strictEmailLookup) throw error;
+    return [];
+  }
+  if (!data?.length) return [];
+  const emails = await emailsByIds(
+    sb,
+    data.map((profile) => profile.id),
+    { strict: strictEmailLookup },
+  );
   const recipients = data.flatMap((profile) => {
     const email = emails[profile.id];
     const currentlyStaff = profile.is_staff === true || isStaffEmail(email, env);

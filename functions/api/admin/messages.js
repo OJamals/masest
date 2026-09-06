@@ -447,19 +447,6 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
       return internalServerError('admin.messages.reply_insert', error);
     }
     const { message: data, emailDelivery } = publication;
-    const messageLink = orderContext.orderId
-      ? `/dashboard.html?order=${encodeURIComponent(orderContext.orderId)}#messages`
-      : '/dashboard.html#messages';
-    if (companyId && recipientUserId) {
-      await sb.from('notifications').insert({
-        company_id: companyId,
-        user_id: recipientUserId,
-        type: 'message',
-        title: 'New message from MASEST',
-        body: text.slice(0, 140),
-        link: messageLink,
-      }).then(() => {}, () => {});
-    }
     const response = {
       id: data.id,
       thread_id: data.thread_id,

@@ -1,20 +1,29 @@
-import { deliverSupportMessageEmail } from './support-email.js';
 import { appendSupportMessage } from './support-messages.js';
+import {
+  attemptSupportMessageDelivery,
+  createSupportDeliveryWorkerId,
+} from './support-delivery.js';
 
 const EMAIL_DELIVERY_FAILURE = {
-  ok: false,
-  retryable: true,
-  error: 'support_email_delivery_failed',
+  state: 'dead',
+  effect_id: null,
+  reason: 'support_delivery_status_unavailable',
 };
 
 export async function publishSupportMessage(env, sb, input, dependencies = {}) {
   const append = dependencies.append || appendSupportMessage;
-  const deliver = dependencies.deliver || deliverSupportMessageEmail;
+  const attemptDelivery = dependencies.attemptDelivery || attemptSupportMessageDelivery;
+  const createWorkerId = dependencies.createWorkerId || createSupportDeliveryWorkerId;
   const message = await append(sb, input);
 
   let emailDelivery;
   try {
-    emailDelivery = await deliver(env, sb, message);
+    emailDelivery = await attemptDelivery({
+      env,
+      sb,
+      message,
+      workerId: createWorkerId(input?.source || 'message'),
+    });
   } catch {
     emailDelivery = EMAIL_DELIVERY_FAILURE;
   }

@@ -141,15 +141,20 @@ export async function requireStaff(request, env) {
 }
 
 // Resolve auth emails for a known set of user ids via getUserById — O(ids), not
-// O(all-users). Best-effort: failed lookups are skipped. Returns { [id]: email }.
-export async function emailsByIds(sb, ids) {
+// O(all-users). Existing callers remain best-effort; durable delivery can opt
+// into strict failure propagation. Returns { [id]: email }.
+export async function emailsByIds(sb, ids, { strict = false } = {}) {
   const unique = [...new Set((ids || []).filter(Boolean))];
   const out = {};
   await Promise.all(unique.map(async (id) => {
     try {
-      const { data } = await sb.auth.admin.getUserById(id);
+      const { data, error } = await sb.auth.admin.getUserById(id);
+      if (error) throw error;
       if (data?.user?.email) out[id] = data.user.email;
-    } catch { /* skip unresolved id */ }
+    } catch (error) {
+      if (strict) throw error;
+      // Existing directory callers intentionally keep best-effort behavior.
+    }
   }));
   return out;
 }

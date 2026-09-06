@@ -228,8 +228,10 @@ test('support email workers can claim only their requested support-message effec
   const claim = sqlFunction(sql, 'claim_support_message_email_effect');
 
   assert.match(claim, /p_message_id uuid[\s\S]*p_worker_id text[\s\S]*p_lease_seconds integer/i);
-  assert.match(claim, /from public\.integration_effects as effect[\s\S]*effect\.payload\s*->>\s*'message_id'\s*=\s*p_message_id::text/i);
-  assert.match(claim, /effect\.effect_type\s*=\s*'support_message_email'/i);
+  assert.match(claim, /event\.provider\s*=\s*'masest'[\s\S]*event\.environment_or_tenant\s*=\s*'production'[\s\S]*event\.provider_event_id\s*=\s*'support-message\/'\s*\|\|\s*p_message_id::text/i);
+  assert.match(claim, /effect\.event_id\s*=\s*v_event\.id[\s\S]*effect\.effect_key\s*=\s*'email-counterpart'/i);
+  assert.doesNotMatch(claim, /effect\.payload\s*->>/i);
+  assert.match(claim, /v_claimed\.effect_type\s*<>\s*'support_message_email'/i);
   assert.match(claim, /for update skip locked/i);
   assert.match(claim, /status\s*=\s*'processing'/i);
   assert.match(claim, /lease_owner\s*=\s*p_worker_id/i);
@@ -246,7 +248,10 @@ test('support delivery migration is rerunnable and never creates historical supp
   assert.match(sql, /drop trigger if exists messages_support_message_email_after_insert/i);
   assert.match(sql, /create unique index if not exists notifications_support_message_id_uniq/i);
   assert.doesNotMatch(sql, /insert\s+into\s+public\.messages\b/i);
-  assert.doesNotMatch(sql, /insert\s+into\s+public\.(?:integration_events|integration_effects|support_message_email_envelopes)\b[\s\S]{0,500}\bselect\b/i);
+  assert.doesNotMatch(
+    sql,
+    /insert\s+into\s+public\.(?:integration_events|integration_effects|support_message_email_envelopes)\b\s*(?:\([^;]*?\))?\s*select\b/i,
+  );
 });
 
 test('duplicate event collision compares deterministic provider identity but permits redelivery verification time', () => {

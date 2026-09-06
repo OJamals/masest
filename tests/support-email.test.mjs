@@ -15,6 +15,15 @@ const MESSAGE_ID = '00000000-0000-4000-8000-000000000005';
 const THREAD_ID = '00000000-0000-4000-8000-000000000006';
 const OTHER_USER_ID = '00000000-0000-4000-8000-000000000007';
 const TICKET_ID = '00000000-0000-4000-8000-000000000008';
+const EFFECT_ID = '00000000-0000-4000-8000-000000000009';
+
+function leasedDelivery(dependencies = {}) {
+  return {
+    deliveryEffect: { id: EFFECT_ID, lease_owner: 'worker-test' },
+    freezeEnvelope: async (_sb, input) => input.envelope,
+    ...dependencies,
+  };
+}
 
 function senderResolutionDb({ buyerProfiles = [], staffProfiles = [], emails = {} } = {}) {
   const queryCalls = [];
@@ -184,12 +193,14 @@ async function routeWithResolvedSender({ db, sender, suffix, parent, env = {} })
     messageIdFromReplyAddress: async () => MESSAGE_ID,
     replyMessage: async () => parent,
     replyThread: async () => replyThread(),
-    deliverMessage: async (_env, _sb, message) => {
-      deliveries.push(message);
-      return { ok: true };
+    createDeliveryWorkerId: () => 'support-immediate/test-inbound',
+    attemptDelivery: async (input) => {
+      deliveries.push(input.message);
+      return { state: 'delivered', effect_id: EFFECT_ID };
     },
   });
-  return { result, deliveries };
+  const { email_delivery: delivery, ...publicResult } = result;
+  return { result: publicResult, delivery, deliveries };
 }
 
 test('staff message uses canonical email gateway with exact buyer, order, and RFC thread', async () => {
@@ -205,7 +216,7 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
     created_at: '2026-09-03T14:42:00Z',
     order_id: ORDER_ID,
     recipient_user_id: BUYER_ID,
-  }, {
+  }, leasedDelivery({
     buyerRecipient: async () => ({
       id: BUYER_ID,
       email: 'buyer@example.com',
@@ -231,7 +242,7 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
       return { ok: true, providerMessageId: 'cf-provider-out-2' };
     },
     saveDelivery: async (_sb, input) => { saved = input; },
-  });
+  }));
 
   assert.equal(result.ok, true);
   assert.equal(result.providerMessageId, 'cf-provider-out-2');
@@ -325,11 +336,101 @@ test('provider response loss reuses the frozen request after mutable support con
   assert.equal(sent.length, 2);
   assert.deepEqual(sent[1], sent[0]);
   assert.deepEqual(sent[0].to, ['first@example.com']);
-  assert.match(sent[0].subject, /VK-ORIGINAL/);
+  assert.match(sent[0].subject, /Original ticket subject/);
   assert.doesNotMatch(sent[0].subject, /Changed/);
   assert.match(sent[0].text, /Original history/);
   assert.doesNotMatch(sent[0].text, /Changed history/);
   assert.equal(sent[0].idempotencyKey, `support-message/${MESSAGE_ID}/staff`);
+});
+
+test('provider acceptance followed by transient persistence failure retries the exact frozen request', async () => {
+  let frozen = null;
+  let recipientLoads = 0;
+  let saveAttempts = 0;
+  const sent = [];
+  const canonicalMessage = {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    body: 'Canonical staff reply',
+    recipient_user_id: BUYER_ID,
+  };
+  const dependencies = leasedDelivery({
+    buyerRecipient: async () => {
+      recipientLoads += 1;
+      if (recipientLoads > 1) throw new Error('recipient must not reload after freeze');
+      return { email: 'original@example.com', notify_messages: true, support_chat_open: false };
+    },
+    orderContext: async () => null,
+    ticketContext: async () => ({ id: TICKET_ID, ticket_number: 41, subject: 'Original subject' }),
+    threadParent: async () => null,
+    replyAddress: async () => 'reply+proof@reply.masest.co',
+    freezeEnvelope: async (_sb, input) => {
+      frozen ||= input.envelope;
+      return frozen;
+    },
+    sendEmail: async (_env, request) => {
+      sent.push(structuredClone(request));
+      return { ok: true, providerMessageId: '<provider-accepted@example.test>' };
+    },
+    saveDelivery: async () => {
+      saveAttempts += 1;
+      if (saveAttempts === 1) throw new Error('database temporarily unavailable');
+    },
+  });
+
+  await assert.rejects(
+    deliverSupportMessageEmail({}, {}, canonicalMessage, dependencies),
+    /database temporarily unavailable/,
+  );
+  const replay = await deliverSupportMessageEmail({}, {}, canonicalMessage, dependencies);
+
+  assert.equal(replay.providerMessageId, '<provider-accepted@example.test>');
+  assert.equal(recipientLoads, 1);
+  assert.equal(saveAttempts, 2);
+  assert.deepEqual(sent[1], sent[0]);
+  assert.equal(sent[0].idempotencyKey, `support-message/${MESSAGE_ID}/staff`);
+});
+
+test('zero-row provider identity persistence is terminal and never reports delivered', async () => {
+  const update = {
+    update() { return this; },
+    eq() { return this; },
+    select() { return this; },
+    async maybeSingle() { return { data: null, error: null }; },
+  };
+  const sb = {
+    from(table) {
+      assert.equal(table, 'messages');
+      return update;
+    },
+  };
+  const attempt = deliverSupportMessageEmail({}, sb, {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    body: 'Canonical staff reply',
+    recipient_user_id: BUYER_ID,
+  }, leasedDelivery({
+    buyerRecipient: async () => ({
+      email: 'buyer@example.com', notify_messages: true, support_chat_open: false,
+    }),
+    orderContext: async () => null,
+    ticketContext: async () => ({ id: TICKET_ID, ticket_number: 41, subject: 'Proof' }),
+    threadParent: async () => null,
+    replyAddress: async () => 'reply+proof@reply.masest.co',
+    sendEmail: async () => ({ ok: true, providerMessageId: '<provider-accepted@example.test>' }),
+  }));
+
+  await assert.rejects(attempt, (error) => {
+    assert.equal(error.code, 'support_email_delivery_persistence_missing');
+    assert.equal(error.terminal, true);
+    return true;
+  });
 });
 
 test('staff delivery distinguishes missing email and exact prior delivery', async () => {
@@ -339,9 +440,9 @@ test('staff delivery distinguishes missing email and exact prior delivery', asyn
     sender_role: 'staff',
     body: 'Account update',
     recipient_user_id: BUYER_ID,
-  }, {
+  }, leasedDelivery({
     buyerRecipient: async () => ({ email: null, notify_messages: true, support_chat_open: false }),
-  });
+  }));
   assert.deepEqual(missing, { ok: true, skipped: 'recipient_email_missing' });
 
   let sends = 0;
@@ -354,9 +455,9 @@ test('staff delivery distinguishes missing email and exact prior delivery', asyn
     email_delivery_id: 'cf-existing',
     email_message_id: null,
     email_references: '<root@example.com>',
-  }, {
+  }, leasedDelivery({
     sendEmail: async () => { sends += 1; return { ok: true, providerMessageId: 'wrong' }; },
-  });
+  }));
   assert.equal(sends, 0);
   assert.deepEqual(existing, {
     ok: true,
@@ -379,7 +480,7 @@ test('buyer message emails opted-in admins through the same message-addressed th
     order_id: ORDER_ID,
     previous_sender_role: 'staff',
     prior_thread_status: 'open',
-  }, {
+  }, leasedDelivery({
     adminRecipients: async () => ['support@masest.co'],
     orderContext: async () => ({ id: ORDER_ID, reference: 'VK-1042', status: 'shipped' }),
     replyAddress: async () => `reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`,
@@ -389,13 +490,120 @@ test('buyer message emails opted-in admins through the same message-addressed th
       return { ok: true, providerMessageId: 'cf-provider-out-3' };
     },
     saveDelivery: async () => {},
-  });
+  }));
   assert.equal(result.ok, true);
   assert.deepEqual(sent.to, ['support@masest.co']);
   assert.equal(sent.category, 'staff_alert');
   assert.match(sent.subject, /^MASEST support · Northwind HVAC · Order VK-1042$/);
   assert.deepEqual(sent.emailHeaders, {});
   assert.match(sent.html, /Can you confirm tracking\?/);
+});
+
+test('an existing frozen request wins before retry-time recipient policy or context is loaded', async () => {
+  const frozen = {
+    request: {
+      to: ['original@example.com'],
+      subject: 'Original frozen subject',
+      html: '<p>Original frozen body</p>',
+      text: 'Original frozen body',
+      replyTo: 'reply+original@reply.masest.co',
+      emailHeaders: {},
+      category: 'messages',
+      idempotencyKey: `support-message/${MESSAGE_ID}/staff`,
+    },
+    references: '<original@example.com>',
+  };
+  let sent;
+  let mutableLoads = 0;
+  const failMutableLoad = async () => {
+    mutableLoads += 1;
+    throw new Error('mutable context must not load after freeze');
+  };
+  const result = await deliverSupportMessageEmail({}, {}, {
+    id: MESSAGE_ID,
+    ticket_id: TICKET_ID,
+    thread_id: THREAD_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    recipient_user_id: BUYER_ID,
+    body: 'Canonical body',
+  }, {
+    deliveryEffect: { id: EFFECT_ID, lease_owner: 'worker-retry' },
+    freezeEnvelope: async (_sb, input) => {
+      assert.equal(input.envelope, null);
+      return frozen;
+    },
+    buyerRecipient: failMutableLoad,
+    orderContext: failMutableLoad,
+    ticketContext: failMutableLoad,
+    threadParent: failMutableLoad,
+    replyAddress: failMutableLoad,
+    sendEmail: async (_env, request) => {
+      sent = request;
+      return { ok: true, providerMessageId: '<reconciled@example.test>' };
+    },
+    saveDelivery: async () => {},
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(mutableLoads, 0);
+  assert.deepEqual(sent, frozen.request);
+});
+
+test('a malformed or identity-mismatched frozen request fails terminally without rerendering or sending', async (t) => {
+  for (const [name, frozen, expectedError] of [
+    ['missing body', {
+      request: {
+        to: ['original@example.com'],
+        subject: 'Original frozen subject',
+        html: '<p>Original frozen body</p>',
+        replyTo: 'reply+original@reply.masest.co',
+        emailHeaders: {},
+        category: 'messages',
+        idempotencyKey: `support-message/${MESSAGE_ID}/staff`,
+      },
+    }, 'support_email_envelope_invalid'],
+    ['wrong message identity', {
+      request: {
+        to: ['original@example.com'],
+        subject: 'Original frozen subject',
+        html: '<p>Original frozen body</p>',
+        text: 'Original frozen body',
+        replyTo: 'reply+original@reply.masest.co',
+        emailHeaders: {},
+        category: 'messages',
+        idempotencyKey: 'support-message/other/staff',
+      },
+    }, 'support_email_envelope_identity_mismatch'],
+  ]) {
+    await t.test(name, async () => {
+      let mutableLoads = 0;
+      let sends = 0;
+      const mutableLoad = async () => { mutableLoads += 1; };
+      const result = await deliverSupportMessageEmail({}, {}, {
+        id: MESSAGE_ID,
+        ticket_id: TICKET_ID,
+        thread_id: THREAD_ID,
+        company_id: COMPANY_ID,
+        sender_role: 'staff',
+        recipient_user_id: BUYER_ID,
+        body: 'Canonical body',
+      }, {
+        deliveryEffect: { id: EFFECT_ID, lease_owner: 'worker-retry' },
+        freezeEnvelope: async () => frozen,
+        buyerRecipient: mutableLoad,
+        orderContext: mutableLoad,
+        ticketContext: mutableLoad,
+        threadParent: mutableLoad,
+        replyAddress: mutableLoad,
+        sendEmail: async () => { sends += 1; },
+      });
+
+      assert.deepEqual(result, { ok: false, retryable: false, error: expectedError });
+      assert.equal(mutableLoads, 0);
+      assert.equal(sends, 0);
+    });
+  }
 });
 
 test('customer and staff email replies append through canonical chat with exact linked order', async () => {
@@ -459,10 +667,18 @@ test('customer and staff email replies append through canonical chat with exact 
           inserted: true,
         };
       },
-      deliverMessage: async (_env, _sb, message) => { delivered = message; return { ok: true }; },
+      createDeliveryWorkerId: () => 'support-immediate/direct-inbound',
+      attemptDelivery: async ({ message }) => {
+        delivered = message;
+        return { state: 'delivered', effect_id: EFFECT_ID };
+      },
     });
 
-    assert.deepEqual(result, { routed: true, duplicate: false });
+    assert.deepEqual(result, {
+      routed: true,
+      duplicate: false,
+      email_delivery: { state: 'delivered', effect_id: EFFECT_ID },
+    });
     assert.equal(upserted.senderRole, senderRole);
     assert.equal(upserted.threadId, THREAD_ID);
     assert.equal(upserted.orderId, ORDER_ID);
@@ -502,7 +718,8 @@ test('signed parent ticket is invariant when inbound subject and threading heade
         upserted = input;
         return { id: `routed-${index}`, inserted: true, ticket_id: TICKET_ID };
       },
-      deliverMessage: async () => ({ ok: true }),
+      createDeliveryWorkerId: () => 'support-immediate/ticket-invariant',
+      attemptDelivery: async () => ({ state: 'delivered', effect_id: EFFECT_ID }),
     });
     assert.equal(upserted.ticketId, TICKET_ID);
     assert.equal(upserted.orderId, ORDER_ID);
@@ -520,7 +737,7 @@ test('support delivery loads the exact message ticket and renderer escapes ticke
     sender_role: 'staff',
     recipient_user_id: BUYER_ID,
     body: 'Use the attached process guidance.',
-  }, {
+  }, leasedDelivery({
     buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
     ticketContext: async (_sb, ticketId) => {
       requestedTicketId = ticketId;
@@ -531,7 +748,7 @@ test('support delivery loads the exact message ticket and renderer escapes ticke
     replyAddress: async () => 'reply+safe@reply.masest.co',
     sendEmail: async (_env, options) => { sent = options; return { ok: true, providerMessageId: '<delivery@example.test>' }; },
     saveDelivery: async () => {},
-  });
+  }));
   assert.equal(requestedTicketId, TICKET_ID);
   assert.equal(sent.subject, '[MAS-000123] MASEST support · Pump-room <scaling & "biofilm">');
   assert.match(sent.html, /\[MAS-000123\]/);
@@ -579,14 +796,14 @@ test('support delivery query does not inherit parent headers or history from ano
     sender_role: 'staff',
     recipient_user_id: BUYER_ID,
     body: 'First message in this ticket.',
-  }, {
+  }, leasedDelivery({
     buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
     ticketContext: async () => ({ id: TICKET_ID, ticket_number: 124, subject: 'New issue' }),
     orderContext: async () => null,
     replyAddress: async () => 'reply+safe@reply.masest.co',
     sendEmail: async (_env, options) => { sent = options; return { ok: true, providerMessageId: 'delivery-2' }; },
     saveDelivery: async () => {},
-  });
+  }));
 
   assert.deepEqual(filters, [['thread_id', THREAD_ID], ['ticket_id', TICKET_ID]]);
   assert.deepEqual(sent.emailHeaders, {});
@@ -601,7 +818,7 @@ test('unrecognized inbound sender never enters support chat', async () => {
     to: [`reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`],
     text: 'inject me',
     headers: {},
-  }, {
+  }, leasedDelivery({
     sb: {},
     messageIdFromReplyAddress: async () => MESSAGE_ID,
     replyMessage: async () => ({
@@ -613,7 +830,7 @@ test('unrecognized inbound sender never enters support chat', async () => {
     }),
     senderIdentity: async () => null,
     upsertMessage: async () => { upserts += 1; },
-  });
+  }));
   assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
   assert.equal(upserts, 0);
 });
@@ -808,7 +1025,7 @@ test('read-only alert recipient receives configured alert but cannot author a re
     sender_role: 'buyer',
     user_id: BUYER_ID,
     body: 'Please review this request.',
-  }, {
+  }, leasedDelivery({
     adminRecipients: async () => [address],
     orderContext: async () => null,
     replyAddress: async () => `reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`,
@@ -818,7 +1035,7 @@ test('read-only alert recipient receives configured alert but cannot author a re
       return { ok: true, providerMessageId: '<read-only-alert@example.test>' };
     },
     saveDelivery: async () => {},
-  });
+  }));
   assert.equal(alert.ok, true);
   assert.deepEqual(alertRecipients, [address]);
 
@@ -836,4 +1053,149 @@ test('read-only alert recipient receives configured alert but cannot author a re
   db.assertClean({ upserts: 0 });
   assert.equal(deliveries.length, 0);
   assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+});
+
+test('durable recipient resolution retries database and Auth outages but skips genuine empty staff policy', async (t) => {
+  const staffMessage = {
+    id: MESSAGE_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    recipient_user_id: BUYER_ID,
+    body: 'Strict lookup proof',
+  };
+  const buyerMessage = {
+    id: MESSAGE_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'buyer',
+    user_id: BUYER_ID,
+    body: 'Strict staff lookup proof',
+    external_alert_kind: 'message',
+  };
+
+  await t.test('buyer profile database error', async () => {
+    const databaseError = new Error('profile_database_unavailable');
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        async maybeSingle() { return { data: null, error: databaseError }; },
+      }),
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, staffMessage, leasedDelivery()),
+      /profile_database_unavailable/,
+    );
+  });
+
+  await t.test('buyer Auth lookup returned error', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        async maybeSingle() {
+          return {
+            data: {
+              id: BUYER_ID,
+              company_id: COMPANY_ID,
+              notify_messages: true,
+              support_chat_open: false,
+            },
+            error: null,
+          };
+        },
+      }),
+      auth: { admin: { getUserById: async () => ({ data: null, error: new Error('auth_unavailable') }) } },
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, staffMessage, leasedDelivery()),
+      /auth_unavailable/,
+    );
+  });
+
+  await t.test('buyer Auth lookup thrown error', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        async maybeSingle() {
+          return {
+            data: {
+              id: BUYER_ID,
+              company_id: COMPANY_ID,
+              notify_messages: true,
+              support_chat_open: false,
+            },
+            error: null,
+          };
+        },
+      }),
+      auth: { admin: { getUserById: async () => { throw new Error('auth_transport_unavailable'); } } },
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, staffMessage, leasedDelivery()),
+      /auth_transport_unavailable/,
+    );
+  });
+
+  await t.test('staff preference database error', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        then(resolve, reject) {
+          return Promise.resolve({ data: null, error: new Error('staff_database_unavailable') })
+            .then(resolve, reject);
+        },
+      }),
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, buyerMessage, leasedDelivery()),
+      /staff_database_unavailable/,
+    );
+  });
+
+  await t.test('partial staff Auth lookup failure', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        then(resolve, reject) {
+          return Promise.resolve({
+            data: [
+              { id: 'staff-ok', is_staff: true, support_inbox_seen_at: null },
+              { id: 'staff-failed', is_staff: true, support_inbox_seen_at: null },
+            ],
+            error: null,
+          }).then(resolve, reject);
+        },
+      }),
+      auth: { admin: { getUserById: async (id) => (
+        id === 'staff-ok'
+          ? { data: { user: { email: 'staff@example.test' } }, error: null }
+          : { data: null, error: new Error('partial_auth_unavailable') }
+      ) } },
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, buyerMessage, leasedDelivery()),
+      /partial_auth_unavailable/,
+    );
+  });
+
+  await t.test('successful empty staff query is a policy skip', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        then(resolve, reject) {
+          return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+        },
+      }),
+    };
+    assert.deepEqual(
+      await deliverSupportMessageEmail({}, sb, buyerMessage, leasedDelivery()),
+      { ok: true, skipped: 'no_admin_recipients' },
+    );
+  });
 });

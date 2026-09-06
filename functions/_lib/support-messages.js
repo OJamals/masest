@@ -35,13 +35,17 @@ export async function resolveSupportOrderId(sb, { orderId, companyId = null, use
 
 const SUPPORT_RECIPIENT_SELECT = 'id,company_id,full_name,notify_messages,support_chat_open,support_chat_seen_at';
 
-async function recipientWithEmail(sb, profile) {
+async function recipientWithEmail(sb, profile, options) {
   if (!profile?.id) return null;
-  const emailById = await emailsByIds(sb, [profile.id]);
+  const emailById = await emailsByIds(sb, [profile.id], options);
   return { ...profile, email: emailById[profile.id] || null };
 }
 
-export async function resolveSupportRecipient(sb, { companyId, userId = null, email = null } = {}) {
+export async function resolveSupportRecipient(
+  sb,
+  { companyId, userId = null, email = null } = {},
+  { strictEmailLookup = false } = {},
+) {
   const targetCompanyId = String(companyId || '').trim() || null;
   const targetUserId = String(userId || '').trim();
   const targetEmail = String(email || '').trim().toLowerCase();
@@ -53,7 +57,7 @@ export async function resolveSupportRecipient(sb, { companyId, userId = null, em
     if (targetCompanyId) query = query.eq('company_id', targetCompanyId);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
-    if (data) return recipientWithEmail(sb, data);
+    if (data) return recipientWithEmail(sb, data, { strict: strictEmailLookup });
   }
 
   if (!targetEmail || !targetCompanyId) return null;
@@ -62,7 +66,11 @@ export async function resolveSupportRecipient(sb, { companyId, userId = null, em
     .eq('company_id', targetCompanyId)
     .limit(1000);
   if (error) throw error;
-  const emailById = await emailsByIds(sb, (data || []).map((profile) => profile.id));
+  const emailById = await emailsByIds(
+    sb,
+    (data || []).map((profile) => profile.id),
+    { strict: strictEmailLookup },
+  );
   const profile = (data || []).find((candidate) => (
     String(emailById[candidate.id] || '').trim().toLowerCase() === targetEmail
   ));

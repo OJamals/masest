@@ -138,14 +138,6 @@ async function postQuoteThreadHandoff({ env, sb, quote, companyId, text, actor }
     return { posted: false, company_id: resolvedCompanyId, error: error.message };
   }
 
-  await sb.from('notifications').insert({
-    company_id: resolvedCompanyId,
-    user_id: recipientUserId,
-    type: 'message',
-    title: 'Quote follow-up posted',
-    body: `A MASEST quote follow-up from ${actor} is ready in your message thread.`,
-    link: '/dashboard.html#messages',
-  });
   return {
     posted: true,
     company_id: resolvedCompanyId,

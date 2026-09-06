@@ -53,7 +53,7 @@ test('support publisher keeps the canonical message when counterpart email deliv
 
   assert.equal(result.message, message);
   assert.deepEqual(result.emailDelivery, {
-    state: 'queued',
+    state: 'dead',
     effect_id: null,
     reason: 'support_delivery_status_unavailable',
   });
