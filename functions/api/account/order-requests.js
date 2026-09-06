@@ -11,6 +11,7 @@ import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-bo
 import { orderLifecycle } from '../../_lib/order-lifecycle.js';
 import { orderReference } from '../../_lib/order-integrations.js';
 import { deliverSupportMessageEmail } from '../../_lib/support-email.js';
+import { projectBuyerSupportTicket } from '../../_lib/support-tickets.js';
 
 const BODY_MAX_BYTES = 8 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -20,6 +21,39 @@ const RETURN_WINDOW_DAYS = 30;
 
 function text(value, max = 1000) {
   return String(value ?? '').trim().slice(0, max);
+}
+
+function projectBuyerOrderRequest(request = {}, ticketId = null) {
+  return {
+    id: request.id,
+    order_id: request.order_id,
+    ticket_id: ticketId,
+    type: request.type,
+    status: request.status,
+    reason: request.reason,
+    line_items: request.line_items,
+    resolution_note: request.resolution_note,
+    created_at: request.created_at,
+    resolved_at: request.resolved_at,
+    orders: request.orders,
+  };
+}
+
+function projectBuyerSupportMessage(message = {}) {
+  return {
+    id: message.id,
+    created_at: message.created_at,
+    thread_id: message.thread_id,
+    ticket_id: message.ticket_id,
+    company_id: message.company_id,
+    user_id: message.user_id,
+    recipient_user_id: message.recipient_user_id,
+    order_id: message.order_id,
+    sender_role: message.sender_role,
+    body: message.body,
+    source: message.source,
+    ticket: message.ticket ? projectBuyerSupportTicket(message.ticket) : null,
+  };
 }
 
 // What the buyer may ask for, given where the order actually is. Exported so the dashboard
@@ -70,7 +104,7 @@ export async function handleAccountOrderRequests({ request, env }, dependencies 
 
   if (request.method === 'GET') {
     const { data, error } = await sb.from('order_requests')
-      .select('id,order_id,type,status,reason,resolution_note,created_at,resolved_at,orders(order_number)')
+      .select('id,order_id,ticket_id,type,status,reason,resolution_note,created_at,resolved_at,orders(order_number)')
       .eq('requested_by', user.id)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -122,14 +156,19 @@ export async function handleAccountOrderRequests({ request, env }, dependencies 
     p_requested_by: user.id,
     p_requested_email: user.email || order.customer_email || null,
     p_message_body: messageBody,
+    p_contract_version: 2,
   });
   if (requestError || !result?.request) return json(500, { error: 'server_error' });
 
   if (result.duplicate) {
+    const exactTicketId = result.ticket_mapping_state === 'exact' ? result.ticket_id || null : null;
     return json(200, {
       ok: true,
       duplicate: true,
-      request: result.request,
+      request: projectBuyerOrderRequest(result.request, exactTicketId),
+      ticket_id: exactTicketId,
+      ticket: exactTicketId && result.ticket ? projectBuyerSupportTicket(result.ticket) : null,
+      ticket_mapping_state: result.ticket_mapping_state || (exactTicketId ? 'exact' : 'unknown_legacy'),
       message: 'We already have this request and are working on it.',
     });
   }
@@ -145,8 +184,13 @@ export async function handleAccountOrderRequests({ request, env }, dependencies 
 
   return json(201, {
     ok: true,
-    request: result.request,
-    support_message: result.message,
+    request: projectBuyerOrderRequest(result.request, result.ticket_id || result.message?.ticket_id || null),
+    ticket_id: result.ticket_id || result.message?.ticket_id || null,
+    ticket: result.ticket || result.message?.ticket
+      ? projectBuyerSupportTicket(result.ticket || result.message.ticket)
+      : null,
+    support_message: result.message ? projectBuyerSupportMessage(result.message) : null,
+    ticket_mapping_state: result.ticket_mapping_state || 'exact',
     email_delivery: emailDelivery,
     chat_linked: Boolean(result.chat_linked),
     message: type === 'cancel'

@@ -1,4 +1,5 @@
 import { emailsByIds } from './supabase.js';
+import { projectAdminSupportTicket } from './support-tickets.js';
 
 export const SUPPORT_PAGE_SIZE = 200;
 export const SUPPORT_PRESENCE_TTL_MS = 45_000;
@@ -73,11 +74,16 @@ export async function appendSupportMessage(sb, {
   userId = null,
   recipientUserId = null,
   threadUserId = userId || recipientUserId || null,
+  threadId = null,
+  ticketId = null,
   senderRole,
   body,
   orderId = null,
   source = 'dashboard',
   reopen = null,
+  subject = null,
+  category = 'general',
+  startTicket = false,
 }) {
   const { data, error } = await sb.rpc('append_support_message', {
     p_company_id: companyId,
@@ -89,9 +95,23 @@ export async function appendSupportMessage(sb, {
     p_order_id: orderId,
     p_source: source,
     p_reopen: reopen,
+    p_thread_id: threadId,
+    p_ticket_id: ticketId,
+    p_subject: subject,
+    p_category: category,
+    p_start_ticket: startTicket === true,
+    p_contract_version: 2,
   });
   if (error) throw error;
-  return data;
+  if (!data?.ticket_id || !data?.ticket?.id || data.ticket.id !== data.ticket_id) {
+    throw new Error('support_ticket_identity_missing');
+  }
+  const ticket = projectAdminSupportTicket(data.ticket);
+  return {
+    ...data,
+    ticket_id: data.ticket_id || ticket.id,
+    ticket,
+  };
 }
 
 export function supportOrderContext(order) {
@@ -146,25 +166,4 @@ export function presenceIsFresh(value, now = Date.now(), ttlMs = SUPPORT_PRESENC
   if (!value) return false;
   const seenAt = Date.parse(value);
   return Number.isFinite(seenAt) && now - seenAt >= 0 && now - seenAt < ttlMs;
-}
-
-export function supportThreadListStatus(value) {
-  const status = String(value || 'open').trim();
-  return ['open', 'complete'].includes(status) ? status : null;
-}
-
-export function supportThreadPatch(status, userId, now = new Date().toISOString()) {
-  if (!['open', 'escalated', 'complete'].includes(status)) return null;
-  if (status === 'complete') {
-    return {
-      status: 'complete',
-      completed_at: now,
-      completed_by: userId,
-    };
-  }
-  return {
-    status,
-    completed_at: null,
-    completed_by: null,
-  };
 }

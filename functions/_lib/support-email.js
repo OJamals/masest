@@ -17,6 +17,7 @@ import {
   resolveSupportRecipient,
   supportOrderContextsById,
 } from './support-messages.js';
+import { formatSupportTicketNumber } from './support-tickets.js';
 
 const MESSAGE_ID_RE = /<[^<>\s]+>/g;
 const MAX_REFERENCE_IDS = 30;
@@ -69,9 +70,14 @@ async function threadParent(sb, message) {
     ? query.eq('thread_id', message.thread_id)
     : query.eq('company_id', message.company_id);
   if (message.id) query = query.neq('id', message.id);
-  if (message.order_id) query = query.eq('order_id', message.order_id);
-  else query = query.is('order_id', null);
-  if (!message.thread_id) {
+  if (message.ticket_id) {
+    query = query.eq('ticket_id', message.ticket_id);
+  } else if (message.order_id) {
+    query = query.eq('order_id', message.order_id);
+  } else {
+    query = query.is('order_id', null);
+  }
+  if (!message.thread_id && !message.ticket_id) {
     const participantId = message.sender_role === 'staff' ? message.recipient_user_id : message.user_id;
     if (participantId) query = query.or(`user_id.eq.${participantId},recipient_user_id.eq.${participantId}`);
   }
@@ -151,11 +157,25 @@ async function senderIdentity(sb, sender, thread, env) {
 
 async function loadReplyMessage(sb, messageId) {
   const { data, error } = await sb.from('messages')
-    .select('id,thread_id,company_id,sender_role,user_id,recipient_user_id,order_id')
+    .select('id,thread_id,ticket_id,company_id,sender_role,user_id,recipient_user_id,order_id')
     .eq('id', messageId)
     .maybeSingle();
   if (error) throw error;
   return data || null;
+}
+
+async function supportTicketContext(sb, ticketId) {
+  if (!ticketId) return null;
+  const { data, error } = await sb.from('support_tickets')
+    .select('id,ticket_number,subject,status,priority,category')
+    .eq('id', ticketId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.id) return null;
+  return {
+    ...data,
+    display_number: formatSupportTicketNumber(data.ticket_number),
+  };
 }
 
 async function loadReplyThread(sb, threadId) {
@@ -179,6 +199,7 @@ async function upsertInboundMessage(sb, input) {
     p_order_id: input.orderId,
     p_email_references: input.emailReferences,
     p_thread_id: input.threadId,
+    p_ticket_id: input.ticketId,
   });
   if (error) throw error;
   if (!data?.message_id && !data?.id) throw new Error('email_inbound_message_upsert_failed');
@@ -228,10 +249,17 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
 
   const replyTo = await (dependencies.replyAddress || messageReplyAddress)(env, message.id);
   if (!replyTo) return { ok: false, retryable: false, error: 'support_reply_address_not_configured' };
-  const [order, parent] = await Promise.all([
+  const [order, parent, rawTicket] = await Promise.all([
     (dependencies.orderContext || orderContext)(sb, message),
     (dependencies.threadParent || threadParent)(sb, message),
+    message.ticket_id
+      ? (dependencies.ticketContext || supportTicketContext)(sb, message.ticket_id)
+      : null,
   ]);
+  const ticket = rawTicket?.id ? {
+    ...rawTicket,
+    display_number: rawTicket.display_number || formatSupportTicketNumber(rawTicket.ticket_number),
+  } : null;
   const inheritedIds = messageIds(message.email_references);
   const threading = inheritedIds.length ? {
     headers: {
@@ -254,6 +282,7 @@ export async function deliverSupportMessageEmail(env, sb, message, dependencies 
     message,
     priorMessages: parent?.history || [],
     participant: { name: companyName },
+    ticket,
     order: order ? {
       ...order,
       viewUrl: isStaffMessage
@@ -332,6 +361,7 @@ export async function routeInboundMessageReply(env, input, dependencies = {}) {
   ).join(' ') || null;
   const result = await (dependencies.upsertMessage || upsertInboundMessage)(sb, {
     threadId: thread.id || parent.thread_id || null,
+    ticketId: parent.ticket_id || null,
     companyId,
     userId: identity.role === 'buyer' ? identity.userId : null,
     senderRole: identity.role,
@@ -345,6 +375,7 @@ export async function routeInboundMessageReply(env, input, dependencies = {}) {
     ...result,
     id: result.id || result.message_id,
     thread_id: result.thread_id || thread.id || parent.thread_id || null,
+    ticket_id: result.ticket_id ?? parent.ticket_id ?? null,
     company_id: result.company_id ?? companyId,
     sender_role: result.sender_role || identity.role,
     user_id: result.user_id ?? (identity.role === 'buyer' ? identity.userId : null),

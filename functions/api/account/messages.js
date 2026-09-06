@@ -10,6 +10,13 @@ import {
   resolveSupportOrderId,
   SUPPORT_PAGE_SIZE,
 } from '../../_lib/support-messages.js';
+import {
+  normalizeSupportTicketCategory,
+  normalizeSupportTicketSubject,
+  projectBuyerSupportTicket,
+  supportTicketById,
+  supportTicketsForThreads,
+} from '../../_lib/support-tickets.js';
 
 async function visibleSupportThreadIds(sb, userId, companyId) {
   const [participantResult, companyResult] = await Promise.all([
@@ -28,6 +35,9 @@ export async function handleAccountMessages({ request, env }, dependencies = {})
   const checkRateLimit = dependencies.rateLimit || rateLimit;
   const parseBody = dependencies.readBody || readBody;
   const publishMessage = dependencies.publishSupportMessage || publishSupportMessage;
+  const findTicket = dependencies.supportTicketById || supportTicketById;
+  const listTickets = dependencies.supportTicketsForThreads || supportTicketsForThreads;
+  const listVisibleThreadIds = dependencies.visibleSupportThreadIds || visibleSupportThreadIds;
   const now = dependencies.now || (() => new Date());
 
   const ctx = await getCommerceContext(request, env);
@@ -38,6 +48,7 @@ export async function handleAccountMessages({ request, env }, dependencies = {})
     const url = new URL(request.url);
     const peek = url.searchParams.get('peek') === '1';
     const before = url.searchParams.get('before');
+    const requestedTicketId = String(url.searchParams.get('ticket_id') || '').trim() || null;
     const orderContext = await resolveSupportOrderId(sb, {
       orderId: url.searchParams.get('order_id'),
       companyId,
@@ -45,20 +56,37 @@ export async function handleAccountMessages({ request, env }, dependencies = {})
     });
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
     let threadIds;
-    try { threadIds = await visibleSupportThreadIds(sb, user.id, companyId); }
+    try { threadIds = await listVisibleThreadIds(sb, user.id, companyId); }
     catch { return json(500, { error: 'server_error' }); }
     if (!threadIds.length) {
+      if (requestedTicketId) return json(404, { error: 'ticket_not_found' });
       return json(200, {
         messages: [], has_more: false, next_before: null,
+        tickets: [], ticket: null,
         order_scope: orderContext.order || null,
       });
     }
+    let tickets;
+    let selectedTicket = null;
+    try {
+      tickets = await listTickets(sb, threadIds);
+      if (requestedTicketId) {
+        selectedTicket = tickets.find((ticket) => ticket.id === requestedTicketId)
+          || await findTicket(sb, requestedTicketId);
+        if (!selectedTicket || !threadIds.includes(selectedTicket.thread_id)) {
+          return json(404, { error: 'ticket_not_found' });
+        }
+      }
+    } catch {
+      return json(500, { error: 'server_error' });
+    }
     let query = sb
       .from('messages')
-      .select('id,thread_id,sender_role,body,order_id,source,created_at')
+      .select('id,thread_id,ticket_id,sender_role,body,order_id,source,created_at')
       .in('thread_id', threadIds)
       .order('created_at', { ascending: false })
       .limit(SUPPORT_PAGE_SIZE + 1);
+    if (selectedTicket) query = query.eq('ticket_id', selectedTicket.id);
     if (orderContext.orderId) query = query.eq('order_id', orderContext.orderId);
     if (before) query = query.lt('created_at', before);
     const { data, error } = await query;
@@ -66,12 +94,15 @@ export async function handleAccountMessages({ request, env }, dependencies = {})
     if (!peek) {
       let readQuery = sb.from('messages').update({ read_by_user: true })
         .in('thread_id', threadIds).eq('sender_role', 'staff').eq('read_by_user', false);
+      if (selectedTicket) readQuery = readQuery.eq('ticket_id', selectedTicket.id);
       if (orderContext.orderId) readQuery = readQuery.eq('order_id', orderContext.orderId);
       await readQuery;
     }
     try {
       const page = messagePage(data, SUPPORT_PAGE_SIZE);
       page.messages = await hydrateSupportOrderContexts(sb, page.messages);
+      page.tickets = tickets.map(projectBuyerSupportTicket);
+      page.ticket = selectedTicket ? projectBuyerSupportTicket(selectedTicket) : null;
       page.order_scope = orderContext.order || null;
       return json(200, page);
     } catch {
@@ -101,12 +132,40 @@ export async function handleAccountMessages({ request, env }, dependencies = {})
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
     const source = body.source === 'customer_chat' ? 'customer_chat' : 'dashboard';
+    if (body.action && body.action !== 'start_ticket') return json(400, { error: 'invalid_action' });
+    const startTicket = body.action === 'start_ticket';
+    const ticketId = String(body.ticket_id || '').trim() || null;
+    const subject = normalizeSupportTicketSubject(body.subject, text);
+    if (!subject) return json(400, { error: 'invalid_ticket_subject' });
+    const category = body.category === undefined
+      ? 'general'
+      : normalizeSupportTicketCategory(body.category);
+    if (!category) return json(400, { error: 'invalid_ticket_category' });
     const orderContext = await resolveSupportOrderId(sb, {
       orderId: body.order_id,
       companyId,
       userId: user.id,
     });
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
+    let selectedTicket = null;
+    if (ticketId) {
+      let threadIds;
+      try {
+        [selectedTicket, threadIds] = await Promise.all([
+          findTicket(sb, ticketId),
+          listVisibleThreadIds(sb, user.id, companyId),
+        ]);
+      } catch {
+        return json(500, { error: 'server_error' });
+      }
+      if (!selectedTicket || !threadIds.includes(selectedTicket.thread_id)) {
+        return json(404, { error: 'ticket_not_found' });
+      }
+      if (orderContext.orderId && selectedTicket.primary_order_id
+        && selectedTicket.primary_order_id !== orderContext.orderId) {
+        return json(404, { error: 'ticket_not_found' });
+      }
+    }
     let publication;
     try {
       publication = await publishMessage({
@@ -120,20 +179,33 @@ export async function handleAccountMessages({ request, env }, dependencies = {})
         body: text,
         orderId: orderContext.orderId,
         source,
+        ticketId,
+        threadId: selectedTicket?.thread_id || null,
+        subject,
+        category,
+        startTicket,
       });
-    } catch {
+    } catch (error) {
+      if (String(error?.message || '').includes('support_ticket_routing_not_enabled')) {
+        return json(409, { error: 'support_ticket_routing_not_enabled' });
+      }
       return json(500, { error: 'server_error' });
     }
     const { message: data, emailDelivery } = publication;
 
-    return json(201, {
+    const response = {
       id: data.id,
       thread_id: data.thread_id,
       created_at: data.created_at,
       order_id: data.order_id || null,
       email_delivery: emailDelivery,
       summary_synced: true,
-    });
+    };
+    if (data.ticket_id) {
+      response.ticket_id = data.ticket_id;
+      response.ticket = data.ticket ? projectBuyerSupportTicket(data.ticket) : null;
+    }
+    return json(201, response);
   }
 
   return json(405, { error: 'method_not_allowed' });
