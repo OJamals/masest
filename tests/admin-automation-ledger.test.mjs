@@ -101,8 +101,17 @@ test('staleness is measured against each job own cadence', () => {
 
   assert.equal(byJob.content_publish.state, 'ok', 'within two intervals is not stale');
   assert.equal(byJob.qbo_sync.state, 'stale');
+  assert.equal(byJob.newsletter_sweep.expectedMinutes, 5);
   assert.equal(byJob.quote_sweep.state, 'failing', 'a recent failure outranks freshness');
   assert.equal(byJob.review_reminders.state, 'never');
+});
+
+test('newsletter sweep becomes stale after the configured missed cadence window', () => {
+  const now = new Date('2026-08-06T12:00:00Z');
+  const summary = summarizeAutomationRuns([
+    { job: 'newsletter_sweep', started_at: new Date(now - 16 * 60000).toISOString(), ok: true },
+  ], now);
+  assert.equal(summary.find((entry) => entry.job === 'newsletter_sweep').state, 'stale');
 });
 
 test('every scheduled job records to the ledger', () => {

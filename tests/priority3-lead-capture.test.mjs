@@ -97,8 +97,51 @@ test("contact page exposes all six public request types", () => {
   }
   assert.match(contact, /data-intent="technical"/, "technical document requests should be a first-class contact intent");
   assert.match(contact, /<option>Data Centers<\/option>/);
-  assert.match(contact, /name="marketing_email_enabled"[^>]*checked/);
+  const marketingControl = contact.match(/<input id="fMarketingEmail"[^>]*>/)?.[0];
+  assert.ok(marketingControl, "contact form should expose the marketing consent control");
+  assert.doesNotMatch(marketingControl, /\bchecked\b/, "marketing consent must default to explicit opt-in");
   assert.match(contact, /Unsubscribe anytime\./);
+});
+
+test("quote form serializes marketing consent only after explicit opt-in", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const requests = [];
+    try {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+      await page.route("**/api/quote", async (route) => {
+        requests.push(route.request().postData() || "");
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ ok: true, durable: true, quote_id: "44444444-4444-4444-8444-444444444444" }),
+        });
+      });
+      await page.goto(`${BASE_URL}/contact.html?type=quote`, { waitUntil: "load" });
+      assert.equal(await page.locator("#fMarketingEmail").isChecked(), false, "consent should start unchecked");
+      await page.fill("#fName", "Opt-in Buyer");
+      await page.fill("#fCompany", "Opt-in Company");
+      await page.fill("#fEmail", "opt-in@example.com");
+      await page.fill("#fMessage", "Explicit marketing consent test");
+      await page.locator('#quoteForm button[type="submit"]').click();
+      await page.getByRole("heading", { name: "Request received." }).waitFor();
+      assert.equal(hasMultipartField(requests[0], "marketing_email_enabled", "on"), false);
+
+      await page.goto(`${BASE_URL}/contact.html?type=quote`, { waitUntil: "load" });
+      await page.locator("#fMarketingEmail").check();
+      await page.fill("#fName", "Opt-in Buyer");
+      await page.fill("#fCompany", "Opt-in Company");
+      await page.fill("#fEmail", "opt-in@example.com");
+      await page.fill("#fMessage", "Explicit marketing consent test");
+      await page.locator('#quoteForm button[type="submit"]').click();
+      await page.getByRole("heading", { name: "Request received." }).waitFor();
+    } finally {
+      await browser.close();
+    }
+    assert.equal(requests.length, 2);
+    assert.equal(hasMultipartField(requests[0], "marketing_email_enabled", "on"), false);
+    assert.equal(hasMultipartField(requests[1], "marketing_email_enabled", "on"), true);
+  });
 });
 
 test("product detail pages expose a product-specific free sample request CTA", () => {

@@ -21,7 +21,7 @@ export const AUTOMATION_JOBS = [
   { job: 'quote_sweep', label: 'Quote follow-up sweep', expectedMinutes: 60 },
   { job: 'crm_task_digest', label: 'CRM follow-up digest', expectedMinutes: 60 * 24 },
   { job: 'review_reminders', label: 'Review reminder sweep', expectedMinutes: 60 * 24 },
-  { job: 'newsletter_sweep', label: 'Newsletter campaign sweep', expectedMinutes: 60 },
+  { job: 'newsletter_sweep', label: 'Newsletter campaign sweep', expectedMinutes: 5 },
   { job: 'blog_newsletter', label: 'Blog post newsletter', expectedMinutes: 60 },
   { job: 'qbo_sync', label: 'QuickBooks sync', expectedMinutes: 60 },
 ];
