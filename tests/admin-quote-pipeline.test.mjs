@@ -113,7 +113,7 @@ test("admin quotes API can send a lead follow-up email", () => {
   assert.match(QUOTE_LEADS, /next_step:\s*emailQueued \|\| thread\.posted \? 'Follow-up queued' : 'Follow-up needs retry'/);
 });
 
-test("admin quote follow-up publishes through the buyer message and email thread", () => {
+test("admin quote follow-up publishes through the durable buyer message handoff", () => {
   assert.match(ADMIN_QUOTES, /async function companyIdForQuote/);
   assert.match(ADMIN_QUOTES, /sb\.auth\.admin\.listUsers/);
   assert.match(ADMIN_QUOTES, /publishSupportMessage\(env,\s*sb,/);
@@ -121,9 +121,8 @@ test("admin quote follow-up publishes through the buyer message and email thread
   assert.match(ADMIN_QUOTES, /senderRole:\s*'staff'/);
   assert.match(ADMIN_QUOTES, /source:\s*'quote_followup'/);
   assert.match(ADMIN_QUOTES, /email_delivery:\s*publication\.emailDelivery/);
-  assert.match(ADMIN_QUOTES, /\.from\('notifications'\)\.insert/);
-  assert.match(ADMIN_QUOTES, /Quote follow-up posted/);
-  assert.match(ADMIN_QUOTES, /dashboard\.html#messages/);
+  assert.doesNotMatch(ADMIN_QUOTES, /\.from\('notifications'\)\.insert/);
+  assert.doesNotMatch(ADMIN_QUOTES, /Quote follow-up posted/);
 });
 
 test("admin quotes API sweeps stale due leads with email and notes", () => {

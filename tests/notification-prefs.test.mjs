@@ -5,6 +5,7 @@ import test from 'node:test';
 import { sanitizeNotificationPrefs, companyEmails } from '../functions/_lib/supabase.js';
 
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const supportEmailDelivery = read('functions/_lib/support-email-delivery.js');
 
 // ---- sanitizeNotificationPrefs ----
 test('sanitizeNotificationPrefs keeps only optional marketing + support flags', () => {
@@ -72,8 +73,8 @@ test('send sites keep orders mandatory and use marketing preference for offers',
   const notifyCompany = orders.match(/async function notifyCompany[\s\S]*?\n}\n\nasync function sendTrackingEmail/)?.[0] || '';
   assert.match(notifyCompany, /category:\s*'order'/);
   assert.match(read('functions/api/admin/messages.js'), /publishSupportMessage/);
-  assert.match(read('functions/_lib/support-message-publisher.js'), /deliverSupportMessageEmail/);
-  assert.match(read('functions/_lib/support-email.js'), /shouldEmailSupportRecipient/);
+  assert.match(read('functions/_lib/support-message-publisher.js'), /attemptSupportMessageDelivery/);
+  assert.match(supportEmailDelivery, /shouldEmailSupportRecipient/);
   assert.match(read('functions/_lib/message-notifications.js'), /notify_messages/);
   assert.match(read('functions/api/admin/offers.js'), /marketing_company_emails/);
   assert.match(read('supabase/migrate-ses-marketing-2026-09-03.sql'), /marketing_email_enabled is not false/);

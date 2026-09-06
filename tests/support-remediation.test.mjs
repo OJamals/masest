@@ -122,10 +122,13 @@ test('support polling is lightweight while closed, bounded while open, hidden-sa
 
 test('inbound replies preserve participant identity and re-enter the shared delivery path', () => {
   const source = read('functions/_lib/support-email.js');
+  const delivery = read('functions/_lib/support-delivery.js');
+  const outbound = read('functions/_lib/support-email-delivery.js');
   assert.match(source, /sender_not_participant/);
   assert.match(source, /upsertInboundMessage/);
-  assert.match(source, /deliverSupportMessageEmail/);
-  assert.match(source, /admin\.html#support/);
+  assert.match(source, /attemptSupportMessageDelivery/);
+  assert.match(delivery, /processClaimedIntegrationEffect/);
+  assert.match(outbound, /admin\.html#support/);
   assert.doesNotMatch(source, /#support-settings/);
   assert.doesNotMatch(source, /staffRecipients\(env\)/);
 });
