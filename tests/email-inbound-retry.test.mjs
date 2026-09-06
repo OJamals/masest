@@ -19,7 +19,7 @@ const input = {
   text: 'Please update my order.',
 };
 
-function retryDependencies(deliverMessage) {
+function retryDependencies(attemptDelivery) {
   let upserts = 0;
   return {
     counters: { get upserts() { return upserts; } },
@@ -41,32 +41,42 @@ function retryDependencies(deliverMessage) {
         inserted: upserts++ === 0,
         company_name: 'Buyer Co',
       }),
-      deliverMessage,
+      createDeliveryWorkerId: () => 'support-immediate/inbound-1',
+      attemptDelivery,
     },
   };
 }
 
-test('inbound retry reconciles duplicate atomic chat append then retries email alert', async () => {
-  let sends = 0;
-  const fixture = retryDependencies(async () => {
-    sends += 1;
-    if (sends === 1) throw new Error('response_lost_after_atomic_insert');
-    return { ok: true };
+test('inbound response-loss retry reconciles the duplicate through its exact durable effect', async () => {
+  let attempts = 0;
+  const fixture = retryDependencies(async ({ message, workerId }) => {
+    attempts += 1;
+    assert.equal(message.id, 'message-1');
+    assert.equal(workerId, 'support-immediate/inbound-1');
+    return attempts === 1
+      ? { state: 'queued', effect_id: 'effect-1' }
+      : { state: 'delivered', effect_id: 'effect-1' };
   });
-  await assert.rejects(routeInboundMessageReply({}, input, fixture.dependencies), /response_lost/);
-  assert.deepEqual(await routeInboundMessageReply({}, input, fixture.dependencies), { routed: true, duplicate: true });
+  assert.deepEqual(await routeInboundMessageReply({}, input, fixture.dependencies), {
+    routed: true, duplicate: false, email_delivery: { state: 'queued', effect_id: 'effect-1' },
+  });
+  assert.deepEqual(await routeInboundMessageReply({}, input, fixture.dependencies), {
+    routed: true, duplicate: true, email_delivery: { state: 'delivered', effect_id: 'effect-1' },
+  });
   assert.equal(fixture.counters.upserts, 2);
-  assert.equal(sends, 2);
+  assert.equal(attempts, 2);
 });
 
-test('inbound email delivery failure remains retryable after atomic chat append', async () => {
-  let sends = 0;
-  const fixture = retryDependencies(async () => {
-    sends += 1;
-    return sends > 1 ? { ok: true } : { ok: false, error: 'inbound_delivery_failed' };
+test('inbound legacy duplicate exposes operator attention without fabricating retry durability', async () => {
+  const fixture = retryDependencies(async () => ({
+    state: 'dead', effect_id: null, reason: 'legacy_delivery_effect_missing',
+  }));
+  const response = await routeInboundMessageReply({}, input, fixture.dependencies);
+  assert.deepEqual(response, {
+    routed: true,
+    duplicate: false,
+    email_delivery: {
+      state: 'dead', effect_id: null, reason: 'legacy_delivery_effect_missing',
+    },
   });
-  await assert.rejects(routeInboundMessageReply({}, input, fixture.dependencies), /inbound_delivery_failed/);
-  assert.deepEqual(await routeInboundMessageReply({}, input, fixture.dependencies), { routed: true, duplicate: true });
-  assert.equal(fixture.counters.upserts, 2);
-  assert.equal(sends, 2);
 });

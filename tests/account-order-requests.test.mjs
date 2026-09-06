@@ -63,7 +63,7 @@ function postRequest() {
 }
 
 test('buyer order request and linked support message use one atomic RPC', async () => {
-  let deliveredMessage = null;
+  let attemptedDelivery = null;
   const sb = requestClient({
     data: {
       duplicate: false,
@@ -103,9 +103,10 @@ test('buyer order request and linked support message use one atomic RPC', async 
     error: null,
   });
   const response = await handlerFor(sb, {
-    deliverSupportMessageEmail: async (_env, _sb, message) => {
-      deliveredMessage = message;
-      return { ok: true };
+    createDeliveryWorkerId: () => 'support-immediate/order-request-1',
+    attemptSupportMessageDelivery: async (input) => {
+      attemptedDelivery = input;
+      return { state: 'queued', effect_id: 'effect-order-request-1' };
     },
   })({ request: postRequest(), env: {} });
 
@@ -128,8 +129,11 @@ test('buyer order request and linked support message use one atomic RPC', async 
   assert.equal(payload.support_message.ticket.version, undefined);
   assert.equal(payload.support_message.ticket.private_notes, undefined);
   assert.equal(payload.chat_linked, true);
-  assert.equal(deliveredMessage.id, '66666666-6666-4666-8666-666666666666');
-  assert.deepEqual(payload.email_delivery, { ok: true });
+  assert.equal(attemptedDelivery.message.id, '66666666-6666-4666-8666-666666666666');
+  assert.equal(attemptedDelivery.workerId, 'support-immediate/order-request-1');
+  assert.deepEqual(payload.email_delivery, {
+    state: 'queued', effect_id: 'effect-order-request-1',
+  });
 });
 
 test('buyer order request cannot report success when atomic chat handoff fails', async () => {

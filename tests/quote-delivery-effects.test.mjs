@@ -131,3 +131,14 @@ test('source contract keeps offer effects and quote message completion in their 
   assert.ok(delivery.indexOf('provider_succeeded_at is not null') < delivery.indexOf('public.append_support_message('));
   assert.ok(delivery.indexOf('public.append_support_message(') < delivery.indexOf('public.finish_integration_projection('));
 });
+
+test('quote support handoff relies on the canonical message notification exactly once', () => {
+  const source = readFileSync(new URL('../functions/api/admin/quotes.js', import.meta.url), 'utf8');
+  const start = source.indexOf('async function postQuoteThreadHandoff');
+  const end = source.indexOf('\nasync function ', start + 1);
+  const handoff = source.slice(start, end === -1 ? source.length : end);
+
+  assert.match(handoff, /publishSupportMessage/);
+  assert.doesNotMatch(handoff, /from\(['"]notifications['"]\)/);
+  assert.doesNotMatch(handoff, /notifications?\.insert/);
+});

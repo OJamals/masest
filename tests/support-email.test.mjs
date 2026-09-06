@@ -256,6 +256,82 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
   });
 });
 
+test('provider response loss reuses the frozen request after mutable support context changes', async () => {
+  let generation = 0;
+  let frozen = null;
+  const sent = [];
+  const deliveryEffect = { id: 'effect-1', lease_owner: 'worker-1' };
+  const dependencies = {
+    deliveryEffect,
+    buyerRecipient: async () => ({
+      id: BUYER_ID,
+      email: generation === 0 ? 'first@example.com' : 'changed@example.com',
+      notify_messages: true,
+      support_chat_open: false,
+    }),
+    orderContext: async () => ({
+      id: ORDER_ID,
+      reference: generation === 0 ? 'VK-ORIGINAL' : 'VK-CHANGED',
+      status: 'processing',
+    }),
+    ticketContext: async () => ({
+      id: TICKET_ID,
+      ticket_number: 41,
+      subject: generation === 0 ? 'Original ticket subject' : 'Changed ticket subject',
+    }),
+    replyAddress: async () => `reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`,
+    threadParent: async () => ({
+      messageId: '<root@example.com>',
+      references: '',
+      history: [{
+        sender_role: 'buyer',
+        body: generation === 0 ? 'Original history' : 'Changed history',
+        created_at: '2026-09-06T12:00:00Z',
+      }],
+    }),
+    freezeEnvelope: async (_sb, input) => {
+      assert.equal(input.effectId, deliveryEffect.id);
+      assert.equal(input.workerId, deliveryEffect.lease_owner);
+      assert.equal(input.messageId, MESSAGE_ID);
+      frozen ||= input.envelope;
+      return frozen;
+    },
+    sendEmail: async (_env, request) => {
+      sent.push(structuredClone(request));
+      return generation === 0
+        ? { ok: false, retryable: true, error: 'support_email_failed' }
+        : { ok: true, providerMessageId: 'provider-replayed' };
+    },
+    saveDelivery: async () => {},
+  };
+  const canonicalMessage = {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    company_name: 'Northwind HVAC',
+    sender_role: 'staff',
+    body: 'Canonical staff reply',
+    recipient_user_id: BUYER_ID,
+    order_id: ORDER_ID,
+  };
+
+  const first = await deliverSupportMessageEmail({}, {}, canonicalMessage, dependencies);
+  generation = 1;
+  const replay = await deliverSupportMessageEmail({}, {}, canonicalMessage, dependencies);
+
+  assert.deepEqual(first, { ok: false, retryable: true, error: 'support_email_failed' });
+  assert.equal(replay.providerMessageId, 'provider-replayed');
+  assert.equal(sent.length, 2);
+  assert.deepEqual(sent[1], sent[0]);
+  assert.deepEqual(sent[0].to, ['first@example.com']);
+  assert.match(sent[0].subject, /VK-ORIGINAL/);
+  assert.doesNotMatch(sent[0].subject, /Changed/);
+  assert.match(sent[0].text, /Original history/);
+  assert.doesNotMatch(sent[0].text, /Changed history/);
+  assert.equal(sent[0].idempotencyKey, `support-message/${MESSAGE_ID}/staff`);
+});
+
 test('staff delivery distinguishes missing email and exact prior delivery', async () => {
   const missing = await deliverSupportMessageEmail({}, {}, {
     id: MESSAGE_ID,

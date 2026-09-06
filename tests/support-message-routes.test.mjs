@@ -1339,18 +1339,8 @@ test('staff POST rejects empty and 4,001-character replies before database I/O',
   }
 });
 
-test('selected staff thread fixes participant and Company identity for ordered reply and notification', async () => {
+test('selected staff thread fixes participant and Company identity while SQL owns its atomic notification', async () => {
   let published = false;
-  const notification = {
-    company_id: COMPANY_ID,
-    user_id: USER_ID,
-    type: 'message',
-    title: 'New message from MASEST',
-    body: 'Order update is ready',
-    link: `/dashboard.html?order=${ORDER_ID}#messages`,
-  };
-  const notificationQuery = query('notifications', [op('insert', notification)], { data: null, error: null });
-  notificationQuery.onSettle = () => assert.equal(published, true, 'publication must finish before notification');
   const sb = strictSupabase([
     single('support_threads', [op('select', THREAD_SELECT), op('eq', 'id', USER_THREAD_ID)], {
       data: participantThread(), error: null,
@@ -1373,7 +1363,6 @@ test('selected staff thread fixes participant and Company identity for ordered r
     single('orders', [op('select', ORDER_SELECT), op('eq', 'id', ORDER_ID)], {
       data: orderRow(), error: null,
     }),
-    notificationQuery,
   ], {
     authUsers: [
       { id: USER_ID, result: { data: { user: { email: 'buyer@example.test' } }, error: null } },

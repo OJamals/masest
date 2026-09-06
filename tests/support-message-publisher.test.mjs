@@ -11,7 +11,7 @@ const input = {
   source: 'admin',
 };
 
-test('support publisher persists once, then emails the canonical message row', async () => {
+test('support publisher persists once, then claims the canonical message effect', async () => {
   const env = { APP_URL: 'https://masest.co' };
   const sb = { name: 'database' };
   const message = { id: 'message-1', company_id: 'company-1', sender_role: 'staff' };
@@ -22,18 +22,24 @@ test('support publisher persists once, then emails the canonical message row', a
       calls.push(['append', receivedSb, receivedInput]);
       return message;
     },
-    deliver: async (receivedEnv, receivedSb, receivedMessage) => {
-      calls.push(['deliver', receivedEnv, receivedSb, receivedMessage]);
-      return { ok: true, providerMessageId: 'email-1' };
+    createWorkerId: () => 'support-immediate/test-1',
+    attemptDelivery: async (options) => {
+      calls.push(['attempt', options]);
+      return { state: 'delivered', effect_id: 'effect-1' };
     },
   });
 
   assert.deepEqual(calls, [
     ['append', sb, input],
-    ['deliver', env, sb, message],
+    ['attempt', {
+      env,
+      sb,
+      message,
+      workerId: 'support-immediate/test-1',
+    }],
   ]);
   assert.equal(result.message, message);
-  assert.deepEqual(result.emailDelivery, { ok: true, providerMessageId: 'email-1' });
+  assert.deepEqual(result.emailDelivery, { state: 'delivered', effect_id: 'effect-1' });
 });
 
 test('support publisher keeps the canonical message when counterpart email delivery throws', async () => {
@@ -41,13 +47,14 @@ test('support publisher keeps the canonical message when counterpart email deliv
 
   const result = await publishSupportMessage({}, {}, input, {
     append: async () => message,
-    deliver: async () => { throw new Error('provider unavailable'); },
+    createWorkerId: () => 'support-immediate/test-2',
+    attemptDelivery: async () => { throw new Error('provider unavailable'); },
   });
 
   assert.equal(result.message, message);
   assert.deepEqual(result.emailDelivery, {
-    ok: false,
-    retryable: true,
-    error: 'support_email_delivery_failed',
+    state: 'queued',
+    effect_id: null,
+    reason: 'support_delivery_status_unavailable',
   });
 });
