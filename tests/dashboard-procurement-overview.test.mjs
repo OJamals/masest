@@ -143,12 +143,25 @@ test("buyer messages preserve order scope, drafts, and the selected ticket acros
     const calls = [];
     window.__buyerRaceCalls = calls;
     window.__buyerRaceSettled = [];
+    window.__buyerRaceTrace = { history: [], pending: [] };
     const order = { id: "order-42", reference: "MST-0042", status: "shipped" };
     const ticketA = { id: "ticket-a", display_number: "MAS-000041", subject: "Order question", status: "open", scope: "personal", primary_order_id: null, last_message_at: "2026-09-05T12:00:00Z" };
     const ticketB = { id: "ticket-b", display_number: "MAS-000042", subject: "Billing question", status: "open", scope: "personal", primary_order_id: order.id, order: order, last_message_at: "2026-09-04T12:00:00Z" };
-    let historyCalls = 0;
+    const deferred = () => {
+      let resolve;
+      const promise = new Promise((done) => { resolve = done; });
+      return { promise, resolve };
+    };
+    const lateADetail = deferred();
+    const aReplyBarriers = [deferred(), deferred()];
+    let historyPhase = "initial";
     let ticketADetailCalls = 0;
-    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    let ticketAReplyCalls = 0;
+    window.__buyerRaceControl = {
+      releaseADetail() { lateADetail.resolve(); },
+      releaseAReply(index) { aReplyBarriers[index]?.resolve(); },
+      setHistoryPhase(phase) { historyPhase = phase; },
+    };
     export async function getToken() { return "fixture-token"; }
     export async function me() { return { can_admin: false, email: "buyer@example.com", profile: { full_name: "Fixture Buyer" }, company: null, setup: { steps: [] } }; }
     export async function logout() {}
@@ -157,18 +170,31 @@ test("buyer messages preserve order scope, drafts, and the selected ticket acros
     export async function api(path, options = {}) {
       calls.push({ path, options });
       if (options.method === "POST") {
-        if (options.body?.ticket_id === "ticket-a") await wait(220);
+        if (options.body?.ticket_id === "ticket-a") {
+          const replyIndex = ticketAReplyCalls;
+          ticketAReplyCalls += 1;
+          const barrier = aReplyBarriers[replyIndex];
+          if (!barrier) throw new Error("Unexpected ticket A reply");
+          window.__buyerRaceTrace.pending.push("a-reply-" + replyIndex);
+          await barrier.promise;
+        }
         window.__buyerRaceSettled.push(options.body?.body || "");
         return { ticket_id: options.body?.ticket_id || "ticket-a", ticket: options.body?.ticket_id === "ticket-b" ? ticketB : ticketA };
       }
       const url = new URL(path, "http://fixture");
       if (url.searchParams.get("view") === "tickets") {
-        historyCalls += 1;
-        return { tickets: historyCalls === 1 ? [ticketB] : historyCalls === 2 ? [ticketB, ticketA] : [ticketB], has_more: false, next_ticket_cursor: null };
+        const phase = historyPhase;
+        const tickets = phase === "initial" || phase === "omit-selected-a" ? [ticketB] : [ticketB, ticketA];
+        window.__buyerRaceTrace.history.push({ phase, returnedTicketIds: tickets.map((ticket) => ticket.id) });
+        return { tickets, has_more: false, next_ticket_cursor: null };
       }
       if (url.searchParams.get("ticket_id") === "ticket-a") {
         ticketADetailCalls += 1;
-        if (ticketADetailCalls > 1) await wait(220);
+        if (ticketADetailCalls > 1) {
+          window.__buyerRaceTrace.pending.push("late-a-detail");
+          await lateADetail.promise;
+          window.__buyerRaceSettled.push("late-a-detail");
+        }
         return { ticket: ticketA, messages: [{ id: "message-a", sender_role: "staff", body: "Order answer", created_at: "2026-09-05T12:00:00Z" }], has_more: false, next_message_cursor: null, order_scope: order };
       }
       if (url.searchParams.get("ticket_id") === "ticket-b") return { ticket: ticketB, messages: [{ id: "message-b", sender_role: "staff", body: "Billing answer", created_at: "2026-09-04T12:00:00Z" }], has_more: false, next_message_cursor: null, order_scope: null };
@@ -187,6 +213,7 @@ test("buyer messages preserve order scope, drafts, and the selected ticket acros
     assert.equal(new URL(initialDefault.path, "http://fixture").searchParams.get("order_id"), "order-42");
     const initialHistory = await page.evaluate(() => window.__buyerRaceCalls.find((call) => new URL(call.path, location.origin).searchParams.get("view") === "tickets"));
     assert.equal(new URL(initialHistory.path, "http://fixture").searchParams.get("order_id"), "order-42");
+    await page.evaluate(() => window.__buyerRaceControl.setHistoryPhase("stable"));
 
     await page.locator("#msgInput").fill("Draft for order question");
     await page.locator('#msgTickets [data-ticket-id="ticket-b"]').click();
@@ -194,18 +221,25 @@ test("buyer messages preserve order scope, drafts, and the selected ticket acros
     await page.locator("#msgInput").fill("Draft for billing question");
     await page.locator('#msgTickets [data-ticket-id="ticket-a"]').click();
     await page.locator('#msgTickets [data-ticket-id="ticket-b"]').click();
+    await page.waitForFunction(() => window.__buyerRaceTrace.pending.includes("late-a-detail"));
     await page.waitForFunction(() => document.querySelector("#msgTicketSubject")?.textContent === "Billing question");
     assert.equal(await page.locator("#msgInput").inputValue(), "Draft for billing question", "a late A response must not replace B's draft");
+    await page.evaluate(() => window.__buyerRaceControl.releaseADetail());
+    await page.waitForFunction(() => window.__buyerRaceSettled.includes("late-a-detail"));
+    assert.equal(await page.locator("#msgInput").inputValue(), "Draft for billing question", "settling A detail must leave B's draft intact");
 
     await page.locator('#msgTickets [data-ticket-id="ticket-a"]').click();
     await page.waitForFunction(() => document.querySelector("#msgTicketSubject")?.textContent === "Order question");
     await page.locator("#msgInput").fill("Reply for order question");
     await page.locator("#msgForm [type=submit]").click();
+    await page.waitForFunction(() => window.__buyerRaceTrace.pending.includes("a-reply-0"));
     await page.locator('#msgTickets [data-ticket-id="ticket-b"]').click();
     await page.waitForFunction(() => document.querySelector("#msgTicketSubject")?.textContent === "Billing question");
     await page.waitForFunction(() => window.__buyerRaceCalls.some((call) => call.options.method === "POST" && call.options.body?.body === "Reply for order question"));
     assert.equal(await page.locator("#msgInput").inputValue(), "Draft for billing question", "a late successful A reply must not clear B's draft");
+    await page.evaluate(() => window.__buyerRaceControl.releaseAReply(0));
     await page.waitForFunction(() => window.__buyerRaceSettled.includes("Reply for order question"));
+    assert.equal(await page.locator("#msgInput").inputValue(), "Draft for billing question", "settling A's reply must leave the selected B draft intact");
     await page.locator('#msgTickets [data-ticket-id="ticket-a"]').click();
     await page.waitForFunction(() => document.querySelector("#msgTicketSubject")?.textContent === "Order question");
     assert.equal(await page.locator("#msgInput").inputValue(), "", "returning to A after its successful send must not restore sent text");
@@ -214,11 +248,16 @@ test("buyer messages preserve order scope, drafts, and the selected ticket acros
     assert.equal(await page.locator("#msgInput").inputValue(), "Draft for billing question", "B's draft remains isolated after A settles");
 
     await page.locator("#msgInput").fill("Reply for billing question  ");
+    await page.evaluate(() => window.__buyerRaceControl.setHistoryPhase("after-b-send"));
+    const historyBeforeBReply = await page.evaluate(() => window.__buyerRaceTrace.history.length);
     await page.locator("#msgForm [type=submit]").click();
     await page.waitForFunction(() => window.__buyerRaceCalls.some((call) => call.options.method === "POST" && call.options.body?.body === "Reply for billing question"));
     const billingReply = await page.evaluate(() => window.__buyerRaceCalls.find((call) => call.options.method === "POST" && call.options.body?.body === "Reply for billing question"));
     assert.deepEqual(billingReply.options.body, { body: "Reply for billing question", order_id: "order-42", source: "dashboard", ticket_id: "ticket-b" });
     await page.waitForFunction(() => window.__buyerRaceSettled.includes("Reply for billing question") && document.querySelector("#msgInput")?.value === "");
+    await page.waitForFunction((count) => window.__buyerRaceTrace.history.length > count && window.__buyerRaceTrace.history.at(-1)?.phase === "after-b-send", historyBeforeBReply);
+    const afterBHistory = await page.evaluate(() => window.__buyerRaceTrace.history.at(-1));
+    assert.deepEqual(afterBHistory, { phase: "after-b-send", returnedTicketIds: ["ticket-b", "ticket-a"] });
     const displayed = await page.evaluate(() => ({
       highlighted: document.querySelector('.msg-ticket[aria-pressed="true"]')?.dataset.ticketId,
       heading: document.querySelector("#msgTicketMeta")?.textContent,
@@ -228,16 +267,26 @@ test("buyer messages preserve order scope, drafts, and the selected ticket acros
 
     await page.locator('#msgTickets [data-ticket-id="ticket-a"]').click();
     await page.waitForFunction(() => document.querySelector("#msgTicketSubject")?.textContent === "Order question");
+    await page.evaluate(() => window.__buyerRaceControl.setHistoryPhase("omit-selected-a"));
+    const historyBeforeOmission = await page.evaluate(() => window.__buyerRaceTrace.history.length);
     await page.locator("#refreshMessages").click();
+    await page.waitForFunction((count) => window.__buyerRaceTrace.history.length > count && window.__buyerRaceTrace.history.at(-1)?.phase === "omit-selected-a", historyBeforeOmission);
+    const omittedAHistory = await page.evaluate(() => window.__buyerRaceTrace.history.at(-1));
+    assert.deepEqual(omittedAHistory, { phase: "omit-selected-a", returnedTicketIds: ["ticket-b"] });
     await page.waitForFunction(() => document.querySelector("#msgTicketSubject")?.textContent === "Order question");
     assert.equal(await page.locator('.msg-ticket[aria-pressed="true"]').getAttribute("data-ticket-id"), "ticket-a", "explicit selection survives a refresh that omits it from the first page");
     const selectedARead = await page.evaluate(() => window.__buyerRaceCalls.find((call) => call.options.method !== "POST" && new URL(call.path, location.origin).searchParams.get("ticket_id") === "ticket-a"));
     assert.equal(new URL(selectedARead.path, "http://fixture").searchParams.get("order_id"), "order-42");
 
     await page.locator("#msgInput").fill("Reply A while pending");
+    await page.evaluate(() => window.__buyerRaceControl.setHistoryPhase("after-pending-a-send"));
+    const historyBeforePendingAReply = await page.evaluate(() => window.__buyerRaceTrace.history.length);
     await page.locator("#msgForm [type=submit]").click();
+    await page.waitForFunction(() => window.__buyerRaceTrace.pending.includes("a-reply-1"));
     await page.locator("#msgInput").fill("Newer A edit");
-    await page.waitForFunction(() => window.__buyerRaceSettled.includes("Reply A while pending") && document.querySelector("#msgInput")?.value === "Newer A edit");
+    await page.evaluate(() => window.__buyerRaceControl.releaseAReply(1));
+    await page.waitForFunction((count) => window.__buyerRaceSettled.includes("Reply A while pending") && window.__buyerRaceTrace.history.length > count && window.__buyerRaceTrace.history.at(-1)?.phase === "after-pending-a-send", historyBeforePendingAReply);
+    assert.equal(await page.locator("#msgInput").inputValue(), "Newer A edit", "a newer A draft must survive settlement and refresh of the earlier A reply");
   } finally {
     await context.close();
     await browser.close();
