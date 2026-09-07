@@ -151,13 +151,22 @@ function abortError(signal) {
 }
 
 function withAbort(promise, signal) {
-  if (signal.aborted) return Promise.reject(abortError(signal));
+  const observed = Promise.resolve(promise);
   return new Promise((resolve, reject) => {
-    const aborted = () => reject(abortError(signal));
-    signal.addEventListener("abort", aborted, { once: true });
-    Promise.resolve(promise).then(resolve, reject).finally(() => {
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
       signal.removeEventListener("abort", aborted);
-    });
+      callback(value);
+    };
+    const aborted = () => finish(reject, abortError(signal));
+    signal.addEventListener("abort", aborted, { once: true });
+    observed.then(
+      (value) => finish(resolve, value),
+      (error) => finish(reject, error),
+    );
+    if (signal.aborted) aborted();
   });
 }
 
@@ -217,8 +226,9 @@ export async function collectStoryPerformanceDiagnostic(page, {
   durationMs = 3000,
   timeoutMs = 12_000,
   signal: upstreamSignal = null,
+  sessionFactories = null,
 } = {}) {
-  const browser = page.context().browser();
+  if (upstreamSignal?.aborted) throw abortError(upstreamSignal);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(new Error("diagnostic collection timed out")), timeoutMs);
   const forwardAbort = () => controller.abort(abortError(upstreamSignal));
@@ -254,8 +264,10 @@ export async function collectStoryPerformanceDiagnostic(page, {
 
   try {
     ({ pageSession, browserSession } = await acquireDiagnosticSessions({
-      createPageSession: () => page.context().newCDPSession(page),
-      createBrowserSession: () => browser.newBrowserCDPSession(),
+      createPageSession: sessionFactories?.createPageSession
+        || (() => page.context().newCDPSession(page)),
+      createBrowserSession: sessionFactories?.createBrowserSession
+        || (() => page.context().browser().newBrowserCDPSession()),
     }, signal));
 
     pageSession.on("Tracing.dataCollected", ({ value = [] }) => {
@@ -304,6 +316,7 @@ export async function collectStoryPerformanceDiagnostic(page, {
     const systemInfo = await optional(() => withAbort(browserSession.send("SystemInfo.getInfo"), signal));
     const processBefore = await optional(() => withAbort(browserSession.send("SystemInfo.getProcessInfo"), signal));
 
+    tracingStarted = true;
     await withAbort(pageSession.send("Tracing.start", {
       transferMode: "ReportEvents",
       traceConfig: {
@@ -318,8 +331,6 @@ export async function collectStoryPerformanceDiagnostic(page, {
         ],
       },
     }), signal);
-    tracingStarted = true;
-
     const expression = `(async () => {
       globalThis.__masestStoryDiagnosticCancelled = false;
       const story = document.getElementById("story");

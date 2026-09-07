@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   acquireDiagnosticSessions,
+  collectStoryPerformanceDiagnostic,
   diagnoseStoryPerformanceFailure,
 } from "../tools/story-performance-diagnostics.mjs";
 
@@ -103,4 +104,72 @@ test("partial or late session acquisition closes every acquired CDP session", as
   assert.equal(pageDetachCount, 1);
   await new Promise((resolve) => setTimeout(resolve, 30));
   assert.equal(lateBrowserDetachCount, 1, "a session that resolves after cancellation must detach itself");
+});
+
+test("a pre-aborted collection touches no browser or CDP session", async () => {
+  const controller = new AbortController();
+  controller.abort(new Error("already cancelled"));
+  let pageTouched = false;
+
+  await assert.rejects(collectStoryPerformanceDiagnostic({
+    context() {
+      pageTouched = true;
+      throw new Error("page must not be inspected");
+    },
+  }, { signal: controller.signal }), /already cancelled/);
+  assert.equal(pageTouched, false);
+});
+
+test("pre-aborted acquisition observes a rejected session promise", async () => {
+  const controller = new AbortController();
+  controller.abort(new Error("already cancelled"));
+  let rejected = false;
+  const acquisition = acquireDiagnosticSessions({
+    createPageSession: () => Promise.reject(new Error("late CDP rejection")).finally(() => { rejected = true; }),
+    createBrowserSession: () => assert.fail("browser session must not be requested"),
+  }, controller.signal);
+
+  await assert.rejects(acquisition, /already cancelled/);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(rejected, true);
+});
+
+test("abort racing an in-flight trace start still ends and detaches both sessions", async () => {
+  const controller = new AbortController();
+  let resolveStart;
+  const startPending = new Promise((resolve) => { resolveStart = resolve; });
+  const pageCalls = [];
+  let pageDetached = 0;
+  let browserDetached = 0;
+  const pageSession = {
+    on() {},
+    async send(method) {
+      pageCalls.push(method);
+      if (method === "Performance.getMetrics") return { metrics: [] };
+      if (method === "Tracing.start") return startPending;
+      return {};
+    },
+    async detach() { pageDetached += 1; },
+  };
+  const browserSession = {
+    async send() { return {}; },
+    async detach() { browserDetached += 1; },
+  };
+  const collecting = collectStoryPerformanceDiagnostic({}, {
+    signal: controller.signal,
+    timeoutMs: 2000,
+    sessionFactories: {
+      createPageSession: async () => pageSession,
+      createBrowserSession: async () => browserSession,
+    },
+  });
+  while (!pageCalls.includes("Tracing.start")) await new Promise((resolve) => setTimeout(resolve, 1));
+  controller.abort(new Error("cancel during trace start"));
+
+  await assert.rejects(collecting, /cancel during trace start/);
+  assert.ok(pageCalls.includes("Tracing.end"));
+  assert.equal(pageDetached, 1);
+  assert.equal(browserDetached, 1);
+  resolveStart();
+  await new Promise((resolve) => setTimeout(resolve, 0));
 });

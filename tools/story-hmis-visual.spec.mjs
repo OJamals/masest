@@ -1158,6 +1158,7 @@ test("an active diagnostic timeout terminates scrolling and releases the page", 
   test.setTimeout(15_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
+  const scrollBeforeDiagnostic = await page.evaluate(() => scrollY);
   const syntheticFailedEvaluation = { pass: false, failures: [{ metric: "sampleQuorum" }] };
 
   const result = await diagnoseStoryPerformanceFailure({
@@ -1174,6 +1175,7 @@ test("an active diagnostic timeout terminates scrolling and releases the page", 
   expect(result.evaluation).toBe(syntheticFailedEvaluation);
   expect(result.diagnostic.error).toBe("diagnostic collection timed out");
   const scrollAtReturn = await page.evaluate(() => scrollY);
+  expect(scrollAtReturn).toBeGreaterThan(scrollBeforeDiagnostic);
   await page.waitForTimeout(150);
   expect(await page.evaluate(() => scrollY)).toBe(scrollAtReturn);
   expect(await page.evaluate(() => 2 + 2)).toBe(4);
