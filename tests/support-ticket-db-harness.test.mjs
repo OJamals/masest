@@ -5,6 +5,7 @@ import { access, mkdtemp, rm } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createServer } from 'node:net';
 import test from 'node:test';
 import pg from 'pg';
 
@@ -19,6 +20,19 @@ import { runSupportDbProofs } from '../tools/verify-support-tickets-db.mjs';
 
 const { Client } = pg;
 const LOCAL_PG_BIN = process.env.PG_BIN || '/opt/homebrew/opt/postgresql@18/bin';
+
+function waitForChildExit(child, timeoutMs) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve([child.exitCode, child.signalCode]);
+  }
+  return Promise.race([
+    once(child, 'exit'),
+    new Promise((_, reject) => {
+      const timer = setTimeout(() => reject(new Error('child cleanup timed out')), timeoutMs);
+      timer.unref();
+    }),
+  ]);
+}
 
 test('explicit PG_BIN fails closed with one actionable missing-binary error', async () => {
   const fakeBin = await mkdtemp(join(tmpdir(), 'masest-pg-missing-'));
@@ -146,28 +160,34 @@ test('an outer SIGTERM stops and removes the child-owned cluster', async () => {
     setInterval(() => {}, 60_000);
   `], { stdio: ['ignore', 'pipe', 'pipe'] });
   let output = '';
+  let tempDir;
   child.stdout.setEncoding('utf8');
   child.stdout.on('data', (chunk) => { output += chunk; });
-  await Promise.race([
-    (async () => { while (!output.includes('\n')) await once(child.stdout, 'data'); })(),
-    once(child, 'exit').then(([code, signal]) => { throw new Error(`child exited before ready: ${code ?? signal}`); }),
-    new Promise((_, reject) => {
-      const timer = setTimeout(() => reject(new Error('child readiness timed out')), 10_000);
-      timer.unref();
-    }),
-  ]);
-  const { tempDir } = JSON.parse(output.trim());
-  assert.equal(child.kill('SIGTERM'), true);
-  const [code, signal] = await Promise.race([
-    once(child, 'exit'),
-    new Promise((_, reject) => {
-      const timer = setTimeout(() => reject(new Error('child cleanup timed out')), 20_000);
-      timer.unref();
-    }),
-  ]);
-  assert.equal(signal, null);
-  assert.equal(code, 143);
-  await assert.rejects(access(tempDir, fsConstants.F_OK), /ENOENT/);
+  try {
+    await Promise.race([
+      (async () => { while (!output.includes('\n')) await once(child.stdout, 'data'); })(),
+      once(child, 'exit').then(([code, signal]) => { throw new Error(`child exited before ready: ${code ?? signal}`); }),
+      new Promise((_, reject) => {
+        const timer = setTimeout(() => reject(new Error('child readiness timed out')), 10_000);
+        timer.unref();
+      }),
+    ]);
+    ({ tempDir } = JSON.parse(output.trim()));
+    assert.equal(child.kill('SIGTERM'), true);
+    const [code, signal] = await waitForChildExit(child, 20_000);
+    assert.equal(signal, null);
+    assert.equal(code, 143);
+    await assert.rejects(access(tempDir, fsConstants.F_OK), /ENOENT/);
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGTERM');
+      try {
+        await waitForChildExit(child, 20_000);
+      } catch (error) {
+        throw new Error(`child-owned PostgreSQL shutdown unconfirmed; preserved ${tempDir || 'unreported owned directory'}: ${error.message}`);
+      }
+    }
+  }
 });
 
 test('real connections enforce statement and lock timeouts', async () => {
@@ -192,4 +212,35 @@ test('real connections enforce statement and lock timeouts', async () => {
       await Promise.all([first.end().catch(() => {}), second.end().catch(() => {})]);
     }
   });
+});
+
+test('a stalled loopback PostgreSQL handshake obeys the connection timeout', async () => {
+  const sockets = new Set();
+  const server = createServer((socket) => {
+    sockets.add(socket);
+    socket.on('close', () => sockets.delete(socket));
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  try {
+    await withOwnedPostgres({
+      prefix: 'masest-support-connection-proof-',
+      env: { ...process.env, PG_BIN: LOCAL_PG_BIN },
+      connectionTimeoutMs: 150,
+    }, async (cluster) => {
+      const client = new Client({ ...cluster.clientConfig, port: server.address().port });
+      const startedAt = Date.now();
+      try {
+        await assert.rejects(client.connect(), /timeout expired/i);
+        assert.ok(Date.now() - startedAt < 2_000, 'connection timeout exceeded its bounded allowance');
+      } finally {
+        await client.end().catch(() => {});
+      }
+    });
+  } finally {
+    for (const socket of sockets) socket.destroy();
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
 });
