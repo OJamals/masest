@@ -2,23 +2,23 @@
    Icons: Phosphor web family only. No emoji. No em-dashes in copy. */
 import { renderChrome } from "./main/chrome.js?v=20260907d";
 import { initResponsiveTables, initReveal } from "./main/effects.js";
-import { initServiceCatalog } from "./main/service-catalog.js?v=20260830h";
+import { initServiceCatalog } from "./main/service-catalog.js?v=20260907d";
 import {
   initCartButtons,
   initShop,
   productCard,
-} from "./main/commerce-ui.js?v=20260830h";
+} from "./main/commerce-ui.js?v=20260907d";
 import {
   initBeforeAfter,
   initIndustryDiscovery,
   initMarineProductSelector,
   initProofFilters,
   initQuoteForm,
-} from "./main/engagement.js?v=20260830h";
-import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260830h";
+} from "./main/engagement.js?v=20260907d";
+import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20260907d";
 import { initDataVisualizations } from "./main/data-visuals.js";
-import { initContentSnapshots } from "./main/content-snapshots.js?v=20260830h";
-import { initPricingBindings } from "./main/pricing-data.js?v=20260830h";
+import { initContentSnapshots } from "./main/content-snapshots.js?v=20260907d";
+import { initPricingBindings } from "./main/pricing-data.js?v=20260907d";
 
 window.MASESTMain = {
   initReveal,

@@ -6,23 +6,22 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260830h";
-const MAIN_ENTRY_RELEASE = "20260907d";
-const ADMIN_RELEASE = "20260907b";
+const MAIN_RELEASE = "20260907d";
+const ADMIN_RELEASE = "20260907d";
 const ADMIN_PAGE_RELEASE = "20260907d";
-const ADMIN_ACCOUNTS_RELEASE = "20260907b";
-const ADMIN_WORKFLOW_RELEASE = "20260907b";
-const ADMIN_CHROME_RELEASE = "20260907b";
-const CHROME_RELEASE = MAIN_ENTRY_RELEASE;
+const ADMIN_ACCOUNTS_RELEASE = "20260907d";
+const ADMIN_WORKFLOW_RELEASE = "20260907d";
+const ADMIN_CHROME_RELEASE = "20260907d";
+const CHROME_RELEASE = MAIN_RELEASE;
 const ACCOUNT_NAV_RELEASE = "20260822c";
 const CUSTOMER_CHAT_RELEASE = "20260907d";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260907a";
-const CONTENT_RELEASE = "20260907b";
+const CONTENT_RELEASE = "20260907d";
 const STORY_RELEASE = "20260903b";
 const PUBLIC_SUPPORT_RELEASE = "20260907d";
 const ADMIN_SUPPORT_RELEASE = "20260907d";
 const ADMIN_SUPPORT_STYLE_RELEASE = "20260907d";
-const MAIN_ENTRY_RELEASE_OVERRIDES = new Map();
+const MAIN_RELEASE_OVERRIDES = new Map();
 
 function filesUnder(path) {
   return readdirSync(new URL(path, root), { withFileTypes: true }).flatMap((entry) => {
@@ -128,7 +127,7 @@ test("public pages and generators publish the auth cache release", () => {
     const matches = [...read(path).matchAll(/main\.js\?v=(\d{8}[a-z])/g)];
     for (const match of matches) {
       entrypoints += 1;
-      assert.equal(match[1], MAIN_ENTRY_RELEASE_OVERRIDES.get(path) || MAIN_ENTRY_RELEASE, path);
+      assert.equal(match[1], MAIN_RELEASE_OVERRIDES.get(path) || MAIN_RELEASE, path);
     }
   }
 
@@ -138,7 +137,7 @@ test("public pages and generators publish the auth cache release", () => {
     "tools/gen_industries.mjs",
     "tools/seo-inject.mjs",
   ]) {
-    assert.doesNotMatch(read(path), new RegExp(`main\\.js\\?v=(?!${MAIN_ENTRY_RELEASE})`), path);
+    assert.doesNotMatch(read(path), new RegExp(`main\\.js\\?v=(?!${MAIN_RELEASE})`), path);
   }
   assert.ok(entrypoints >= 50, "expected generated and hand-authored public pages");
 });
