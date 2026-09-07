@@ -470,7 +470,6 @@ test("settings cannot be stolen by ticket refresh and returning restores propert
   await page.locator("[data-support-settings-toggle]").click();
   await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "settings");
   await expect(page.locator("#adminNotifySupportRequests")).toBeVisible();
-  await page.waitForTimeout(100);
   await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "settings");
   await page.locator("[data-support-back]").click();
   await expect(page.getByRole("heading", { level: 3, name: "Damaged pail on delivery" })).toBeVisible();
@@ -650,7 +649,7 @@ test("queued property work from A cannot resurrect after an A to B to A selectio
   await expect(page.getByRole("heading", { level: 3, name: "Damaged pail on delivery" })).toBeVisible();
   releasePatch();
   await expect.poll(() => patchCompleted).toBe(true);
-  await page.waitForTimeout(100);
+  await expect(page.locator("[data-support-properties]")).not.toHaveAttribute("aria-busy", "true");
   expect(patches).toEqual([{ ticket_id: TICKET_ID, version: 4, priority: "urgent" }]);
   await page.getByRole("button", { name: "Properties" }).click();
   await expect(page.locator('[data-ticket-field="priority"]')).toHaveValue("high");
