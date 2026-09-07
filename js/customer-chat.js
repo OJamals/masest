@@ -60,7 +60,7 @@ export async function initCustomerChat() {
       const account = await session.me();
       if (account?.can_admin) {
         document.removeEventListener("masest:open-support-order", handleSupportOrderRequest);
-        const { initAdminSupport } = await import("./admin-support.js?v=20260907a");
+        const { initAdminSupport } = await import("./admin-support.js?v=20260907d");
         initAdminSupport({ auth: session, root, staff: account.staff });
         return;
       }

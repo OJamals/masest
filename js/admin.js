@@ -851,7 +851,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   support: async () => {
-    const { createThreadsTab } = await import('./admin/threads.js?v=20260907b');
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260907d');
     const { renderThreads, wireThreads, openThread, openNewChat, openConsole, openSettings } = createThreadsTab({
       api,
       state,
