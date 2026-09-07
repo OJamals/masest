@@ -146,6 +146,11 @@ function boundedError(error) {
   return String(error?.message || error || "unknown diagnostic error").replace(/\s+/g, " ").slice(0, 240);
 }
 
+export function storyDiagnosticBrowserProduct(page, browserVersion) {
+  if (browserVersion?.product) return browserVersion.product;
+  return page.context?.().browser?.()?.version?.() || null;
+}
+
 function abortError(signal) {
   return signal.reason instanceof Error ? signal.reason : new Error("diagnostic collection aborted");
 }
@@ -397,7 +402,7 @@ export async function collectStoryPerformanceDiagnostic(page, {
         cgroupCpu: cgroupCpuDelta(cgroupBefore, cgroupAfter),
       },
       browser: {
-        product: browserVersion?.product || browser.version(),
+        product: storyDiagnosticBrowserProduct(page, browserVersion),
         jsVersion: browserVersion?.jsVersion || null,
         userAgent: browserVersion?.userAgent?.slice(0, 180) || null,
       },

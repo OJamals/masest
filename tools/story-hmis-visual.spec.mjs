@@ -1154,26 +1154,30 @@ test("failed-budget diagnostics profile a separate scroll without changing gate 
   expect(messages[0]).toContain("story-performance-diagnostic");
 });
 
-test("an active diagnostic timeout terminates scrolling and releases the page", async ({ page }) => {
+test("an active diagnostic cancellation terminates scrolling and releases the page", async ({ page }) => {
   test.setTimeout(15_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
   const scrollBeforeDiagnostic = await page.evaluate(() => scrollY);
-  const syntheticFailedEvaluation = { pass: false, failures: [{ metric: "sampleQuorum" }] };
-
-  const result = await diagnoseStoryPerformanceFailure({
-    evaluation: syntheticFailedEvaluation,
-    deadlineMs: 700,
-    collect: (signal) => collectStoryPerformanceDiagnostic(page, {
-      durationMs: 5000,
-      timeoutMs: 300,
-      signal,
-    }),
-    log: () => {},
+  const controller = new AbortController();
+  const collecting = collectStoryPerformanceDiagnostic(page, {
+    durationMs: 5000,
+    timeoutMs: 8000,
+    signal: controller.signal,
   });
+  const observedCollection = collecting.then(
+    () => ({ error: null }),
+    (error) => ({ error }),
+  );
 
-  expect(result.evaluation).toBe(syntheticFailedEvaluation);
-  expect(result.diagnostic.error).toBe("diagnostic collection timed out");
+  await expect.poll(
+    () => page.evaluate(() => scrollY),
+    { timeout: 3000, intervals: [10, 25, 50, 100] },
+  ).toBeGreaterThan(scrollBeforeDiagnostic);
+  controller.abort(new Error("controlled active diagnostic timeout"));
+  const { error } = await observedCollection;
+
+  expect(error?.message).toBe("controlled active diagnostic timeout");
   const scrollAtReturn = await page.evaluate(() => scrollY);
   expect(scrollAtReturn).toBeGreaterThan(scrollBeforeDiagnostic);
   await page.waitForTimeout(150);

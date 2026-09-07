@@ -5,6 +5,7 @@ import {
   acquireDiagnosticSessions,
   collectStoryPerformanceDiagnostic,
   diagnoseStoryPerformanceFailure,
+  storyDiagnosticBrowserProduct,
 } from "../tools/story-performance-diagnostics.mjs";
 
 test("passing performance evaluation does not run diagnostics", async () => {
@@ -118,6 +119,18 @@ test("a pre-aborted collection touches no browser or CDP session", async () => {
     },
   }, { signal: controller.signal }), /already cancelled/);
   assert.equal(pageTouched, false);
+});
+
+test("browser product falls back to Playwright when optional CDP metadata is unavailable", () => {
+  const page = {
+    context: () => ({
+      browser: () => ({ version: () => "148.0.7778.96" }),
+    }),
+  };
+
+  assert.equal(storyDiagnosticBrowserProduct(page, null), "148.0.7778.96");
+  assert.equal(storyDiagnosticBrowserProduct(page, { product: "HeadlessChrome/148.0.7778.96" }),
+    "HeadlessChrome/148.0.7778.96");
 });
 
 test("pre-aborted acquisition observes a rejected session promise", async () => {
