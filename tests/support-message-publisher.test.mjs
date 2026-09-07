@@ -100,6 +100,13 @@ function readinessFailureFetch({ staff = false } = {}) {
   return calls;
 }
 
+function assertNoSupportPersistence(calls) {
+  assert.equal(calls.some(({ path }) => /\/rest\/v1\/rpc\/append_support_message(?:_v2)?$/.test(path)), false);
+  assert.equal(calls.some(({ path, method }) => (
+    path === '/rest/v1/messages' || path === '/rest/v1/notifications'
+  ) && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method)), false);
+}
+
 test('buyer v2 ticket POST fails closed at readiness before message persistence', async () => {
   const calls = readinessFailureFetch();
   const request = new Request('https://masest.test/api/account/messages', {
@@ -111,8 +118,7 @@ test('buyer v2 ticket POST fails closed at readiness before message persistence'
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: 'durable_email_effects_not_ready', retryable: true });
   assert.equal(calls.filter(({ path }) => path.endsWith('/rest/v1/rpc/assert_email_effects_ready')).length, 1);
-  assert.equal(calls.some(({ path }) => path.endsWith('/rest/v1/rpc/append_support_message_v2')), false);
-  assert.equal(calls.some(({ path }) => path.endsWith('/rest/v1/notifications')), false);
+  assertNoSupportPersistence(calls);
 });
 
 test('staff v2 ticket POST fails closed at readiness before message or notification persistence', async () => {
@@ -126,6 +132,5 @@ test('staff v2 ticket POST fails closed at readiness before message or notificat
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: 'durable_email_effects_not_ready', retryable: true });
   assert.equal(calls.filter(({ path }) => path.endsWith('/rest/v1/rpc/assert_email_effects_ready')).length, 1);
-  assert.equal(calls.some(({ path }) => path.endsWith('/rest/v1/rpc/append_support_message_v2')), false);
-  assert.equal(calls.some(({ path }) => path.endsWith('/rest/v1/notifications')), false);
+  assertNoSupportPersistence(calls);
 });

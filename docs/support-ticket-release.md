@@ -8,9 +8,10 @@ database, deploy an application, send mail, or delete test data.
 
 Production release is not authorized by this document. The current user-authorized
 production execution is governed by the separately reviewed
-`advisor-plans/043-production-integration.md` addendum maintained by the release owner;
-that authorization does not establish that staging passed. Staging acceptance remains
-unproven until all of the following are proven and approved:
+`advisor-plans/043-production-execution.md` and
+`advisor-plans/043-production-cutover.md` addenda maintained by the release owner; that
+authorization does not establish that staging passed. Staging acceptance remains unproven
+until all of the following are proven and approved:
 
 - the target has an authoritative nonproduction identity that is demonstrably distinct
   from production;
@@ -142,8 +143,13 @@ assert_sql "select exists (select 1 from pg_trigger where tgrelid = 'public.mess
 support_generation=$("$PG_BIN/psql" "${psql_args[@]}" -Atqc \
   "select generation from public.support_ingress_control where singleton and accepting")
 [[ "$support_generation" =~ ^[0-9]+$ ]]
-"$PG_BIN/psql" "${psql_args[@]}" -v expected_generation="$support_generation" -c \
-  "select public.set_support_ingress_accepting(:'expected_generation'::bigint, false, 'support ticket production cutover')"
+"$PG_BIN/psql" "${psql_args[@]}" -v expected_generation="$support_generation" <<'SQL'
+select public.set_support_ingress_accepting(
+  :'expected_generation'::bigint,
+  false,
+  'support ticket production cutover'
+);
+SQL
 closed_generation=$((support_generation + 1))
 assert_sql "select exists (select 1 from public.support_ingress_control where singleton and not accepting and generation = $closed_generation)"
 
@@ -207,8 +213,13 @@ Stop on the first error. Do not activate version 2 after a partial sequence.
    closed_generation=$("$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -Atqc \
      "select generation from public.support_ingress_control where singleton and not accepting")
    [[ "$closed_generation" =~ ^[0-9]+$ ]]
-   "$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -v expected_generation="$closed_generation" -c \
-     "select public.set_support_ingress_accepting(:'expected_generation'::bigint, true, null)"
+   "$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -v expected_generation="$closed_generation" <<'SQL'
+select public.set_support_ingress_accepting(
+  :'expected_generation'::bigint,
+  true,
+  null
+);
+SQL
    "$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -Atqc \
      "select accepting, generation from public.support_ingress_control where singleton"
    ```
