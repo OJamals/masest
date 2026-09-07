@@ -4,15 +4,15 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260907a';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260907b';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260907a';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260907a';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260907a';
+} from './rich-editor.js?v=20260907b';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260907b';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260907b';
 
 const SECTIONS = [
   ['compose', 'Compose'],
@@ -485,7 +485,7 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
     setStatus('Sending test…');
     try {
       await api('/api/admin/newsletters', { method: 'POST', body: { action: 'test_send', to: to || undefined, subject, body_md: bodyMd } });
-      setStatus('Test email accepted by Amazon SES.', 'ok');
+      setStatus('Test email queued for delivery.', 'ok');
     } catch (err) {
       setStatus(err.data?.error || 'Could not send the test email. Retry.', 'err');
     }

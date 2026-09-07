@@ -136,3 +136,27 @@ test("sending an already-sent newsletter creates a new campaign before queueing"
   expect(send).toMatchObject({ action: "send_now", id: "resend-2" });
   await expect(page.locator("#nlStatus")).toContainText("Queued 1 recipient for Amazon SES. 1 started now.");
 });
+
+test("test send reports queue acceptance without claiming provider acceptance", async ({ page }) => {
+  const requests = [];
+  await bootAsOwner(page, requests);
+  await page.goto(`${BASE_URL}/admin.html#newsletter`);
+  await page.locator("#nlSubject").fill("Production transport smoke");
+  await page.locator('[data-rich-editor-key="newsletter-body"] [data-rich-editor-surface]').evaluate((node) => {
+    node.innerHTML = '<p>Clearly labeled transport smoke.</p>';
+    node.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+  });
+  await page.locator('[data-nl-action="test_send"]').click();
+  const dialog = page.locator("dialog.confirm-dialog");
+  await dialog.locator('[data-nl-test-email]').fill("aoaljamal@gmail.com");
+  await dialog.locator('button[value="ok"]').click();
+
+  await expect.poll(() => requests.filter((request) => request.action === "test_send").length).toBe(1);
+  expect(requests.find((request) => request.action === "test_send")).toMatchObject({
+    to: "aoaljamal@gmail.com",
+    subject: "Production transport smoke",
+    body_md: "Clearly labeled transport smoke.",
+  });
+  await expect(page.locator("#nlStatus")).toHaveText("Test email queued for delivery.");
+  await expect(page.locator("#nlStatus")).not.toContainText("accepted by Amazon SES");
+});
