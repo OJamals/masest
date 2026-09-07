@@ -77,19 +77,20 @@ test('support API persists ticket lifecycle and admin message preferences', () =
   assert.match(unifiedSql, /append_support_message/);
 });
 
-test('admin inbox surfaces unanswered threads, lifecycle controls, and notification settings', () => {
+test('admin inbox surfaces server-owned ticket queues, exact lifecycle controls, and notification settings', () => {
   const html = read('admin.html');
   const threads = read('js/admin-support.js');
   // The prefs moved into the console's settings view; admin.html no longer ships
   // a support panel at all.
-  assert.match(threads, /"adminNotifySupportRequests", "notify_admin_support_requests"/);
-  assert.match(threads, /"adminNotifyMessages", "notify_admin_messages"/);
-  assert.match(threads, /<input id="\$\{id\}"[^>]*type="checkbox"[^>]*data-support-pref="\$\{key\}">/);
+  assert.match(threads, /id="adminNotifySupportRequests"[^>]*data-support-pref="notify_admin_support_requests"/);
+  assert.match(threads, /id="adminNotifyMessages"[^>]*data-support-pref="notify_admin_messages"/);
   assert.doesNotMatch(html, /data-panel="support-settings"/);
-  assert.match(threads, /unanswered/);
-  assert.match(threads, /Mark resolved/);
-  assert.match(threads, /Reopen/);
-  assert.match(threads, /Escalate/);
+  assert.match(threads, /data-support-queue="needs_reply"/);
+  assert.match(threads, /\["open", "waiting_on_customer", "resolved"\]/);
+  assert.match(threads, /\["normal", "high", "urgent"\]/);
+  assert.match(threads, /\["general", "product", "order", "shipping", "billing", "account", "technical"\]/);
+  assert.match(threads, /ticket_id:/);
+  assert.match(threads, /version:/);
   assert.match(threads, /message-settings/);
 });
 
@@ -147,6 +148,6 @@ test('account user detail starts the canonical support composer for that user', 
     'the shared support entry point should preselect the requested user');
   assert.match(threads, /openNewChat/,
     'the admin adapter should expose the canonical composer entry point');
-  assert.match(support, /openNewChat:\s*\(options\s*=\s*\{\}\)\s*=>\s*openNewChat\(options\)/,
+  assert.match(support, /openNewChat:\s*async\s*\(\{\s*userId\s*=\s*null,\s*orderId:\s*requestedOrderId\s*=\s*null\s*\}\s*=\s*\{\}\)/,
     'the shared console should own direct composer opening');
 });

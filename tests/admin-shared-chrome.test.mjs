@@ -16,9 +16,9 @@ test('one customer-support console serves admin and public surfaces', () => {
     assert.doesNotMatch(html, new RegExp(stale), `${stale} should no longer be static markup`);
   }
   // The one console injects its own launcher, labelled the same everywhere.
-  assert.match(support, /class="site-support__launcher"[^>]*aria-label="Open customer support"/);
+  assert.match(support, /class="site-support__launcher"[^>]*aria-label="Open support tickets"/);
   assert.match(support, /ph-lifebuoy/);
-  assert.match(support, /<span>Customer support<\/span>/);
+  assert.match(support, /<span>Support<\/span>/);
   // Mounted from both entry points, and guarded so a document can only get one.
   assert.match(threads, /import\('\.\.\/admin-support\.js\?v=\d{8}[a-z]'\)/);
   assert.match(customerChat, /import\("\.\/admin-support\.js\?v=\d{8}[a-z]"\)/);
@@ -33,12 +33,12 @@ test('support console puts close top-right and settings top-left', () => {
 
   // List-pane header owns settings; the conversation toolbar owns close.
   const listHeader = support.match(/<div class="site-support__header-actions">[\s\S]*?<\/div>/)[0];
-  assert.match(listHeader, /aria-label="Customer support settings"/);
+  assert.match(listHeader, /aria-label="Support settings"/);
   assert.doesNotMatch(listHeader, /Close support menu/, 'close should not sit in the list header');
 
   const toolbar = support.match(/<header class="site-support__conversation-toolbar">[\s\S]*?<\/header>/)[0];
   assert.match(toolbar, /aria-label="Close support menu"/);
-  assert.doesNotMatch(toolbar, /Customer support settings/, 'the duplicate gear should be gone');
+  assert.doesNotMatch(toolbar, /Support settings/, 'the duplicate gear should be gone');
 
   // The gear was previously hidden here and duplicated in the toolbar.
   assert.doesNotMatch(css, /\.site-support__header-actions > a \{ display: none; \}/);

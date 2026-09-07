@@ -1,7 +1,7 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 261,
-  "usedCount": 152,
+  "count": 260,
+  "usedCount": 151,
   "bufferCount": 109,
   "icons": [
     {
@@ -207,11 +207,6 @@
     {
       "name": "chart-line-up",
       "cp": "E156",
-      "src": "used"
-    },
-    {
-      "name": "chat-centered-text",
-      "cp": "E166",
       "src": "used"
     },
     {
