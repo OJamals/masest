@@ -50,7 +50,8 @@ const detailTicket = (overrides = {}) => {
   return plainTicket;
 };
 
-async function boot(page, { post = null, onList = null, onDetail = null, role = "owner" } = {}) {
+async function boot(page, { post = null, onList = null, onDetail = null, role = "owner", ticketOverrides = {} } = {}) {
+  const initialTicket = ticket(ticketOverrides);
   await page.addInitScript(() => {
     window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
     window.MASEST_SUPABASE_ANON = "stub-anon-key";
@@ -84,7 +85,7 @@ async function boot(page, { post = null, onList = null, onDetail = null, role = 
     const url = new URL(request.url());
     if (request.method() === "POST") {
       if (post) return post(route);
-      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ ticket_id: TICKET_ID, ticket: ticket() }) });
+      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ ticket_id: TICKET_ID, ticket: initialTicket }) });
     }
     if (request.method() === "PATCH") {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: ticket({ priority: "urgent", version: 5 }) }) });
@@ -100,7 +101,7 @@ async function boot(page, { post = null, onList = null, onDetail = null, role = 
       return route.fulfill({
         status: 200, contentType: "application/json",
         body: JSON.stringify({
-          ticket: detailTicket(),
+          ticket: detailTicket(initialTicket),
           thread: { id: "thread-1", participant: { id: USER_ID, full_name: "Avery Buyer" }, company_id: "company-1", company_name: "Acme HVAC" },
           order_scope: { id: ORDER_ID, reference: "MST-2042", status: "delivered", admin_url: "/admin.html?order=" + ORDER_ID + "#orders" },
           messages: [{ id: "m1", sender_role: "buyer", body: "One pail arrived damaged.", created_at: "2026-09-06T14:00:00Z" }],
@@ -111,7 +112,7 @@ async function boot(page, { post = null, onList = null, onDetail = null, role = 
     if (onList) onList(url);
     return route.fulfill({
       status: 200, contentType: "application/json",
-      body: JSON.stringify({ tickets: [ticket()], summary: { open: 2, needs_reply: 1, mine: 0, unassigned: 1, waiting: 0, resolved: 0 }, has_more: false, next_cursor: null }),
+      body: JSON.stringify({ tickets: [initialTicket], summary: { open: 2, needs_reply: 1, mine: 0, unassigned: 1, waiting: 0, resolved: 0 }, has_more: false, next_cursor: null }),
     });
   });
 }
@@ -744,4 +745,79 @@ test("reports exact ticket drawer geometry at handoff viewports", async ({ page 
     expect(measurement.compose.recipientReachable).toBe(true);
     expect(measurement.compose.compose.bottom).toBeLessThanOrEqual(measurement.compose.drawer.bottom);
   });
+});
+
+test("dense support controls keep filters and properties as non-reflowing accessible popovers", async ({ page }) => {
+  await boot(page);
+  await page.setViewportSize({ width: 1200, height: 674 });
+  await page.goto(BASE_URL + "/admin.html#support");
+
+  const drawer = page.locator(".site-support__drawer");
+  const listPane = page.locator(".site-support__list-pane");
+  const filterRow = page.locator(".site-support__filters");
+  const filters = page.getByRole("button", { name: "Filters" });
+  const properties = page.getByRole("button", { name: "Properties" });
+  const launcher = page.getByRole("button", { name: "Open support tickets" });
+
+  await expect(filters).toHaveAttribute("aria-expanded", "false");
+  await expect(filters).toHaveAttribute("aria-controls", /.+/);
+  await expect(properties).toHaveAttribute("aria-expanded", "false");
+  await expect(properties).toHaveAttribute("aria-controls", /.+/);
+  expect((await filterRow.boundingBox()).height).toBeLessThanOrEqual(64);
+  expect((await listPane.boundingBox()).width).toBeGreaterThanOrEqual(320);
+  await expect(page.locator(".site-support__drawer select:visible")).toHaveCount(0);
+
+  await page.locator("[data-support-ticket-id]").click();
+  await expect(page.locator("#siteSupportReply")).toBeVisible();
+  const toolbar = page.locator(".site-support__conversation-toolbar");
+  const ticketHead = page.locator(".site-support__ticket-head");
+  const transcript = page.locator(".site-support__messages");
+  const rightHeaderHeight = (await toolbar.boundingBox()).height + (await ticketHead.boundingBox()).height;
+  expect(rightHeaderHeight).toBeLessThanOrEqual(96);
+  expect((await transcript.boundingBox()).height).toBeGreaterThanOrEqual(280);
+
+  const beforeFilters = { list: await listPane.boundingBox(), transcript: await transcript.boundingBox() };
+  await filters.click();
+  await expect(filters).toHaveAttribute("aria-expanded", "true");
+  expect(Math.abs((await listPane.boundingBox()).height - beforeFilters.list.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await transcript.boundingBox()).height - beforeFilters.transcript.height)).toBeLessThanOrEqual(1);
+
+  await properties.click();
+  await expect(filters).toHaveAttribute("aria-expanded", "false");
+  await expect(properties).toHaveAttribute("aria-expanded", "true");
+  expect(Math.abs((await listPane.boundingBox()).height - beforeFilters.list.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await transcript.boundingBox()).height - beforeFilters.transcript.height)).toBeLessThanOrEqual(1);
+
+  const reply = page.locator("#siteSupportReply");
+  await reply.fill("Keep this draft while controls dismiss.");
+  await page.locator(".site-support__conversation-toolbar").click();
+  await expect(properties).toHaveAttribute("aria-expanded", "false");
+  await expect(reply).toHaveValue("Keep this draft while controls dismiss.");
+
+  await properties.click();
+  await page.keyboard.press("Escape");
+  await expect(properties).toHaveAttribute("aria-expanded", "false");
+  await expect(properties).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(launcher).toBeFocused();
+});
+
+test("dense support console keeps long subjects, Properties, and Send reachable on constrained viewports", async ({ page }) => {
+  const longSubject = "Replacement request for damaged industrial VertKleen drums received after a delayed multi-stop delivery route";
+  await boot(page, { ticketOverrides: { subject: longSubject } });
+  const properties = page.getByRole("button", { name: "Properties" });
+  const send = page.getByRole("button", { name: "Send reply" });
+
+  for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 640 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("about:blank");
+    await page.goto(BASE_URL + "/admin.html#support");
+    await page.locator("[data-support-ticket-id]").click();
+    await expect(page.getByRole("heading", { level: 3, name: longSubject })).toBeVisible();
+    await expect(properties).toBeVisible();
+    await expect(send).toBeVisible();
+    const pageWidth = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
+    expect(pageWidth.scrollWidth).toBeLessThanOrEqual(pageWidth.clientWidth + 1);
+  }
 });
