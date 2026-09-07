@@ -7,13 +7,11 @@
  * never substitutes an RPC body.  A failed prerequisite application is a STOP.
  */
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { createServer } from 'node:net';
-import { tmpdir } from 'node:os';
+import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { startOwnedPostgres } from './support-db-harness.mjs';
 
 const { Client } = pg;
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -35,29 +33,6 @@ const ids = {
   sameTimeFirst: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
   sameTimeReply: '00000000-0000-4000-8000-000000000042',
 };
-
-function run(binary, args, timeout = 30_000) {
-  try {
-    return execFileSync(binary, args, {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout,
-    });
-  } catch (error) {
-    throw new Error(`${binary} failed: ${String(error.stderr || error.stdout || error.message).trim()}`);
-  }
-}
-
-async function freePort() {
-  const server = createServer();
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
-  });
-  const { port } = server.address();
-  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-  return port;
-}
 
 const fixture = `
 create schema if not exists extensions;
@@ -190,26 +165,11 @@ async function fixtureState(client) {
 }
 
 async function main() {
-  const bindir = process.env.PG_BIN || run('pg_config', ['--bindir']).trim();
-  const temp = await mkdtemp(join(tmpdir(), 'masest-support-effects-'));
-  const dataDir = join(temp, 'data');
-  const logFile = join(temp, 'postgres.log');
-  const port = await freePort();
-  const initdb = join(bindir, 'initdb');
-  const pgCtl = join(bindir, 'pg_ctl');
+  const cluster = await startOwnedPostgres({ prefix: 'masest-support-effects-' });
   let client;
   let peer;
-  let started = false;
   try {
-    run(initdb, ['-D', dataDir, '--auth=trust', '--no-locale', '--encoding=UTF8']);
-    run(pgCtl, [
-      '-D', dataDir,
-      '-l', logFile,
-      '-o', `-h 127.0.0.1 -p ${port}`,
-      '-w', 'start',
-    ]);
-    started = true;
-    client = new Client({ host: '127.0.0.1', port, user: process.env.USER, database: 'postgres' });
+    client = new Client(cluster.clientConfig);
     await client.connect();
     await client.query(fixture);
 
@@ -333,7 +293,7 @@ async function main() {
     // Exact claim and generic batch claim race; at most one lease is acquired.
     const exactMessage = await one(client, `select public.append_support_message($1,$2,'buyer','Exact lease proof',$3,'dashboard',false,null,$2,$4,$5,'Exact lease','general',false,2) result`, [ids.company, ids.buyer, ids.order, ids.thread, append.result.ticket_id]);
     const target = exactMessage.result.id;
-    peer = new Client({ host: '127.0.0.1', port, user: process.env.USER, database: 'postgres' });
+    peer = new Client(cluster.clientConfig);
     await peer.connect();
     await client.query('begin');
     const exact = await one(client, `select public.claim_support_message_email_effect($1,'proof-exact',60) result`, [target]);
@@ -406,7 +366,7 @@ async function main() {
     const replayClaim = await one(client, `select public.claim_support_message_email_effect($1,'proof-replay',60) result`, [leaseCandidate.payload.message_id]);
     assert.equal(replayClaim.result?.state, 'claimed', 'explicit replay did not requeue exact effect');
 
-    peer = new Client({ host: '127.0.0.1', port, user: process.env.USER, database: 'postgres' });
+    peer = new Client(cluster.clientConfig);
     await peer.connect();
     await peer.query('set role service_role');
     assert.equal((await one(peer, 'select count(*)::int count from public.support_message_email_envelopes')).count, 1);
@@ -430,15 +390,7 @@ async function main() {
   } finally {
     if (peer) await peer.end().catch(() => {});
     if (client) await client.end().catch(() => {});
-    if (started) {
-      try {
-        run(pgCtl, ['-D', dataDir, '-m', 'fast', '-w', 'stop']);
-        started = false;
-      } catch (error) {
-        throw new Error(`owned PostgreSQL cleanup failed; preserved ${temp}: ${error.message}`);
-      }
-    }
-    if (!started) await rm(temp, { recursive: true, force: true });
+    await cluster.stop();
   }
 }
 

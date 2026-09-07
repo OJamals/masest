@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 /* Disposable PostgreSQL proof for Plan 042. Never connects to a remote database. */
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { createServer } from 'node:net';
-import { tmpdir } from 'node:os';
+import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { startOwnedPostgres } from './support-db-harness.mjs';
 
 const { Client } = pg;
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,8 +23,10 @@ const ids = {
   staff: '11000000-0000-4000-8000-000000000042',
   ineligible: '12000000-0000-4000-8000-000000000042',
   readOnly: '13000000-0000-4000-8000-000000000042',
+  autoBuyer: '14000000-0000-4000-8000-000000000042',
   thread: '20000000-0000-4000-8000-000000000042',
   companyThread: '21000000-0000-4000-8000-000000000042',
+  autoThread: '22000000-0000-4000-8000-000000000042',
   orderA: '30000000-0000-4000-8000-000000000042',
   orderB: '31000000-0000-4000-8000-000000000042',
   orderC: '32000000-0000-4000-8000-000000000042',
@@ -42,28 +42,8 @@ const ids = {
   otherBuyer: '61000000-0000-4000-8000-000000000042',
   otherThread: '62000000-0000-4000-8000-000000000042',
   otherTicket: '63000000-0000-4000-8000-000000000042',
+  otherOrder: '64000000-0000-4000-8000-000000000042',
 };
-
-function run(binary, args, timeout = 30_000) {
-  try {
-    return execFileSync(binary, args, {
-      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout,
-    });
-  } catch (error) {
-    throw new Error(`${binary} failed: ${String(error.stderr || error.stdout || error.message).trim()}`);
-  }
-}
-
-async function freePort() {
-  const server = createServer();
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
-  });
-  const { port } = server.address();
-  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-  return port;
-}
 
 const fixture = `
 create schema if not exists extensions;
@@ -171,14 +151,15 @@ async function append(client, {
   sender = 'buyer', body, orderId = null, recipientUserId = null,
   ticketId = null, subject = 'Queue proof', category = 'general',
   startTicket = false, expectedVersion = null,
+  companyId = ids.company, userId = ids.buyer, threadId = ids.thread,
 } = {}) {
   return one(client, `
     select public.append_support_message(
       $1,$2,$3,$4,$5,'dashboard',false,$6,$2,$7,$8,$9,$10,$11,2,$12
     ) result
   `, [
-    ids.company, sender === 'buyer' ? ids.buyer : null, sender, body, orderId,
-    recipientUserId, ids.thread, ticketId, subject, category, startTicket, expectedVersion,
+    companyId, sender === 'buyer' ? userId : null, sender, body, orderId,
+    recipientUserId, threadId, ticketId, subject, category, startTicket, expectedVersion,
   ]);
 }
 
@@ -212,22 +193,12 @@ async function counts(client) {
 }
 
 async function main() {
-  const bindir = process.env.PG_BIN || run('pg_config', ['--bindir']).trim();
-  const temp = await mkdtemp(join(tmpdir(), 'masest-support-queue-'));
-  const dataDir = join(temp, 'data');
-  const logFile = join(temp, 'postgres.log');
-  const port = await freePort();
-  const initdb = join(bindir, 'initdb');
-  const pgCtl = join(bindir, 'pg_ctl');
+  const cluster = await startOwnedPostgres({ prefix: 'masest-support-queue-' });
   let client;
   let waiterA;
   let waiterB;
-  let started = false;
   try {
-    run(initdb, ['-D', dataDir, '--auth=trust', '--no-locale', '--encoding=UTF8']);
-    run(pgCtl, ['-D', dataDir, '-l', logFile, '-o', `-h 127.0.0.1 -p ${port}`, '-w', 'start']);
-    started = true;
-    client = new Client({ host: '127.0.0.1', port, user: process.env.USER, database: 'postgres' });
+    client = new Client(cluster.clientConfig);
     await client.connect();
     await client.query(fixture);
     await apply(client, migrations[0]);
@@ -236,6 +207,8 @@ async function main() {
 
     await client.query(`insert into public.companies(id,name) values ($1,'Proof Co')`, [ids.company]);
     await client.query(`insert into public.profiles(id,company_id,full_name,email) values ($1,$2,'Buyer','buyer@example.test')`, [ids.buyer, ids.company]);
+    await client.query(`insert into public.profiles(id,company_id,full_name,email) values ($1,$2,'Automatic Buyer','auto@example.test')`,
+      [ids.autoBuyer, ids.company]);
     await client.query(`insert into public.profiles(id,company_id,full_name,email,is_staff,staff_role) values
       ($1,$3,'Sam Support','staff@example.test',true,'support'),
       ($2,$3,'Not staff','viewer@example.test',false,'support'),
@@ -245,6 +218,8 @@ async function main() {
       await client.query(`insert into public.orders(id,company_id,user_id,order_number,customer_email) values ($1,$2,$3,$4,'buyer@example.test')`, [id, ids.company, ids.buyer, number]);
     }
     await client.query(`insert into public.support_threads(id,participant_user_id,company_id) values ($1,$2,$3)`, [ids.thread, ids.buyer, ids.company]);
+    await client.query(`insert into public.support_threads(id,participant_user_id,company_id) values ($1,$2,$3)`,
+      [ids.autoThread, ids.autoBuyer, ids.company]);
     await client.query(`insert into public.support_threads(id,company_id) values ($1,$2)`, [ids.companyThread, ids.company]);
     const activation = await one(client, `select public.activate_support_ticket_routing(1) result`);
     assert.equal(activation.result.version, 2, 'fixture-only routing activation failed');
@@ -257,6 +232,8 @@ async function main() {
       [ids.otherBuyer, ids.otherCompany]);
     await client.query(`insert into public.support_threads(id,participant_user_id,company_id) values ($1,$2,$3)`,
       [ids.otherThread, ids.otherBuyer, ids.otherCompany]);
+    await client.query(`insert into public.orders(id,company_id,user_id,order_number,customer_email)
+      values ($1,$2,$3,'ORD-FOREIGN','other@example.test')`, [ids.otherOrder, ids.otherCompany, ids.otherBuyer]);
     await client.query(`insert into public.support_tickets(id,thread_id,subject,last_message_at,last_message_body,last_sender_role)
       values ($1,$2,'Foreign tenant ticket','2097-01-01T00:00:00+00:00','Foreign message','buyer')`,
     [ids.otherTicket, ids.otherThread]);
@@ -278,6 +255,18 @@ async function main() {
     const orderA = await append(client, { body: 'Order A starts', orderId: ids.orderA, subject: 'Order A' });
     const orderB = await append(client, { body: 'Order B starts', orderId: ids.orderB, subject: 'Order B' });
     assert.notEqual(orderA.result.ticket_id, orderB.result.ticket_id, 'distinct explicit orders shared one active episode');
+    const beforeMismatches = await counts(client);
+    await assert.rejects(append(client, {
+      sender: 'staff', recipientUserId: ids.otherBuyer, body: 'Mismatched staff context',
+      companyId: ids.otherCompany, threadId: null, ticketId: orderA.result.ticket_id,
+    }), /support_participant_thread_mismatch/);
+    assert.deepEqual(await counts(client), beforeMismatches,
+      'staff ticket/thread/participant mismatch left durable state');
+    await assert.rejects(append(client, {
+      body: 'Cross-company order mismatch', orderId: ids.otherOrder,
+    }), /support_order_thread_mismatch/);
+    assert.deepEqual(await counts(client), beforeMismatches,
+      'cross-company order mismatch changed messages, tickets, events, effects, or notifications');
     await client.query(`insert into public.messages(thread_id,ticket_id,company_id,user_id,sender_role,body,order_id,source)
       values ($1,$2,$3,$4,'buyer','Conflicting historical association',$5,'proof')`,
     [ids.thread, orderA.result.ticket_id, ids.company, ids.buyer, ids.orderB]);
@@ -290,8 +279,8 @@ async function main() {
       nullPrimary.result.ticket_id, 'null-primary historical order association was not retained');
 
     // Both waiters begin with no order-specific ticket and block on the held thread lock.
-    waiterA = new Client({ host: '127.0.0.1', port, user: process.env.USER, database: 'postgres' });
-    waiterB = new Client({ host: '127.0.0.1', port, user: process.env.USER, database: 'postgres' });
+    waiterA = new Client(cluster.clientConfig);
+    waiterB = new Client(cluster.clientConfig);
     await Promise.all([waiterA.connect(), waiterB.connect()]);
     await client.query('begin');
     await client.query(`select 1 from public.support_threads where id=$1 for update`, [ids.thread]);
@@ -308,6 +297,46 @@ async function main() {
     await Promise.all([waiterA.end(), waiterB.end()]);
     waiterA = null;
     waiterB = null;
+
+    // With no order hint, contending automatic sends reuse one active ticket.
+    waiterA = new Client(cluster.clientConfig);
+    waiterB = new Client(cluster.clientConfig);
+    await Promise.all([waiterA.connect(), waiterB.connect()]);
+    await client.query('begin');
+    await client.query(`select 1 from public.support_threads where id=$1 for update`, [ids.autoThread]);
+    let defaultRaceSettled = 0;
+    const defaultRace = [waiterA, waiterB].map((connection, index) => append(connection, {
+      body: `Concurrent default message ${index + 1}`,
+      userId: ids.autoBuyer,
+      threadId: ids.autoThread,
+    }).then((value) => { defaultRaceSettled += 1; return value; }));
+    await new Promise((resolve) => setTimeout(resolve, 75));
+    assert.equal(defaultRaceSettled, 0, 'automatic no-order append bypassed the canonical thread lock');
+    await client.query('commit');
+    const [defaultA, defaultB] = await Promise.all(defaultRace);
+    assert.equal(defaultA.result.ticket_id, defaultB.result.ticket_id,
+      'contending automatic no-order sends created duplicate tickets');
+    assert.equal((await one(client, `select count(*)::int count from public.support_tickets where thread_id=$1`,
+      [ids.autoThread])).count, 1, 'automatic no-order reuse persisted more than one ticket');
+    await Promise.all([waiterA.end(), waiterB.end()]);
+    waiterA = null;
+    waiterB = null;
+
+    const explicitSecond = await append(client, {
+      body: 'Explicit second ticket in one context', userId: ids.autoBuyer,
+      threadId: ids.autoThread, startTicket: true,
+    });
+    assert.notEqual(explicitSecond.result.ticket_id, defaultA.result.ticket_id,
+      'explicit second ticket reused the existing context ticket');
+    const secondBeforeResolve = await one(client,
+      `select status,version,resolved_at from public.support_tickets where id=$1`, [explicitSecond.result.ticket_id]);
+    const firstAutoTicket = await one(client,
+      `select version from public.support_tickets where id=$1`, [defaultA.result.ticket_id]);
+    await one(client, `select public.update_support_ticket($1,$2,$3,'resolved',null,null,null,false) result`,
+      [defaultA.result.ticket_id, firstAutoTicket.version, ids.staff]);
+    assert.deepEqual(await one(client,
+      `select status,version,resolved_at from public.support_tickets where id=$1`, [explicitSecond.result.ticket_id]),
+    secondBeforeResolve, 'resolving ticket A changed ticket B in the same context');
 
     // Queue pagination is stable at equal timestamps and preserves microseconds.
     await client.query(`insert into public.support_tickets(id,thread_id,subject,last_message_at,last_message_body,last_sender_role) values
@@ -417,9 +446,23 @@ async function main() {
       ticketId: orderA.result.ticket_id, expectedVersion: version,
     }), /ticket_version_conflict/);
 
-    version = Number(staffReply.result.ticket.version);
-    waiterA = new Client({ host: '127.0.0.1', port, user: process.env.USER, database: 'postgres' });
-    waiterB = new Client({ host: '127.0.0.1', port, user: process.env.USER, database: 'postgres' });
+    const firstResponse = await one(client,
+      `select first_response_at,version from public.support_tickets where id=$1`, [orderA.result.ticket_id]);
+    assert.ok(firstResponse.first_response_at, 'first staff reply did not set first_response_at');
+    await client.query('select pg_sleep(0.01)');
+    const laterStaffReply = await append(client, {
+      sender: 'staff', recipientUserId: ids.buyer, body: 'Later staff reply', orderId: ids.orderA,
+      ticketId: orderA.result.ticket_id, expectedVersion: Number(firstResponse.version),
+    });
+    assert.ok(new Date(laterStaffReply.result.created_at) > new Date(firstResponse.first_response_at),
+      'second staff reply did not have a demonstrably later timestamp');
+    assert.equal((await one(client, `select first_response_at from public.support_tickets where id=$1`,
+      [orderA.result.ticket_id])).first_response_at.toISOString(), firstResponse.first_response_at.toISOString(),
+    'second staff reply overwrote first_response_at');
+
+    version = Number(laterStaffReply.result.ticket.version);
+    waiterA = new Client(cluster.clientConfig);
+    waiterB = new Client(cluster.clientConfig);
     await Promise.all([waiterA.connect(), waiterB.connect()]);
     await client.query('begin');
     await client.query(`select 1 from public.support_threads where id=$1 for update`, [ids.thread]);
@@ -444,7 +487,7 @@ async function main() {
     const contentionFailure = contention.find(({ status }) => status === 'rejected');
     assert.match(String(contentionFailure?.reason?.message || ''), /ticket_version_conflict/);
     version = Number((await one(client, `select version from public.support_tickets where id=$1`, [orderA.result.ticket_id])).version);
-    assert.equal(version, Number(staffReply.result.ticket.version) + 1, 'serialized metadata/reply contention bumped version more than once');
+    assert.equal(version, Number(laterStaffReply.result.ticket.version) + 1, 'serialized metadata/reply contention bumped version more than once');
     await Promise.all([waiterA.end(), waiterB.end()]);
     waiterA = null;
     waiterB = null;
@@ -536,6 +579,29 @@ async function main() {
     assert.equal(timestampGrammar.offset_sixteen, false);
     assert.equal(timestampGrammar.offset_twenty_three, false);
 
+    assert.equal((await one(client, `select count(*)::int count from public.messages where ticket_id is null`)).count, 0,
+      'cutover left messages without canonical ticket identities');
+
+    const eventId = (await one(client, `select id from public.support_ticket_events order by created_at,id limit 1`)).id;
+    const privateReader = new Client(cluster.clientConfig);
+    try {
+      await privateReader.connect();
+      for (const role of ['anon', 'authenticated']) {
+        await privateReader.query(`set role ${role}`);
+        await assert.rejects(privateReader.query('select * from public.support_tickets'), /permission denied/i);
+        await assert.rejects(privateReader.query('select * from public.support_ticket_events'), /permission denied/i);
+        await privateReader.query('reset role');
+      }
+      await privateReader.query('set role service_role');
+      await assert.rejects(privateReader.query('update public.support_ticket_events set detail=detail where id=$1', [eventId]),
+        /permission denied/i);
+      await assert.rejects(privateReader.query('delete from public.support_ticket_events where id=$1', [eventId]),
+        /permission denied/i);
+      await privateReader.query('reset role');
+    } finally {
+      await privateReader.end().catch(() => {});
+    }
+
     const populatedCounts = await counts(client);
     const populatedTickets = await one(client, `select coalesce(jsonb_agg(to_jsonb(ticket) order by ticket.id),'[]'::jsonb) snapshot
       from public.support_tickets ticket`);
@@ -565,15 +631,7 @@ async function main() {
     if (waiterA) await waiterA.end().catch(() => {});
     if (waiterB) await waiterB.end().catch(() => {});
     if (client) await client.end().catch(() => {});
-    if (started) {
-      try {
-        run(pgCtl, ['-D', dataDir, '-m', 'fast', '-w', 'stop']);
-        started = false;
-      } catch (error) {
-        throw new Error(`owned PostgreSQL cleanup failed; preserved ${temp}: ${error.message}`);
-      }
-    }
-    if (!started) await rm(temp, { recursive: true, force: true });
+    await cluster.stop();
   }
 }
 
