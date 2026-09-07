@@ -1,4 +1,5 @@
 import { emailsByIds } from './supabase.js';
+import { encodeSupportCursor, projectAdminSupportTicket } from './support-tickets.js';
 
 export const SUPPORT_PAGE_SIZE = 200;
 export const SUPPORT_PRESENCE_TTL_MS = 45_000;
@@ -34,13 +35,17 @@ export async function resolveSupportOrderId(sb, { orderId, companyId = null, use
 
 const SUPPORT_RECIPIENT_SELECT = 'id,company_id,full_name,notify_messages,support_chat_open,support_chat_seen_at';
 
-async function recipientWithEmail(sb, profile) {
+async function recipientWithEmail(sb, profile, options) {
   if (!profile?.id) return null;
-  const emailById = await emailsByIds(sb, [profile.id]);
+  const emailById = await emailsByIds(sb, [profile.id], options);
   return { ...profile, email: emailById[profile.id] || null };
 }
 
-export async function resolveSupportRecipient(sb, { companyId, userId = null, email = null } = {}) {
+export async function resolveSupportRecipient(
+  sb,
+  { companyId, userId = null, email = null } = {},
+  { strictEmailLookup = false } = {},
+) {
   const targetCompanyId = String(companyId || '').trim() || null;
   const targetUserId = String(userId || '').trim();
   const targetEmail = String(email || '').trim().toLowerCase();
@@ -52,7 +57,7 @@ export async function resolveSupportRecipient(sb, { companyId, userId = null, em
     if (targetCompanyId) query = query.eq('company_id', targetCompanyId);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
-    if (data) return recipientWithEmail(sb, data);
+    if (data) return recipientWithEmail(sb, data, { strict: strictEmailLookup });
   }
 
   if (!targetEmail || !targetCompanyId) return null;
@@ -61,7 +66,11 @@ export async function resolveSupportRecipient(sb, { companyId, userId = null, em
     .eq('company_id', targetCompanyId)
     .limit(1000);
   if (error) throw error;
-  const emailById = await emailsByIds(sb, (data || []).map((profile) => profile.id));
+  const emailById = await emailsByIds(
+    sb,
+    (data || []).map((profile) => profile.id),
+    { strict: strictEmailLookup },
+  );
   const profile = (data || []).find((candidate) => (
     String(emailById[candidate.id] || '').trim().toLowerCase() === targetEmail
   ));
@@ -73,11 +82,17 @@ export async function appendSupportMessage(sb, {
   userId = null,
   recipientUserId = null,
   threadUserId = userId || recipientUserId || null,
+  threadId = null,
+  ticketId = null,
   senderRole,
   body,
   orderId = null,
   source = 'dashboard',
   reopen = null,
+  subject = null,
+  category = 'general',
+  startTicket = false,
+  expectedTicketVersion = null,
 }) {
   const { data, error } = await sb.rpc('append_support_message', {
     p_company_id: companyId,
@@ -89,9 +104,24 @@ export async function appendSupportMessage(sb, {
     p_order_id: orderId,
     p_source: source,
     p_reopen: reopen,
+    p_thread_id: threadId,
+    p_ticket_id: ticketId,
+    p_subject: subject,
+    p_category: category,
+    p_start_ticket: startTicket === true,
+    p_contract_version: 2,
+    p_expected_ticket_version: expectedTicketVersion,
   });
   if (error) throw error;
-  return data;
+  if (!data?.ticket_id || !data?.ticket?.id || data.ticket.id !== data.ticket_id) {
+    throw new Error('support_ticket_identity_missing');
+  }
+  const ticket = projectAdminSupportTicket(data.ticket);
+  return {
+    ...data,
+    ticket_id: data.ticket_id || ticket.id,
+    ticket,
+  };
 }
 
 export function supportOrderContext(order) {
@@ -138,7 +168,11 @@ export function messagePage(rows, limit = SUPPORT_PAGE_SIZE) {
   return {
     messages,
     has_more: hasMore,
-    next_before: hasMore ? messages[0]?.created_at || null : null,
+    next_message_cursor: hasMore ? encodeSupportCursor({
+      kind: 'message',
+      timestamp: messages[0]?.created_at,
+      id: messages[0]?.id,
+    }) : null,
   };
 }
 
@@ -146,25 +180,4 @@ export function presenceIsFresh(value, now = Date.now(), ttlMs = SUPPORT_PRESENC
   if (!value) return false;
   const seenAt = Date.parse(value);
   return Number.isFinite(seenAt) && now - seenAt >= 0 && now - seenAt < ttlMs;
-}
-
-export function supportThreadListStatus(value) {
-  const status = String(value || 'open').trim();
-  return ['open', 'complete'].includes(status) ? status : null;
-}
-
-export function supportThreadPatch(status, userId, now = new Date().toISOString()) {
-  if (!['open', 'escalated', 'complete'].includes(status)) return null;
-  if (status === 'complete') {
-    return {
-      status: 'complete',
-      completed_at: now,
-      completed_by: userId,
-    };
-  }
-  return {
-    status,
-    completed_at: null,
-    completed_by: null,
-  };
 }

@@ -11,6 +11,15 @@ const MESSAGE_ID = '22222222-2222-4222-8222-222222222222';
 const BUYER_ID = '33333333-3333-4333-8333-333333333333';
 const ORDER_ID = '44444444-4444-4444-8444-444444444444';
 const THREAD_ID = '77777777-7777-4777-8777-777777777777';
+const EFFECT_ID = '88888888-8888-4888-8888-888888888888';
+
+function leasedDelivery(dependencies = {}) {
+  return {
+    deliveryEffect: { id: EFFECT_ID, lease_owner: 'worker-test' },
+    freezeEnvelope: async (_sb, input) => input.envelope,
+    ...dependencies,
+  };
+}
 
 test('support delivery keeps provider identity separate from Cloudflare-generated RFC Message-ID', async () => {
   let replyTarget = null;
@@ -24,7 +33,7 @@ test('support delivery keeps provider identity separate from Cloudflare-generate
     order_id: ORDER_ID,
     body: 'Your order is ready.',
   };
-  const result = await deliverSupportMessageEmail({}, {}, message, {
+  const result = await deliverSupportMessageEmail({}, {}, message, leasedDelivery({
     buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
     replyAddress: async (_env, value) => {
       replyTarget = value;
@@ -42,8 +51,7 @@ test('support delivery keeps provider identity separate from Cloudflare-generate
       retryable: false,
     }),
     saveDelivery: async (_sb, value) => { saved = value; },
-    prepareDelivery: async (_sb, _id, envelope) => envelope,
-  });
+  }));
   assert.equal(replyTarget, MESSAGE_ID);
   assert.deepEqual(saved, {
     messageId: MESSAGE_ID,
@@ -91,7 +99,7 @@ test('dashboard reply continues the latest inbound RFC email thread', async () =
     recipient_user_id: BUYER_ID,
     order_id: ORDER_ID,
     body: 'Tomorrow works.',
-  }, {
+  }, leasedDelivery({
     buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
     replyAddress: async () => `reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`,
     orderContext: async () => ({ id: ORDER_ID, reference: 'VK-100', status: 'processing' }),
@@ -100,8 +108,7 @@ test('dashboard reply continues the latest inbound RFC email thread', async () =
       return { ok: true, providerMessageId: 'cf-provider-2' };
     },
     saveDelivery: async () => {},
-    prepareDelivery: async (_sb, _id, envelope) => envelope,
-  });
+  }));
   assert.equal(usedReferenceFilter, true);
   assert.equal(sent.emailHeaders['In-Reply-To'], '<buyer-reply@example.com>');
   assert.equal(sent.emailHeaders.References, '<root@example.com> <buyer-reply@example.com>');
@@ -151,7 +158,8 @@ test('inbound reply address resolves the exact customer-order parent before chat
         inserted: true,
       };
     },
-    deliverMessage: async () => ({ ok: true }),
+    createDeliveryWorkerId: () => 'support-immediate/thread-test',
+    attemptDelivery: async () => ({ state: 'delivered', effect_id: EFFECT_ID }),
   });
   assert.equal(upserted.companyId, COMPANY_ID);
   assert.equal(upserted.threadId, THREAD_ID);
@@ -162,7 +170,11 @@ test('inbound reply address resolves the exact customer-order parent before chat
     upserted.emailReferences,
     '<root@example.com> <cf-message-1@cloudflare-email.com> <buyer-reply@example.com>',
   );
-  assert.deepEqual(result, { routed: true, duplicate: false });
+  assert.deepEqual(result, {
+    routed: true,
+    duplicate: false,
+    email_delivery: { state: 'delivered', effect_id: EFFECT_ID },
+  });
 });
 
 test('reply routing rejects a sender who is not the addressed buyer', async () => {

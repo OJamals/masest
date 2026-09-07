@@ -78,6 +78,9 @@
   .badge[data-s=net_open], .badge[data-s=pending_payment], .badge[data-s=payment_pending], .badge[data-s=unfulfilled], .badge[data-s=fulfilling], .badge[data-s=delivered_payment_due] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
   .badge[data-s=shipped] { background: var(--accent-soft); color: var(--accent-ink); }
   .badge[data-s=refunded], .badge[data-s=blocked] { background: var(--status-danger-bg); color: var(--status-danger-ink); }
+  .badge[data-s=open] { background: var(--accent-soft); color: var(--accent-ink); }
+  .badge[data-s=waiting_on_customer] { background: var(--status-warning-bg); color: var(--status-warning-ink); }
+  .badge[data-s=resolved] { background: var(--panel); color: var(--ink-soft); }
   .track-blocked { display: flex; gap: 8px; align-items: baseline; padding: 8px 10px; border-radius: 8px;
     background: var(--status-warning-bg); color: var(--status-warning-ink); font-size: .86rem; font-weight: 700; }
   .trackline { display: grid; gap: 8px; margin: 12px 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.68); }
@@ -94,6 +97,31 @@
   .msg time { display: block; font-size: .68rem; opacity: .7; margin-top: 4px; }
   .msg-order { display: block; width: fit-content; margin-bottom: 5px; color: inherit; font-size: .68rem; font-weight: 850; letter-spacing: .04em; text-decoration: underline; text-underline-offset: 2px; text-transform: uppercase; }
   .msg-source { font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .msg-workspace { display: grid; grid-template-columns: minmax(210px, .36fr) minmax(0, 1fr); gap: 16px; margin-top: 14px; }
+  .msg-ticket-history, .msg-ticket-detail { min-width: 0; }
+  .msg-ticket-history { border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--panel); padding: 12px; }
+  .msg-ticket-history h3 { margin: 0 0 8px; font-size: .9rem; }
+  .msg-ticket-list { display: grid; gap: 6px; }
+  .msg-ticket { display: grid; gap: 3px; width: 100%; min-height: 64px; padding: 9px 10px; border: 1px solid transparent; border-radius: var(--r-input); background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+  .msg-ticket:hover { border-color: var(--line); }
+  .msg-ticket[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 42%, var(--line)); background: var(--accent-soft); }
+  .msg-ticket-top, .msg-ticket-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .msg-ticket-top { font-size: .72rem; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
+  .msg-ticket-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 750; }
+  .msg-ticket-meta { color: var(--muted); font-size: .72rem; }
+  .msg-ticket-scope { color: var(--accent-ink); font-weight: 800; }
+  .msg-ticket-empty { margin: 8px 0; color: var(--muted); font-size: .84rem; line-height: 1.4; }
+  .msg-ticket-detail { border: 1px solid var(--line-soft); border-radius: var(--r-input); padding: 14px; }
+  .msg-ticket-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .msg-ticket-heading[hidden] { display: none; }
+  .msg-ticket-heading h3 { margin: 0; font-size: 1.05rem; }
+  .msg-ticket-heading p { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
+  .msg-new-ticket-form { display: grid; gap: 12px; margin-top: 14px; padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--r-input); background: var(--panel); }
+  .msg-new-ticket-form[hidden] { display: none; }
+  .msg-new-ticket-form .field-grid { margin: 0; }
+  .msg-new-ticket-form .msg-new-ticket-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .dash-panel-form[hidden] { display: none; }
+  @media (max-width: 760px) { .msg-workspace { grid-template-columns: 1fr; } .msg-ticket-history { order: 0; } .msg-ticket-detail { order: 1; } }
   .notif { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
   .notif.unread { background: var(--accent-tint); margin: 0; padding: 14px; border-radius: var(--r-input); }
   .notif i { color: var(--accent); font-size: 1.3rem; }
@@ -539,22 +567,43 @@
             <div class="dash-card-toolbar">
               <div>
                 <h2 class="headline dash-section-title dash-section-title-tight">Messages with MASEST</h2>
-                <p class="muted">Your full company conversation with the MASEST team.</p>
+                <p class="muted">Your support issues and replies with the MASEST team.</p>
               </div>
               <div class="dash-action-row dash-action-row--flush">
+                <button class="btn btn-primary btn-sm" id="newTicketButton" type="button"><i class="ph ph-plus" aria-hidden="true"></i> New issue</button>
                 <button class="btn btn-ghost btn-sm" id="refreshMessages" type="button"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh</button>
               </div>
             </div>
-            <div class="msg-order-context" id="msgOrderContext" hidden><span><i class="ph ph-package" aria-hidden="true"></i> <b id="msgOrderLabel"></b></span><button class="btn btn-ghost btn-sm" id="msgOrderClear" type="button">Full company conversation</button></div>
-            <p class="muted" id="msgCount" aria-live="polite"></p>
-            <button class="btn btn-ghost btn-sm" id="loadEarlierMessages" type="button" hidden>Load earlier messages</button>
-            <div class="msg-thread" id="msgThread"><p class="muted">Loading…</p></div>
-            <form onsubmit="return false" id="msgForm" class="dash-panel-form">
-              <div class="field"><label for="msgInput" class="sr-only">Message</label>
-                <textarea id="msgInput" name="message" rows="3" placeholder="Type a message to the MASEST team…" required></textarea></div>
-              <button class="btn btn-primary btn-sm msg-send" type="submit">Send</button>
-              <span class="dash-status" id="msgStatus" role="status" aria-live="polite"></span>
-            </form>
+            <div class="msg-order-context" id="msgOrderContext" hidden><span><i class="ph ph-package" aria-hidden="true"></i> <b id="msgOrderLabel"></b></span><button class="btn btn-ghost btn-sm" id="msgOrderClear" type="button">Show all issues</button></div>
+            <div class="msg-workspace">
+              <aside class="msg-ticket-history" aria-label="Support issue history">
+                <h3>Issue history</h3>
+                <div class="msg-ticket-list" id="msgTickets" aria-live="polite"><p class="msg-ticket-empty">Loading issues…</p></div>
+                <button class="btn btn-ghost btn-sm" id="loadMoreTickets" type="button" hidden>Load more issues</button>
+              </aside>
+              <section class="msg-ticket-detail" aria-live="polite">
+                <div class="msg-ticket-heading" id="msgTicketHeading" hidden><div><h3 id="msgTicketSubject"></h3><p id="msgTicketMeta"></p></div><span class="badge" id="msgTicketStatus"></span></div>
+                <p class="muted" id="msgCount" aria-live="polite"></p>
+                <button class="btn btn-ghost btn-sm" id="loadEarlierMessages" type="button" hidden>Load earlier messages</button>
+                <div class="msg-thread" id="msgThread"><p class="muted">Loading…</p></div>
+                <form onsubmit="return false" id="newTicketForm" class="msg-new-ticket-form" hidden>
+                  <div><h3 class="dash-section-title dash-section-title-sm">Start a new issue</h3><p class="muted">Choose an order if your question is about a specific purchase.</p></div>
+                  <div class="field-grid">
+                    <div class="field"><label for="msgNewSubject">Subject</label><input id="msgNewSubject" name="subject" maxlength="200" required placeholder="What do you need help with?"></div>
+                    <div class="field"><label for="msgNewCategory">Category</label><select id="msgNewCategory" name="category"><option value="general">General</option><option value="product">Product</option><option value="order">Order</option><option value="shipping">Shipping</option><option value="billing">Billing</option><option value="account">Account</option><option value="technical">Technical</option></select></div>
+                    <div class="field"><label for="msgNewOrder">Owned order <span class="muted">(optional)</span></label><select id="msgNewOrder" name="order_id"><option value="">No order</option></select></div>
+                  </div>
+                  <div class="field"><label for="msgNewBody">Message</label><textarea id="msgNewBody" name="body" rows="3" maxlength="4000" required placeholder="Tell us what you need help with…"></textarea></div>
+                  <div class="msg-new-ticket-actions"><button class="btn btn-primary btn-sm" type="submit">Start issue</button><button class="btn btn-ghost btn-sm" id="cancelNewTicket" type="button">Cancel</button><span class="dash-status" id="newTicketStatus" role="status" aria-live="polite"></span></div>
+                </form>
+                <form onsubmit="return false" id="msgForm" class="dash-panel-form" hidden>
+                  <div class="field"><label for="msgInput" class="sr-only">Message</label>
+                    <textarea id="msgInput" name="message" rows="3" placeholder="Reply to this issue…" required></textarea></div>
+                  <button class="btn btn-primary btn-sm msg-send" type="submit">Send reply</button>
+                  <span class="dash-status" id="msgStatus" role="status" aria-live="polite"></span>
+                </form>
+              </section>
+            </div>
             <details class="dash-disclosure">
               <summary>Message settings</summary>
               <div class="dash-disclosure-body">
@@ -735,6 +784,6 @@
 <script src="js/config.js"></script>
 <script type="module" src="js/main.js?v=20260830h"></script>
 <script src="js/track.js" defer></script>
-<script type="module" src="js/dashboard.js?v=20260830h"></script>
+<script type="module" src="js/dashboard.js?v=20260907a"></script>
 </body>
 </html>

@@ -7,6 +7,8 @@ import { appendSupportMessage, supportOrderContextsById } from '../functions/_li
 const COMPANY_ID = '22222222-2222-4222-8222-222222222222';
 const ORDER_ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '33333333-3333-4333-8333-333333333333';
+const THREAD_ID = '44444444-4444-4444-8444-444444444444';
+const TICKET_ID = '55555555-5555-4555-8555-555555555555';
 
 test('canonical support append delegates one atomic database call', async () => {
   let call;
@@ -15,8 +17,10 @@ test('canonical support append delegates one atomic database call', async () => 
       call = { name, args };
       return {
         data: {
-          id: '44444444-4444-4444-8444-444444444444',
+          id: '66666666-6666-4666-8666-666666666666',
           created_at: '2026-08-30T12:00:00.000Z',
+          thread_id: THREAD_ID,
+          ticket_id: TICKET_ID,
           company_id: COMPANY_ID,
           order_id: ORDER_ID,
           sender_role: 'buyer',
@@ -25,6 +29,25 @@ test('canonical support append delegates one atomic database call', async () => 
           previous_sender_role: 'staff',
           prior_thread_status: 'complete',
           company_name: 'Acme',
+          ticket: {
+            id: TICKET_ID,
+            ticket_number: 123,
+            thread_id: THREAD_ID,
+            subject: 'Need help with delivery',
+            status: 'open',
+            priority: 'normal',
+            category: 'shipping',
+            primary_order_id: ORDER_ID,
+            first_response_at: null,
+            resolved_at: null,
+            last_message_at: '2026-08-30T12:00:00.000Z',
+            last_message_body: 'Need help with delivery',
+            last_sender_role: 'buyer',
+            created_at: '2026-08-30T12:00:00.000Z',
+            updated_at: '2026-08-30T12:00:00.000Z',
+            version: 2,
+            private_note: 'must not escape',
+          },
         },
         error: null,
       };
@@ -38,6 +61,9 @@ test('canonical support append delegates one atomic database call', async () => 
     body: 'Need help with delivery',
     orderId: ORDER_ID,
     source: 'customer_chat',
+    ticketId: TICKET_ID,
+    subject: 'Need help with delivery',
+    category: 'shipping',
   });
 
   assert.deepEqual(call, {
@@ -52,10 +78,44 @@ test('canonical support append delegates one atomic database call', async () => 
       p_order_id: ORDER_ID,
       p_source: 'customer_chat',
       p_reopen: null,
+      p_thread_id: null,
+      p_ticket_id: TICKET_ID,
+      p_subject: 'Need help with delivery',
+      p_category: 'shipping',
+      p_start_ticket: false,
+      p_contract_version: 2,
+      p_expected_ticket_version: null,
     },
   });
   assert.equal(message.order_id, ORDER_ID);
   assert.equal(message.previous_sender_role, 'staff');
+  assert.equal(message.ticket_id, TICKET_ID);
+  assert.deepEqual(message.ticket, {
+    id: TICKET_ID,
+    ticket_number: 123,
+    display_number: 'MAS-000123',
+    thread_id: THREAD_ID,
+    subject: 'Need help with delivery',
+    status: 'open',
+    priority: 'normal',
+    category: 'shipping',
+    assigned_to: undefined,
+    assignee: null,
+    primary_order_id: ORDER_ID,
+    first_response_at: null,
+    resolved_at: null,
+    last_message_at: '2026-08-30T12:00:00.000Z',
+    last_message_body: 'Need help with delivery',
+    last_sender_role: 'buyer',
+    needs_staff_reply: true,
+    scope: 'personal',
+    order: null,
+    participant: null,
+    company: null,
+    created_at: '2026-08-30T12:00:00.000Z',
+    updated_at: '2026-08-30T12:00:00.000Z',
+    version: 2,
+  });
 });
 
 test('canonical support append never masks an atomic write failure', async () => {
@@ -67,6 +127,16 @@ test('canonical support append never masks an atomic write failure', async () =>
     senderRole: 'staff',
     body: 'Reply',
   }), error);
+});
+
+test('canonical support append fails closed when the RPC omits exact ticket identity', async () => {
+  await assert.rejects(() => appendSupportMessage({
+    async rpc() { return { data: { id: 'message-without-ticket' }, error: null }; },
+  }, {
+    companyId: COMPANY_ID,
+    senderRole: 'staff',
+    body: 'Reply',
+  }), /support_ticket_identity_missing/);
 });
 
 test('support order hydration bounds large thread-list lookups', async () => {

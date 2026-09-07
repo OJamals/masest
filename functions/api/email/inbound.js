@@ -33,7 +33,11 @@ export function createEmailInboundHandler(dependencies = {}) {
         duplicate: result?.duplicate === true,
         ...(result?.reason ? { reason: String(result.reason).slice(0, 120) } : {}),
       });
-    } catch {
+    } catch (error) {
+      if (error?.code === 'support_writes_paused'
+          || String(error?.message || '').includes('support_writes_paused')) {
+        return json(503, { error: 'support_writes_paused', retryable: true }, { 'Retry-After': '60' });
+      }
       return json(503, { error: 'email_ingress_failed' });
     }
   };

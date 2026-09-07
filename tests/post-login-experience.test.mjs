@@ -105,7 +105,8 @@ test("account-only dashboard keeps personal order history while gating business-
   const js = read("js/dashboard.js");
 
   assert.match(js, /Your account is ready\./, "dashboard should distinguish active user accounts from business verification");
-  assert.match(js, /Business setup required/, "messages tab should explain business setup before company-scoped threads");
+  assert.doesNotMatch(js, /Business setup required/, "companyless buyers retain their personal support ticket inbox");
+  assert.match(js, /loadDefaultMessageTicket/, "messages still load the buyer's personal active ticket without a Company");
   assert.match(js, /Your personal order history remains available below\./, "profileless Buyers should retain user-owned tracking and reorder access");
   assert.match(js, /const requisitionHtml = ACCOUNT\?\.company \?/, "saved requisitions should remain Company-scoped");
   assert.match(js, /No business notifications yet/, "notifications tab should not show a load failure before business setup");

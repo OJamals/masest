@@ -13,10 +13,13 @@ import { computeRefund, qboFullDocumentRefund } from './refund.js';
 import { linkOrderProviderObject } from './order-integrations.js';
 import { getAccessToken, voidQboInvoice } from './qbo.js';
 import { voidOrderLabel } from './shipstation-orders.js';
-import { deliverSupportMessageEmail } from './support-email.js';
 import { deliverQuoteIntakeEmail } from './quote-intake-effects.js';
 import { enrollMarketingNurture } from './marketing-nurture.js';
 import { deliverOrderEmailEffect } from './order-email-effects.js';
+import {
+  deliverSupportMessageEmail,
+  isSupportEmailPolicySkip,
+} from './support-email-delivery.js';
 import Stripe from 'stripe';
 
 async function defaultCreateStripeRefund(env, { paymentIntent, amountCents, idempotencyKey }) {
@@ -417,6 +420,12 @@ export function effectIdempotencyKey(effectRow) {
 function errorWithCode(code) {
   const error = new Error(code);
   error.code = code;
+  return error;
+}
+
+function terminalErrorWithCode(code) {
+  const error = errorWithCode(code);
+  error.terminal = true;
   return error;
 }
 
@@ -1063,29 +1072,6 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
   // sendEmailResult keeps the retryable/non-retryable distinction that the boolean
   // sendEmail throws away; handlers may still return their own {skipped} object.
   const send = dependencies.sendEmail || sendEmailResult;
-  if (effectRow.effect_type === 'support_message_email') {
-    if (effectRow.provider !== 'masest') throw errorWithCode('unsupported_integration_provider');
-    const messageId = String(effectRow.payload?.message_id || '').trim();
-    if (!messageId) throw errorWithCode('support_message_missing');
-    const { data: message, error } = await sb.from('messages').select('*').eq('id', messageId).maybeSingle();
-    if (error) throw errorWithCode('support_message_load_failed');
-    if (!message) throw errorWithCode('support_message_missing');
-    const delivery = await (dependencies.supportDelivery || deliverSupportMessageEmail)(env, sb, message, { sendEmail: send });
-    if (delivery?.skipped) return { providerRecorded: false, providerResult: delivery, skipped: true };
-    if (delivery?.ok) {
-      return {
-        providerRecorded: false,
-        providerResult: delivery.providerMessageId
-          ? { provider_message_id: String(delivery.providerMessageId).slice(0, 512) }
-          : {},
-        skipped: false,
-      };
-    }
-    if (delivery?.retryable === false) {
-      return { providerRecorded: false, providerResult: { skipped: delivery.error || 'support_email_not_deliverable' }, skipped: true };
-    }
-    throw errorWithCode('support_email_delivery_failed');
-  }
   if (effectRow.effect_type === 'quote_intake_email') {
     if (effectRow.provider !== 'masest') throw errorWithCode('unsupported_integration_provider');
     const quoteId = String(effectRow.payload?.quote_id || '').trim();
@@ -1144,6 +1130,16 @@ export async function deliverIntegrationEffect({ env, sb, effect: effectRow }, d
   const allowedProvider = EFFECT_PROVIDERS[effectRow.effect_type];
   if (!allowedProvider) throw errorWithCode('unknown_integration_effect_type');
   if (!allowedProvider.has(effectRow.provider)) throw errorWithCode('unsupported_integration_provider');
+
+  if (effectRow.effect_type === 'support_message_email') {
+    const loadMessage = dependencies.loadSupportMessage || supportMessageForEffect;
+    const message = await loadMessage(sb, effectRow);
+    const delivery = await deliverSupportMessageEmail(env, sb, message, {
+      ...dependencies,
+      deliveryEffect: effectRow,
+    });
+    return supportProviderResult(delivery);
+  }
 
   // Cancellation chain. The two database-owned steps (restock, close) record their own
   // success inside the transaction that performs them; the provider-calling steps report
@@ -1281,11 +1277,151 @@ function errorCode(error) {
 
 async function integrationEventForEffect(sb, effectRow) {
   const { data, error } = await sb.from('integration_events')
-    .select('provider,environment_or_tenant,provider_event_id,provider_event_type,metadata')
+    .select('provider,environment_or_tenant,provider_event_id,provider_event_type,provider_object_id,metadata')
     .eq('id', effectRow.event_id)
     .maybeSingle();
   if (error || !data) throw errorWithCode('integration_event_not_found');
   return data;
+}
+
+async function supportMessageForEffect(sb, effectRow) {
+  const messageId = String(effectRow.payload?.message_id || '');
+  if (!messageId
+    || Object.keys(effectRow.payload || {}).length !== 1
+    || effectRow.effect_type !== 'support_message_email'
+    || effectRow.effect_key !== 'email-counterpart'
+    || effectRow.aggregate_type !== 'support_ticket') {
+    throw terminalErrorWithCode('support_effect_identity_invalid');
+  }
+  const { data: message, error } = await sb.from('messages')
+    .select('id,thread_id,ticket_id,company_id,user_id,recipient_user_id,sender_role,body,order_id,source,external_alert_kind,email_delivery_id,email_message_id,email_references,created_at')
+    .eq('id', messageId)
+    .maybeSingle();
+  if (error) throw errorWithCode('support_effect_message_load_failed');
+  if (!message) throw terminalErrorWithCode('support_effect_message_not_found');
+  if (message.ticket_id !== effectRow.aggregate_id) {
+    throw terminalErrorWithCode('support_effect_ticket_mismatch');
+  }
+  if (effectRow.provider !== 'masest'
+    || effectRow.environment_or_tenant !== 'production'
+    || effectRow.provider_event_id !== `support-message/${message.id}`
+    || effectRow.provider_event_type !== 'support.message.created'
+    || effectRow.provider_object_id !== message.id) {
+    throw terminalErrorWithCode('support_effect_event_identity_mismatch');
+  }
+  return message;
+}
+
+function supportProviderResult(delivery) {
+  if (delivery?.skipped === 'already_delivered') {
+    if (!delivery.providerMessageId) throw terminalErrorWithCode('support_delivery_result_missing');
+    return {
+      providerRecorded: false,
+      providerResult: {
+        provider_message_id: String(delivery.providerMessageId).slice(0, 512),
+        delivery_state: 'delivered',
+      },
+      skipped: false,
+    };
+  }
+  if (delivery?.skipped && isSupportEmailPolicySkip(delivery.skipped)) {
+    return {
+      providerRecorded: false,
+      providerResult: { skipped: delivery.skipped },
+      skipped: true,
+    };
+  }
+  if (delivery?.ok) {
+    if (!delivery.providerMessageId) throw errorWithCode('support_email_delivery_id_missing');
+    return {
+      providerRecorded: false,
+      providerResult: {
+        provider_message_id: String(delivery.providerMessageId).slice(0, 512),
+        delivery_state: 'delivered',
+      },
+      skipped: false,
+    };
+  }
+  const code = String(delivery?.error || 'effect_provider_failed');
+  if (delivery?.retryable === false) throw terminalErrorWithCode(code);
+  throw errorWithCode(code);
+}
+
+export async function processClaimedIntegrationEffect({
+  env,
+  sb,
+  effect: claimedEffect,
+  workerId,
+}, dependencies = {}) {
+  if (!claimedEffect?.id || claimedEffect.lease_owner !== workerId) {
+    throw errorWithCode('effect_lease_owner_mismatch');
+  }
+  const deliverEffect = dependencies.deliverEffect || deliverIntegrationEffect;
+  const loadEvent = dependencies.loadEvent || integrationEventForEffect;
+  let providerAcknowledged = false;
+  let providerCallSkipped = false;
+  let skipped = false;
+  try {
+    const integrationEvent = claimedEffect.provider
+      ? {}
+      : await loadEvent(sb, claimedEffect);
+    const effectRow = { ...claimedEffect, ...integrationEvent };
+    let outcome = null;
+    if (!effectRow.provider_succeeded_at) {
+      outcome = await deliverEffect({ env, sb, effect: effectRow });
+      if (!outcome?.providerRecorded) {
+        const recorded = await rpcData(sb, 'record_integration_effect_success', {
+          p_effect_id: effectRow.id,
+          p_worker_id: workerId,
+          p_result: outcome?.providerResult || {},
+        });
+        if (recorded !== true) throw errorWithCode('effect_success_record_failed');
+      }
+      skipped = Boolean(outcome?.skipped);
+      providerAcknowledged = !skipped;
+    } else {
+      providerCallSkipped = true;
+      outcome = {
+        providerRecorded: true,
+        providerResult: effectRow.provider_result || {},
+        skipped: Boolean(effectRow.provider_result?.skipped),
+      };
+      skipped = outcome.skipped;
+    }
+    const completed = await rpcData(sb, 'complete_integration_effect', {
+      p_effect_id: effectRow.id,
+      p_worker_id: workerId,
+    });
+    if (completed !== true) throw errorWithCode('effect_completion_failed');
+    return {
+      state: outcome?.skipped ? 'skipped' : 'delivered',
+      effectId: effectRow.id,
+      ...(outcome?.skipped ? { reason: outcome.providerResult?.skipped } : {}),
+      providerAcknowledged,
+      providerCallSkipped,
+      skipped,
+    };
+  } catch (error) {
+    const maxAttempts = error?.terminal
+      ? Math.max(Number(claimedEffect.attempt_count) || 1, 1)
+      : 8;
+    const reason = errorCode(error);
+    const status = await rpcData(sb, 'fail_integration_effect', {
+      p_effect_id: claimedEffect.id,
+      p_worker_id: workerId,
+      p_error_code: reason,
+      p_max_attempts: maxAttempts,
+      p_base_backoff_seconds: 30,
+    });
+    return {
+      state: status === 'dead' ? 'dead' : 'queued',
+      effectId: claimedEffect.id,
+      reason,
+      providerAcknowledged,
+      providerCallSkipped,
+      skipped,
+    };
+  }
 }
 
 export async function runIntegrationEffectsWorker({
@@ -1295,8 +1431,6 @@ export async function runIntegrationEffectsWorker({
   limit = 10,
   leaseSeconds = 60,
 }, dependencies = {}) {
-  const deliverEffect = dependencies.deliverEffect || deliverIntegrationEffect;
-  const loadEvent = dependencies.loadEvent || integrationEventForEffect;
   const batchLimit = Math.min(Math.max(Number(limit) || 10, 1), 25);
   const boundedLeaseSeconds = Math.min(Math.max(Number(leaseSeconds) || 60, 15), 900);
   const summary = {
@@ -1319,41 +1453,21 @@ export async function runIntegrationEffectsWorker({
     if (!Array.isArray(claimed) || !claimed.length) break;
     const claimedEffect = claimed[0];
     summary.claimed += 1;
-    try {
-      const integrationEvent = await loadEvent(sb, claimedEffect);
-      const effectRow = { ...claimedEffect, ...integrationEvent };
-      if (!effectRow.provider_succeeded_at) {
-        const outcome = await deliverEffect({ env, sb, effect: effectRow });
-        if (!outcome?.providerRecorded) {
-          const recorded = await rpcData(sb, 'record_integration_effect_success', {
-            p_effect_id: effectRow.id,
-            p_worker_id: workerId,
-            p_result: outcome?.providerResult || {},
-          });
-          if (recorded !== true) throw errorWithCode('effect_success_record_failed');
-        }
-        if (outcome?.skipped) summary.skipped += 1;
-        else summary.providerAcknowledged += 1;
-      } else {
-        summary.providerCallSkipped += 1;
-        if (effectRow.provider_result?.skipped) summary.skipped += 1;
-      }
-      const completed = await rpcData(sb, 'complete_integration_effect', {
-        p_effect_id: effectRow.id,
-        p_worker_id: workerId,
-      });
-      if (completed !== true) throw errorWithCode('effect_completion_failed');
+    const result = await processClaimedIntegrationEffect({
+      env,
+      sb,
+      effect: claimedEffect,
+      workerId,
+    }, dependencies);
+    if (result.skipped) summary.skipped += 1;
+    if (result.providerAcknowledged) summary.providerAcknowledged += 1;
+    if (result.providerCallSkipped) summary.providerCallSkipped += 1;
+    if (result.state === 'delivered' || result.state === 'skipped') {
       summary.completed += 1;
-    } catch (error) {
-      const status = await rpcData(sb, 'fail_integration_effect', {
-        p_effect_id: claimedEffect.id,
-        p_worker_id: workerId,
-        p_error_code: errorCode(error),
-        p_max_attempts: 8,
-        p_base_backoff_seconds: 30,
-      });
-      if (status === 'dead') summary.dead += 1;
-      else summary.retried += 1;
+    } else if (result.state === 'dead') {
+      summary.dead += 1;
+    } else {
+      summary.retried += 1;
     }
   }
   return summary;

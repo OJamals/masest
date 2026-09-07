@@ -11,7 +11,8 @@ test('buyer Orders opens the existing customer chat with order context', () => {
   assert.match(dashboard, /Message about this order/);
   assert.match(dashboard, /masest:open-support-order/);
   assert.match(chat, /addEventListener\("masest:open-support-order"/);
-  assert.match(chat, /order_id:\s*activeOrder\?\.id\s*\|\|\s*null/);
+  assert.match(chat, /const mutationOrderId = activeOrder\?\.id \|\| null/);
+  assert.match(chat, /order_id: mutationOrderId/);
   assert.match(chat, /customer-chat__order-context/);
   assert.match(dashboard, /if \(activeMessageOrderId\) params\.set\('order_id', activeMessageOrderId\)/);
 });
@@ -27,8 +28,9 @@ test('Admin Orders opens the canonical participant support composer scoped to us
   assert.match(admin, /onMessageCustomer:\s*\(\{\s*companyId,\s*orderId,\s*userId\s*\}\)/);
   assert.match(admin, /view:\s*"conversation",\s*companyId,\s*orderId,\s*userId/);
   assert.match(admin, /openNewChat\?\.\(\{\s*userId,\s*orderId\s*\}\)/);
-  assert.match(support, /order_id:\s*activeOrderId/);
-  assert.match(support, /Full conversation/);
+  assert.match(support, /openNewChat: async \(\{ userId = null, orderId: requestedOrderId = null \}/);
+  assert.match(support, /await loadRecipient\(userId, requestedOrderId\)/);
+  assert.match(support, /order_id: selectedOrderId/);
 });
 
 test('Admin Orders surfaces existing support request queue without a parallel message store', () => {

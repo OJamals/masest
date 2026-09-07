@@ -10,6 +10,8 @@ const messagesSrc = readFileSync(new URL("../functions/api/account/messages.js",
 const adminMessagesSrc = readFileSync(new URL("../functions/api/admin/messages.js", import.meta.url), "utf8");
 const supportPublisherSrc = readFileSync(new URL("../functions/_lib/support-message-publisher.js", import.meta.url), "utf8");
 const supportEmailSrc = readFileSync(new URL("../functions/_lib/support-email.js", import.meta.url), "utf8");
+const supportDeliverySrc = readFileSync(new URL("../functions/_lib/support-delivery.js", import.meta.url), "utf8");
+const supportEmailDeliverySrc = readFileSync(new URL("../functions/_lib/support-email-delivery.js", import.meta.url), "utf8");
 const emailRenderersSrc = readFileSync(new URL("../functions/_lib/email-renderers.js", import.meta.url), "utf8");
 const emailBridgeSrc = readFileSync(new URL("../shared/email-bridge.js", import.meta.url), "utf8");
 const messageRepliesSrc = readFileSync(new URL("../functions/_lib/message-replies.js", import.meta.url), "utf8");
@@ -17,13 +19,14 @@ const messageRepliesSrc = readFileSync(new URL("../functions/_lib/message-replie
 test("support notification emails route customer and staff content through the canonical escaping renderer", () => {
   assert.match(messagesSrc, /publishSupportMessage/);
   assert.match(adminMessagesSrc, /publishSupportMessage/);
-  assert.match(supportPublisherSrc, /assert_email_effects_ready/);
-  assert.match(supportPublisherSrc, /emailDelivery: \{ ok: true, queued: true \}/);
+  assert.match(supportPublisherSrc, /attemptSupportMessageDelivery/);
   assert.doesNotMatch(supportPublisherSrc, /deliverSupportMessageEmail/);
-  assert.match(supportEmailSrc, /renderSupportEmail\(/);
+  assert.match(supportDeliverySrc, /processClaimedIntegrationEffect/);
+  assert.match(supportEmailSrc, /export \{ deliverSupportMessageEmail \}/);
+  assert.match(supportEmailDeliverySrc, /renderSupportEmail\(/);
   assert.match(emailRenderersSrc, /const latest = bodyAsHtml\(message\.body\)/);
   assert.match(emailRenderersSrc, /View order \$\{emailEscape\(orderReference\)\}/);
-  assert.doesNotMatch(supportEmailSrc, /<blockquote[^>]*>\$\{message\.body\}/);
+  assert.doesNotMatch(supportEmailDeliverySrc, /<blockquote[^>]*>\$\{message\.body\}/);
 });
 
 test("email bridge verifier compares every MAC byte without a signature equality short-circuit", () => {

@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -35,6 +35,27 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
+      - name: Require supported PostgreSQL tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          pg_bin="$(pg_config --bindir)"
+          for binary in initdb pg_ctl postgres; do
+            test -x "$pg_bin/$binary" || {
+              echo "::error::Missing executable PostgreSQL binary: $pg_bin/$binary"
+              exit 1
+            }
+          done
+          pg_major="$("$pg_bin/postgres" --version | sed -E 's/.*PostgreSQL\) ([0-9]+).*/\1/')"
+          case "$pg_major" in
+            16|17|18) ;;
+            *)
+              echo "::error::Unsupported PostgreSQL major $pg_major; expected 16, 17, or 18"
+              exit 1
+              ;;
+          esac
+          echo "PG_BIN=$pg_bin" >> "$GITHUB_ENV"
 
       - name: Refresh production CMS snapshots
         if: github.repository == 'medicux/masest' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

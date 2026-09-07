@@ -53,7 +53,7 @@ test('admin message recipients exclude active inboxes and revoked staff', async 
   ]);
 });
 
-test('support API persists thread lifecycle and admin message preferences', () => {
+test('support API persists ticket lifecycle and admin message preferences', () => {
   const account = read('functions/api/account/messages.js');
   const admin = read('functions/api/admin/messages.js');
   const settings = read('functions/api/admin/message-settings.js');
@@ -66,7 +66,10 @@ test('support API persists thread lifecycle and admin message preferences', () =
   assert.doesNotMatch(admin, /appendSupportMessage/);
   assert.match(admin, /request\.method === 'PATCH'/);
   assert.match(admin, /support_threads/);
-  assert.match(admin, /supportThreadPatch/);
+  assert.match(admin, /updateSupportTicket/);
+  assert.match(admin, /ticket_version_conflict/);
+  assert.doesNotMatch(admin, /supportThreadPatch/);
+  assert.doesNotMatch(admin, /from\('support_threads'\)\.update/);
   assert.match(settings, /ADMIN_MESSAGE_PREF_COLUMNS/);
   assert.match(notifications, /notify_admin_support_requests/);
   assert.match(notifications, /notify_admin_messages/);
@@ -74,20 +77,40 @@ test('support API persists thread lifecycle and admin message preferences', () =
   assert.match(unifiedSql, /append_support_message/);
 });
 
-test('admin inbox surfaces unanswered threads, lifecycle controls, and notification settings', () => {
+test('admin inbox surfaces server-owned ticket queues, exact lifecycle controls, and notification settings', () => {
   const html = read('admin.html');
   const threads = read('js/admin-support.js');
   // The prefs moved into the console's settings view; admin.html no longer ships
   // a support panel at all.
-  assert.match(threads, /"adminNotifySupportRequests", "notify_admin_support_requests"/);
-  assert.match(threads, /"adminNotifyMessages", "notify_admin_messages"/);
-  assert.match(threads, /<input id="\$\{id\}"[^>]*type="checkbox"[^>]*data-support-pref="\$\{key\}">/);
+  assert.match(threads, /id="adminNotifySupportRequests"[^>]*data-support-pref="notify_admin_support_requests"/);
+  assert.match(threads, /id="adminNotifyMessages"[^>]*data-support-pref="notify_admin_messages"/);
   assert.doesNotMatch(html, /data-panel="support-settings"/);
-  assert.match(threads, /unanswered/);
-  assert.match(threads, /Mark resolved/);
-  assert.match(threads, /Reopen/);
-  assert.match(threads, /Escalate/);
+  assert.match(threads, /data-support-queue="needs_reply"/);
+  assert.match(threads, /\["open", "waiting_on_customer", "resolved"\]/);
+  assert.match(threads, /\["normal", "high", "urgent"\]/);
+  assert.match(threads, /\["general", "product", "order", "shipping", "billing", "account", "technical"\]/);
+  assert.match(threads, /ticket_id:/);
+  assert.match(threads, /version:/);
   assert.match(threads, /message-settings/);
+});
+
+test('admin inbox presence follows the drawer lifecycle and serializes late responses', () => {
+  const threads = read('js/admin-support.js');
+
+  assert.match(threads, /const PRESENCE_HEARTBEAT_MS = 30_000;/);
+  assert.match(threads, /const setPresence = async \(open, \{ force = false, keepalive = false \} = \{\}\) =>/);
+  assert.match(threads, /presenceRequest = presenceRequest\.catch\(\(\) => \{\}\)\.then\(\(\) => auth\.api\("\/api\/admin\/message-settings", \{/);
+  assert.match(threads, /method: "POST", body: \{ action: "inbox_presence", inbox_open: open \}, keepalive/);
+  assert.match(threads, /if \(presenceOpen === open\) presenceOpen = !open;/,
+    'a failed request must not undo a newer presence transition');
+  assert.match(threads, /if \(open\) \{ void setPresence\(true\); void poller\?\.refresh\(\);/);
+  assert.match(threads, /else \{ void setPresence\(false\); setView\("queue"\); launcher\.focus\(\); \}/);
+  assert.match(threads, /visibilitychange", \(\) => \{[\s\S]*setPresence\(!document\.hidden, \{ force: true, keepalive: document\.hidden \}\)/);
+  assert.match(threads, /pagehide", \(\) => \{[\s\S]*poller\?\.stop\(\);[\s\S]*setPresence\(false, \{ force: true, keepalive: true \}\)/);
+  assert.match(threads, /pageshow", \(event\) => \{[\s\S]*event\.persisted[\s\S]*setPresence\(true, \{ force: true \}\)/,
+    'a restored visible drawer must reassert presence after pagehide cleanup');
+  assert.match(threads, /heartbeat: \(\) => Date\.now\(\) - lastPresencePing > PRESENCE_HEARTBEAT_MS[\s\S]*setPresence\(true, \{ force: true \}\)/,
+    'an open visible inbox must refresh before the server TTL elapses');
 });
 
 test('admin shell does not mount buyer chat, account navigation, or user notifications', () => {
@@ -144,6 +167,6 @@ test('account user detail starts the canonical support composer for that user', 
     'the shared support entry point should preselect the requested user');
   assert.match(threads, /openNewChat/,
     'the admin adapter should expose the canonical composer entry point');
-  assert.match(support, /openNewChat:\s*\(options\s*=\s*\{\}\)\s*=>\s*openNewChat\(options\)/,
+  assert.match(support, /openNewChat:\s*async\s*\(\{\s*userId\s*=\s*null,\s*orderId:\s*requestedOrderId\s*=\s*null\s*\}\s*=\s*\{\}\)/,
     'the shared console should own direct composer opening');
 });

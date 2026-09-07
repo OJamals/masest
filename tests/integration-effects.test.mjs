@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
+import { runIntegrationEffectsWorker } from '../functions/_lib/integration-effects.js';
+
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Stripe webhook and generic worker use integration event/effect contracts only', () => {
@@ -29,6 +31,19 @@ test('Stripe webhook and generic worker use integration event/effect contracts o
   assert.match(route, /x-integration-effects-secret/);
   assert.match(route, /integration_effects_worker_failed/);
   assert.doesNotMatch(route, /api\/admin\/stripe-effects|runStripeEffectsWorker/);
+});
+
+test('support delivery is a minimal local-provider effect handled by the shared claimed-effect processor', () => {
+  const effects = read('functions/_lib/integration-effects.js');
+
+  assert.match(effects, /support_message_email:\s*new Set\(\['message_id'\]\)/);
+  assert.match(effects, /support_message_email:\s*MASEST/);
+  assert.match(effects, /export async function processClaimedIntegrationEffect/);
+  assert.match(effects, /effectRow\.aggregate_type\s*!==\s*'support_ticket'/);
+  assert.match(effects, /effectRow\.effect_key\s*!==\s*'email-counterpart'/);
+  assert.match(effects, /message\.ticket_id\s*!==\s*effectRow\.aggregate_id/);
+  assert.match(effects, /deliverSupportMessageEmail/);
+  assert.doesNotMatch(effects, /from ['"]\.\/support-email\.js['"]/);
 });
 
 test('provider-visible Stripe idempotency keys and delivery plans remain stable', async () => {
@@ -78,57 +93,95 @@ test('generic atomic local effects preserve response-loss protection', () => {
   assert.doesNotMatch(sql, /stripe_webhook_effects|apply_stripe_stock_effect|deliver_stripe_notification_effect/);
 });
 
-test('support message effects are durable and use the canonical worker handler', () => {
-  const effects = read('functions/_lib/integration-effects.js');
-  const migration = read('supabase/migrate-durable-support-message-effects-2026-09-05.sql');
-  assert.match(effects, /support_message_email/);
-  assert.match(effects, /deliverSupportMessageEmail/);
-  assert.match(read('functions/_lib/support-email.js'), /support-message\/\$\{message\.id\}\/\$\{message\.sender_role\}/);
-  assert.match(migration, /after insert on public\.messages/i);
-  assert.match(migration, /public\.ingest_integration_event/i);
-  assert.match(migration, /support_message_email/i);
-  assert.match(migration, /support-message-/i);
-  assert.match(effects, /quote_intake_email/);
-  assert.match(read('functions/_lib/quote-intake-effects.js'), /quote-intake\/\$\{quote\.id\}\/autoreply/);
-  assert.match(migration, /quotes_intake_email_effect/i);
-});
+test('generic worker preserves completed provider-stage counters when final completion retries', async (t) => {
+  const cases = [
+    {
+      name: 'accepted provider success was durably recorded',
+      effect: {},
+      outcome: {
+        providerRecorded: false,
+        providerResult: { provider_message_id: 'provider-1' },
+        skipped: false,
+      },
+      expected: { providerAcknowledged: 1, providerCallSkipped: 0, skipped: 0 },
+      expectedRecordCalls: 1,
+    },
+    {
+      name: 'pre-recorded provider success bypassed the provider call',
+      effect: {
+        provider_succeeded_at: '2026-09-06T12:00:00.000Z',
+        provider_result: { provider_message_id: 'provider-1' },
+      },
+      outcome: null,
+      expected: { providerAcknowledged: 0, providerCallSkipped: 1, skipped: 0 },
+      expectedRecordCalls: 0,
+    },
+    {
+      name: 'policy skip was durably recorded',
+      effect: {},
+      outcome: {
+        providerRecorded: false,
+        providerResult: { skipped: 'recipient_opted_out' },
+        skipped: true,
+      },
+      expected: { providerAcknowledged: 0, providerCallSkipped: 0, skipped: 1 },
+      expectedRecordCalls: 1,
+    },
+  ];
 
-test('support effect preserves retryable provider outage and accepted delivery state', async () => {
-  const { deliverIntegrationEffect } = await import('../functions/_lib/integration-effects.js');
-  const message = { id: 'message-1', sender_role: 'staff' };
-  const sb = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: message, error: null }) }) }) }) };
-  const effect = { effect_type: 'support_message_email', provider: 'masest', payload: { message_id: message.id } };
-  const failed = await assert.rejects(
-    () => deliverIntegrationEffect({ env: {}, sb, effect }, {
-      supportDelivery: async () => ({ ok: false, retryable: true, error: 'provider_unavailable' }),
-    }),
-    /support_email_delivery_failed/,
-  );
-  assert.equal(failed, undefined);
-  const accepted = await deliverIntegrationEffect({ env: {}, sb, effect }, {
-    supportDelivery: async () => ({ ok: true, providerMessageId: 'provider-1' }),
-  });
-  assert.deepEqual(accepted, {
-    providerRecorded: false,
-    providerResult: { provider_message_id: 'provider-1' },
-    skipped: false,
-  });
-});
+  for (const entry of cases) {
+    await t.test(entry.name, async () => {
+      let claims = 0;
+      let providerCalls = 0;
+      let recordCalls = 0;
+      const effect = {
+        id: '00000000-0000-4000-8000-000000000041',
+        event_id: '00000000-0000-4000-8000-000000000042',
+        effect_type: 'order_confirmation',
+        lease_owner: 'worker-stage-proof',
+        attempt_count: 1,
+        provider: 'stripe',
+        ...entry.effect,
+      };
+      const sb = {
+        async rpc(name) {
+          if (name === 'claim_integration_effects') {
+            claims += 1;
+            return { data: claims === 1 ? [effect] : [], error: null };
+          }
+          if (name === 'record_integration_effect_success') {
+            recordCalls += 1;
+            return { data: true, error: null };
+          }
+          if (name === 'complete_integration_effect') {
+            return { data: false, error: null };
+          }
+          if (name === 'fail_integration_effect') {
+            return { data: 'pending', error: null };
+          }
+          throw new Error(`unexpected RPC ${name}`);
+        },
+      };
+      const summary = await runIntegrationEffectsWorker({
+        env: {}, sb, workerId: 'worker-stage-proof', limit: 1,
+      }, {
+        deliverEffect: async () => {
+          providerCalls += 1;
+          return entry.outcome;
+        },
+      });
 
-test('quote intake worker renders only the frozen effect snapshot', async () => {
-  const { deliverIntegrationEffect } = await import('../functions/_lib/integration-effects.js');
-  const sent = [];
-  const base = { id: 'quote-1', email: 'frozen@example.test', name: 'Frozen Name', company: 'Frozen Co', type: 'sample', priority: 'urgent', lead_score: 90, payload: { current_chemical: 'X' } };
-  const sb = {};
-  const result = await deliverIntegrationEffect({ env: { SALES_EMAIL: 'sales@example.test' }, sb, effect: {
-    effect_type: 'quote_intake_email', provider: 'masest', payload: { quote_id: 'quote-1', kind: 'internal' }, source_snapshot: base,
-  } }, { sendEmail: async (_env, options) => { sent.push(options); return { ok: true, providerMessageId: 'mail-1' }; } });
-  assert.equal(result.skipped, false);
-  assert.match(sent[0].subject, /Frozen Co/);
-  assert.match(sent[0].html, /Cleaner used now/);
-  await assert.rejects(() => deliverIntegrationEffect({ env: {}, sb, effect: {
-    effect_type: 'quote_intake_email', provider: 'masest', payload: { quote_id: 'quote-1', kind: 'internal' }, source_snapshot: { ...base, id: 'other' },
-  } }, { sendEmail: async () => { throw new Error('must not send'); } }), /quote_intake_missing/);
+      assert.equal(summary.claimed, 1);
+      assert.equal(summary.completed, 0);
+      assert.equal(summary.retried, 1);
+      assert.equal(summary.dead, 0);
+      assert.equal(summary.providerAcknowledged, entry.expected.providerAcknowledged);
+      assert.equal(summary.providerCallSkipped, entry.expected.providerCallSkipped);
+      assert.equal(summary.skipped, entry.expected.skipped);
+      assert.equal(providerCalls, entry.outcome ? 1 : 0);
+      assert.equal(recordCalls, entry.expectedRecordCalls);
+    });
+  }
 });
 
 test('cutover removes legacy table/RPCs only after exact parity and rollback reconstructs them', () => {

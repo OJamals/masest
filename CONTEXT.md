@@ -169,6 +169,27 @@
 - **Invite**  
   A pending company invitation (`company_invites`) to add a new team member by email.
 
+- **Support Thread**
+  The stable participant or Company communication identity in `public.support_threads`.
+  Dashboard chat, Platform-staff replies, Order context, and signed email replies all use
+  this same transport; a thread may contain many independently managed Support Tickets.
+
+- **Support Ticket**
+  One support-work episode in `public.support_tickets` beneath exactly one Support Thread.
+  After the ticket-routing cutover, it is the sole owner of support status, priority,
+  category, assignment, and resolution. Its `MAS-…` display number is presentation only,
+  never a routing or authorization credential.
+
+- **Support Message**
+  Buyer-visible communication in `public.messages` belonging to exactly one Support Thread
+  and, after ticket assignment, one Support Ticket. A message may reference an Order, but
+  Order-specific support does not create a second message table, route family, or email ingress.
+
+- **Support Ticket Event**
+  Append-only, Platform-staff-private history in `public.support_ticket_events` for ticket
+  lifecycle, priority, category, assignment, and private-note changes. Ticket events are not
+  customer communication and never belong on buyer-readable Support Threads or Support Messages.
+
 - **Content asset**
   A CMS-managed image in `content_assets`. Its storage object is immutable once referenced;
   replacement uploads a distinct asset.
@@ -211,4 +232,10 @@
 - Never import a Prospect Organization into `companies`, a Prospect Contact into
   `profiles` / `crm_contacts`, or either into a newsletter audience. A Prospect becomes a
   customer only through an explicit Company link; unknown consent never authorizes bulk mail.
+- Support Tickets move `open` → `waiting_on_customer` → `open` → `resolved`; a resolved
+  ticket returns to `open` only through an explicit reply or reopen. Escalation sets priority
+  to `high` or `urgent`, never a parallel status. `needs_staff_reply` is derived from an
+  unresolved ticket's latest sender rather than persisted as a second workflow state.
+- Private Support Ticket Events and notes are service-role data. Buyer-facing authenticated
+  APIs return explicit safe fields and never expose assignee identity, event detail, or notes.
 - `admin` means at least two concepts in code; always qualify whether it is **company admin** or **platform staff**.

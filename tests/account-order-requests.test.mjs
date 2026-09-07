@@ -6,6 +6,7 @@ import { createAccountOrderRequestsHandler } from '../functions/api/account/orde
 const COMPANY_ID = '22222222-2222-4222-8222-222222222222';
 const ORDER_ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '33333333-3333-4333-8333-333333333333';
+const TICKET_ID = '44444444-4444-4444-8444-444444444444';
 
 function requestClient(rpcResult, { companyId = COMPANY_ID } = {}) {
   const calls = [];
@@ -36,7 +37,9 @@ function requestClient(rpcResult, { companyId = COMPANY_ID } = {}) {
       throw new Error(`unexpected direct table write: ${table}`);
     },
     async rpc(name, args) {
-      if (name === 'assert_email_effects_ready') return { data: true, error: null };
+      if (name === 'assert_email_effects_ready') {
+        return { data: { ready: true }, error: null };
+      }
       calls.push({ name, args });
       return rpcResult;
     },
@@ -62,17 +65,64 @@ function postRequest() {
   return new Request('https://masest.test/api/account/order-requests', { method: 'POST' });
 }
 
+test('paused order request returns retryable 503 without delivery attempt', async () => {
+  const sb = requestClient({ data: null, error: { message: 'support_writes_paused' } });
+  let attempted = false;
+  const response = await handlerFor(sb, {
+    attemptSupportMessageDelivery: async () => { attempted = true; },
+  })({ request: postRequest(), env: {} });
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get('retry-after'), '60');
+  assert.deepEqual(await response.json(), { error: 'support_writes_paused', retryable: true });
+  assert.equal(attempted, false);
+});
+
 test('buyer order request and linked support message use one atomic RPC', async () => {
+  let attemptedDelivery = null;
   const sb = requestClient({
     data: {
       duplicate: false,
       request: { id: '55555555-5555-4555-8555-555555555555', order_id: ORDER_ID, type: 'cancel', status: 'open' },
-      message: { id: '66666666-6666-4666-8666-666666666666', order_id: ORDER_ID },
+      message: {
+        id: '66666666-6666-4666-8666-666666666666',
+        order_id: ORDER_ID,
+        ticket_id: TICKET_ID,
+        ticket: {
+          id: TICKET_ID,
+          ticket_number: 42,
+          thread_id: '77777777-7777-4777-8777-777777777777',
+          subject: 'Cancellation request',
+          status: 'open',
+          priority: 'normal',
+          category: 'order',
+          assigned_to: 'staff-private',
+          version: 7,
+          private_notes: ['never expose'],
+        },
+      },
+      ticket_id: TICKET_ID,
+      ticket: {
+        id: TICKET_ID,
+        ticket_number: 42,
+        thread_id: '77777777-7777-4777-8777-777777777777',
+        subject: 'Cancellation request',
+        status: 'open',
+        priority: 'normal',
+        category: 'order',
+        assigned_to: 'staff-private',
+        version: 7,
+        private_notes: ['never expose'],
+      },
       chat_linked: true,
     },
     error: null,
   });
   const response = await handlerFor(sb, {
+    createDeliveryWorkerId: () => 'support-immediate/order-request-1',
+    attemptSupportMessageDelivery: async (input) => {
+      attemptedDelivery = input;
+      return { state: 'queued', effect_id: 'effect-order-request-1' };
+    },
   })({ request: postRequest(), env: {} });
 
   assert.equal(response.status, 201);
@@ -80,11 +130,25 @@ test('buyer order request and linked support message use one atomic RPC', async 
   assert.equal(sb.calls[0].name, 'create_order_support_request');
   assert.equal(sb.calls[0].args.p_order_id, ORDER_ID);
   assert.equal(sb.calls[0].args.p_requested_by, USER_ID);
+  assert.equal(sb.calls[0].args.p_contract_version, 2);
   assert.match(sb.calls[0].args.p_message_body, /Cancellation requested for order MST-1042/);
   const payload = await response.json();
   assert.equal(payload.request.order_id, ORDER_ID);
+  assert.equal(payload.ticket_id, TICKET_ID);
+  assert.equal(payload.support_message.ticket_id, TICKET_ID);
+  assert.equal(payload.ticket.display_number, 'MAS-000042');
+  assert.equal(payload.ticket.assigned_to, undefined);
+  assert.equal(payload.ticket.version, undefined);
+  assert.equal(payload.ticket.private_notes, undefined);
+  assert.equal(payload.support_message.ticket.assigned_to, undefined);
+  assert.equal(payload.support_message.ticket.version, undefined);
+  assert.equal(payload.support_message.ticket.private_notes, undefined);
   assert.equal(payload.chat_linked, true);
-  assert.deepEqual(payload.email_delivery, { ok: true, queued: true });
+  assert.equal(attemptedDelivery.message.id, '66666666-6666-4666-8666-666666666666');
+  assert.equal(attemptedDelivery.workerId, 'support-immediate/order-request-1');
+  assert.deepEqual(payload.email_delivery, {
+    state: 'queued', effect_id: 'effect-order-request-1',
+  });
 });
 
 test('buyer order request cannot report success when atomic chat handoff fails', async () => {
@@ -101,13 +165,50 @@ test('duplicate open buyer order request stays idempotent without another messag
       duplicate: true,
       request: { id: '55555555-5555-4555-8555-555555555555', order_id: ORDER_ID, type: 'cancel', status: 'open' },
       message: null,
+      ticket_id: TICKET_ID,
+      ticket_mapping_state: 'exact',
     },
     error: null,
   });
   const response = await handlerFor(sb)({ request: postRequest(), env: {} });
 
   assert.equal(response.status, 200);
-  assert.equal((await response.json()).duplicate, true);
+  const payload = await response.json();
+  assert.equal(payload.duplicate, true);
+  assert.equal(payload.ticket_id, TICKET_ID);
+});
+
+test('duplicate request with unproved requester mapping hides nested ticket identity', async () => {
+  const sb = requestClient({
+    data: {
+      duplicate: true,
+      request: {
+        id: '55555555-5555-4555-8555-555555555555',
+        order_id: ORDER_ID,
+        ticket_id: TICKET_ID,
+        requested_by: 'another-company-user',
+        requested_email: 'private@example.test',
+        type: 'cancel',
+        status: 'open',
+      },
+      message: null,
+      ticket_id: null,
+      ticket_mapping_state: 'unknown_legacy',
+      ticket: null,
+    },
+    error: null,
+  });
+
+  const response = await handlerFor(sb)({ request: postRequest(), env: {} });
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.ticket_id, null);
+  assert.equal(payload.ticket, null);
+  assert.equal(payload.ticket_mapping_state, 'unknown_legacy');
+  assert.equal(payload.request.ticket_id, null);
+  assert.equal(payload.request.requested_by, undefined);
+  assert.equal(payload.request.requested_email, undefined);
 });
 
 test('profileless retail buyer keeps atomic cancellation queue without a Company chat', async () => {

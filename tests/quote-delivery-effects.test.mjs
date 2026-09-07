@@ -34,7 +34,10 @@ test('local Buyer message delivery uses the leased idempotent database projectio
     sb: {
       async rpc(name, input) {
         calls.push([name, input]);
-        return { data: { message_id: 'message-1', inserted: true }, error: null };
+        return {
+          data: { message_id: 'message-1', ticket_id: 'ticket-1', ticket_number: '123', inserted: true },
+          error: null,
+        };
       },
     },
     effect: {
@@ -51,7 +54,9 @@ test('local Buyer message delivery uses the leased idempotent database projectio
   ]]);
   assert.deepEqual(result, {
     providerRecorded: true,
-    providerResult: { message_id: 'message-1', inserted: true },
+    providerResult: {
+      message_id: 'message-1', ticket_id: 'ticket-1', ticket_number: '123', inserted: true,
+    },
     skipped: false,
   });
 });
@@ -105,11 +110,35 @@ test('notification and email delivery route the Buyer to the real Orders workspa
   });
 });
 
-test('offer and all three delivery effects are one SQL transaction boundary', () => {
+test('source contract keeps offer effects and quote message completion in their SQL functions', () => {
   const sql = readFileSync(new URL('../supabase/schema-quote-lifecycle.sql', import.meta.url), 'utf8');
+  const routingSql = readFileSync(new URL('../supabase/migrate-support-ticket-routing-2026-09-06.sql', import.meta.url), 'utf8');
   const commit = sql.slice(sql.indexOf('create or replace function public.commit_quote_offer'));
   assert.match(commit, /jsonb_array_length\(p_effects\) <> 3/);
   assert.match(commit, /public\.ingest_integration_event\(/);
   assert.match(commit, /update public\.quotes[\s\S]*offer_delivery_event_id/);
   assert.match(sql, /begin;[\s\S]*commit;/);
+  const marker = 'create or replace function public.deliver_quote_message_effect';
+  const start = routingSql.toLowerCase().indexOf(marker);
+  const end = routingSql.indexOf('\n$$;', start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const delivery = routingSql.slice(start, end + 4);
+  assert.match(delivery, /invalid_quote_message_effect_lease/i);
+  assert.match(delivery, /provider_succeeded_at is not null/i);
+  assert.match(delivery, /public\.append_support_message\(/i);
+  assert.match(delivery, /public\.finish_integration_projection\(/i);
+  assert.ok(delivery.indexOf('provider_succeeded_at is not null') < delivery.indexOf('public.append_support_message('));
+  assert.ok(delivery.indexOf('public.append_support_message(') < delivery.indexOf('public.finish_integration_projection('));
+});
+
+test('quote support handoff relies on the canonical message notification exactly once', () => {
+  const source = readFileSync(new URL('../functions/api/admin/quotes.js', import.meta.url), 'utf8');
+  const start = source.indexOf('async function postQuoteThreadHandoff');
+  const end = source.indexOf('\nasync function ', start + 1);
+  const handoff = source.slice(start, end === -1 ? source.length : end);
+
+  assert.match(handoff, /publishSupportMessage/);
+  assert.doesNotMatch(handoff, /from\(['"]notifications['"]\)/);
+  assert.doesNotMatch(handoff, /notifications?\.insert/);
 });

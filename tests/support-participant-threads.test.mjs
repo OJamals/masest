@@ -11,6 +11,7 @@ import {
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const ORDER_ID = '22222222-2222-4222-8222-222222222222';
 const THREAD_ID = '33333333-3333-4333-8333-333333333333';
+const TICKET_ID = '44444444-4444-4444-8444-444444444444';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -82,12 +83,18 @@ test('order context accepts exact user ownership without a company', async () =>
   assert.deepEqual(filters, [['id', ORDER_ID]]);
 });
 
-test('support append targets one canonical participant thread', async () => {
+test('support append targets one canonical participant thread and exact ticket', async () => {
   let call;
   await appendSupportMessage({
     async rpc(name, args) {
       call = { name, args };
-      return { data: { id: 'message-1', thread_id: THREAD_ID }, error: null };
+      return {
+        data: {
+          id: 'message-1', thread_id: THREAD_ID, ticket_id: TICKET_ID,
+          ticket: { id: TICKET_ID, thread_id: THREAD_ID },
+        },
+        error: null,
+      };
     },
   }, {
     companyId: null,
@@ -100,6 +107,9 @@ test('support append targets one canonical participant thread', async () => {
   assert.equal(call.name, 'append_support_message');
   assert.equal(call.args.p_thread_user_id, USER_ID);
   assert.equal(call.args.p_company_id, null);
+  assert.equal(call.args.p_contract_version, 2);
+  assert.equal(call.args.p_start_ticket, false);
+  assert.equal(call.args.p_ticket_id, null);
 });
 
 test('support schema owns user and business scopes through one thread table', () => {
@@ -126,7 +136,7 @@ test('support schema owns user and business scopes through one thread table', ()
   assert.match(baseline, /if to_regclass\('public\.support_threads'\) is null then[\s\S]*create policy messages_company/i);
 });
 
-test('account, admin, email, and UI use the same participant-thread identity', () => {
+test('account, admin, email, and UI preserve thread transport under exact ticket identity', () => {
   const account = read('functions/api/account/messages.js');
   const admin = read('functions/api/admin/messages.js');
   const email = read('functions/_lib/support-email.js');
@@ -140,34 +150,38 @@ test('account, admin, email, and UI use the same participant-thread identity', (
   assert.match(email, /thread_id/);
   assert.match(email, /threadId/);
   assert.doesNotMatch(supportUi, /customers\.filter\(\(customer\) => customer\.id && customer\.company_id\)/);
-  assert.match(supportUi, /data-support-thread-id/);
-  assert.match(supportUi, /thread_id:/);
+  assert.match(supportUi, /button\.dataset\.supportTicketId = id/);
+  assert.match(supportUi, /ticket_id: id/);
 });
 
-test('admin thread lists avoid per-thread auth email lookups', () => {
+test('admin ticket lists avoid per-ticket auth email lookups', () => {
   const admin = read('functions/api/admin/messages.js');
+  const tickets = read('functions/_lib/support-tickets.js');
 
   assert.match(admin, /hydrateThreads\(sb, rows, \{ includeEmails = false \} = \{\}\)/);
   assert.match(admin, /includeEmails \? await emailsByIds\(sb, userIds\) : \{\}/);
   assert.match(admin, /hydrateThreads\(sb, \[data\], \{ includeEmails: true \}\)/);
-  assert.match(admin, /hydrated = await hydrateThreads\(sb, data \|\| \[\]\);/);
+  assert.match(admin, /const listTickets = dependencies\.listSupportTickets \|\| listSupportTickets/);
+  assert.match(admin, /await listTickets\(sb, \{ \.\.\.listParams, projection: 'admin' \}\)/);
+  assert.match(tickets, /sb\.rpc\('list_support_tickets'/);
 });
 
-test('staff replies always target one user and therefore one email recipient', () => {
+test('staff exact replies derive their recipient from the ticket thread while creation requires one user', () => {
   const admin = read('functions/api/admin/messages.js');
   const supportUi = read('js/admin-support.js');
 
-  assert.match(admin, /if \(!recipientUserId\) return json\(400, \{ error: 'recipient_user_id_required' \}\);/);
-  assert.match(supportUi, /selected\.participant_user_id/);
-  assert.match(supportUi, /data-support-start-customer/);
-  assert.match(supportUi, /Start a customer chat to reply by chat and email\./);
+  assert.match(admin, /recipientUserId = thread\.participant_user_id \|\| null/);
+  assert.match(admin, /if \(!UUID\.test\(recipientUserId\)\) return json\(400, \{ error: 'recipient_user_id_required' \}\)/);
+  assert.match(supportUi, /data-support-recipient-search/);
+  assert.match(supportUi, /loadRecipient\(customer\.id, orderId\)/);
 });
 
-test('legacy business order handoff keeps the order while staff chooses a recipient', () => {
+test('company-only order handoff keeps its scope while staff chooses a recipient for a new ticket', () => {
   const supportUi = read('js/admin-support.js');
 
-  assert.match(supportUi, /openNewChat\(\{ orderId: activeOrder\?\.id \|\| activeOrderId \|\| null \}\)/);
-  assert.match(supportUi, /loadNewChatUser\(button\.dataset\.supportUserId, \{ orderId: pendingNewChatOrderId \}\)/);
+  assert.match(supportUi, /new URLSearchParams\(\{ queue: "all", company_id: companyId, limit: "100" \}\)/);
+  assert.match(supportUi, /if \(requestedOrderId\) params\.set\("order_id", requestedOrderId\)/);
+  assert.match(supportUi, /else \{ setView\("compose"\); renderComposer\(\); \}/);
 });
 
 test('order dashboard messaging enters the selected user participant thread with order scope', () => {
@@ -179,6 +193,7 @@ test('order dashboard messaging enters the selected user participant thread with
   assert.match(orders, /userId:\s*button\.dataset\.messageUser \|\| null/);
   assert.match(admin, /onMessageCustomer:\s*\(\{ companyId, orderId, userId \}\)/);
   assert.match(admin, /openNewChat\?\.\(\{ userId, orderId \}\)/);
-  assert.match(supportUi, /openNewChat = \(\{ userId = null, orderId = null \}/);
-  assert.match(supportUi, /selectedOrderId:\s*orderId/);
+  assert.match(supportUi, /openNewChat: async \(\{ userId = null, orderId: requestedOrderId = null \}/);
+  assert.match(supportUi, /orderId = requestedOrderId \|\| null/);
+  assert.match(supportUi, /await loadRecipient\(userId, requestedOrderId\)/);
 });

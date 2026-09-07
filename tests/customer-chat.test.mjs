@@ -11,6 +11,8 @@ const messages = read("functions/api/account/messages.js");
 const adminMessages = read("functions/api/admin/messages.js");
 const supportPublisher = read("functions/_lib/support-message-publisher.js");
 const supportEmail = read("functions/_lib/support-email.js");
+const supportDelivery = read("functions/_lib/support-delivery.js");
+const supportEmailDelivery = read("functions/_lib/support-email-delivery.js");
 const phase5 = read("supabase/schema-phase5.sql");
 const admin = read("js/admin.js");
 let BASE_URL = "";
@@ -152,23 +154,168 @@ test("customer chat posts to the authenticated message thread and receives staff
   assert.match(chat, /source: "customer_chat"/);
   assert.match(chat, /POLL_MS/);
   assert.match(messages, /body\.source === 'customer_chat'/);
-  assert.match(messages, /publishSupportMessage\(/);
+  assert.match(messages, /dependencies\.publishSupportMessage \|\| publishSupportMessage/);
+  assert.match(messages, /publication = await publishMessage\(/);
   assert.match(supportPublisher, /appendSupportMessage/);
   assert.match(messages, /source,/);
   assert.match(admin, /source === 'customer_chat'/);
 });
 
-test("customer chat records presence and delegates counterpart email to the durable support effect", () => {
+test("customer chat uses the active buyer ticket contract", () => {
+  assert.match(chat, /ticket_id/);
+  assert.match(chat, /start_ticket/);
+  assert.match(chat, /customer-chat__ticket/);
+  assert.match(chat, /customer-chat__new-ticket/);
+  assert.doesNotMatch(chat, /assigned_to/);
+  assert.doesNotMatch(chat, /priority/);
+});
+
+test("customer chat replies to the active ticket and starts a deliberate new issue without reusing it", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const authModule = `
+      const calls = [];
+      window.__chatApiCalls = calls;
+      export async function getToken() { return "test-token"; }
+      export async function me() { return { can_admin: false }; }
+      export async function api(path, options = {}) {
+        calls.push({ path, options });
+        if (options.method === "POST") return { ticket_id: "ticket-active", ticket: { id: "ticket-active", display_number: "MAS-000001", status: "open" } };
+        return { ticket: { id: "ticket-active", display_number: "MAS-000001", status: "open" }, messages: [], has_more: false, next_message_cursor: null, order_scope: null };
+      }
+    `;
+    await page.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "application/javascript", body: authModule }));
+    try {
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+      await page.locator(".customer-chat__toggle").click();
+      await page.locator("#customerChatBody").fill("A reply on this issue");
+      await page.locator(".customer-chat__form [type=submit]").click();
+      await page.waitForFunction(() => window.__chatApiCalls.some((call) => call.options.body?.body === "A reply on this issue"));
+      const reply = await page.evaluate(() => window.__chatApiCalls.find((call) => call.options.body?.body === "A reply on this issue"));
+      assert.deepEqual(reply.options.body, { body: "A reply on this issue", order_id: null, source: "customer_chat", ticket_id: "ticket-active" });
+      await page.locator("[data-customer-chat-new-ticket]").click();
+      await page.locator("#customerChatSubject").fill("A separate issue");
+      await page.locator("#customerChatBody").fill("Start a separate support issue");
+      await page.locator(".customer-chat__form [type=submit]").click();
+      await page.waitForFunction(() => window.__chatApiCalls.some((call) => call.options.body?.body === "Start a separate support issue"));
+      const fresh = await page.evaluate(() => window.__chatApiCalls.find((call) => call.options.body?.body === "Start a separate support issue"));
+      assert.deepEqual(fresh.options.body, { action: "start_ticket", body: "Start a separate support issue", category: "general", order_id: null, source: "customer_chat", subject: "A separate issue" });
+      assert.equal(Object.hasOwn(fresh.options.body, "ticket_id"), false);
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  });
+});
+
+test("customer chat isolates order drafts and settles sends across same-context refreshes", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const authModule = `
+      const calls = [];
+      window.__chatDraftCalls = calls;
+      window.__chatDraftSettled = [];
+      const orders = {
+        A: { id: "order-a", reference: "MST-A" },
+        B: { id: "order-b", reference: "MST-B" },
+      };
+      const tickets = {
+        A: { id: "ticket-a", display_number: "MAS-000001", status: "open" },
+        B: { id: "ticket-b", display_number: "MAS-000002", status: "open" },
+      };
+      let releaseOrderB;
+      const orderBGate = new Promise((resolve) => { releaseOrderB = resolve; });
+      let orderBLoads = 0;
+      window.__releaseOrderB = releaseOrderB;
+      const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      export async function getToken() { return "test-token"; }
+      export async function me() { return { can_admin: false }; }
+      export async function api(path, options = {}) {
+        calls.push({ path, options });
+        if (options.method === "POST") {
+          if (["Send pending", "Create pending"].includes(options.body?.body)) await wait(220);
+          const key = options.body?.order_id === "order-b" ? "B" : "A";
+          window.__chatDraftSettled.push(options.body?.body || "");
+          return { ticket_id: tickets[key].id, ticket: tickets[key] };
+        }
+        const key = new URL(path, "http://fixture").searchParams.get("order_id") === "order-b" ? "B" : "A";
+        if (key === "B" && orderBLoads++ === 0) await orderBGate;
+        return { ticket: tickets[key], messages: [{ id: "message-" + key, sender_role: "staff", body: "A complete staff answer for order " + key, created_at: "2026-09-06T12:00:00Z" }], has_more: false, next_message_cursor: null, order_scope: orders[key] };
+      }
+    `;
+    await page.route("**/js/auth.js*", (route) => route.fulfill({ status: 200, contentType: "application/javascript", body: authModule }));
+    try {
+      await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+      await page.locator(".customer-chat__toggle").click();
+      await page.locator('[data-customer-chat-ticket-number]').waitFor();
+      await page.locator("#customerChatBody").fill("Draft for order A");
+      await page.evaluate(() => document.dispatchEvent(new CustomEvent("masest:open-support-order", { detail: { order: { id: "order-b", reference: "MST-B" } } })));
+      assert.doesNotMatch(await page.locator(".customer-chat__messages").textContent(), /complete staff answer for order A/);
+      assert.match(await page.locator(".customer-chat__messages").textContent(), /Loading messages/);
+      await page.evaluate(() => window.__releaseOrderB());
+      await page.waitForFunction(() => document.querySelector("[data-customer-chat-ticket-number]")?.textContent === "MAS-000002");
+      assert.equal(await page.locator("#customerChatBody").inputValue(), "", "order B must not inherit order A's draft");
+      await page.locator("#customerChatBody").fill("Draft for order B");
+      await page.evaluate(() => document.dispatchEvent(new CustomEvent("masest:open-support-order", { detail: { order: { id: "order-a", reference: "MST-A" } } })));
+      await page.waitForFunction(() => document.querySelector("[data-customer-chat-ticket-number]")?.textContent === "MAS-000001");
+      assert.equal(await page.locator("#customerChatBody").inputValue(), "Draft for order A", "returning to order A must restore only its draft");
+      await page.locator("#customerChatBody").fill("Send pending");
+      await page.locator(".customer-chat__form [type=submit]").click();
+      await page.evaluate(() => document.dispatchEvent(new Event("masest:auth")));
+      await page.locator("#customerChatBody").fill("Newer edit");
+      await page.waitForFunction(() => window.__chatDraftSettled.includes("Send pending") && document.querySelector("#customerChatBody")?.value === "Newer edit");
+      const pending = await page.evaluate(() => window.__chatDraftCalls.find((call) => call.options.method === "POST" && call.options.body?.body === "Send pending"));
+      assert.equal(pending.options.body.ticket_id, "ticket-a");
+      assert.equal(pending.options.body.order_id, "order-a");
+
+      await page.locator("#customerChatBody").fill("Trimmed widget send  ");
+      await page.locator(".customer-chat__form [type=submit]").click();
+      await page.waitForFunction(() => window.__chatDraftSettled.includes("Trimmed widget send") && document.querySelector("#customerChatBody")?.value === "");
+
+      await page.locator("[data-customer-chat-new-ticket]").click();
+      await page.locator("#customerChatSubject").fill("Create a fresh issue");
+      await page.locator("#customerChatBody").fill("Create pending");
+      await page.locator(".customer-chat__form [type=submit]").click();
+      await page.locator("#customerChatBody").fill("Newer create edit");
+      await page.waitForFunction(() => window.__chatDraftSettled.includes("Create pending") && document.querySelector("#customerChatBody")?.value === "Newer create edit");
+      await page.locator(".customer-chat__form [type=submit]").click();
+      await page.waitForFunction(() => window.__chatDraftSettled.includes("Newer create edit") && document.querySelector("#customerChatBody")?.value === "");
+      await page.locator("[data-customer-chat-new-ticket]").click();
+      assert.equal(await page.locator("#customerChatBody").inputValue(), "", "re-entering New issue must not resurrect the remapped sent draft");
+      await page.locator("[data-customer-chat-new-ticket]").click();
+
+      await page.locator("#customerChatBody").fill("Capture the submit destination");
+      await page.evaluate(() => {
+        document.querySelector(".customer-chat__form").requestSubmit();
+        document.dispatchEvent(new CustomEvent("masest:open-support-order", { detail: { order: { id: "order-b", reference: "MST-B" } } }));
+      });
+      await page.waitForFunction(() => window.__chatDraftCalls.some((call) => call.options.method === "POST" && call.options.body?.body === "Capture the submit destination"));
+      const captured = await page.evaluate(() => window.__chatDraftCalls.find((call) => call.options.method === "POST" && call.options.body?.body === "Capture the submit destination"));
+      assert.equal(captured.options.body.ticket_id, "ticket-a", "the submit uses the ticket captured before its first await");
+      assert.equal(captured.options.body.order_id, "order-a", "the submit uses the order captured before its first await");
+    } finally {
+      await context.close();
+      await browser.close();
+    }
+  });
+});
+
+test("customer chat records presence and delegates counterpart email to shared support delivery", () => {
   assert.match(chat, /chat_presence/);
   assert.match(chat, /setChatPresence\(false\)/);
   assert.match(messages, /body\.action === 'chat_presence'/);
   assert.match(messages, /publishSupportMessage/);
   assert.match(adminMessages, /publishSupportMessage/);
-  assert.match(supportPublisher, /assert_email_effects_ready/);
-  assert.match(supportPublisher, /emailDelivery: \{ ok: true, queued: true \}/);
+  assert.match(supportPublisher, /attemptSupportMessageDelivery/);
   assert.doesNotMatch(supportPublisher, /deliverSupportMessageEmail/);
-  assert.match(supportEmail, /adminMessageAlertKind/);
-  assert.match(supportEmail, /shouldEmailSupportRecipient/);
+  assert.match(supportDelivery, /processClaimedIntegrationEffect/);
+  assert.match(supportEmail, /attemptSupportMessageDelivery/);
+  assert.match(supportEmailDelivery, /adminMessageAlertKind/);
+  assert.match(supportEmailDelivery, /shouldEmailSupportRecipient/);
   assert.match(phase5, /support_chat_open boolean not null default false/);
   assert.match(phase5, /support_chat_seen_at timestamptz/);
 });

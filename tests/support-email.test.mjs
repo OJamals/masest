@@ -5,6 +5,7 @@ import {
   deliverSupportMessageEmail,
   routeInboundMessageReply,
 } from '../functions/_lib/support-email.js';
+import { renderSupportEmail } from '../functions/_lib/email-renderers.js';
 
 const COMPANY_ID = '00000000-0000-4000-8000-000000000001';
 const BUYER_ID = '00000000-0000-4000-8000-000000000002';
@@ -12,6 +13,198 @@ const STAFF_ID = '00000000-0000-4000-8000-000000000004';
 const ORDER_ID = '00000000-0000-4000-8000-000000000003';
 const MESSAGE_ID = '00000000-0000-4000-8000-000000000005';
 const THREAD_ID = '00000000-0000-4000-8000-000000000006';
+const OTHER_USER_ID = '00000000-0000-4000-8000-000000000007';
+const TICKET_ID = '00000000-0000-4000-8000-000000000008';
+const EFFECT_ID = '00000000-0000-4000-8000-000000000009';
+
+function leasedDelivery(dependencies = {}) {
+  return {
+    deliveryEffect: { id: EFFECT_ID, lease_owner: 'worker-test' },
+    freezeEnvelope: async (_sb, input) => input.envelope,
+    ...dependencies,
+  };
+}
+
+function senderResolutionDb({ buyerProfiles = [], staffProfiles = [], emails = {} } = {}) {
+  const queryCalls = [];
+  const authCalls = [];
+  const upsertCalls = [];
+  const violations = [];
+
+  function from(table) {
+    if (table !== 'profiles') {
+      violations.push(`unexpected table ${table}`);
+      throw new Error(`unexpected fake table ${table}`);
+    }
+    let selected = null;
+    const filters = [];
+    let settled = false;
+    let builder;
+    const target = {
+      select(columns) {
+        if (selected !== null) {
+          violations.push(`duplicate select on ${table}`);
+          throw new Error(`duplicate fake select on ${table}`);
+        }
+        selected = columns;
+        return builder;
+      },
+      eq(column, value) {
+        filters.push([column, value]);
+        return builder;
+      },
+      then(resolve, reject) {
+        if (settled) {
+          const error = new Error(`duplicate fake query settlement on ${table}`);
+          violations.push(error.message);
+          return Promise.reject(error).then(resolve, reject);
+        }
+        settled = true;
+        const call = { table, selected, filters };
+        queryCalls.push(call);
+        const buyerQuery = selected === 'id'
+          && filters.length === 1
+          && filters[0][0] === 'id'
+          && filters[0][1] === BUYER_ID;
+        const staffQuery = ['id,is_staff', 'id,is_staff,staff_role'].includes(selected)
+          && filters.length === 1
+          && filters[0][0] === 'is_staff'
+          && filters[0][1] === true;
+        if (!buyerQuery && !staffQuery) {
+          const error = new Error(`unexpected fake query ${JSON.stringify(call)}`);
+          violations.push(error.message);
+          return Promise.reject(error).then(resolve, reject);
+        }
+        return Promise.resolve({
+          data: buyerQuery ? buyerProfiles : staffProfiles,
+          error: null,
+        }).then(resolve, reject);
+      },
+    };
+    builder = new Proxy(target, {
+      get(object, property, receiver) {
+        if (Reflect.has(object, property)) return Reflect.get(object, property, receiver);
+        if (typeof property === 'symbol') return undefined;
+        return (...args) => {
+          violations.push(`unexpected method ${String(property)}(${JSON.stringify(args)}) on ${table}`);
+          throw new Error(`unexpected fake method ${String(property)} on ${table}`);
+        };
+      },
+    });
+    return builder;
+  }
+
+  const sb = {
+    from,
+    auth: {
+      admin: {
+        async getUserById(id) {
+          authCalls.push(id);
+          if (!Object.hasOwn(emails, id)) {
+            violations.push(`unexpected Auth getUserById(${id})`);
+            return { data: null, error: new Error('unexpected fake Auth lookup') };
+          }
+          return { data: { user: { id, email: emails[id] } }, error: null };
+        },
+      },
+    },
+    async rpc(name, args) {
+      if (name === 'assert_email_effects_ready') {
+        return { data: { ready: true }, error: null };
+      }
+      if (name !== 'upsert_email_inbound_message') {
+        violations.push(`unexpected RPC ${name}`);
+        throw new Error(`unexpected fake RPC ${name}`);
+      }
+      upsertCalls.push(args);
+      return {
+        data: {
+          message_id: `00000000-0000-4000-8000-${String(upsertCalls.length).padStart(12, '0')}`,
+          inserted: true,
+        },
+        error: null,
+      };
+    },
+    assertClean({ upserts = 0, staffColumns = 'id,is_staff,staff_role' } = {}) {
+      assert.equal(upsertCalls.length, upserts, 'unexpected canonical message upsert count');
+      assert.deepEqual(violations, [], violations.join('\n'));
+      const normalizedQueries = queryCalls.map((call) => JSON.stringify(call)).sort();
+      assert.deepEqual(normalizedQueries, [
+        JSON.stringify({ table: 'profiles', selected: 'id', filters: [['id', BUYER_ID]] }),
+        JSON.stringify({ table: 'profiles', selected: staffColumns, filters: [['is_staff', true]] }),
+      ].sort());
+      const expectedAuthCalls = [...new Set([
+        ...buyerProfiles.map((profile) => profile.id),
+        ...staffProfiles.map((profile) => profile.id),
+      ])].sort();
+      assert.deepEqual([...authCalls].sort(), expectedAuthCalls);
+    },
+    upsertCalls,
+  };
+  return sb;
+}
+
+function inboundReply(sender, suffix) {
+  return {
+    id: `email-${suffix}`,
+    from: sender,
+    to: [`reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`],
+    text: 'Reply from email',
+    headers: { 'message-id': `<incoming-${suffix}@example.test>` },
+  };
+}
+
+function replyThread() {
+  return {
+    id: THREAD_ID,
+    participant_user_id: BUYER_ID,
+    company_id: COMPANY_ID,
+  };
+}
+
+function parentFromBuyer() {
+  return {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'buyer',
+    user_id: BUYER_ID,
+    recipient_user_id: null,
+    order_id: ORDER_ID,
+    ticket_id: TICKET_ID,
+  };
+}
+
+function parentFromStaff(overrides = {}) {
+  return {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    user_id: STAFF_ID,
+    recipient_user_id: BUYER_ID,
+    order_id: ORDER_ID,
+    ticket_id: TICKET_ID,
+    ...overrides,
+  };
+}
+
+async function routeWithResolvedSender({ db, sender, suffix, parent, env = {} }) {
+  const deliveries = [];
+  const result = await routeInboundMessageReply(env, inboundReply(sender, suffix), {
+    sb: db,
+    messageIdFromReplyAddress: async () => MESSAGE_ID,
+    replyMessage: async () => parent,
+    replyThread: async () => replyThread(),
+    createDeliveryWorkerId: () => 'support-immediate/test-inbound',
+    attemptDelivery: async (input) => {
+      deliveries.push(input.message);
+      return { state: 'delivered', effect_id: EFFECT_ID };
+    },
+  });
+  const { email_delivery: delivery, ...publicResult } = result;
+  return { result: publicResult, delivery, deliveries };
+}
 
 test('staff message uses canonical email gateway with exact buyer, order, and RFC thread', async () => {
   let sent;
@@ -26,7 +219,7 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
     created_at: '2026-09-03T14:42:00Z',
     order_id: ORDER_ID,
     recipient_user_id: BUYER_ID,
-  }, {
+  }, leasedDelivery({
     buyerRecipient: async () => ({
       id: BUYER_ID,
       email: 'buyer@example.com',
@@ -51,9 +244,8 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
       sent = options;
       return { ok: true, providerMessageId: 'cf-provider-out-2' };
     },
-    prepareDelivery: async (_sb, _id, envelope) => envelope,
     saveDelivery: async (_sb, input) => { saved = input; },
-  });
+  }));
 
   assert.equal(result.ok, true);
   assert.equal(result.providerMessageId, 'cf-provider-out-2');
@@ -78,6 +270,172 @@ test('staff message uses canonical email gateway with exact buyer, order, and RF
   });
 });
 
+test('provider response loss reuses the frozen request after mutable support context changes', async () => {
+  let generation = 0;
+  let frozen = null;
+  const sent = [];
+  const deliveryEffect = { id: 'effect-1', lease_owner: 'worker-1' };
+  const dependencies = {
+    deliveryEffect,
+    buyerRecipient: async () => ({
+      id: BUYER_ID,
+      email: generation === 0 ? 'first@example.com' : 'changed@example.com',
+      notify_messages: true,
+      support_chat_open: false,
+    }),
+    orderContext: async () => ({
+      id: ORDER_ID,
+      reference: generation === 0 ? 'VK-ORIGINAL' : 'VK-CHANGED',
+      status: 'processing',
+    }),
+    ticketContext: async () => ({
+      id: TICKET_ID,
+      ticket_number: 41,
+      subject: generation === 0 ? 'Original ticket subject' : 'Changed ticket subject',
+    }),
+    replyAddress: async () => `reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`,
+    threadParent: async () => ({
+      messageId: '<root@example.com>',
+      references: '',
+      history: [{
+        sender_role: 'buyer',
+        body: generation === 0 ? 'Original history' : 'Changed history',
+        created_at: '2026-09-06T12:00:00Z',
+      }],
+    }),
+    freezeEnvelope: async (_sb, input) => {
+      assert.equal(input.effectId, deliveryEffect.id);
+      assert.equal(input.workerId, deliveryEffect.lease_owner);
+      assert.equal(input.messageId, MESSAGE_ID);
+      frozen ||= input.envelope;
+      return frozen;
+    },
+    sendEmail: async (_env, request) => {
+      sent.push(structuredClone(request));
+      return generation === 0
+        ? { ok: false, retryable: true, error: 'support_email_failed' }
+        : { ok: true, providerMessageId: 'provider-replayed' };
+    },
+    saveDelivery: async () => {},
+  };
+  const canonicalMessage = {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    company_name: 'Northwind HVAC',
+    sender_role: 'staff',
+    body: 'Canonical staff reply',
+    recipient_user_id: BUYER_ID,
+    order_id: ORDER_ID,
+  };
+
+  const first = await deliverSupportMessageEmail({}, {}, canonicalMessage, dependencies);
+  generation = 1;
+  const replay = await deliverSupportMessageEmail({}, {}, canonicalMessage, dependencies);
+
+  assert.deepEqual(first, { ok: false, retryable: true, error: 'support_email_failed' });
+  assert.equal(replay.providerMessageId, 'provider-replayed');
+  assert.equal(sent.length, 2);
+  assert.deepEqual(sent[1], sent[0]);
+  assert.deepEqual(sent[0].to, ['first@example.com']);
+  assert.match(sent[0].subject, /Original ticket subject/);
+  assert.doesNotMatch(sent[0].subject, /Changed/);
+  assert.match(sent[0].text, /Original history/);
+  assert.doesNotMatch(sent[0].text, /Changed history/);
+  assert.equal(sent[0].idempotencyKey, `support-message/${MESSAGE_ID}/staff`);
+});
+
+test('provider acceptance followed by transient persistence failure retries the exact frozen request', async () => {
+  let frozen = null;
+  let recipientLoads = 0;
+  let saveAttempts = 0;
+  const sent = [];
+  const canonicalMessage = {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    body: 'Canonical staff reply',
+    recipient_user_id: BUYER_ID,
+  };
+  const dependencies = leasedDelivery({
+    buyerRecipient: async () => {
+      recipientLoads += 1;
+      if (recipientLoads > 1) throw new Error('recipient must not reload after freeze');
+      return { email: 'original@example.com', notify_messages: true, support_chat_open: false };
+    },
+    orderContext: async () => null,
+    ticketContext: async () => ({ id: TICKET_ID, ticket_number: 41, subject: 'Original subject' }),
+    threadParent: async () => null,
+    replyAddress: async () => 'reply+proof@reply.masest.co',
+    freezeEnvelope: async (_sb, input) => {
+      frozen ||= input.envelope;
+      return frozen;
+    },
+    sendEmail: async (_env, request) => {
+      sent.push(structuredClone(request));
+      return { ok: true, providerMessageId: '<provider-accepted@example.test>' };
+    },
+    saveDelivery: async () => {
+      saveAttempts += 1;
+      if (saveAttempts === 1) throw new Error('database temporarily unavailable');
+    },
+  });
+
+  await assert.rejects(
+    deliverSupportMessageEmail({}, {}, canonicalMessage, dependencies),
+    /database temporarily unavailable/,
+  );
+  const replay = await deliverSupportMessageEmail({}, {}, canonicalMessage, dependencies);
+
+  assert.equal(replay.providerMessageId, '<provider-accepted@example.test>');
+  assert.equal(recipientLoads, 1);
+  assert.equal(saveAttempts, 2);
+  assert.deepEqual(sent[1], sent[0]);
+  assert.equal(sent[0].idempotencyKey, `support-message/${MESSAGE_ID}/staff`);
+});
+
+test('zero-row provider identity persistence is terminal and never reports delivered', async () => {
+  const update = {
+    update() { return this; },
+    eq() { return this; },
+    select() { return this; },
+    async maybeSingle() { return { data: null, error: null }; },
+  };
+  const sb = {
+    from(table) {
+      assert.equal(table, 'messages');
+      return update;
+    },
+  };
+  const attempt = deliverSupportMessageEmail({}, sb, {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    body: 'Canonical staff reply',
+    recipient_user_id: BUYER_ID,
+  }, leasedDelivery({
+    buyerRecipient: async () => ({
+      email: 'buyer@example.com', notify_messages: true, support_chat_open: false,
+    }),
+    orderContext: async () => null,
+    ticketContext: async () => ({ id: TICKET_ID, ticket_number: 41, subject: 'Proof' }),
+    threadParent: async () => null,
+    replyAddress: async () => 'reply+proof@reply.masest.co',
+    sendEmail: async () => ({ ok: true, providerMessageId: '<provider-accepted@example.test>' }),
+  }));
+
+  await assert.rejects(attempt, (error) => {
+    assert.equal(error.code, 'support_email_delivery_persistence_missing');
+    assert.equal(error.terminal, true);
+    return true;
+  });
+});
+
 test('staff delivery distinguishes missing email and exact prior delivery', async () => {
   const missing = await deliverSupportMessageEmail({}, {}, {
     id: MESSAGE_ID,
@@ -85,9 +443,9 @@ test('staff delivery distinguishes missing email and exact prior delivery', asyn
     sender_role: 'staff',
     body: 'Account update',
     recipient_user_id: BUYER_ID,
-  }, {
+  }, leasedDelivery({
     buyerRecipient: async () => ({ email: null, notify_messages: true, support_chat_open: false }),
-  });
+  }));
   assert.deepEqual(missing, { ok: true, skipped: 'recipient_email_missing' });
 
   let sends = 0;
@@ -100,9 +458,9 @@ test('staff delivery distinguishes missing email and exact prior delivery', asyn
     email_delivery_id: 'cf-existing',
     email_message_id: null,
     email_references: '<root@example.com>',
-  }, {
+  }, leasedDelivery({
     sendEmail: async () => { sends += 1; return { ok: true, providerMessageId: 'wrong' }; },
-  });
+  }));
   assert.equal(sends, 0);
   assert.deepEqual(existing, {
     ok: true,
@@ -125,7 +483,7 @@ test('buyer message emails opted-in admins through the same message-addressed th
     order_id: ORDER_ID,
     previous_sender_role: 'staff',
     prior_thread_status: 'open',
-  }, {
+  }, leasedDelivery({
     adminRecipients: async () => ['support@masest.co'],
     orderContext: async () => ({ id: ORDER_ID, reference: 'VK-1042', status: 'shipped' }),
     replyAddress: async () => `reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`,
@@ -135,8 +493,7 @@ test('buyer message emails opted-in admins through the same message-addressed th
       return { ok: true, providerMessageId: 'cf-provider-out-3' };
     },
     saveDelivery: async () => {},
-    prepareDelivery: async (_sb, _id, envelope) => envelope,
-  });
+  }));
   assert.equal(result.ok, true);
   assert.deepEqual(sent.to, ['support@masest.co']);
   assert.equal(sent.category, 'staff_alert');
@@ -145,37 +502,111 @@ test('buyer message emails opted-in admins through the same message-addressed th
   assert.match(sent.html, /Can you confirm tracking\?/);
 });
 
-test('support retry reuses the first persisted envelope after context changes', async () => {
-  let persisted;
-  const requests = [];
-  const base = { id: MESSAGE_ID, company_id: COMPANY_ID, sender_role: 'staff', recipient_user_id: BUYER_ID,
-    order_id: ORDER_ID, body: 'Original support update', company_name: 'Original Co' };
-  const dependencies = {
-    buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
-    replyAddress: async () => 'reply+stable@reply.masest.co',
-    orderContext: async () => ({ id: ORDER_ID, reference: 'ORIGINAL-ORDER', status: 'shipped' }),
-    threadParent: async () => null,
-    prepareDelivery: async (_sb, _id, envelope) => persisted || (persisted = envelope),
-    sendEmail: async (_env, options) => { requests.push(options); return { ok: true, providerMessageId: `provider-${requests.length}` }; },
-    saveDelivery: async () => {},
+test('an existing frozen request wins before retry-time recipient policy or context is loaded', async () => {
+  const frozen = {
+    request: {
+      to: ['original@example.com'],
+      subject: 'Original frozen subject',
+      html: '<p>Original frozen body</p>',
+      text: 'Original frozen body',
+      replyTo: 'reply+original@reply.masest.co',
+      emailHeaders: {},
+      category: 'messages',
+      idempotencyKey: `support-message/${MESSAGE_ID}/staff`,
+    },
+    references: '<original@example.com>',
   };
-  await deliverSupportMessageEmail({}, {}, base, dependencies);
-  await deliverSupportMessageEmail({}, {}, { ...base, body: 'Changed after retry', company_name: 'Changed Co' }, dependencies);
-  assert.deepEqual(requests[1], requests[0]);
+  let sent;
+  let mutableLoads = 0;
+  const failMutableLoad = async () => {
+    mutableLoads += 1;
+    throw new Error('mutable context must not load after freeze');
+  };
+  const result = await deliverSupportMessageEmail({}, {}, {
+    id: MESSAGE_ID,
+    ticket_id: TICKET_ID,
+    thread_id: THREAD_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    recipient_user_id: BUYER_ID,
+    body: 'Canonical body',
+  }, {
+    deliveryEffect: { id: EFFECT_ID, lease_owner: 'worker-retry' },
+    freezeEnvelope: async (_sb, input) => {
+      assert.equal(input.envelope, null);
+      return frozen;
+    },
+    buyerRecipient: failMutableLoad,
+    orderContext: failMutableLoad,
+    ticketContext: failMutableLoad,
+    threadParent: failMutableLoad,
+    replyAddress: failMutableLoad,
+    sendEmail: async (_env, request) => {
+      sent = request;
+      return { ok: true, providerMessageId: '<reconciled@example.test>' };
+    },
+    saveDelivery: async () => {},
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(mutableLoads, 0);
+  assert.deepEqual(sent, frozen.request);
 });
 
-test('support envelope storage is kept on the private effect preparation seam', async () => {
-  const migration = await (await import('node:fs/promises')).readFile(
-    new URL('../supabase/migrate-support-email-envelope-2026-09-05.sql', import.meta.url), 'utf8',
-  );
-  assert.match(migration, /alter table public\.integration_effects[\s\S]+delivery_request/);
-  assert.doesNotMatch(migration, /alter table public\.messages[\s\S]+email_delivery_request/);
-  assert.match(migration, /revoke all on function public\.prepare_support_email_delivery/);
-  assert.match(migration, /grant execute on function public\.prepare_support_email_delivery[^\n]+ to service_role/);
-  const durable = await (await import('node:fs/promises')).readFile(
-    new URL('../supabase/migrate-durable-support-message-effects-2026-09-05.sql', import.meta.url), 'utf8',
-  );
-  assert.match(durable, /to_regprocedure\('public\.prepare_support_email_delivery\(uuid,jsonb\)'\)/);
+test('a malformed or identity-mismatched frozen request fails terminally without rerendering or sending', async (t) => {
+  for (const [name, frozen, expectedError] of [
+    ['missing body', {
+      request: {
+        to: ['original@example.com'],
+        subject: 'Original frozen subject',
+        html: '<p>Original frozen body</p>',
+        replyTo: 'reply+original@reply.masest.co',
+        emailHeaders: {},
+        category: 'messages',
+        idempotencyKey: `support-message/${MESSAGE_ID}/staff`,
+      },
+    }, 'support_email_envelope_invalid'],
+    ['wrong message identity', {
+      request: {
+        to: ['original@example.com'],
+        subject: 'Original frozen subject',
+        html: '<p>Original frozen body</p>',
+        text: 'Original frozen body',
+        replyTo: 'reply+original@reply.masest.co',
+        emailHeaders: {},
+        category: 'messages',
+        idempotencyKey: 'support-message/other/staff',
+      },
+    }, 'support_email_envelope_identity_mismatch'],
+  ]) {
+    await t.test(name, async () => {
+      let mutableLoads = 0;
+      let sends = 0;
+      const mutableLoad = async () => { mutableLoads += 1; };
+      const result = await deliverSupportMessageEmail({}, {}, {
+        id: MESSAGE_ID,
+        ticket_id: TICKET_ID,
+        thread_id: THREAD_ID,
+        company_id: COMPANY_ID,
+        sender_role: 'staff',
+        recipient_user_id: BUYER_ID,
+        body: 'Canonical body',
+      }, {
+        deliveryEffect: { id: EFFECT_ID, lease_owner: 'worker-retry' },
+        freezeEnvelope: async () => frozen,
+        buyerRecipient: mutableLoad,
+        orderContext: mutableLoad,
+        ticketContext: mutableLoad,
+        threadParent: mutableLoad,
+        replyAddress: mutableLoad,
+        sendEmail: async () => { sends += 1; },
+      });
+
+      assert.deepEqual(result, { ok: false, retryable: false, error: expectedError });
+      assert.equal(mutableLoads, 0);
+      assert.equal(sends, 0);
+    });
+  }
 });
 
 test('customer and staff email replies append through canonical chat with exact linked order', async () => {
@@ -191,6 +622,7 @@ test('customer and staff email replies append through canonical chat with exact 
           user_id: STAFF_ID,
           recipient_user_id: BUYER_ID,
           order_id: ORDER_ID,
+          ticket_id: TICKET_ID,
         }
       : {
           id: MESSAGE_ID,
@@ -200,6 +632,7 @@ test('customer and staff email replies append through canonical chat with exact 
           user_id: BUYER_ID,
           recipient_user_id: null,
           order_id: ORDER_ID,
+          ticket_id: TICKET_ID,
         };
     const result = await routeInboundMessageReply({}, {
       id: `email-${senderRole}`,
@@ -237,20 +670,147 @@ test('customer and staff email replies append through canonical chat with exact 
           inserted: true,
         };
       },
-      deliverMessage: async (_env, _sb, message) => { delivered = message; return { ok: true }; },
+      createDeliveryWorkerId: () => 'support-immediate/direct-inbound',
+      attemptDelivery: async ({ message }) => {
+        delivered = message;
+        return { state: 'delivered', effect_id: EFFECT_ID };
+      },
     });
 
-    assert.deepEqual(result, { routed: true, duplicate: false });
+    assert.deepEqual(result, {
+      routed: true,
+      duplicate: false,
+      email_delivery: { state: 'delivered', effect_id: EFFECT_ID },
+    });
     assert.equal(upserted.senderRole, senderRole);
     assert.equal(upserted.threadId, THREAD_ID);
     assert.equal(upserted.orderId, ORDER_ID);
+    assert.equal(upserted.ticketId, TICKET_ID);
     assert.equal(upserted.recipientUserId, senderRole === 'staff' ? BUYER_ID : null);
     assert.equal(
       upserted.emailReferences,
       `<root@example.com> <outbound-parent@example.com> <incoming-${senderRole}@example.com>`,
     );
-    assert.equal(delivered, undefined);
+    assert.equal(delivered.sender_role, senderRole);
+    assert.equal(delivered.order_id, ORDER_ID);
   }
+});
+
+test('signed parent ticket is invariant when inbound subject and threading headers are changed, stripped, or forged', async () => {
+  const parent = parentFromStaff();
+  const inputs = [
+    { subject: 'Re: [MAS-999999] forged', headers: {} },
+    { subject: 'totally unrelated', headers: { references: '<forged@example.test>' } },
+    { subject: '', headers: { 'in-reply-to': '<attacker@example.test>', 'message-id': '<new@example.test>' } },
+  ];
+  for (const [index, override] of inputs.entries()) {
+    let upserted;
+    await routeInboundMessageReply({}, {
+      id: `subject-invariant-${index}`,
+      from: 'buyer@example.com',
+      to: [`reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`],
+      text: 'Authoritative parent remains unchanged.',
+      ...override,
+    }, {
+      sb: {},
+      messageIdFromReplyAddress: async () => MESSAGE_ID,
+      replyMessage: async () => parent,
+      replyThread: async () => replyThread(),
+      senderIdentity: async () => ({ role: 'buyer', userId: BUYER_ID }),
+      upsertMessage: async (_sb, input) => {
+        upserted = input;
+        return { id: `routed-${index}`, inserted: true, ticket_id: TICKET_ID };
+      },
+      createDeliveryWorkerId: () => 'support-immediate/ticket-invariant',
+      attemptDelivery: async () => ({ state: 'delivered', effect_id: EFFECT_ID }),
+    });
+    assert.equal(upserted.ticketId, TICKET_ID);
+    assert.equal(upserted.orderId, ORDER_ID);
+  }
+});
+
+test('support delivery loads the exact message ticket and renderer escapes ticket display subject', async () => {
+  let requestedTicketId;
+  let sent;
+  await deliverSupportMessageEmail({}, {}, {
+    id: MESSAGE_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    company_name: 'Northwind HVAC',
+    sender_role: 'staff',
+    recipient_user_id: BUYER_ID,
+    body: 'Use the attached process guidance.',
+  }, leasedDelivery({
+    buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
+    ticketContext: async (_sb, ticketId) => {
+      requestedTicketId = ticketId;
+      return { id: ticketId, ticket_number: 123, subject: 'Pump-room <scaling & "biofilm">' };
+    },
+    orderContext: async () => null,
+    threadParent: async () => null,
+    replyAddress: async () => 'reply+safe@reply.masest.co',
+    sendEmail: async (_env, options) => { sent = options; return { ok: true, providerMessageId: '<delivery@example.test>' }; },
+    saveDelivery: async () => {},
+  }));
+  assert.equal(requestedTicketId, TICKET_ID);
+  assert.equal(sent.subject, '[MAS-000123] MASEST support · Pump-room <scaling & "biofilm">');
+  assert.match(sent.html, /\[MAS-000123\]/);
+  assert.match(sent.html, /Pump-room &lt;scaling &amp; &quot;biofilm&quot;&gt;/);
+
+  const rendered = renderSupportEmail({
+    thread: { headers: { 'In-Reply-To': '<parent@example.test>' } },
+    message: { sender_role: 'staff', body: 'Reply' },
+    participant: { name: 'Northwind HVAC' },
+    ticket: { display_number: 'MAS-000123', subject: 'Pump-room scaling' },
+  });
+  assert.equal(rendered.subject, 'Re: [MAS-000123] MASEST support · Pump-room scaling');
+});
+
+test('support delivery query does not inherit parent headers or history from another ticket', async () => {
+  const filters = [];
+  const priorOtherTicket = [{
+    id: 'old-message',
+    email_message_id: '<old-ticket@example.test>',
+    email_references: '<old-root@example.test>',
+    sender_role: 'buyer',
+    body: 'Old ticket history',
+    created_at: '2026-09-01T12:00:00Z',
+  }];
+  const builder = {
+    select() { return this; },
+    or() { return this; },
+    order() { return this; },
+    limit() { return this; },
+    eq(column, value) { filters.push([column, value]); return this; },
+    neq() { return this; },
+    is() { return this; },
+    then(resolve, reject) {
+      const exactTicket = filters.some(([column, value]) => column === 'ticket_id' && value === TICKET_ID);
+      return Promise.resolve({ data: exactTicket ? [] : priorOtherTicket, error: null }).then(resolve, reject);
+    },
+  };
+  let sent;
+  await deliverSupportMessageEmail({}, { from: () => builder }, {
+    id: MESSAGE_ID,
+    thread_id: THREAD_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    company_name: 'Northwind HVAC',
+    sender_role: 'staff',
+    recipient_user_id: BUYER_ID,
+    body: 'First message in this ticket.',
+  }, leasedDelivery({
+    buyerRecipient: async () => ({ email: 'buyer@example.com', notify_messages: true, support_chat_open: false }),
+    ticketContext: async () => ({ id: TICKET_ID, ticket_number: 124, subject: 'New issue' }),
+    orderContext: async () => null,
+    replyAddress: async () => 'reply+safe@reply.masest.co',
+    sendEmail: async (_env, options) => { sent = options; return { ok: true, providerMessageId: 'delivery-2' }; },
+    saveDelivery: async () => {},
+  }));
+
+  assert.deepEqual(filters, [['thread_id', THREAD_ID], ['ticket_id', TICKET_ID]]);
+  assert.deepEqual(sent.emailHeaders, {});
+  assert.doesNotMatch(sent.html, /Old ticket history/);
 });
 
 test('unrecognized inbound sender never enters support chat', async () => {
@@ -261,7 +821,7 @@ test('unrecognized inbound sender never enters support chat', async () => {
     to: [`reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`],
     text: 'inject me',
     headers: {},
-  }, {
+  }, leasedDelivery({
     sb: {},
     messageIdFromReplyAddress: async () => MESSAGE_ID,
     replyMessage: async () => ({
@@ -273,7 +833,372 @@ test('unrecognized inbound sender never enters support chat', async () => {
     }),
     senderIdentity: async () => null,
     upsertMessage: async () => { upserts += 1; },
-  });
+  }));
   assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
   assert.equal(upserts, 0);
+});
+
+test('write-capable database platform staff email replies route as staff', async (t) => {
+  for (const role of ['owner', 'finance', 'support']) {
+    await t.test(role, async () => {
+      const address = `${role}@example.test`;
+      const db = senderResolutionDb({
+        staffProfiles: [{ id: STAFF_ID, is_staff: true, staff_role: role }],
+        emails: { [STAFF_ID]: address },
+      });
+      const { result, deliveries } = await routeWithResolvedSender({
+        db,
+        sender: address,
+        suffix: `staff-${role}`,
+        parent: parentFromBuyer(),
+      });
+
+      db.assertClean({ upserts: 1 });
+      assert.equal(deliveries.length, 1);
+      assert.equal(db.upsertCalls[0].p_sender_role, 'staff');
+      assert.equal(db.upsertCalls[0].p_recipient_user_id, BUYER_ID);
+      assert.deepEqual(result, { routed: true, duplicate: false });
+    });
+  }
+});
+
+test('read-only platform staff email reply never creates a message or delivery', async () => {
+  const address = 'read-only@example.test';
+  const db = senderResolutionDb({
+    staffProfiles: [{ id: STAFF_ID, is_staff: true, staff_role: 'read_only' }],
+    emails: { [STAFF_ID]: address },
+  });
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: address,
+    suffix: 'read-only',
+    parent: parentFromBuyer(),
+  });
+
+  db.assertClean({ upserts: 0 });
+  assert.equal(deliveries.length, 0);
+  assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+});
+
+test('missing, unknown, malformed, or non-staff database roles fail closed', async (t) => {
+  const cases = [
+    ['missing role', null, true],
+    ['unknown role', 'warehouse', true],
+    ['malformed role', ['owner'], true],
+    ['is_staff false', 'owner', false],
+  ];
+  for (const [name, staffRole, isStaff] of cases) {
+    await t.test(name, async () => {
+      const address = `${name.replaceAll(' ', '-')}@example.test`;
+      const db = senderResolutionDb({
+        staffProfiles: [{ id: STAFF_ID, is_staff: isStaff, staff_role: staffRole }],
+        emails: { [STAFF_ID]: address },
+      });
+      const { result, deliveries } = await routeWithResolvedSender({
+        db,
+        sender: address,
+        suffix: name.replaceAll(' ', '-'),
+        parent: parentFromBuyer(),
+      });
+
+      db.assertClean({ upserts: 0 });
+      assert.equal(deliveries.length, 0);
+      assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+    });
+  }
+});
+
+test('exact ADMIN_EMAILS sender remains root staff without a profile', async () => {
+  const db = senderResolutionDb();
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: 'Root Operator <ROOT@example.test>',
+    suffix: 'root-operator',
+    parent: parentFromBuyer(),
+    env: { ADMIN_EMAILS: 'root@example.test, another@example.test' },
+  });
+
+  db.assertClean({ upserts: 1 });
+  assert.equal(deliveries.length, 1);
+  assert.equal(db.upsertCalls[0].p_sender_role, 'staff');
+  assert.equal(db.upsertCalls[0].p_user_id, null);
+  assert.deepEqual(result, { routed: true, duplicate: false });
+});
+
+test('ADMIN_EMAILS matching stays exact and unrelated senders remain rejected', async () => {
+  const db = senderResolutionDb();
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: 'root+unlisted@example.test',
+    suffix: 'unrelated-root-alias',
+    parent: parentFromBuyer(),
+    env: { ADMIN_EMAILS: 'root@example.test' },
+  });
+
+  db.assertClean({ upserts: 0 });
+  assert.equal(deliveries.length, 0);
+  assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+});
+
+test('buyer replies still require the exact participant address and parent recipient', async (t) => {
+  const address = 'buyer@example.test';
+
+  await t.test('exact participant and recipient routes as buyer', async () => {
+    const db = senderResolutionDb({
+      buyerProfiles: [{ id: BUYER_ID }],
+      emails: { [BUYER_ID]: address },
+    });
+    const { result, deliveries } = await routeWithResolvedSender({
+      db,
+      sender: address,
+      suffix: 'buyer-exact',
+      parent: parentFromStaff(),
+    });
+
+    db.assertClean({ upserts: 1 });
+    assert.equal(deliveries.length, 1);
+    assert.equal(db.upsertCalls[0].p_sender_role, 'buyer');
+    assert.equal(db.upsertCalls[0].p_user_id, BUYER_ID);
+    assert.deepEqual(result, { routed: true, duplicate: false });
+  });
+
+  await t.test('participant address cannot reply to a message for another recipient', async () => {
+    const db = senderResolutionDb({
+      buyerProfiles: [{ id: BUYER_ID }],
+      emails: { [BUYER_ID]: address },
+    });
+    const { result, deliveries } = await routeWithResolvedSender({
+      db,
+      sender: address,
+      suffix: 'buyer-wrong-recipient',
+      parent: parentFromStaff({ recipient_user_id: OTHER_USER_ID }),
+    });
+
+    db.assertClean({ upserts: 0 });
+    assert.equal(deliveries.length, 0);
+    assert.deepEqual(result, { routed: false, reason: 'sender_not_recipient' });
+  });
+
+  await t.test('non-participant address is rejected', async () => {
+    const db = senderResolutionDb({
+      buyerProfiles: [{ id: BUYER_ID }],
+      emails: { [BUYER_ID]: address },
+    });
+    const { result, deliveries } = await routeWithResolvedSender({
+      db,
+      sender: 'other-buyer@example.test',
+      suffix: 'buyer-unrelated',
+      parent: parentFromStaff(),
+    });
+
+    db.assertClean({ upserts: 0 });
+    assert.equal(deliveries.length, 0);
+    assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+  });
+});
+
+test('read-only platform staff retains an independently valid buyer reply path', async () => {
+  const address = 'dual-buyer-staff@example.test';
+  const db = senderResolutionDb({
+    buyerProfiles: [{ id: BUYER_ID }],
+    staffProfiles: [{ id: BUYER_ID, is_staff: true, staff_role: 'read_only' }],
+    emails: { [BUYER_ID]: address },
+  });
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: address,
+    suffix: 'dual-buyer-staff',
+    parent: parentFromStaff(),
+  });
+
+  db.assertClean({ upserts: 1 });
+  assert.equal(deliveries.length, 1);
+  assert.equal(db.upsertCalls[0].p_sender_role, 'buyer');
+  assert.equal(db.upsertCalls[0].p_user_id, BUYER_ID);
+  assert.deepEqual(result, { routed: true, duplicate: false });
+});
+
+test('read-only alert recipient receives configured alert but cannot author a reply', async () => {
+  const address = 'read-only-alert@example.test';
+  let alertRecipients;
+  const alert = await deliverSupportMessageEmail({}, {}, {
+    id: MESSAGE_ID,
+    company_id: COMPANY_ID,
+    company_name: 'Example Buyer',
+    sender_role: 'buyer',
+    user_id: BUYER_ID,
+    body: 'Please review this request.',
+  }, leasedDelivery({
+    adminRecipients: async () => [address],
+    orderContext: async () => null,
+    replyAddress: async () => `reply+${MESSAGE_ID}.0123456789abcdef0123@reply.masest.co`,
+    threadParent: async () => null,
+    sendEmail: async (_env, options) => {
+      alertRecipients = options.to;
+      return { ok: true, providerMessageId: '<read-only-alert@example.test>' };
+    },
+    saveDelivery: async () => {},
+  }));
+  assert.equal(alert.ok, true);
+  assert.deepEqual(alertRecipients, [address]);
+
+  const db = senderResolutionDb({
+    staffProfiles: [{ id: STAFF_ID, is_staff: true, staff_role: 'read_only' }],
+    emails: { [STAFF_ID]: address },
+  });
+  const { result, deliveries } = await routeWithResolvedSender({
+    db,
+    sender: address,
+    suffix: 'read-only-alert-reply',
+    parent: parentFromBuyer(),
+  });
+
+  db.assertClean({ upserts: 0 });
+  assert.equal(deliveries.length, 0);
+  assert.deepEqual(result, { routed: false, reason: 'sender_not_participant' });
+});
+
+test('durable recipient resolution retries database and Auth outages but skips genuine empty staff policy', async (t) => {
+  const staffMessage = {
+    id: MESSAGE_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'staff',
+    recipient_user_id: BUYER_ID,
+    body: 'Strict lookup proof',
+  };
+  const buyerMessage = {
+    id: MESSAGE_ID,
+    ticket_id: TICKET_ID,
+    company_id: COMPANY_ID,
+    sender_role: 'buyer',
+    user_id: BUYER_ID,
+    body: 'Strict staff lookup proof',
+    external_alert_kind: 'message',
+  };
+
+  await t.test('buyer profile database error', async () => {
+    const databaseError = new Error('profile_database_unavailable');
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        async maybeSingle() { return { data: null, error: databaseError }; },
+      }),
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, staffMessage, leasedDelivery()),
+      /profile_database_unavailable/,
+    );
+  });
+
+  await t.test('buyer Auth lookup returned error', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        async maybeSingle() {
+          return {
+            data: {
+              id: BUYER_ID,
+              company_id: COMPANY_ID,
+              notify_messages: true,
+              support_chat_open: false,
+            },
+            error: null,
+          };
+        },
+      }),
+      auth: { admin: { getUserById: async () => ({ data: null, error: new Error('auth_unavailable') }) } },
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, staffMessage, leasedDelivery()),
+      /auth_unavailable/,
+    );
+  });
+
+  await t.test('buyer Auth lookup thrown error', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        async maybeSingle() {
+          return {
+            data: {
+              id: BUYER_ID,
+              company_id: COMPANY_ID,
+              notify_messages: true,
+              support_chat_open: false,
+            },
+            error: null,
+          };
+        },
+      }),
+      auth: { admin: { getUserById: async () => { throw new Error('auth_transport_unavailable'); } } },
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, staffMessage, leasedDelivery()),
+      /auth_transport_unavailable/,
+    );
+  });
+
+  await t.test('staff preference database error', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        then(resolve, reject) {
+          return Promise.resolve({ data: null, error: new Error('staff_database_unavailable') })
+            .then(resolve, reject);
+        },
+      }),
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, buyerMessage, leasedDelivery()),
+      /staff_database_unavailable/,
+    );
+  });
+
+  await t.test('partial staff Auth lookup failure', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        then(resolve, reject) {
+          return Promise.resolve({
+            data: [
+              { id: 'staff-ok', is_staff: true, support_inbox_seen_at: null },
+              { id: 'staff-failed', is_staff: true, support_inbox_seen_at: null },
+            ],
+            error: null,
+          }).then(resolve, reject);
+        },
+      }),
+      auth: { admin: { getUserById: async (id) => (
+        id === 'staff-ok'
+          ? { data: { user: { email: 'staff@example.test' } }, error: null }
+          : { data: null, error: new Error('partial_auth_unavailable') }
+      ) } },
+    };
+    await assert.rejects(
+      deliverSupportMessageEmail({}, sb, buyerMessage, leasedDelivery()),
+      /partial_auth_unavailable/,
+    );
+  });
+
+  await t.test('successful empty staff query is a policy skip', async () => {
+    const sb = {
+      from: () => ({
+        select() { return this; },
+        eq() { return this; },
+        then(resolve, reject) {
+          return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+        },
+      }),
+    };
+    assert.deepEqual(
+      await deliverSupportMessageEmail({}, sb, buyerMessage, leasedDelivery()),
+      { ok: true, skipped: 'no_admin_recipients' },
+    );
+  });
 });

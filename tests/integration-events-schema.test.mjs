@@ -1,8 +1,29 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const SUPPORT_DELIVERY_MIGRATION = 'supabase/migrate-support-message-delivery-effects-2026-09-06.sql';
+const supportDeliverySql = existsSync(new URL(`../${SUPPORT_DELIVERY_MIGRATION}`, import.meta.url))
+  ? read(SUPPORT_DELIVERY_MIGRATION)
+  : '';
+
+function supportDeliveryMigration() {
+  assert.ok(
+    supportDeliverySql.length > 0,
+    `${SUPPORT_DELIVERY_MIGRATION} must define the Plan 041 support-delivery contract`,
+  );
+  return supportDeliverySql;
+}
+
+function sqlFunction(sql, name) {
+  const marker = `create or replace function public.${name}`;
+  const start = sql.toLowerCase().indexOf(marker);
+  assert.notEqual(start, -1, `${name} definition missing`);
+  const end = sql.indexOf('\n$$;', start);
+  assert.notEqual(end, -1, `${name} terminator missing`);
+  return sql.slice(start, end + 4);
+}
 
 test('generic integration ledger defines provider inbox, dependent effects, and append-only attempts', () => {
   const sql = read('supabase/schema-integration-events.sql');
@@ -132,6 +153,105 @@ test('RLS and grants deny public roles and rollback removes only generic objects
   }
   assert.doesNotMatch(rollback, /drop\s+table\s+if\s+exists\s+public\.stripe_webhook_effects/i);
   assert.doesNotMatch(rollback, /drop\s+function\s+if\s+exists\s+public\.(claim|complete|retry)_stripe_webhook_effect/i);
+});
+
+test('support delivery is a future-only messages AFTER INSERT seam that emits one local ledger effect', () => {
+  const sql = supportDeliveryMigration();
+  const enqueue = sqlFunction(sql, 'enqueue_support_message_email_effect');
+
+  assert.match(enqueue, /public\.ingest_integration_event\s*\(/i);
+  assert.match(enqueue, /'masest'/i);
+  assert.match(enqueue, /'support_message_email'/i);
+  assert.match(enqueue, /jsonb_build_object\s*\(\s*'message_id'\s*,\s*new\.id\s*\)/i);
+  assert.match(enqueue, /'effect_key'/i);
+  assert.match(enqueue, /'effect_type'\s*,\s*'support_message_email'/i);
+  assert.match(enqueue, /'aggregate_type'\s*,\s*'support_ticket'/i);
+  assert.match(enqueue, /'aggregate_id'\s*,\s*new\.ticket_id::text/i);
+  assert.match(enqueue, /'support-message\/'\s*\|\|\s*new\.id::text/i);
+  assert.match(enqueue, /new\.created_at/i);
+  assert.match(enqueue, /external_alert_kind/i);
+  assert.match(enqueue, /sender_role::text\s*=\s*'buyer'/i);
+  assert.match(enqueue, /ticket\.status\s*=\s*'resolved'/i);
+  assert.doesNotMatch(enqueue, /ingest_provider_event/i);
+
+  assert.match(sql, /drop trigger if exists messages_support_message_email_after_insert on public\.messages/i);
+  assert.match(
+    sql,
+    /create trigger messages_support_message_email_after_insert\s+after insert on public\.messages\s+for each row execute function public\.enqueue_support_message_email_effect\s*\(\s*\)/i,
+  );
+});
+
+test('support delivery notifications carry message identity with the exact partial conflict target', () => {
+  const sql = supportDeliveryMigration();
+
+  assert.match(
+    sql,
+    /alter table public\.notifications\s+add column if not exists support_message_id uuid\s+references public\.messages\s*\(id\)\s*on delete cascade/i,
+  );
+  assert.match(
+    sql,
+    /create unique index if not exists notifications_support_message_id_uniq\s+on public\.notifications\s*\(\s*support_message_id\s*\)\s*where support_message_id is not null/i,
+  );
+  assert.match(
+    sql,
+    /on conflict\s*\(\s*support_message_id\s*\)\s*where support_message_id is not null\s+do nothing/i,
+  );
+});
+
+test('support email envelopes are bounded, immutable private snapshots keyed by message and effect', () => {
+  const sql = supportDeliveryMigration();
+  const persist = sqlFunction(sql, 'store_support_message_email_envelope');
+
+  assert.match(sql, /create table if not exists public\.support_message_email_envelopes/i);
+  assert.match(sql, /message_id uuid not null references public\.messages\s*\(id\)\s*on delete cascade/i);
+  assert.match(sql, /effect_id uuid not null references public\.integration_effects\s*\(id\)\s*on delete cascade/i);
+  assert.match(sql, /unique\s*\(\s*message_id\s*\)/i);
+  assert.match(sql, /unique\s*\(\s*effect_id\s*\)/i);
+  assert.match(sql, /octet_length\(envelope::text\)\s*<=\s*131072/i);
+  assert.match(sql, /create trigger support_message_email_envelopes_immutable/i);
+  assert.match(sql, /raise exception 'support_message_email_envelope_immutable'/i);
+  assert.match(persist, /security definer/i);
+  assert.match(persist, /p_effect_id uuid[\s\S]*p_worker_id text[\s\S]*p_envelope jsonb/i);
+  assert.match(persist, /effect\.lease_owner\s*=\s*p_worker_id/i);
+  assert.match(persist, /effect\.payload\s*->>\s*'message_id'/i);
+  assert.match(persist, /on conflict\s*\(\s*effect_id\s*\)\s+do nothing/i);
+  assert.match(sql, /alter table public\.support_message_email_envelopes enable row level security/i);
+  assert.match(sql, /revoke all on table public\.support_message_email_envelopes from public/i);
+  assert.match(sql, /revoke all on table public\.support_message_email_envelopes from anon, authenticated/i);
+  assert.doesNotMatch(sql, /grant\s+(?:select|insert|update|delete|all)[^;]*support_message_email_envelopes[^;]*to\s+(?:anon|authenticated)/i);
+  assert.match(sql, /revoke all on function public\.store_support_message_email_envelope\(uuid, text, jsonb\) from public/i);
+  assert.match(sql, /grant execute on function public\.store_support_message_email_envelope\(uuid, text, jsonb\) to service_role/i);
+});
+
+test('support email workers can claim only their requested support-message effect', () => {
+  const sql = supportDeliveryMigration();
+  const claim = sqlFunction(sql, 'claim_support_message_email_effect');
+
+  assert.match(claim, /p_message_id uuid[\s\S]*p_worker_id text[\s\S]*p_lease_seconds integer/i);
+  assert.match(claim, /event\.provider\s*=\s*'masest'[\s\S]*event\.environment_or_tenant\s*=\s*'production'[\s\S]*event\.provider_event_id\s*=\s*'support-message\/'\s*\|\|\s*p_message_id::text/i);
+  assert.match(claim, /effect\.event_id\s*=\s*v_event\.id[\s\S]*effect\.effect_key\s*=\s*'email-counterpart'/i);
+  assert.doesNotMatch(claim, /effect\.payload\s*->>/i);
+  assert.match(claim, /v_claimed\.effect_type\s*<>\s*'support_message_email'/i);
+  assert.match(claim, /for update skip locked/i);
+  assert.match(claim, /status\s*=\s*'processing'/i);
+  assert.match(claim, /lease_owner\s*=\s*p_worker_id/i);
+  assert.match(claim, /attempt_count\s*=\s*effect\.attempt_count\s*\+\s*1/i);
+  assert.match(sql, /revoke all on function public\.claim_support_message_email_effect\(uuid, text, integer\) from public/i);
+  assert.match(sql, /grant execute on function public\.claim_support_message_email_effect\(uuid, text, integer\) to service_role/i);
+});
+
+test('support delivery migration is rerunnable and never creates historical support-delivery work', () => {
+  const sql = supportDeliveryMigration();
+
+  assert.match(sql, /begin;[\s\S]*commit;/i);
+  assert.match(sql, /create or replace function public\.enqueue_support_message_email_effect/i);
+  assert.match(sql, /drop trigger if exists messages_support_message_email_after_insert/i);
+  assert.match(sql, /create unique index if not exists notifications_support_message_id_uniq/i);
+  assert.doesNotMatch(sql, /insert\s+into\s+public\.messages\b/i);
+  assert.doesNotMatch(
+    sql,
+    /insert\s+into\s+public\.(?:integration_events|integration_effects|support_message_email_envelopes)\b\s*(?:\([^;]*?\))?\s*select\b/i,
+  );
 });
 
 test('duplicate event collision compares deterministic provider identity but permits redelivery verification time', () => {

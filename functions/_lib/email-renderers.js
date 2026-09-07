@@ -109,17 +109,26 @@ export function renderSupportEmail({
   message = {},
   priorMessages = [],
   participant = {},
+  ticket = {},
   order = null,
   audience = 'buyer',
 } = {}) {
+  const supportTicket = ticket && typeof ticket === 'object' ? ticket : {};
   const orderReference = order?.id ? referenceOf(order) : '';
   const participantName = text(participant.name || 'Customer', 120) || 'Customer';
   const hasParent = Boolean(thread?.headers?.['In-Reply-To']);
-  const subjectBase = `MASEST support · ${participantName}${orderReference ? ` · Order ${orderReference}` : ''}`;
-  const subject = `${hasParent ? 'Re: ' : ''}${subjectBase}`;
+  const ticketNumber = text(supportTicket.display_number, 32);
+  const ticketSubject = text(supportTicket.subject, 200);
+  const subjectBase = ticketSubject
+    ? `MASEST support · ${ticketSubject}`
+    : `MASEST support · ${participantName}${orderReference ? ` · Order ${orderReference}` : ''}`;
+  const subject = `${hasParent ? 'Re: ' : ''}${ticketNumber ? `[${ticketNumber}] ` : ''}${subjectBase}`;
   const sender = supportSender(message, participant, audience);
   const timestamp = formatDate(message.created_at, true);
   const topic = text(thread.topic, 180);
+  const ticketLabel = ticketNumber
+    ? `Ticket [${ticketNumber}]${ticketSubject ? ` · ${ticketSubject}` : ''}`
+    : '';
   const previewText = `New reply from ${sender} — respond by email or continue online.`;
   const viewUrl = emailSafeUrl(thread.viewUrl);
   const orderUrl = emailSafeUrl(order?.viewUrl);
@@ -136,6 +145,7 @@ export function renderSupportEmail({
     + `<tr><td class="email-pad" style="padding:34px 28px 16px;font-family:Arial,sans-serif">
       <p style="margin:0 0 8px;color:#0a5b62;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase">New support reply</p>
       <h1 style="margin:0;color:#15171c;font-size:27px;line-height:1.18;letter-spacing:-.5px">New message from ${emailEscape(sender)}</h1>
+      ${ticketLabel ? `<p style="margin:10px 0 0;color:#5f656d;font-size:14px;line-height:1.55">${emailEscape(ticketLabel)}</p>` : ''}
       ${topic ? `<p style="margin:10px 0 0;color:#5f656d;font-size:14px;line-height:1.55">Re: ${emailEscape(topic)}</p>` : ''}
     </td></tr>
     <tr><td class="email-pad" style="padding:0 28px 18px;font-family:Arial,sans-serif">
@@ -161,6 +171,7 @@ export function renderSupportEmail({
     '',
     'NEW SUPPORT REPLY',
     `New message from ${sender}`,
+    ticketLabel,
     topic ? `Re: ${topic}` : '',
     '',
     `${sender}${timestamp ? ` · ${timestamp}` : ''}`,

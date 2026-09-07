@@ -25,6 +25,9 @@ const QUOTE_DUE_FILTERS = new Set(['overdue', 'upcoming', 'unscheduled']);
 
 function leadMutationResponse(result) {
   if (result.ok) return json(200, result);
+  if (String(result.error || '').includes('support_writes_paused')) {
+    return json(503, { error: 'support_writes_paused', retryable: true }, { 'Retry-After': '60' });
+  }
   return json(result.status || (result.storage_error ? 500 : 400), { error: result.error });
 }
 
@@ -135,17 +138,11 @@ async function postQuoteThreadHandoff({ env, sb, quote, companyId, text, actor }
       reopen: false,
     });
   } catch (error) {
+    if (error?.code === 'support_writes_paused'
+        || String(error?.message || '').includes('support_writes_paused')) throw error;
     return { posted: false, company_id: resolvedCompanyId, error: error.message };
   }
 
-  await sb.from('notifications').insert({
-    company_id: resolvedCompanyId,
-    user_id: recipientUserId,
-    type: 'message',
-    title: 'Quote follow-up posted',
-    body: `A MASEST quote follow-up from ${actor} is ready in your message thread.`,
-    link: '/dashboard.html#messages',
-  });
   return {
     posted: true,
     company_id: resolvedCompanyId,

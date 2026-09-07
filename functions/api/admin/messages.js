@@ -1,6 +1,4 @@
-// /api/admin/messages — staff side of canonical participant/company support threads.
-// GET → list · GET ?thread_id= (or legacy ?company_id=) → conversation
-// PATCH → lifecycle · POST → first message/reply through the shared publisher.
+// /api/admin/messages — staff ticket queue, exact-ticket transcript and mutations.
 import {
   adminClient,
   requireStaff,
@@ -16,13 +14,27 @@ import {
   messagePage,
   resolveSupportOrderId,
   resolveSupportRecipient,
-  SUPPORT_PAGE_SIZE,
-  supportOrderContextsById,
-  supportThreadListStatus,
-  supportThreadPatch,
 } from '../../_lib/support-messages.js';
+import {
+  decodeSupportCursor,
+  escapeSupportLike,
+  listSupportAssignees,
+  listSupportTickets,
+  normalizeSupportTicketCategory,
+  normalizeSupportTicketLimit,
+  normalizeSupportTicketPriority,
+  normalizeSupportTicketStatus,
+  normalizeSupportTicketSubject,
+  normalizeSupportTicketVersion,
+  projectAdminSupportTicket,
+  supportTicketById,
+  SUPPORT_TICKET_QUEUES,
+  updateSupportTicket,
+} from '../../_lib/support-tickets.js';
 
-const THREAD_SELECT = 'id,participant_user_id,company_id,status,completed_at,completed_by,last_message_at,last_message_body,last_sender_role,last_order_id';
+const THREAD_SELECT = 'id,participant_user_id,company_id,last_message_at,last_message_body,last_sender_role,last_order_id';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SEARCH_MAX = 120;
 
 async function hydrateThreads(sb, rows, { includeEmails = false } = {}) {
   const threads = rows || [];
@@ -78,8 +90,6 @@ async function loadThread(sb, { threadId = null, companyId = null } = {}) {
     company_name: company.name || null,
     company_status: company.status || null,
     scope: 'company',
-    status: 'open',
-    completed_at: null,
     participant: null,
   } : null;
 }
@@ -93,169 +103,264 @@ function threadResponse(thread, order = null) {
     participant_user_id: thread.participant_user_id || null,
     participant: thread.participant || null,
     scope: thread.scope,
-    status: thread.status || 'open',
-    completed_at: thread.completed_at || null,
     order_scope: order,
   };
 }
 
-export async function onRequest({ request, env }) {
-  const { user, staff, role } = await requireStaff(request, env);
+function invalidUuid(value) {
+  return value !== null && value !== undefined && value !== '' && !UUID.test(String(value));
+}
+
+function hasUnexpectedParams(params, allowed) {
+  return [...params.keys()].some((key) => !allowed.has(key));
+}
+
+function parseQueueParams(params, staffId) {
+  const queue = String(params.get('queue') || 'needs_reply').trim();
+  if (!SUPPORT_TICKET_QUEUES.includes(queue) || queue === 'active') return { error: 'invalid_queue' };
+  const statusValue = params.get('status');
+  const status = statusValue === null ? null : normalizeSupportTicketStatus(statusValue);
+  if (statusValue !== null && !status) return { error: 'invalid_status' };
+  const priorityValue = params.get('priority');
+  const priority = priorityValue === null ? null : normalizeSupportTicketPriority(priorityValue);
+  if (priorityValue !== null && !priority) return { error: 'invalid_priority' };
+  const categoryValue = params.get('category');
+  const category = categoryValue === null ? null : normalizeSupportTicketCategory(categoryValue);
+  if (categoryValue !== null && !category) return { error: 'invalid_category' };
+  const limit = normalizeSupportTicketLimit(params.get('limit'), 50);
+  if (!limit) return { error: 'invalid_limit' };
+  const cursor = String(params.get('cursor') || '').trim() || null;
+  if (cursor && !decodeSupportCursor(cursor, { kind: 'ticket' })) return { error: 'invalid_cursor' };
+  const companyId = String(params.get('company_id') || '').trim() || null;
+  const orderId = String(params.get('order_id') || '').trim() || null;
+  if (invalidUuid(companyId)) return { error: 'invalid_company_id' };
+  if (invalidUuid(orderId)) return { error: 'invalid_order_id' };
+  const rawSearch = String(params.get('search') || '').trim();
+  if (rawSearch.length > SEARCH_MAX || /[\u0000-\u001f\u007f]/u.test(rawSearch)) return { error: 'invalid_search' };
+  const rawAssignee = String(params.get('assignee') || '').trim() || null;
+  let assigneeMode = null;
+  let assigneeId = null;
+  if (rawAssignee === 'mine') assigneeMode = 'mine';
+  else if (rawAssignee === 'unassigned') assigneeMode = 'unassigned';
+  else if (rawAssignee && UUID.test(rawAssignee)) {
+    assigneeMode = 'staff';
+    assigneeId = rawAssignee;
+  } else if (rawAssignee) return { error: 'invalid_assignee' };
+  return {
+    queue,
+    status,
+    priority,
+    category,
+    limit,
+    cursor,
+    companyId,
+    orderId,
+    search: rawSearch ? escapeSupportLike(rawSearch) : null,
+    assigneeMode,
+    assigneeId,
+    staffId,
+  };
+}
+
+function messageCursorFilter(cursor) {
+  return `created_at.lt.${cursor.timestamp},and(created_at.eq.${cursor.timestamp},id.lt.${cursor.id})`;
+}
+
+export async function handleAdminMessages({ request, env }, dependencies = {}) {
+  const getStaffContext = dependencies.requireStaff || requireStaff;
+  const getAdminClient = dependencies.adminClient || adminClient;
+  const parseBody = dependencies.readBody || readBody;
+  const publishMessage = dependencies.publishSupportMessage || publishSupportMessage;
+  const findTicket = dependencies.supportTicketById || supportTicketById;
+  const patchTicket = dependencies.updateSupportTicket || updateSupportTicket;
+  const getThread = dependencies.loadThread || loadThread;
+  const getRecipient = dependencies.resolveSupportRecipient || resolveSupportRecipient;
+  const listTickets = dependencies.listSupportTickets || listSupportTickets;
+  const listAssignees = dependencies.listSupportAssignees || listSupportAssignees;
+
+  const { user, staff, role } = await getStaffContext(request, env);
   if (!user) return json(401, { error: 'unauthenticated' });
   if (!staff) return json(403, { error: 'forbidden' });
-  const sb = adminClient(env);
+  const sb = getAdminClient(env);
 
   if (request.method === 'GET') {
     const params = new URL(request.url).searchParams;
-    const threadId = String(params.get('thread_id') || '').trim() || null;
-    const companyId = String(params.get('company_id') || '').trim() || null;
-    if (threadId || companyId) {
+    const view = String(params.get('view') || '').trim() || null;
+    const ticketId = String(params.get('ticket_id') || '').trim() || null;
+    const summaryOnly = params.get('summary') === '1';
+    const modeCount = Number(Boolean(view)) + Number(Boolean(ticketId)) + Number(summaryOnly);
+    if (modeCount > 1) return json(400, { error: 'invalid_query_mode' });
+
+    if (view) {
+      if (view !== 'assignees' || hasUnexpectedParams(params, new Set(['view']))) {
+        return json(400, { error: 'invalid_view' });
+      }
+      try {
+        return json(200, { assignees: await listAssignees(sb) });
+      } catch (error) {
+        return internalServerError('admin.messages.assignees', error);
+      }
+    }
+
+    if (ticketId) {
+      const allowed = new Set(['ticket_id', 'message_cursor', 'limit', 'order_id', 'peek']);
+      if (!UUID.test(ticketId) || hasUnexpectedParams(params, allowed)) {
+        return json(400, { error: 'invalid_ticket_query' });
+      }
+      const limit = normalizeSupportTicketLimit(params.get('limit'), 100);
+      const cursorValue = String(params.get('message_cursor') || '').trim() || null;
+      const cursor = cursorValue ? decodeSupportCursor(cursorValue, { kind: 'message' }) : null;
+      if (!limit) return json(400, { error: 'invalid_limit' });
+      if (cursorValue && !cursor) return json(400, { error: 'invalid_message_cursor' });
+      let ticket;
       let thread;
-      try { thread = await loadThread(sb, { threadId, companyId }); }
-      catch (error) { return internalServerError('admin.messages.thread_context', error); }
-      if (!thread) return json(404, { error: 'thread_not_found' });
-      const before = params.get('before');
+      try {
+        ticket = await findTicket(sb, ticketId);
+        if (!ticket) return json(404, { error: 'ticket_not_found' });
+        thread = await getThread(sb, { threadId: ticket.thread_id });
+      } catch (error) {
+        return internalServerError('admin.messages.ticket_context', error);
+      }
+      if (!thread) return json(404, { error: 'ticket_not_found' });
       const orderContext = await resolveSupportOrderId(sb, {
         orderId: params.get('order_id'),
         companyId: thread.company_id,
         userId: thread.participant_user_id,
       });
       if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
-
-      let rows = [];
-      if (thread.id) {
-        let query = sb.from('messages')
-          .select('id,thread_id,sender_role,user_id,recipient_user_id,body,order_id,created_at,read_by_staff,source,external_message_id,email_delivery_id,email_message_id,email_references')
-          .eq('thread_id', thread.id)
-          .order('created_at', { ascending: false })
-          .limit(SUPPORT_PAGE_SIZE + 1);
-        if (orderContext.orderId) query = query.eq('order_id', orderContext.orderId);
-        if (before) query = query.lt('created_at', before);
-        const result = await query;
-        if (result.error) return internalServerError('admin.messages.thread_read', result.error);
-        rows = result.data || [];
-        let readQuery = sb.from('messages').update({ read_by_staff: true })
-          .eq('thread_id', thread.id).eq('sender_role', 'buyer').eq('read_by_staff', false);
-        if (orderContext.orderId) readQuery = readQuery.eq('order_id', orderContext.orderId);
-        await readQuery;
+      let query = sb.from('messages')
+        .select('id,thread_id,ticket_id,sender_role,user_id,recipient_user_id,body,order_id,created_at,read_by_staff,source,external_message_id,email_delivery_id,email_message_id,email_references')
+        .eq('ticket_id', ticket.id)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1);
+      if (cursor) query = query.or(messageCursorFilter(cursor));
+      const result = await query;
+      if (result.error) return internalServerError('admin.messages.ticket_read', result.error);
+      if (params.get('peek') !== '1') {
+        await sb.from('messages').update({ read_by_staff: true })
+          .eq('ticket_id', ticket.id).eq('sender_role', 'buyer').eq('read_by_staff', false);
       }
-
       try {
-        const page = messagePage(rows, SUPPORT_PAGE_SIZE);
+        const page = messagePage(result.data || [], limit);
         page.messages = await hydrateSupportOrderContexts(sb, page.messages);
-        page.messages = page.messages.map((message) => ({ ...message, participant: thread.participant }));
         return json(200, {
-          ...page,
+          ticket: projectAdminSupportTicket(ticket),
           thread: threadResponse(thread, orderContext.order || null),
+          ...page,
+          order_scope: orderContext.order || null,
         });
       } catch (error) {
         return internalServerError('admin.messages.order_context', error);
       }
     }
 
-    if (params.get('summary') === '1') {
-      const openThreads = sb.from('support_threads')
-        .select('id', { count: 'exact', head: true })
-        .not('last_message_at', 'is', null)
-        .neq('status', 'complete');
-      const unansweredThreads = sb.from('support_threads')
-        .select('id', { count: 'exact', head: true })
-        .not('last_message_at', 'is', null)
-        .neq('status', 'complete')
-        .eq('last_sender_role', 'buyer');
-      const [openResult, unansweredResult] = await Promise.all([openThreads, unansweredThreads]);
-      if (openResult.error) return internalServerError('admin.messages.summary_open', openResult.error);
-      if (unansweredResult.error) return internalServerError('admin.messages.summary_unanswered', unansweredResult.error);
-      return json(200, { summary: { open: openResult.count || 0, unanswered: unansweredResult.count || 0 } });
-    }
-
-    const listStatus = supportThreadListStatus(params.get('status'));
-    if (!listStatus) return json(400, { error: 'invalid_status' });
-    let query = sb.from('support_threads')
-      .select(THREAD_SELECT)
-      .not('last_message_at', 'is', null);
-    query = listStatus === 'complete' ? query.eq('status', 'complete') : query.neq('status', 'complete');
-    const { data, error } = await query.order('last_message_at', { ascending: false }).limit(500);
-    if (error) return internalServerError('admin.messages.thread_list', error);
-    let hydrated;
-    let orderContexts;
+    const allowed = new Set([
+      'summary', 'queue', 'status', 'assignee', 'priority', 'category', 'search',
+      'company_id', 'order_id', 'limit', 'cursor',
+    ]);
+    if (hasUnexpectedParams(params, allowed)) return json(400, { error: 'invalid_queue_query' });
+    const listParams = parseQueueParams(params, user.id);
+    if (listParams.error) return json(400, { error: listParams.error });
     try {
-      hydrated = await hydrateThreads(sb, data || []);
-      orderContexts = await supportOrderContextsById(sb, hydrated.map((thread) => thread.last_order_id));
-    } catch (contextError) {
-      return internalServerError('admin.messages.thread_context', contextError);
+      const page = await listTickets(sb, { ...listParams, projection: 'admin' });
+      return summaryOnly ? json(200, { summary: page.summary }) : json(200, page);
+    } catch (error) {
+      if (String(error?.message || '').includes('invalid_ticket_cursor')) {
+        return json(400, { error: 'invalid_cursor' });
+      }
+      return internalServerError('admin.messages.ticket_list', error);
     }
-    const threads = hydrated.map((thread) => ({
-      thread_id: thread.id,
-      company_id: thread.company_id || null,
-      company_name: thread.company_name || null,
-      participant_user_id: thread.participant_user_id || null,
-      participant: thread.participant,
-      scope: thread.scope,
-      last_body: thread.last_message_body || '',
-      last_at: thread.last_message_at,
-      status: thread.status || 'open',
-      completed_at: thread.completed_at || null,
-      unanswered: listStatus !== 'complete' && thread.last_sender_role === 'buyer',
-      order: thread.last_order_id ? orderContexts.get(thread.last_order_id) || null : null,
-    }));
-    return json(200, {
-      threads,
-      summary: listStatus === 'complete'
-        ? { resolved: threads.length }
-        : { open: threads.length, unanswered: threads.filter((thread) => thread.unanswered).length },
-    });
   }
 
   if (request.method === 'PATCH') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
-    const body = await readBody(request);
-    let threadId = String(body.thread_id || '').trim() || null;
-    if (!threadId && body.company_id) {
-      try { threadId = (await loadThread(sb, { companyId: String(body.company_id) }))?.id || null; }
-      catch (error) { return internalServerError('admin.messages.status_context', error); }
+    const body = await parseBody(request);
+    const ticketId = String(body.ticket_id || '').trim();
+    const expectedVersion = normalizeSupportTicketVersion(body.version);
+    if (!UUID.test(ticketId)) return json(400, { error: 'ticket_id_required' });
+    if (!expectedVersion) return json(400, { error: 'ticket_version_required' });
+    const status = body.status === undefined ? null : normalizeSupportTicketStatus(body.status);
+    const priority = body.priority === undefined ? null : normalizeSupportTicketPriority(body.priority);
+    const category = body.category === undefined ? null : normalizeSupportTicketCategory(body.category);
+    const assignmentProvided = Object.hasOwn(body, 'assigned_to');
+    const assignedTo = assignmentProvided && body.assigned_to !== null
+      ? String(body.assigned_to || '').trim()
+      : null;
+    if (body.status !== undefined && !status) return json(400, { error: 'invalid_status' });
+    if (body.priority !== undefined && !priority) return json(400, { error: 'invalid_priority' });
+    if (body.category !== undefined && !category) return json(400, { error: 'invalid_category' });
+    if (assignmentProvided && assignedTo !== null && !UUID.test(assignedTo)) {
+      return json(400, { error: 'invalid_assignee' });
     }
-    if (!threadId) return json(400, { error: 'thread_id_required' });
-    const patch = supportThreadPatch(body.status, user.id);
-    if (!patch) return json(400, { error: 'invalid_status' });
-    const { data, error } = await sb.from('support_threads').update(patch)
-      .eq('id', threadId).select('id,status').maybeSingle();
-    if (error) return internalServerError('admin.messages.status_update', error);
-    if (!data) return json(404, { error: 'thread_not_found' });
-    return json(200, { thread_id: data.id, status: data.status });
+    if (status === null && priority === null && category === null && !assignmentProvided) {
+      return json(400, { error: 'ticket_update_required' });
+    }
+    try {
+      const ticket = await patchTicket(sb, {
+        ticketId,
+        expectedVersion,
+        actorId: user.id,
+        status,
+        priority,
+        category,
+        assignedTo,
+        assignmentProvided,
+      });
+      return json(200, { ticket_id: ticket.id, ticket });
+    } catch (error) {
+      const message = String(error?.message || '');
+      if (message.includes('ticket_version_conflict')) return json(409, { error: 'ticket_version_conflict' });
+      if (message.includes('support_ticket_not_found')) return json(404, { error: 'ticket_not_found' });
+      if (message.includes('support_ticket_assignee_ineligible')) return json(400, { error: 'invalid_assignee' });
+      return internalServerError('admin.messages.ticket_update', error);
+    }
   }
 
   if (request.method === 'POST') {
     if (!staffCanWrite(role)) return json(403, { error: 'forbidden', message: 'Read-only staff cannot make changes.' });
-    const body = await readBody(request);
+    const body = await parseBody(request);
+    const action = String(body.action || '').trim();
+    if (!['reply', 'start_ticket'].includes(action)) return json(400, { error: 'invalid_action' });
     const text = String(body.body || '').trim();
     if (!text) return json(400, { error: 'empty_message' });
     if (text.length > 4000) return json(400, { error: 'message_too_long' });
-    const requestedThreadId = String(body.thread_id || '').trim() || null;
-    const requestedCompanyId = String(body.company_id || '').trim() || null;
-    const explicitRecipientId = String(body.recipient_user_id || '').trim() || null;
-    if (body.start_thread === true && !explicitRecipientId) {
-      return json(400, { error: 'recipient_user_id_required' });
+    const requestedTicketId = String(body.ticket_id || '').trim() || null;
+    if (action === 'start_ticket' && (requestedTicketId || body.thread_id || body.start_thread)) {
+      return json(400, { error: 'invalid_ticket_action' });
     }
 
+    let ticket = null;
     let thread = null;
-    if (requestedThreadId) {
-      try { thread = await loadThread(sb, { threadId: requestedThreadId }); }
-      catch (error) { return internalServerError('admin.messages.thread_context', error); }
-      if (!thread) return json(404, { error: 'thread_not_found' });
-    }
-
     let recipient = null;
-    const recipientUserId = thread?.participant_user_id || explicitRecipientId || null;
-    let companyId = thread?.company_id || requestedCompanyId || null;
-    if (!recipientUserId) return json(400, { error: 'recipient_user_id_required' });
-    try {
-      recipient = await resolveSupportRecipient(sb, { companyId, userId: recipientUserId });
-    } catch (error) {
-      return internalServerError('admin.messages.recipient_read', error);
+    let recipientUserId = null;
+    let companyId = null;
+    let expectedTicketVersion = null;
+    if (action === 'reply') {
+      expectedTicketVersion = normalizeSupportTicketVersion(body.version);
+      if (!requestedTicketId || !UUID.test(requestedTicketId)) return json(400, { error: 'ticket_id_required' });
+      if (!expectedTicketVersion) return json(400, { error: 'ticket_version_required' });
+      try {
+        ticket = await findTicket(sb, requestedTicketId);
+        if (!ticket) return json(404, { error: 'ticket_not_found' });
+        thread = await getThread(sb, { threadId: ticket.thread_id });
+      } catch (error) {
+        return internalServerError('admin.messages.ticket_context', error);
+      }
+      if (!thread) return json(404, { error: 'ticket_not_found' });
+      recipientUserId = thread.participant_user_id || null;
+      companyId = thread.company_id || null;
+    } else {
+      recipientUserId = String(body.recipient_user_id || '').trim();
+      if (!UUID.test(recipientUserId)) return json(400, { error: 'recipient_user_id_required' });
+      try {
+        recipient = await getRecipient(sb, { userId: recipientUserId });
+      } catch (error) {
+        return internalServerError('admin.messages.recipient_read', error);
+      }
+      if (!recipient) return json(404, { error: 'recipient_not_found' });
+      companyId = recipient.company_id || null;
     }
-    if (!recipient) return json(404, { error: 'recipient_not_found' });
-    companyId = recipient.company_id || null;
 
     const orderContext = await resolveSupportOrderId(sb, {
       orderId: body.order_id,
@@ -263,52 +368,79 @@ export async function onRequest({ request, env }) {
       userId: recipientUserId,
     });
     if (!orderContext.ok) return json(orderContext.status, { error: orderContext.error });
+    if (ticket?.primary_order_id && orderContext.orderId
+      && ticket.primary_order_id !== orderContext.orderId) {
+      return json(404, { error: 'ticket_not_found' });
+    }
+    const subject = action === 'start_ticket'
+      ? normalizeSupportTicketSubject(body.subject, text)
+      : ticket.subject;
+    if (!subject) return json(400, { error: 'invalid_ticket_subject' });
+    const category = action === 'start_ticket'
+      ? normalizeSupportTicketCategory(body.category === undefined ? 'general' : body.category)
+      : ticket.category;
+    if (!category) return json(400, { error: 'invalid_ticket_category' });
 
-    let publication;
     try {
-      publication = await publishSupportMessage({
+      const publication = await publishMessage({
         ...env,
         APP_URL: env.APP_URL || new URL(request.url).origin,
       }, sb, {
         companyId,
         recipientUserId,
         threadUserId: recipientUserId,
+        threadId: thread?.id || null,
+        ticketId: ticket?.id || null,
         senderRole: 'staff',
         body: text,
         orderId: orderContext.orderId,
         source: 'admin',
-        reopen: body.start_thread === true,
+        subject,
+        category,
+        startTicket: action === 'start_ticket',
+        expectedTicketVersion,
+      });
+      const { message: data, emailDelivery } = publication;
+      return json(201, {
+        id: data.id,
+        thread_id: data.thread_id,
+        ticket_id: data.ticket_id,
+        ticket: data.ticket ? projectAdminSupportTicket(data.ticket) : null,
+        created_at: data.created_at,
+        order_id: data.order_id || null,
+        recipient_user_id: data.recipient_user_id || recipientUserId,
+        email_delivery: emailDelivery,
+        summary_synced: true,
       });
     } catch (error) {
+      if (error?.code === 'support_writes_paused'
+          || String(error?.message || '').includes('support_writes_paused')) {
+        return json(503, { error: 'support_writes_paused', retryable: true }, { 'Retry-After': '60' });
+      }
       if (error?.code === 'durable_email_effects_not_ready') {
         return json(503, { error: 'durable_email_effects_not_ready', retryable: true });
       }
+      const message = String(error?.message || '');
+      if (message.includes('support_ticket_routing_not_enabled')) {
+        return json(409, { error: 'support_ticket_routing_not_enabled' });
+      }
+      if (message.includes('ticket_version_conflict')) return json(409, { error: 'ticket_version_conflict' });
+      if (message.includes('support_ticket_reply_resolved')) return json(409, { error: 'ticket_resolved' });
       return internalServerError('admin.messages.reply_insert', error);
     }
-    const { message: data, emailDelivery } = publication;
-    const messageLink = orderContext.orderId
-      ? `/dashboard.html?order=${encodeURIComponent(orderContext.orderId)}#messages`
-      : '/dashboard.html#messages';
-    if (companyId && recipientUserId) {
-      await sb.from('notifications').insert({
-        company_id: companyId,
-        user_id: recipientUserId,
-        type: 'message',
-        title: 'New message from MASEST',
-        body: text.slice(0, 140),
-        link: messageLink,
-      }).then(() => {}, () => {});
-    }
-    return json(201, {
-      id: data.id,
-      thread_id: data.thread_id,
-      created_at: data.created_at,
-      order_id: data.order_id || null,
-      recipient_user_id: data.recipient_user_id || recipientUserId,
-      email_delivery: emailDelivery,
-      summary_synced: true,
-    });
   }
 
   return json(405, { error: 'method_not_allowed' });
+}
+
+export function createAdminMessagesHandler(dependencies = {}) {
+  return (context) => handleAdminMessages(context, dependencies);
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  const staffContext = await requireStaff(request, env);
+  return handleAdminMessages(context, {
+    requireStaff: async () => staffContext,
+  });
 }
