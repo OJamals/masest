@@ -170,3 +170,80 @@ test('account user detail starts the canonical support composer for that user', 
   assert.match(support, /openNewChat:\s*async\s*\(\{\s*userId\s*=\s*null,\s*orderId:\s*requestedOrderId\s*=\s*null\s*\}\s*=\s*\{\}\)/,
     'the shared console should own direct composer opening');
 });
+
+test('support density moves secondary filters into an accessible popover without losing queue context', () => {
+  const source = read('js/admin-support.js');
+  const trigger = source.match(/<button[^>]+data-support-filters-toggle[^>]*>/)?.[0] || '';
+  assert.ok(trigger, 'the list pane should expose one Filters trigger');
+  assert.match(trigger, /aria-expanded=/, 'the Filters trigger must expose expanded state');
+  const controlsId = trigger.match(/aria-controls=["']([^"']+)["']/)?.[1];
+  assert.ok(controlsId, 'the Filters trigger must identify its controlled popover');
+  const popover = source.match(new RegExp(`<[^>]*(?:(?:id=["']${controlsId}["'][^>]*data-support-filters)|(?:data-support-filters[^>]*id=["']${controlsId}["']))[^>]*>[\\s\\S]*?</[^>]+>`))?.[0] || '';
+  assert.ok(popover, 'the Filters trigger must control a filters popover');
+  for (const field of ['priority', 'category', 'assignee']) {
+    assert.match(popover, new RegExp(`label[^>]*>[\\s\\S]*?select[^>]+data-support-${field}`),
+      `${field} must remain a native labeled select inside the popover`);
+  }
+  const clearBlock = source.match(/data-support-filters-clear[\\s\\S]{0,1800}/)?.[0] || '';
+  assert.ok(clearBlock, 'the popover needs a Clear filters action');
+  assert.match(clearBlock, /priority\.value\s*=\s*["']["']/);
+  assert.match(clearBlock, /category\.value\s*=\s*["']["']/);
+  assert.match(clearBlock, /assignee\.value\s*=\s*["']["']/);
+  assert.doesNotMatch(clearBlock, /queue\s*=\s*["']/,
+    'clearing filters must preserve the selected queue');
+  assert.doesNotMatch(clearBlock, /search\.value\s*=\s*["']/,
+    'clearing filters must preserve the current search');
+  assert.doesNotMatch(clearBlock, /orderId\s*=\s*null/,
+    'clearing filters must preserve the order-scoped context');
+});
+
+test('ticket properties have one accessible overlay owner and readable list markers', () => {
+  const source = read('js/admin-support.js');
+  const propertyTriggers = source.match(/data-support-properties-toggle/g) || [];
+  assert.equal(propertyTriggers.length, 1, 'the detail pane should have one Properties overlay trigger');
+  const trigger = source.match(/<button[^>]+data-support-properties-toggle[^>]*>/)?.[0] || '';
+  assert.match(trigger, /aria-expanded=/);
+  const controlsId = trigger.match(/aria-controls=["']([^"']+)["']/)?.[1];
+  assert.ok(controlsId, 'Properties must identify its controlled overlay');
+  const panel = source.match(new RegExp(`<[^>]*(?:(?:id=["']${controlsId}["'][^>]*data-support-properties)|(?:data-support-properties[^>]*id=["']${controlsId}["']))[^>]*>[\\s\\S]*?</[^>]+>`))?.[0] || '';
+  assert.ok(panel, 'the Properties trigger must own a single overlay panel');
+  for (const field of ['status', 'priority', 'category', 'assigned_to']) {
+    assert.match(panel, new RegExp(`select[^>]+data-ticket-field=["']${field}["']`),
+      `${field} must be edited by the Properties overlay owner`);
+  }
+  assert.match(source, /data-support-ticket-status/, 'ticket rows need a readable status marker');
+  assert.match(source, /data-support-ticket-assignee/, 'ticket rows need a readable assignment marker');
+});
+
+test('support overlays dismiss topmost-first, restore focus, and invalidate stale lifecycle work', () => {
+  const source = read('js/admin-support.js');
+  const escapeBlock = source.match(/document\.addEventListener\(["']keydown["'][\s\S]*?\}\);/)?.[0] || '';
+  assert.match(escapeBlock, /filters|filter/i, 'Escape must consider an open Filters popover first');
+  assert.match(escapeBlock, /properties|property/i, 'Escape must consider an open Properties overlay before the drawer');
+  assert.match(escapeBlock, /filter[^\n]*focus\(\)|focus\(\)[^\n]*filter/i,
+    'closing Filters must restore focus to its trigger');
+  assert.match(escapeBlock, /propert[^\n]*focus\(\)|focus\(\)[^\n]*propert/i,
+    'closing Properties must restore focus to its trigger');
+  assert.match(escapeBlock, /(?:detailRequest|listRequest|AbortController|generation)/,
+    'overlay dismissal must invalidate or abort stale lifecycle work');
+});
+
+test('read-only staff get readable properties but no mutation affordances', () => {
+  const source = read('js/admin-support.js');
+  const propertyTrigger = source.match(/canWrite\s*\?[\s\S]{0,1200}data-support-properties-toggle/)?.[0] || '';
+  assert.ok(propertyTrigger, 'the Properties trigger must be capability-gated');
+  const controlsBlock = source.match(/if\s*\(canWrite\)[\s\S]{0,1800}data-ticket-field/)?.[0] || '';
+  assert.ok(controlsBlock, 'editable ticket properties must stay behind the write capability');
+  assert.match(source, /read-only access/i, 'read-only staff should receive an explicit read-only notice');
+  assert.doesNotMatch(propertyTrigger, /PATCH|patchTicket/, 'read-only Properties must not wire mutation controls');
+});
+
+test('rapid property edits use a pending identity or serialized patch lane', () => {
+  const source = read('js/admin-support.js');
+  const patchSource = source.match(/const patchTicket = async[\s\S]*?\n\s*\};/)?.[0] || '';
+  assert.ok(patchSource, 'ticket property updates should have one canonical patch function');
+  assert.match(patchSource, /pending(?:Property|Patch)|property(?:Patch|Request)(?:Id|Seq|Generation)|patch(?:Id|Seq|Generation)/i,
+    'property edits need a per-property pending identity or serialized lane');
+  assert.match(patchSource, /(?:pending|request|generation)[\s\S]{0,260}(?:!==|===)[\s\S]{0,260}return/,
+    'late property responses must be ignored when a newer edit supersedes them');
+});
