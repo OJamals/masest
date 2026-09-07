@@ -80,9 +80,9 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     canWrite ? '<button type="button" data-support-new-ticket aria-label="New ticket"><i class="ph ph-plus" aria-hidden="true"></i></button>' : "",
     '<button type="button" data-support-settings-toggle aria-label="Support settings"><i class="ph ph-gear" aria-hidden="true"></i></button></div></header>',
     '<div class="site-support__queues" role="tablist" aria-label="Ticket queues"><button type="button" role="tab" data-support-queue="needs_reply" aria-selected="true">Needs reply</button><button type="button" role="tab" data-support-queue="mine" aria-selected="false">Mine</button><button type="button" role="tab" data-support-queue="unassigned" aria-selected="false">Unassigned</button><button type="button" role="tab" data-support-queue="waiting" aria-selected="false">Waiting</button><button type="button" role="tab" data-support-queue="resolved" aria-selected="false">Resolved</button></div>',
-    '<div class="site-support__filters"><label class="search-field" for="siteSupportSearch"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><span class="sr-only">Search tickets</span><input id="siteSupportSearch" name="search" type="search" autocomplete="off" placeholder="Search ticket, customer, order…" maxlength="120"></label><label>Priority<select name="priority" data-support-priority><option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option></select></label><label>Category<select name="category" data-support-category><option value="">All categories</option><option value="general">General</option><option value="product">Product</option><option value="order">Order</option><option value="shipping">Shipping</option><option value="billing">Billing</option><option value="account">Account</option><option value="technical">Technical</option></select></label><label>Assignee<select name="assignee" data-support-assignee><option value="">All assignees</option><option value="mine">Mine</option><option value="unassigned">Unassigned</option></select></label></div>',
+    '<div class="site-support__filters"><label class="search-field" for="siteSupportSearch"><i class="ph ph-magnifying-glass" aria-hidden="true"></i><span class="sr-only">Search tickets</span><input id="siteSupportSearch" name="search" type="search" autocomplete="off" placeholder="Search ticket, customer, order…" maxlength="120"></label><button type="button" class="site-support__popover-trigger" data-support-filters-toggle aria-expanded="false" aria-controls="siteSupportFilters" aria-haspopup="dialog"><i class="ph ph-funnel" aria-hidden="true"></i><span>Filters</span><b data-support-filter-count hidden>0</b></button><div id="siteSupportFilters" class="site-support__popover site-support__filter-popover" data-support-filters role="dialog" aria-label="Ticket filters" hidden><label>Priority<select name="priority" data-support-priority><option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option></select></label><label>Category<select name="category" data-support-category><option value="">All categories</option><option value="general">General</option><option value="product">Product</option><option value="order">Order</option><option value="shipping">Shipping</option><option value="billing">Billing</option><option value="account">Account</option><option value="technical">Technical</option></select></label><label>Assignee<select name="assignee" data-support-assignee><option value="">All assignees</option><option value="mine">Mine</option><option value="unassigned">Unassigned</option></select></label><button type="button" class="site-support__filters-clear" data-support-filters-clear>Clear filters</button></div></div>',
     '<p class="site-support__results" data-support-results role="status" aria-live="polite"></p><div class="site-support__tickets" data-support-tickets></div><button type="button" class="site-support__load-more" data-support-load-more hidden>Load more tickets</button></section>',
-    '<section class="site-support__detail"><header class="site-support__conversation-toolbar"><div><button type="button" data-support-back aria-label="Back to tickets" hidden><i class="ph ph-arrow-left" aria-hidden="true"></i></button><p data-support-view-label>Support tickets</p></div><button type="button" data-support-close aria-label="Close support menu"><i class="ph ph-x" aria-hidden="true"></i></button></header><div class="site-support__conversation-body" data-support-detail><div class="site-support__empty"><i class="ph ph-ticket" aria-hidden="true"></i><div><strong>No ticket selected</strong><p>Choose a ticket to review its conversation.</p></div></div></div><section class="site-support__settings" hidden><h3>Support settings</h3><label><input id="adminNotifySupportRequests" name="notify_admin_support_requests" type="checkbox" data-support-pref="notify_admin_support_requests"><span><b>New support requests</b><small>Email me when a buyer starts or reopens support.</small></span></label><label><input id="adminNotifyMessages" name="notify_admin_messages" type="checkbox" data-support-pref="notify_admin_messages"><span><b>Follow-up messages while away</b><small>Email me when a buyer follows up while I am away.</small></span></label><p data-support-settings-status role="status" aria-live="polite"></p></section></section></section>',
+    '<section class="site-support__detail"><header class="site-support__conversation-toolbar"><div class="site-support__toolbar-lead"><button type="button" data-support-back aria-label="Back to tickets" hidden><i class="ph ph-arrow-left" aria-hidden="true"></i></button><div class="site-support__ticket-head" data-support-ticket-head hidden><p data-support-ticket-number></p><h3 data-support-ticket-subject></h3><span><span data-support-ticket-person></span><a class="site-support__context" data-support-ticket-account href="" hidden>View account</a></span></div><p data-support-view-label>Support tickets</p></div><div class="site-support__ticket-actions"><button type="button" class="site-support__status-trigger" data-support-ticket-status hidden><i class="ph ph-circle" aria-hidden="true"></i><span data-support-ticket-status-label></span></button><button type="button" class="site-support__optional-action" data-support-ticket-assignee hidden></button><button type="button" class="site-support__optional-action" data-support-ticket-priority hidden></button><button type="button" class="site-support__properties-trigger" data-support-properties-toggle aria-label="Properties" aria-expanded="false" aria-controls="siteSupportProperties" aria-haspopup="dialog" hidden><i class="ph ph-sliders-horizontal" aria-hidden="true"></i><span>Properties</span></button><button type="button" data-support-close aria-label="Close support menu"><i class="ph ph-x" aria-hidden="true"></i></button></div><div id="siteSupportProperties" class="site-support__popover site-support__properties-popover" data-support-properties role="dialog" aria-label="Ticket properties" hidden></div></header><div class="site-support__conversation-body" data-support-detail><div class="site-support__empty"><i class="ph ph-ticket" aria-hidden="true"></i><div><strong>No ticket selected</strong><p>Choose a ticket to review its conversation.</p></div></div></div><section class="site-support__settings" hidden><h3>Support settings</h3><label><input id="adminNotifySupportRequests" name="notify_admin_support_requests" type="checkbox" data-support-pref="notify_admin_support_requests"><span><b>New support requests</b><small>Email me when a buyer starts or reopens support.</small></span></label><label><input id="adminNotifyMessages" name="notify_admin_messages" type="checkbox" data-support-pref="notify_admin_messages"><span><b>Follow-up messages while away</b><small>Email me when a buyer follows up while I am away.</small></span></label><p data-support-settings-status role="status" aria-live="polite"></p></section></section></section>',
     '<button class="site-support__launcher" type="button" title="Customer support" aria-label="Open support tickets" aria-expanded="false"><i class="ph ph-lifebuoy" aria-hidden="true"></i><span>Support</span><b data-support-count hidden>0</b></button>',
   ].join("");
   document.body.append(shell);
@@ -95,6 +95,9 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   const results = $("[data-support-results]");
   const counter = $("[data-support-count]");
   const search = $("#siteSupportSearch");
+  const filterToggle = $("[data-support-filters-toggle]");
+  const filtersPanel = $("[data-support-filters]");
+  const filterCount = $("[data-support-filter-count]");
   const priority = $("[data-support-priority]");
   const category = $("[data-support-category]");
   const assignee = $("[data-support-assignee]");
@@ -102,6 +105,17 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   const settings = $(".site-support__settings");
   const back = $("[data-support-back]");
   const viewLabel = $("[data-support-view-label]");
+  const ticketHead = $("[data-support-ticket-head]");
+  const ticketNumber = $("[data-support-ticket-number]");
+  const ticketSubject = $("[data-support-ticket-subject]");
+  const ticketPerson = $("[data-support-ticket-person]");
+  const ticketAccount = $("[data-support-ticket-account]");
+  const ticketStatus = $("[data-support-ticket-status]");
+  const ticketStatusLabel = $("[data-support-ticket-status-label]");
+  const ticketAssignee = $("[data-support-ticket-assignee]");
+  const ticketPriority = $("[data-support-ticket-priority]");
+  const propertiesToggle = $("[data-support-properties-toggle]");
+  const propertiesPanel = $("[data-support-properties]");
   const idOf = (ticket) => String(ticket?.id || ticket?.ticket_id || "");
   const numberOf = (ticket) => String(ticket?.display_number || (ticket?.ticket_number ? "MAS-" + String(ticket.ticket_number).padStart(6, "0") : "Support ticket"));
   const personOf = (ticket) => ticket?.thread?.participant?.full_name || ticket?.participant?.full_name || ticket?.participant?.name || ticket?.requester?.full_name || ticket?.customer_name || "Company support";
@@ -134,6 +148,67 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   let presenceOpen = false;
   let lastPresencePing = 0;
   let presenceRequest = Promise.resolve();
+  let activePopover = null;
+  let propertyPatchLane = Promise.resolve();
+  let pendingPropertyPatches = 0;
+  let propertyContextGeneration = 0;
+  let ticketContextReady = false;
+  let listScope = { companyId: null, orderId: null };
+
+  const humanize = (value) => String(value || "").replaceAll("_", " ");
+  const assigneeName = (value) => assignees.find((person) => person.id === value)?.name || assignees.find((person) => person.id === value)?.role || (value ? "Assigned" : "Unassigned");
+  const popoverParts = (kind) => kind === "filters"
+    ? { panel: filtersPanel, trigger: filterToggle }
+    : { panel: propertiesPanel, trigger: propertiesToggle };
+  const closeSupportPopover = ({ restoreFocus = false } = {}) => {
+    if (!activePopover) return false;
+    const { panel, trigger } = popoverParts(activePopover);
+    panel.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    activePopover = null;
+    if (restoreFocus && trigger.isConnected) requestAnimationFrame(() => trigger.focus());
+    return true;
+  };
+  const positionSupportPopover = (kind, panel, trigger) => {
+    const margin = 12;
+    const gap = 4;
+    const triggerRect = trigger.getBoundingClientRect();
+    const width = panel.offsetWidth;
+    const roomBelow = Math.max(0, window.innerHeight - margin - triggerRect.bottom - gap);
+    const roomAbove = Math.max(0, triggerRect.top - margin - gap);
+    const minimumUsefulHeight = Math.min(panel.scrollHeight, 176);
+    const useBelow = roomBelow >= minimumUsefulHeight || roomBelow >= roomAbove;
+    const height = Math.min(panel.scrollHeight, useBelow ? roomBelow : roomAbove);
+    const preferredLeft = kind === "filters" ? triggerRect.left : triggerRect.right - width;
+    panel.style.left = `${Math.max(margin, Math.min(preferredLeft, window.innerWidth - width - margin))}px`;
+    panel.style.top = `${useBelow ? triggerRect.bottom + gap : triggerRect.top - gap - height}px`;
+    panel.style.maxHeight = `${height}px`;
+  };
+  const openSupportPopover = (kind, { focusField = null } = {}) => {
+    const { panel, trigger } = popoverParts(kind);
+    if (kind === "properties" && !selected) return;
+    if (activePopover === kind && !panel.hidden) return void closeSupportPopover({ restoreFocus: true });
+    closeSupportPopover();
+    activePopover = kind;
+    panel.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    positionSupportPopover(kind, panel, trigger);
+    requestAnimationFrame(() => {
+      const target = focusField ? panel.querySelector(`[data-ticket-field="${focusField}"]`) : panel.querySelector("select, button, a, [tabindex]");
+      target?.focus();
+    });
+  };
+  const updateFilterCount = () => {
+    const count = [priority, category, assignee].filter((input) => input.value).length;
+    filterCount.hidden = count === 0;
+    filterCount.textContent = String(count);
+    filterToggle.setAttribute("aria-label", count ? `Filters, ${count} active` : "Filters");
+  };
+  const hideTicketChrome = () => {
+    closeSupportPopover();
+    ticketHead.hidden = true;
+    [ticketStatus, ticketAssignee, ticketPriority, propertiesToggle].forEach((node) => { node.hidden = true; });
+  };
 
   // Serialize transitions: a delayed open must settle before a later close is
   // sent, otherwise the server can retain an active inbox after the drawer is
@@ -149,17 +224,34 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   };
 
   const setView = (view) => {
+    closeSupportPopover();
+    if ((view === "settings" || view === "compose") && selected && ticketContextReady) {
+      propertyContextGeneration += 1;
+      ticketContextReady = false;
+    }
     drawer.dataset.view = view;
     settings.hidden = view !== "settings";
     detail.hidden = view === "settings";
     back.hidden = !(view === "settings" || view === "compose" || selected);
     viewLabel.textContent = view === "settings" ? "Support settings" : view === "compose" ? "New ticket" : selected ? "Ticket detail" : "Support tickets";
+    const showTicket = Boolean(selected) && view !== "settings" && view !== "compose";
+    viewLabel.hidden = showTicket;
+    ticketHead.hidden = !showTicket;
+    [ticketStatus, ticketAssignee, ticketPriority, propertiesToggle].forEach((node) => { node.hidden = !showTicket; });
     if (view === "settings") void loadSettings();
   };
   const setOpen = (open, focus = null) => {
+    if (!open) {
+      closeSupportPopover();
+      propertyContextGeneration += 1;
+      ticketContextReady = false;
+    }
     drawer.hidden = !open;
     launcher.setAttribute("aria-expanded", String(open));
-    if (open) { void setPresence(true); void poller?.refresh(); requestAnimationFrame(() => (focus || search).focus()); }
+    if (open) { void setPresence(true); void poller?.refresh();
+      if (selected && !ticketContextReady && !["settings", "compose"].includes(drawer.dataset.view)) void loadTicket(idOf(selected), { scopedOrderId: orderId });
+      requestAnimationFrame(() => (focus || search).focus());
+    }
     else { void setPresence(false); setView("queue"); launcher.focus(); }
   };
   const openLinkedContext = async (event, type, id) => {
@@ -181,6 +273,85 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     node.textContent = label;
     node.selected = value === (selectedValue || "");
     return node;
+  };
+  const propertyFields = [
+    ["Status", "status", ["open", "waiting_on_customer", "resolved"]],
+    ["Priority", "priority", ["normal", "high", "urgent"]],
+    ["Category", "category", ["general", "product", "order", "shipping", "billing", "account", "technical"]],
+    ["Assignee", "assigned_to", []],
+  ];
+  const propertyValue = (field) => field === "assigned_to" ? assigneeName(selected?.assigned_to) : humanize(selected?.[field]);
+  const renderProperties = () => {
+    propertiesPanel.replaceChildren();
+    if (!selected) return;
+    const subject = subjectOf(selected);
+    propertiesPanel.setAttribute("aria-label", `Ticket properties for ${subject}`);
+    const title = document.createElement("h4"); title.className = "site-support__properties-title"; title.textContent = subject;
+    propertiesPanel.append(title);
+    const scopedOrder = orderOf(selected);
+    if (scopedOrder) {
+      const order = document.createElement("a"); order.className = "site-support__order-scope"; order.href = scopedOrder.admin_url || root + "admin.html?order=" + encodeURIComponent(scopedOrder.id) + "#orders"; order.textContent = "Order " + (scopedOrder.reference || scopedOrder.order_number || scopedOrder.id); order.dataset.supportOrderId = scopedOrder.id;
+      order.addEventListener("click", (event) => void openLinkedContext(event, "order", scopedOrder.id));
+      propertiesPanel.append(order);
+    }
+    if (!canWrite) {
+      const values = document.createElement("dl");
+      values.className = "site-support__property-values";
+      propertyFields.forEach(([label, field]) => {
+        const term = document.createElement("dt"); term.textContent = label;
+        const value = document.createElement("dd"); value.textContent = propertyValue(field) || "Not set";
+        values.append(term, value);
+      });
+      const notice = document.createElement("p"); notice.className = "site-support__notice"; notice.textContent = "Your staff role has read-only access.";
+      propertiesPanel.append(values, notice);
+      return;
+    }
+    propertyFields.forEach(([label, field, values]) => {
+      const node = document.createElement("label"); node.textContent = label;
+      const select = document.createElement("select"); select.dataset.ticketField = field;
+      if (field === "assigned_to") {
+        select.append(option("Unassigned", "", selected.assigned_to));
+        assignees.forEach((person) => select.append(option(person.name || person.role || "Staff", person.id, selected.assigned_to)));
+      } else values.forEach((value) => select.append(option(humanize(value), value, selected[field])));
+      select.addEventListener("change", () => void patchTicket(field, select.value || null));
+      node.append(select); propertiesPanel.append(node);
+    });
+  };
+  const syncPropertyValues = () => {
+    propertiesPanel.querySelectorAll("[data-ticket-field]").forEach((select) => {
+      const field = select.dataset.ticketField;
+      select.value = selected?.[field] || "";
+    });
+  };
+  const syncTicketHeader = ({ rebuildProperties = true } = {}) => {
+    if (!selected) return;
+    const subject = subjectOf(selected);
+    ticketHead.hidden = false;
+    ticketNumber.textContent = numberOf(selected);
+    ticketSubject.textContent = subject;
+    ticketSubject.title = subject;
+    const company = companyOf(selected);
+    ticketPerson.textContent = personOf(selected) + (company ? " · " + company : "");
+    const companyId = selected.thread?.company_id || selected.company?.id || selected.company_id || null;
+    ticketAccount.hidden = !companyId;
+    if (companyId) {
+      ticketAccount.href = root + "admin.html#companies";
+      ticketAccount.dataset.supportContext = "company";
+      ticketAccount.dataset.contextId = companyId;
+    }
+    ticketStatus.hidden = false;
+    const statusText = `Status: ${humanize(selected.status || "open")}`;
+    ticketStatus.setAttribute("aria-label", statusText);
+    ticketStatusLabel.textContent = humanize(selected.status || "open");
+    ticketAssignee.hidden = false;
+    ticketAssignee.textContent = `Assignee: ${assigneeName(selected.assigned_to)}`;
+    const priorityValue = selected.priority || "normal";
+    ticketPriority.hidden = priorityValue === "normal";
+    ticketPriority.textContent = `Priority: ${humanize(priorityValue)}`;
+    propertiesToggle.hidden = false;
+    propertiesToggle.setAttribute("aria-label", "Properties");
+    if (rebuildProperties) renderProperties();
+    else syncPropertyValues();
   };
   const renderList = () => {
     list.replaceChildren();
@@ -223,6 +394,8 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     if (priority.value) params.set("priority", priority.value);
     if (category.value) params.set("category", category.value);
     if (search.value.trim()) params.set("search", search.value.trim().slice(0, 120));
+    if (listScope.companyId) params.set("company_id", listScope.companyId);
+    if (listScope.orderId) params.set("order_id", listScope.orderId);
     if (cursor) params.set("cursor", cursor);
     return "/api/admin/messages?" + params;
   };
@@ -257,51 +430,15 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       const result = await api("/api/admin/messages?view=assignees");
       assignees = result.assignees || [];
       assignees.forEach((person) => assignee.append(option(person.name || person.role || "Staff", person.id)));
+      if (selected && ticketContextReady && !["settings", "compose"].includes(drawer.dataset.view)) { renderProperties(); syncTicketHeader({ rebuildProperties: false }); }
     } catch {}
   };
   const renderDetail = () => {
     if (!selected) return;
     detail.replaceChildren();
-    const head = document.createElement("header"); head.className = "site-support__ticket-head";
-    head.innerHTML = '<div><p></p><h3></h3><span></span></div>';
-    head.querySelector("p").textContent = numberOf(selected);
-    head.querySelector("h3").textContent = subjectOf(selected);
-    const company = companyOf(selected);
-    head.querySelector("span").textContent = personOf(selected) + (company ? " · " + company : "");
-    detail.append(head);
-    const companyId = selected.thread?.company_id || selected.company?.id || selected.company_id || null;
-    if (companyId) {
-      const account = document.createElement("a");
-      account.className = "site-support__context";
-      account.href = root + "admin.html#companies";
-      account.textContent = "View account";
-      account.dataset.supportContext = "company";
-      account.dataset.contextId = companyId;
-      account.addEventListener("click", (event) => void openLinkedContext(event, "company", companyId));
-      head.querySelector("div").append(account);
-    }
-    if (canWrite) {
-      const controls = document.createElement("div"); controls.className = "site-support__ticket-controls";
-      [["Status", "status", ["open", "waiting_on_customer", "resolved"]], ["Priority", "priority", ["normal", "high", "urgent"]], ["Category", "category", ["general", "product", "order", "shipping", "billing", "account", "technical"]], ["Assignee", "assigned_to", [""]]].forEach(([label, field, values]) => {
-        const node = document.createElement("label"); node.textContent = label;
-        const select = document.createElement("select"); select.dataset.ticketField = field;
-        if (field === "assigned_to") {
-          select.append(option("Unassigned", "", selected.assigned_to));
-          assignees.forEach((person) => select.append(option(person.name || person.role || "Staff", person.id, selected.assigned_to)));
-        } else values.forEach((value) => select.append(option(String(value).replaceAll("_", " "), value, selected[field])));
-        select.addEventListener("change", () => void patchTicket(field, select.value || null));
-        node.append(select); controls.append(node);
-      });
-      detail.append(controls);
-    } else detail.insertAdjacentHTML("beforeend", '<p class="site-support__notice">Your staff role has read-only access.</p>');
+    syncTicketHeader();
     if (detailFeedback) {
-      const feedback = document.createElement("p"); feedback.className = "site-support__feedback"; feedback.setAttribute("role", "status"); feedback.textContent = detailFeedback; detail.append(feedback);
-    }
-    const scopedOrder = orderOf(selected);
-    if (scopedOrder) {
-      const order = document.createElement("a"); order.className = "site-support__order-scope"; order.href = scopedOrder.admin_url || root + "admin.html?order=" + encodeURIComponent(scopedOrder.id) + "#orders"; order.textContent = "Order " + (scopedOrder.reference || scopedOrder.order_number || scopedOrder.id); order.dataset.supportOrderId = scopedOrder.id;
-      order.addEventListener("click", (event) => void openLinkedContext(event, "order", scopedOrder.id));
-      detail.append(order);
+      const feedback = document.createElement("p"); feedback.className = "site-support__feedback"; feedback.dataset.supportDetailFeedback = ""; feedback.setAttribute("role", "status"); feedback.textContent = detailFeedback; detail.append(feedback);
     }
     if (nextMessageCursor) { const older = document.createElement("button"); older.type = "button"; older.className = "site-support__older"; older.textContent = "Load earlier messages"; older.addEventListener("click", () => void loadTicket(idOf(selected), { older: true })); detail.append(older); }
     const history = document.createElement("div"); history.className = "site-support__messages";
@@ -333,12 +470,19 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     } else if (selected.status === "resolved") detail.insertAdjacentHTML("beforeend", '<p class="site-support__notice">This ticket is resolved. Reopen it before replying.</p>');
   };
   const loadTicket = async (id, { older = false, scopedOrderId = null } = {}) => {
+    const listTicket = tickets.find((ticket) => idOf(ticket) === id);
+    const requestedOrderId = scopedOrderId || (older ? orderId : (orderOf(listTicket)?.id || listTicket?.order_id || listTicket?.primary_order_id || (idOf(selected) === id ? orderId : null)));
+    if (!older) {
+      propertyContextGeneration += 1;
+      ticketContextReady = false;
+      hideTicketChrome();
+      viewLabel.hidden = false;
+      viewLabel.textContent = "Loading ticket";
+      detail.innerHTML = '<p class="site-support__placeholder">Loading ticket…</p>';
+    }
     detailAbort?.abort();
     detailAbort = new AbortController();
     const request = ++detailRequest;
-    if (!older) detail.innerHTML = '<p class="site-support__placeholder">Loading ticket…</p>';
-    const listTicket = tickets.find((ticket) => idOf(ticket) === id);
-    const requestedOrderId = scopedOrderId || (older ? orderId : (orderOf(listTicket)?.id || listTicket?.order_id || listTicket?.primary_order_id || (idOf(selected) === id ? orderId : null)));
     const params = new URLSearchParams({ ticket_id: id });
     if (requestedOrderId) params.set("order_id", requestedOrderId);
     if (older && nextMessageCursor) params.set("message_cursor", nextMessageCursor);
@@ -351,29 +495,70 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       orderId = result.order_scope?.id || selected?.order?.id || selected?.order_id || selected?.primary_order_id || requestedOrderId || null;
       messages = older ? [...(result.messages || []), ...messages] : result.messages || [];
       nextMessageCursor = result.has_more ? result.next_message_cursor || null : null;
+      ticketContextReady = true;
       drawer.dataset.ticketSelected = "true";
       setView("detail"); renderList(); renderDetail();
       if (!older) detail.querySelector(".site-support__messages")?.scrollTo({ top: 999999, behavior: "instant" });
     } catch (error) { if (error?.name !== "AbortError" && request === detailRequest) detail.innerHTML = '<p class="site-support__error">Could not load this ticket.</p>'; }
   };
+  const renderDetailFeedback = () => {
+    let feedback = detail.querySelector("[data-support-detail-feedback]");
+    if (!detailFeedback) { feedback?.remove(); return; }
+    if (!feedback) {
+      feedback = document.createElement("p");
+      feedback.className = "site-support__feedback";
+      feedback.dataset.supportDetailFeedback = "";
+      feedback.setAttribute("role", "status");
+      detail.prepend(feedback);
+    }
+    feedback.textContent = detailFeedback;
+  };
   const patchTicket = async (field, value) => {
-    if (!selected) return;
-    const id = idOf(selected); const version = selected.version; const selectionRequest = detailRequest; const selectedOrderId = orderId;
-    try {
-      const result = await api("/api/admin/messages", { method: "PATCH", body: { ticket_id: id, version, [field]: value } });
-      if (selectionRequest !== detailRequest || idOf(selected) !== id || orderId !== selectedOrderId) return;
-      detailFeedback = "";
-      selected = result.ticket
-        ? { ...selected, ...result.ticket, ...(selected.thread ? { thread: selected.thread } : {}), ...(selected.order_scope ? { order_scope: selected.order_scope } : {}) }
-        : { ...selected, [field]: value, version: Number(selected.version || 0) + 1 };
-      tickets = tickets.map((ticket) => idOf(ticket) === id ? { ...ticket, ...selected } : ticket);
-      renderList(); renderDetail();
-    } catch (error) {
-      if (selectionRequest !== detailRequest || idOf(selected) !== id) return;
-      const conflict = error?.status === 409 || /conflict|stale/i.test(String(error?.data?.error || error?.message || ""));
-      detailFeedback = conflict ? "Ticket changed. Reloading the latest ticket." : errorText(error, "Could not update this ticket.");
-      if (conflict) await loadTicket(id);
-      else renderDetail();
+    if (!selected || !ticketContextReady) return;
+    const id = idOf(selected); const selectedOrderId = orderId; const propertyGeneration = propertyContextGeneration;
+    pendingPropertyPatches += 1;
+    propertiesPanel.setAttribute("aria-busy", "true");
+    const update = propertyPatchLane.catch(() => {}).then(async () => {
+      if (!ticketContextReady || propertyGeneration !== propertyContextGeneration || !selected || idOf(selected) !== id || orderId !== selectedOrderId) return;
+      const version = selected.version; const selectionRequest = detailRequest;
+      try {
+        const result = await api("/api/admin/messages", { method: "PATCH", body: { ticket_id: id, version, [field]: value } });
+        if (propertyGeneration !== propertyContextGeneration || selectionRequest !== detailRequest || idOf(selected) !== id || orderId !== selectedOrderId) return;
+        detailFeedback = "";
+        selected = result.ticket
+          ? { ...selected, ...result.ticket, ...(selected.thread ? { thread: selected.thread } : {}), ...(selected.order_scope ? { order_scope: selected.order_scope } : {}) }
+          : { ...selected, [field]: value, version: Number(selected.version || 0) + 1 };
+        tickets = tickets.map((ticket) => idOf(ticket) === id ? { ...ticket, ...selected } : ticket);
+        renderList();
+        if (field === "status") {
+          const previousHistory = detail.querySelector(".site-support__messages");
+          const previousScrollTop = previousHistory?.scrollTop || 0;
+          const wasAtBottom = previousHistory ? previousHistory.scrollHeight - previousHistory.clientHeight - previousHistory.scrollTop <= 4 : true;
+          const focusedField = propertiesPanel.contains(document.activeElement) ? document.activeElement?.dataset?.ticketField : null;
+          renderDetail();
+          const nextHistory = detail.querySelector(".site-support__messages");
+          if (nextHistory) nextHistory.scrollTop = wasAtBottom ? nextHistory.scrollHeight : previousScrollTop;
+          if (activePopover === "properties" && !propertiesPanel.hidden) {
+            positionSupportPopover("properties", propertiesPanel, propertiesToggle);
+            requestAnimationFrame(() => (focusedField ? propertiesPanel.querySelector(`[data-ticket-field="${focusedField}"]`) : propertiesPanel.querySelector("select"))?.focus());
+          }
+        } else {
+          syncTicketHeader({ rebuildProperties: false });
+          renderDetailFeedback();
+        }
+      } catch (error) {
+        if (propertyGeneration !== propertyContextGeneration || selectionRequest !== detailRequest || idOf(selected) !== id) return;
+        const conflict = error?.status === 409 || /conflict|stale/i.test(String(error?.data?.error || error?.message || ""));
+        detailFeedback = conflict ? "Ticket changed. Reloading the latest ticket." : errorText(error, "Could not update this ticket.");
+        if (conflict) await loadTicket(id);
+        else { syncTicketHeader({ rebuildProperties: false }); renderDetailFeedback(); }
+      }
+    });
+    propertyPatchLane = update.catch(() => {});
+    try { await update; }
+    finally {
+      pendingPropertyPatches -= 1;
+      if (!pendingPropertyPatches) propertiesPanel.removeAttribute("aria-busy");
     }
   };
   const reply = async (event) => {
@@ -469,17 +654,32 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     catch { status.textContent = "Could not save settings."; }
   };
   const clearSelection = () => {
-    detailAbort?.abort(); detailRequest += 1; selected = null; orderId = null; messages = []; nextMessageCursor = null; detailFeedback = ""; drawer.dataset.ticketSelected = "false"; setView("queue"); renderList(); detail.innerHTML = '<div class="site-support__empty"><i class="ph ph-ticket" aria-hidden="true"></i><div><strong>No ticket selected</strong><p>Choose a ticket to review its conversation.</p></div></div>';
+    propertyContextGeneration += 1; ticketContextReady = false; hideTicketChrome(); detailAbort?.abort(); detailRequest += 1; selected = null; orderId = null; messages = []; nextMessageCursor = null; detailFeedback = ""; drawer.dataset.ticketSelected = "false"; setView("queue"); renderList(); detail.innerHTML = '<div class="site-support__empty"><i class="ph ph-ticket" aria-hidden="true"></i><div><strong>No ticket selected</strong><p>Choose a ticket to review its conversation.</p></div></div>';
   };
   const openQueue = async (next) => {
     handoffRequest += 1;
     scopedHandoff = 0;
+    listScope = { companyId: null, orderId: null };
     queue = next; shell.querySelectorAll("[data-support-queue]").forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.supportQueue === queue))); clearSelection(); await loadTickets();
   };
 
   list.addEventListener("click", (event) => { const retry = event.target.closest("[data-support-retry]"); if (retry) return void loadTickets(); const ticket = event.target.closest("[data-support-ticket-id]"); if (ticket) void loadTicket(ticket.dataset.supportTicketId); });
   shell.querySelectorAll("[data-support-queue]").forEach((tab) => tab.addEventListener("click", () => void openQueue(tab.dataset.supportQueue)));
-  [priority, category, assignee].forEach((input) => input.addEventListener("change", () => void loadTickets()));
+  [priority, category, assignee].forEach((input) => input.addEventListener("change", () => { updateFilterCount(); void loadTickets(); }));
+  filterToggle.addEventListener("click", () => openSupportPopover("filters"));
+  $("[data-support-filters-clear]").addEventListener("click", () => {
+    priority.value = ""; category.value = ""; assignee.value = "";
+    updateFilterCount();
+    void loadTickets();
+  });
+  propertiesToggle.addEventListener("click", () => openSupportPopover("properties"));
+  ticketStatus.addEventListener("click", () => openSupportPopover("properties", { focusField: "status" }));
+  ticketAssignee.addEventListener("click", () => openSupportPopover("properties", { focusField: "assigned_to" }));
+  ticketPriority.addEventListener("click", () => openSupportPopover("properties", { focusField: "priority" }));
+  ticketAccount.addEventListener("click", (event) => {
+    const companyId = ticketAccount.dataset.contextId;
+    if (companyId) void openLinkedContext(event, "company", companyId);
+  });
   search.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => void loadTickets(), SEARCH_DELAY_MS); });
   more.addEventListener("click", () => { more.disabled = true; void loadTickets({ append: true, cursor: nextCursor }); });
   launcher.addEventListener("click", () => setOpen(drawer.hidden));
@@ -487,21 +687,58 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   $("[data-support-new-ticket]")?.addEventListener("click", () => {
     handoffRequest += 1;
     scopedHandoff = 0;
+    listScope = { companyId: null, orderId: null };
     selected = null;
     drawer.dataset.ticketSelected = "false";
     setView("compose");
     renderComposer();
     setOpen(true, detail.querySelector("[data-support-recipient-search]"));
   });
-  $("[data-support-settings-toggle]").addEventListener("click", () => { setView(drawer.dataset.view === "settings" ? "queue" : "settings"); setOpen(true); });
-  back.addEventListener("click", () => {
-    if (drawer.dataset.view !== "settings") return clearSelection();
+  const leaveSettings = () => {
+    if (selected) return void loadTicket(idOf(selected), { scopedOrderId: orderId });
     setView("queue");
     requestAnimationFrame(() => shell.querySelector("[data-support-queue][aria-selected='true']")?.focus());
+  };
+  $("[data-support-settings-toggle]").addEventListener("click", () => {
+    if (drawer.dataset.view === "settings") leaveSettings();
+    else setView("settings");
+    setOpen(true);
+  });
+  back.addEventListener("click", () => {
+    if (drawer.dataset.view !== "settings") return clearSelection();
+    leaveSettings();
   });
   settings.addEventListener("change", (event) => { if (event.target.matches("[data-support-pref]")) void saveSettings(); });
-  document.addEventListener("click", (event) => { const trigger = event.target.closest("[data-support-open]"); if (!trigger || shell.hidden) return; event.preventDefault(); if (trigger.dataset.supportOpen === "settings") setView("settings"); setOpen(true); });
-  document.addEventListener("keydown", (event) => { if (event.key !== "Escape" || drawer.hidden) return; if (drawer.dataset.view === "settings") setView("queue"); else if (drawer.dataset.view === "compose" || selected) clearSelection(); else setOpen(false); });
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (activePopover && target) {
+      const { panel, trigger: popoverTrigger } = popoverParts(activePopover);
+      const propertyShortcut = activePopover === "properties" && target.closest("[data-support-ticket-status], [data-support-ticket-assignee], [data-support-ticket-priority]");
+      if (!panel.contains(target) && !popoverTrigger.contains(target) && !propertyShortcut) closeSupportPopover();
+    }
+    const trigger = target?.closest("[data-support-open]");
+    if (!trigger || shell.hidden) return;
+    event.preventDefault();
+    if (trigger.dataset.supportOpen === "settings") setView("settings");
+    setOpen(true);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || drawer.hidden) return;
+    if (activePopover) { event.preventDefault(); closeSupportPopover({ restoreFocus: true }); return; }
+    if (drawer.dataset.view === "settings") leaveSettings();
+    else setOpen(false);
+  });
+  window.addEventListener("resize", () => closeSupportPopover());
+  const invalidateAuthContext = () => {
+    closeSupportPopover();
+    propertyContextGeneration += 1;
+    ticketContextReady = false;
+    detailAbort?.abort();
+    detailRequest += 1;
+    if (!drawer.hidden) setOpen(false);
+  };
+  document.addEventListener("masest:session-expired", invalidateAuthContext);
+  document.addEventListener("masest:auth", invalidateAuthContext);
   const syncRouteVisibility = () => { const suppressed = routeSuppressesSupport(); if (suppressed && !drawer.hidden) setOpen(false); shell.hidden = suppressed; };
   document.addEventListener("masest:support-route", syncRouteVisibility);
   window.addEventListener("hashchange", syncRouteVisibility);
@@ -536,6 +773,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
       listRequest += 1;
       clearSelection();
       orderId = requestedOrderId || null;
+      listScope = { companyId, orderId: requestedOrderId || null };
       setOpen(true);
       try {
         const params = new URLSearchParams({ queue: "all", company_id: companyId, limit: "100" });
@@ -555,7 +793,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
         if (scopedHandoff === handoff) scopedHandoff = 0;
       }
     },
-    openNewChat: async ({ userId = null, orderId: requestedOrderId = null } = {}) => { if (!canWrite) return; handoffRequest += 1; scopedHandoff = 0; clearSelection(); orderId = requestedOrderId || null; setOpen(true); setView("compose"); if (userId) await loadRecipient(userId, requestedOrderId); else renderComposer(); },
+    openNewChat: async ({ userId = null, orderId: requestedOrderId = null } = {}) => { if (!canWrite) return; handoffRequest += 1; scopedHandoff = 0; listScope = { companyId: null, orderId: null }; clearSelection(); orderId = requestedOrderId || null; setOpen(true); setView("compose"); if (userId) await loadRecipient(userId, requestedOrderId); else renderComposer(); },
     open: () => setOpen(true),
     openSettings: () => { setView("settings"); setOpen(true); },
     refresh: () => poller.refresh(),

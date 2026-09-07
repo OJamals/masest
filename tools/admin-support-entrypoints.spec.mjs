@@ -50,8 +50,9 @@ const detailTicket = (overrides = {}) => {
   return plainTicket;
 };
 
-async function boot(page, { post = null, onList = null, onDetail = null, role = "owner", ticketOverrides = {} } = {}) {
+async function boot(page, { post = null, patch = null, onList = null, onDetail = null, role = "owner", ticketOverrides = {}, tickets: providedTickets = null } = {}) {
   const initialTicket = ticket(ticketOverrides);
+  const ticketList = providedTickets || [initialTicket];
   await page.addInitScript(() => {
     window.MASEST_SUPABASE_URL = "https://stub.supabase.co";
     window.MASEST_SUPABASE_ANON = "stub-anon-key";
@@ -88,6 +89,7 @@ async function boot(page, { post = null, onList = null, onDetail = null, role = 
       return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ ticket_id: TICKET_ID, ticket: initialTicket }) });
     }
     if (request.method() === "PATCH") {
+      if (patch) return patch(route);
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: ticket({ priority: "urgent", version: 5 }) }) });
     }
     if (url.searchParams.get("summary") === "1") {
@@ -98,10 +100,11 @@ async function boot(page, { post = null, onList = null, onDetail = null, role = 
     }
     if (url.searchParams.get("ticket_id")) {
       if (onDetail) onDetail(url);
+      const selectedTicket = ticketList.find((entry) => entry.id === url.searchParams.get("ticket_id")) || initialTicket;
       return route.fulfill({
         status: 200, contentType: "application/json",
         body: JSON.stringify({
-          ticket: detailTicket(initialTicket),
+          ticket: detailTicket(selectedTicket),
           thread: { id: "thread-1", participant: { id: USER_ID, full_name: "Avery Buyer" }, company_id: "company-1", company_name: "Acme HVAC" },
           order_scope: { id: ORDER_ID, reference: "MST-2042", status: "delivered", admin_url: "/admin.html?order=" + ORDER_ID + "#orders" },
           messages: [{ id: "m1", sender_role: "buyer", body: "One pail arrived damaged.", created_at: "2026-09-06T14:00:00Z" }],
@@ -112,7 +115,7 @@ async function boot(page, { post = null, onList = null, onDetail = null, role = 
     if (onList) onList(url);
     return route.fulfill({
       status: 200, contentType: "application/json",
-      body: JSON.stringify({ tickets: [initialTicket], summary: { open: 2, needs_reply: 1, mine: 0, unassigned: 1, waiting: 0, resolved: 0 }, has_more: false, next_cursor: null }),
+      body: JSON.stringify({ tickets: ticketList, summary: { open: ticketList.length, needs_reply: ticketList.length, mine: 0, unassigned: ticketList.length, waiting: 0, resolved: 0 }, has_more: false, next_cursor: null }),
     });
   });
 }
@@ -181,16 +184,17 @@ test("desktop queue uses frozen ticket filters and ticket detail controls", asyn
   await expect(page.locator(".site-support__ticket-head")).toContainText("Damaged pail on delivery");
   await expect(page.locator(".site-support__ticket-head")).toContainText("Avery Buyer");
   await expect(page.locator(".site-support__ticket-head")).toContainText("Acme HVAC");
+  await page.screenshot({ path: "test-results/admin-support-ticket-queue-desktop.png", fullPage: false });
+  await page.getByRole("button", { name: "Properties" }).click();
   await expect(page.locator(".site-support__order-scope")).toContainText("MST-2042");
   expect(await page.locator('[data-ticket-field="priority"] option').evaluateAll((options) => options.map((option) => option.value))).toEqual(["normal", "high", "urgent"]);
   expect(await page.locator('[data-ticket-field="category"] option').evaluateAll((options) => options.map((option) => option.value))).toEqual(["general", "product", "order", "shipping", "billing", "account", "technical"]);
   expect(details.some((query) => query.includes("ticket_id=" + TICKET_ID) && query.includes("order_id=" + ORDER_ID))).toBe(true);
 
-  await page.screenshot({ path: "test-results/admin-support-ticket-queue-desktop.png", fullPage: true });
-
   await page.locator('[data-ticket-field="priority"]').selectOption("urgent");
   await expect(page.locator('[data-ticket-field="priority"]')).toHaveValue("urgent");
   await expect(page.locator(".site-support__ticket-head")).toContainText("Avery Buyer · Acme HVAC");
+  await page.getByRole("button", { name: "Properties" }).click();
   await page.locator('[data-support-queue="waiting"]').click();
   expect(urls.some((query) => query.includes("queue=waiting"))).toBe(true);
 });
@@ -231,7 +235,7 @@ test("mobile queue becomes a full ticket detail and preserves a stale reply draf
   await reply.press("Control+Enter");
   await expect.poll(() => postCount).toBe(1);
   await expect(reply).toHaveValue("Please send a replacement.");
-  await page.screenshot({ path: "test-results/admin-support-ticket-queue-390.png", fullPage: true });
+  await page.screenshot({ path: "test-results/admin-support-ticket-queue-390.png", fullPage: false });
 });
 
 test("new ticket composer sends the exact start_ticket contract and is keyboard focused", async ({ page }) => {
@@ -308,6 +312,17 @@ test("Orders company-only Message customer keeps the real order handoff scoped",
   expect(handoffs[0]).toContain("limit=100");
   expect(handoffs[0]).toContain("company_id=company-b");
   expect(handoffs[0]).toContain("order_id=" + ORDER_ID);
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.locator("[data-support-priority]").selectOption("urgent");
+  await expect.poll(() => handoffs.length).toBe(2);
+  expect(handoffs[1]).toContain("company_id=company-b");
+  expect(handoffs[1]).toContain("order_id=" + ORDER_ID);
+  expect(handoffs[1]).toContain("priority=urgent");
+  await page.locator("[data-support-filters-clear]").click();
+  await expect.poll(() => handoffs.length).toBe(3);
+  expect(handoffs[2]).toContain("company_id=company-b");
+  expect(handoffs[2]).toContain("order_id=" + ORDER_ID);
+  expect(handoffs[2]).not.toContain("priority=");
 });
 
 test("a real company-only order handoff clears A when B has no matching ticket", async ({ page }) => {
@@ -412,8 +427,9 @@ test("resolved tickets require an explicit versioned reopen before replies retur
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "PATCH") {
-      patches.push(request.postDataJSON());
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: ticket({ status: "open", version: 5 }) }) });
+      const body = request.postDataJSON();
+      patches.push(body);
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: ticket({ status: body.status, version: 4 + patches.length }) }) });
     }
     if (url.searchParams.get("summary") === "1") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: { open: 0, needs_reply: 0 } }) });
     if (url.searchParams.get("view") === "assignees") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ assignees: [] }) });
@@ -424,9 +440,53 @@ test("resolved tickets require an explicit versioned reopen before replies retur
   await page.locator("[data-support-ticket-id]").click();
   await expect(page.getByText("This ticket is resolved.")).toBeVisible();
   await expect(page.locator("#siteSupportReply")).toHaveCount(0);
+  await page.getByRole("button", { name: "Properties" }).click();
   await page.locator('[data-ticket-field="status"]').selectOption("open");
   await expect.poll(() => patches.length).toBe(1);
   expect(patches[0]).toEqual({ ticket_id: TICKET_ID, version: 4, status: "open" });
+  await expect(page.locator("#siteSupportReply")).toBeVisible();
+  await page.locator("#siteSupportReply").fill("Draft survives status transitions.");
+  await page.locator('[data-ticket-field="status"]').selectOption("resolved");
+  await expect.poll(() => patches.length).toBe(2);
+  expect(patches[1]).toEqual({ ticket_id: TICKET_ID, version: 5, status: "resolved" });
+  await expect(page.locator("#siteSupportReply")).toHaveCount(0);
+  await expect(page.getByText("This ticket is resolved.")).toBeVisible();
+  await page.locator('[data-ticket-field="status"]').selectOption("open");
+  await expect.poll(() => patches.length).toBe(3);
+  expect(patches[2]).toEqual({ ticket_id: TICKET_ID, version: 6, status: "open" });
+  await expect(page.locator("#siteSupportReply")).toHaveValue("Draft survives status transitions.");
+});
+
+test("settings cannot be stolen by ticket refresh and returning restores property edits", async ({ page }) => {
+  const patches = [];
+  const stateTicket = ticket();
+  await boot(page, { tickets: [stateTicket], patch: (route) => {
+    const body = route.request().postDataJSON(); patches.push(body);
+    Object.assign(stateTicket, { category: body.category, version: stateTicket.version + 1 });
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: detailTicket(stateTicket) }) });
+  } });
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("[data-support-ticket-id]").click();
+  await page.locator("[data-support-settings-toggle]").click();
+  await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "settings");
+  await expect(page.locator("#adminNotifySupportRequests")).toBeVisible();
+  await page.waitForTimeout(100);
+  await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "settings");
+  await page.locator("[data-support-back]").click();
+  await expect(page.getByRole("heading", { level: 3, name: "Damaged pail on delivery" })).toBeVisible();
+  await page.getByRole("button", { name: "Properties" }).click();
+  await page.locator('[data-ticket-field="category"]').selectOption("shipping");
+  await expect.poll(() => patches.length).toBe(1);
+  expect(patches[0]).toEqual({ ticket_id: TICKET_ID, version: 4, category: "shipping" });
+
+  await page.locator("[data-support-settings-toggle]").click();
+  await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "settings");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { level: 3, name: "Damaged pail on delivery" })).toBeVisible();
+  await page.getByRole("button", { name: "Properties" }).click();
+  await page.locator('[data-ticket-field="category"]').selectOption("technical");
+  await expect.poll(() => patches.length).toBe(2);
+  expect(patches[1]).toEqual({ ticket_id: TICKET_ID, version: 5, category: "technical" });
 });
 
 test("cursor pagination deduplicates equal-time tickets and preserves server filter queries", async ({ page }) => {
@@ -449,11 +509,20 @@ test("cursor pagination deduplicates equal-time tickets and preserves server fil
     });
   });
   await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("#siteSupportSearch").fill("Acme");
+  await page.locator('[data-support-queue="waiting"]').click();
+  await page.getByRole("button", { name: "Filters" }).click();
   await page.locator('[data-support-priority]').selectOption("high");
-  await expect.poll(() => calls.some((query) => query.includes("priority=high"))).toBe(true);
+  await expect.poll(() => calls.some((query) => query.includes("priority=high") && query.includes("queue=waiting") && query.includes("search=Acme"))).toBe(true);
+  await expect(page.getByRole("button", { name: /Filters, 1 active/ })).toBeVisible();
+  await page.locator("[data-support-filters-clear]").click();
+  await expect(page.locator("#siteSupportSearch")).toHaveValue("Acme");
+  await expect.poll(() => calls.some((query) => query.includes("queue=waiting") && query.includes("search=Acme") && !query.includes("priority="))).toBe(true);
+  await page.locator('[data-support-priority]').selectOption("high");
+  await expect.poll(() => calls.some((query) => query.includes("priority=high") && query.includes("queue=waiting") && query.includes("search=Acme"))).toBe(true);
   await page.locator("[data-support-load-more]").click();
   await expect(page.locator("[data-support-ticket-id]")).toHaveCount(2);
-  expect(calls.some((query) => query.includes("cursor=page-2"))).toBe(true);
+  expect(calls.some((query) => query.includes("cursor=page-2") && query.includes("priority=high") && query.includes("queue=waiting") && query.includes("search=Acme"))).toBe(true);
 });
 
 test("a list failure has an in-place retry", async ({ page }) => {
@@ -475,13 +544,149 @@ test("a list failure has an in-place retry", async ({ page }) => {
 });
 
 test("read-only staff can inspect queue/detail but cannot mutate or compose", async ({ page }) => {
+  let patchCount = 0;
   await boot(page, { role: "read_only" });
+  page.on("request", (request) => { if (request.method() === "PATCH" && request.url().includes("/api/admin/messages")) patchCount += 1; });
   await page.goto(BASE_URL + "/admin.html#support");
   await expect(page.locator("[data-support-new-ticket]")).toHaveCount(0);
   await page.locator("[data-support-ticket-id]").click();
+  await page.getByRole("button", { name: "Properties" }).click();
   await expect(page.locator("[data-ticket-field]")).toHaveCount(0);
+  await expect(page.locator(".site-support__property-values > *")).toHaveText(["Status", "open", "Priority", "high", "Category", "order", "Assignee", "Unassigned"]);
   await expect(page.locator("#siteSupportReply")).toHaveCount(0);
   await expect(page.locator(".site-support__notice")).toContainText("read-only");
+  expect(patchCount).toBe(0);
+});
+
+test("rapid property edits serialize exact versions without losing the second update", async ({ page }) => {
+  const patches = [];
+  let releaseFirst;
+  const firstPatch = new Promise((resolve) => { releaseFirst = resolve; });
+  await boot(page, {
+    patch: async (route) => {
+      const body = route.request().postDataJSON();
+      patches.push(body);
+      if (patches.length === 1) await firstPatch;
+      const updated = patches.length === 1
+        ? ticket({ priority: body.priority, version: 5 })
+        : ticket({ priority: "urgent", category: body.category, version: 6 });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: updated }) });
+    },
+  });
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("[data-support-ticket-id]").click();
+  await page.getByRole("button", { name: "Properties" }).click();
+  await page.locator('[data-ticket-field="priority"]').selectOption("urgent");
+  await page.locator('[data-ticket-field="category"]').selectOption("shipping");
+  await expect.poll(() => patches.length).toBe(1);
+  expect(patches[0]).toEqual({ ticket_id: TICKET_ID, version: 4, priority: "urgent" });
+  releaseFirst();
+  await expect.poll(() => patches.length).toBe(2);
+  expect(patches[1]).toEqual({ ticket_id: TICKET_ID, version: 5, category: "shipping" });
+  await expect(page.locator('[data-ticket-field="priority"]')).toHaveValue("urgent");
+  await expect(page.locator('[data-ticket-field="category"]')).toHaveValue("shipping");
+});
+
+test("a property conflict retains the reply draft, reloads the latest version, and exposes feedback", async ({ page }) => {
+  const patches = [];
+  let detailLoads = 0;
+  await boot(page);
+  await page.unroute("**/api/admin/messages**");
+  await page.route("**/api/admin/messages**", (route) => {
+    const request = route.request(); const url = new URL(request.url());
+    if (request.method() === "PATCH") {
+      const body = request.postDataJSON(); patches.push(body);
+      if (patches.length === 1) return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "ticket_version_conflict" }) });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: detailTicket({ version: 6, category: body.category, priority: "high" }) }) });
+    }
+    if (url.searchParams.get("summary") === "1") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: { open: 1, needs_reply: 1 } }) });
+    if (url.searchParams.get("view") === "assignees") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ assignees: [] }) });
+    if (url.searchParams.get("ticket_id")) {
+      detailLoads += 1;
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: detailTicket({ version: detailLoads === 1 ? 4 : 5, priority: "high" }), messages: [], has_more: false, next_message_cursor: null, order_scope: ticket().order }) });
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ tickets: [ticket()], summary: { open: 1, needs_reply: 1 }, has_more: false }) });
+  });
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("[data-support-ticket-id]").click();
+  await page.locator("#siteSupportReply").fill("Keep this exact reply draft through the conflict.");
+  await page.getByRole("button", { name: "Properties" }).click();
+  await page.locator('[data-ticket-field="priority"]').selectOption("urgent");
+  await expect.poll(() => detailLoads).toBe(2);
+  expect(patches[0]).toEqual({ ticket_id: TICKET_ID, version: 4, priority: "urgent" });
+  await expect(page.locator("#siteSupportReply")).toHaveValue("Keep this exact reply draft through the conflict.");
+  await expect(page.locator("[data-support-detail-feedback]")).toContainText("Ticket changed");
+  await page.getByRole("button", { name: "Properties" }).click();
+  await page.locator('[data-ticket-field="category"]').selectOption("shipping");
+  await expect.poll(() => patches.length).toBe(2);
+  expect(patches[1]).toEqual({ ticket_id: TICKET_ID, version: 5, category: "shipping" });
+});
+
+test("queued property work from A cannot resurrect after an A to B to A selection cycle", async ({ page }) => {
+  const secondId = "44444444-4444-4444-8444-444444444444";
+  let releasePatch;
+  let patchCompleted = false;
+  const patches = [];
+  const pendingPatch = new Promise((resolve) => { releasePatch = resolve; });
+  await boot(page, {
+    tickets: [ticket(), ticket({ id: secondId, display_number: "MAS-000043", subject: "Second ticket" })],
+    patch: async (route) => {
+      const body = route.request().postDataJSON();
+      patches.push(body);
+      if (patches.length === 1) await pendingPatch;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: ticket({ priority: body.priority || "high", category: body.category || "order", version: 5 }) }) });
+      if (patches.length === 1) patchCompleted = true;
+    },
+  });
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator(`[data-support-ticket-id="${TICKET_ID}"]`).click();
+  await page.getByRole("button", { name: "Properties" }).click();
+  await page.locator('[data-ticket-field="priority"]').selectOption("urgent");
+  await expect.poll(() => patches.length).toBe(1);
+  await page.locator('[data-ticket-field="category"]').selectOption("shipping");
+  await page.locator(`[data-support-ticket-id="${secondId}"]`).click();
+  await expect(page.getByRole("heading", { level: 3, name: "Second ticket" })).toBeVisible();
+  await page.locator(`[data-support-ticket-id="${TICKET_ID}"]`).click();
+  await expect(page.getByRole("heading", { level: 3, name: "Damaged pail on delivery" })).toBeVisible();
+  releasePatch();
+  await expect.poll(() => patchCompleted).toBe(true);
+  await page.waitForTimeout(100);
+  expect(patches).toEqual([{ ticket_id: TICKET_ID, version: 4, priority: "urgent" }]);
+  await page.getByRole("button", { name: "Properties" }).click();
+  await expect(page.locator('[data-ticket-field="priority"]')).toHaveValue("high");
+  await expect(page.locator('[data-ticket-field="category"]')).toHaveValue("order");
+  await expect(page.locator("[data-support-detail-feedback]")).toHaveCount(0);
+});
+
+test("an auth lifecycle transition closes Properties and invalidates an in-flight update", async ({ page }) => {
+  let releasePatch;
+  let patchArrived = false;
+  let patchCompleted = false;
+  const pendingPatch = new Promise((resolve) => { releasePatch = resolve; });
+  await boot(page, {
+    patch: async (route) => {
+      patchArrived = true;
+      await pendingPatch;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ticket: ticket({ priority: "urgent", version: 5 }) }) });
+      patchCompleted = true;
+    },
+  });
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("[data-support-ticket-id]").click();
+  const properties = page.getByRole("button", { name: "Properties" });
+  await properties.click();
+  await page.locator('[data-ticket-field="priority"]').selectOption("urgent");
+  await expect.poll(() => patchArrived).toBe(true);
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent("masest:auth")));
+  await expect(page.locator(".site-support__drawer")).toBeHidden();
+  await expect(page.locator("[data-support-properties]")).toBeHidden();
+  await expect(page.locator("[data-support-properties-toggle]")).toHaveAttribute("aria-expanded", "false");
+  releasePatch();
+  await expect.poll(() => patchCompleted).toBe(true);
+  await page.locator(".site-support__launcher").click();
+  await expect(page.getByRole("heading", { level: 3, name: "Damaged pail on delivery" })).toBeVisible();
+  await properties.click();
+  await expect(page.locator('[data-ticket-field="priority"]')).toHaveValue("high");
 });
 
 test("phone settings and new-ticket composer remain reachable at 320px", async ({ page }) => {
@@ -495,7 +700,7 @@ test("phone settings and new-ticket composer remain reachable at 320px", async (
   await page.locator("[data-support-new-ticket]").click();
   await expect(page.locator('[data-support-recipient-search]')).toBeVisible();
   await expect(page.locator(".site-support__list-pane")).toBeHidden();
-  await page.screenshot({ path: "test-results/admin-support-ticket-queue-320.png", fullPage: true });
+  await page.screenshot({ path: "test-results/admin-support-ticket-queue-320.png", fullPage: false });
 });
 
 test("queue has no horizontal overflow at tablet and desktop breakpoints", async ({ page }) => {
@@ -667,7 +872,7 @@ test("a delayed start_ticket completion cannot replace a newer queue context", a
   await started;
   await page.waitForTimeout(100);
   await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "queue");
-  await expect(page.locator(".site-support__ticket-head")).toHaveCount(0);
+  await expect(page.locator(".site-support__ticket-head")).toBeHidden();
 });
 
 test("reduced motion preserves a settled, operable ticket queue", async ({ page }) => {
@@ -692,11 +897,6 @@ test("settings back returns keyboard focus to the ticket queue", async ({ page }
 
 test("reports exact ticket drawer geometry at handoff viewports", async ({ page }) => {
   await boot(page);
-  const box = (node) => {
-    if (!node) return null;
-    const rect = node.getBoundingClientRect();
-    return { left: Math.round(rect.left), top: Math.round(rect.top), right: Math.round(rect.right), bottom: Math.round(rect.bottom), width: Math.round(rect.width), height: Math.round(rect.height) };
-  };
   const metrics = [];
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 720 }]) {
     await page.setViewportSize(viewport);
@@ -736,7 +936,7 @@ test("reports exact ticket drawer geometry at handoff viewports", async ({ page 
       const result = box(recipientResult); const bounds = box(drawer);
       return { drawer: bounds, content: box(document.querySelector("[data-support-detail]")), compose: box(document.querySelector(".site-support__composer")), recipientResult: result, recipientReachable: !!result && result.top >= bounds.top && result.bottom <= bounds.bottom && result.left >= bounds.left && result.right <= bounds.right };
     });
-    await page.screenshot({ path: "test-results/admin-support-correction-" + viewport.width + ".png", fullPage: true });
+    await page.screenshot({ path: "test-results/admin-support-correction-" + viewport.width + ".png", fullPage: false });
   }
   metrics.forEach((measurement) => {
     expect(measurement.document.scrollWidth).toBe(measurement.document.clientWidth);
@@ -754,39 +954,65 @@ test("dense support controls keep filters and properties as non-reflowing access
 
   const drawer = page.locator(".site-support__drawer");
   const listPane = page.locator(".site-support__list-pane");
+  const ticketList = page.locator(".site-support__tickets");
   const filterRow = page.locator(".site-support__filters");
-  const filters = page.getByRole("button", { name: "Filters" });
+  const filters = page.getByRole("button", { name: "Filters", exact: true });
   const properties = page.getByRole("button", { name: "Properties" });
   const launcher = page.getByRole("button", { name: "Open support tickets" });
 
   await expect(filters).toHaveAttribute("aria-expanded", "false");
   await expect(filters).toHaveAttribute("aria-controls", /.+/);
-  await expect(properties).toHaveAttribute("aria-expanded", "false");
-  await expect(properties).toHaveAttribute("aria-controls", /.+/);
   expect((await filterRow.boundingBox()).height).toBeLessThanOrEqual(64);
-  expect((await listPane.boundingBox()).width).toBeGreaterThanOrEqual(320);
+  expect((await ticketList.boundingBox()).height).toBeGreaterThanOrEqual(320);
   await expect(page.locator(".site-support__drawer select:visible")).toHaveCount(0);
 
   await page.locator("[data-support-ticket-id]").click();
   await expect(page.locator("#siteSupportReply")).toBeVisible();
+  await expect(properties).toHaveAttribute("aria-expanded", "false");
+  await expect(properties).toHaveAttribute("aria-controls", /.+/);
   const toolbar = page.locator(".site-support__conversation-toolbar");
   const ticketHead = page.locator(".site-support__ticket-head");
   const transcript = page.locator(".site-support__messages");
-  const rightHeaderHeight = (await toolbar.boundingBox()).height + (await ticketHead.boundingBox()).height;
-  expect(rightHeaderHeight).toBeLessThanOrEqual(96);
+  const toolbarBox = await toolbar.boundingBox();
+  const ticketHeadBox = await ticketHead.boundingBox();
+  expect(toolbarBox.height).toBeLessThanOrEqual(96);
+  expect(ticketHeadBox.y).toBeGreaterThanOrEqual(toolbarBox.y);
+  expect(ticketHeadBox.y + ticketHeadBox.height).toBeLessThanOrEqual(toolbarBox.y + toolbarBox.height);
   expect((await transcript.boundingBox()).height).toBeGreaterThanOrEqual(280);
 
-  const beforeFilters = { list: await listPane.boundingBox(), transcript: await transcript.boundingBox() };
+  const beforeFilters = { list: await ticketList.boundingBox(), transcript: await transcript.boundingBox() };
   await filters.click();
   await expect(filters).toHaveAttribute("aria-expanded", "true");
-  expect(Math.abs((await listPane.boundingBox()).height - beforeFilters.list.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await ticketList.boundingBox()).height - beforeFilters.list.height)).toBeLessThanOrEqual(1);
   expect(Math.abs((await transcript.boundingBox()).height - beforeFilters.transcript.height)).toBeLessThanOrEqual(1);
+  for (const control of [page.locator("[data-support-priority]"), page.locator("[data-support-category]"), page.locator("[data-support-assignee]"), page.locator("[data-support-filters-clear]")]) {
+    await control.scrollIntoViewIfNeeded();
+    const box = await control.boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(674);
+    expect(await control.evaluate((node) => {
+      const rect = node.getBoundingClientRect(); const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return hit === node || node.contains(hit);
+    })).toBe(true);
+  }
 
   await properties.click();
   await expect(filters).toHaveAttribute("aria-expanded", "false");
   await expect(properties).toHaveAttribute("aria-expanded", "true");
-  expect(Math.abs((await listPane.boundingBox()).height - beforeFilters.list.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await ticketList.boundingBox()).height - beforeFilters.list.height)).toBeLessThanOrEqual(1);
   expect(Math.abs((await transcript.boundingBox()).height - beforeFilters.transcript.height)).toBeLessThanOrEqual(1);
+  for (const control of await page.locator("[data-ticket-field]").all()) {
+    await control.scrollIntoViewIfNeeded();
+    const box = await control.boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(674);
+    expect(await control.evaluate((node) => {
+      const rect = node.getBoundingClientRect(); const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return hit === node || node.contains(hit);
+    })).toBe(true);
+  }
 
   const reply = page.locator("#siteSupportReply");
   await reply.fill("Keep this draft while controls dismiss.");
@@ -805,18 +1031,60 @@ test("dense support controls keep filters and properties as non-reflowing access
 
 test("dense support console keeps long subjects, Properties, and Send reachable on constrained viewports", async ({ page }) => {
   const longSubject = "Replacement request for damaged industrial VertKleen drums received after a delayed multi-stop delivery route";
-  await boot(page, { ticketOverrides: { subject: longSubject } });
+  await boot(page, { ticketOverrides: { subject: longSubject, status: "waiting_on_customer", priority: "urgent", assigned_to: "staff-1" } });
   const properties = page.getByRole("button", { name: "Properties" });
   const send = page.getByRole("button", { name: "Send reply" });
 
-  for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 640 }]) {
+  // 600x337 is the effective CSS viewport of a 1200x674 window at 200% zoom.
+  for (const viewport of [{ width: 1200, height: 674 }, { width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 640 }, { width: 600, height: 337 }]) {
     await page.setViewportSize(viewport);
     await page.goto("about:blank");
     await page.goto(BASE_URL + "/admin.html#support");
+    const filters = page.getByRole("button", { name: "Filters", exact: true });
+    await filters.click();
+    const clearFilters = page.locator("[data-support-filters-clear]");
+    await clearFilters.scrollIntoViewIfNeeded();
+    const clearBox = await clearFilters.boundingBox();
+    expect(clearBox.height).toBeGreaterThanOrEqual(44);
+    expect(clearBox.y).toBeGreaterThanOrEqual(0);
+    expect(clearBox.y + clearBox.height).toBeLessThanOrEqual(viewport.height);
+    expect(await clearFilters.evaluate((node) => {
+      const rect = node.getBoundingClientRect(); const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return hit === node || node.contains(hit);
+    })).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(filters).toBeFocused();
     await page.locator("[data-support-ticket-id]").click();
-    await expect(page.getByRole("heading", { level: 3, name: longSubject })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 3, name: longSubject }), JSON.stringify(viewport)).toBeVisible();
     await expect(properties).toBeVisible();
+    if (viewport.width === 1200) await page.screenshot({ path: "test-results/admin-support-density-1200x674-closed.png", fullPage: false });
+    await properties.click();
+    await expect(page.locator(".site-support__properties-title")).toHaveText(longSubject);
+    const lastProperty = page.locator('[data-ticket-field="assigned_to"]');
+    await lastProperty.scrollIntoViewIfNeeded();
+    const propertyBox = await lastProperty.boundingBox();
+    expect(propertyBox.height).toBeGreaterThanOrEqual(44);
+    expect(propertyBox.y).toBeGreaterThanOrEqual(0);
+    expect(propertyBox.y + propertyBox.height).toBeLessThanOrEqual(viewport.height);
+    expect(await lastProperty.evaluate((node) => {
+      const rect = node.getBoundingClientRect(); const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return hit === node || node.contains(hit);
+    })).toBe(true);
+    if (viewport.width === 1200) await page.screenshot({ path: "test-results/admin-support-density-1200x674.png", fullPage: false });
+    await properties.click();
+    await send.scrollIntoViewIfNeeded();
     await expect(send).toBeVisible();
+    const close = page.getByRole("button", { name: "Close support menu" });
+    for (const target of [properties, close, send]) {
+      const box = await target.boundingBox();
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+      expect(await target.evaluate((node) => {
+        const rect = node.getBoundingClientRect(); const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        return hit === node || node.contains(hit);
+      })).toBe(true);
+    }
     const pageWidth = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
     expect(pageWidth.scrollWidth).toBeLessThanOrEqual(pageWidth.clientWidth + 1);
   }
