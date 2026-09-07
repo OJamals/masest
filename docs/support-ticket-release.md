@@ -55,6 +55,8 @@ Their prerequisite order is `schema-phase5.sql`,
 PostgreSQL server binaries are required in addition to the Node `pg` client. The
 verifier creates and removes its own temporary loopback cluster; it must never receive a
 remote database URL or connect to a shared PostgreSQL service.
+The harness supports PostgreSQL majors 16, 17, and 18. An explicitly supplied
+`PG_BIN` outside that range is an error and is never replaced by a PATH fallback.
 
 ```bash
 export PG_BIN="${PG_BIN:-$(pg_config --bindir)}"
