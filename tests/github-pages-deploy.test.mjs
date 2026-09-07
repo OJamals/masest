@@ -16,11 +16,11 @@ test("medicux main pushes verify before deploying the existing Pages project", (
 
   assert.ok(refreshStep >= 0 && refreshStep < verifyStep, "production snapshots must refresh before verification");
   assert.ok(verifyStep >= 0, "workflow must retain the full verification gate");
-  assert.ok(performanceJob > verifyStep, "story performance must run as an isolated job");
-  assert.ok(deployJob > performanceJob && deployStep > deployJob, "production deploy must remain a separate gated job");
-  assert.match(workflow, /deploy:\s+needs: \[verify, story_performance\]/);
-  assert.match(workflow, /uses: actions\/upload-artifact@v7[\s\S]+name: production-dist-\$\{\{ github\.sha \}\}[\s\S]+path: dist\//);
-  assert.match(workflow, /uses: actions\/download-artifact@v8[\s\S]+name: production-dist-\$\{\{ github\.sha \}\}[\s\S]+path: dist/);
+  assert.ok(performanceJob > verifyStep, "story performance must remain an isolated job");
+  assert.equal(deployJob, -1, "production deploy must reuse the verified job workspace");
+  assert.ok(deployStep > verifyStep && deployStep < performanceJob, "the verified dist must deploy only after core verification");
+  assert.match(workflow, /verify:\s+needs: \[story_performance\]/);
+  assert.doesNotMatch(workflow, /actions\/(?:upload|download)-artifact/);
   assert.match(
     workflow,
     /if: github\.repository == 'medicux\/masest' && github\.ref == 'refs\/heads\/main' && github\.event_name != 'pull_request'/,
@@ -39,7 +39,11 @@ test("medicux main pushes verify before deploying the existing Pages project", (
   );
   assert.ok(newsletterStep > deployStep, "blog email may run only after the new static page is deployed");
   assert.match(workflow, /blog_newsletter:\s+description:[^\n]+\s+required: false\s+type: boolean\s+default: false/);
-  assert.match(workflow, /if: github\.event_name == 'workflow_dispatch' && inputs\.blog_newsletter/);
+  assert.match(
+    workflow,
+    /if: github\.repository == 'medicux\/masest' && github\.ref == 'refs\/heads\/main' && github\.event_name == 'workflow_dispatch' && inputs\.blog_newsletter/,
+  );
+  assert.doesNotMatch(workflow.slice(verifyStep, deployStep), /run: npm run (?:build|build:content)/, "verified dist must not be rebuilt before deployment");
   assert.match(workflow, /BLOG_NEWSLETTER_SECRET: \$\{\{ secrets\.BLOG_NEWSLETTER_SECRET \}\}/);
 });
 
@@ -69,9 +73,7 @@ test("GitHub workflows use Node 24 action runtimes", () => {
   }
 
   const verifyWorkflow = read(".github/workflows/verify.yml");
-  assert.match(verifyWorkflow, /actions\/upload-artifact@v7/);
-  assert.match(verifyWorkflow, /actions\/download-artifact@v8/);
-  assert.doesNotMatch(verifyWorkflow, /actions\/(?:upload|download)-artifact@v[1-6]/);
+  assert.doesNotMatch(verifyWorkflow, /actions\/(?:upload|download)-artifact/);
 });
 
 test("Pages deployment contract owns public images through one R2 binding and domain", () => {
