@@ -84,6 +84,7 @@ test('canonical support append delegates one atomic database call', async () => 
       p_category: 'shipping',
       p_start_ticket: false,
       p_contract_version: 2,
+      p_expected_ticket_version: null,
     },
   });
   assert.equal(message.order_id, ORDER_ID);
@@ -99,6 +100,7 @@ test('canonical support append delegates one atomic database call', async () => 
     priority: 'normal',
     category: 'shipping',
     assigned_to: undefined,
+    assignee: null,
     primary_order_id: ORDER_ID,
     first_response_at: null,
     resolved_at: null,
@@ -106,6 +108,10 @@ test('canonical support append delegates one atomic database call', async () => 
     last_message_body: 'Need help with delivery',
     last_sender_role: 'buyer',
     needs_staff_reply: true,
+    scope: 'personal',
+    order: null,
+    participant: null,
+    company: null,
     created_at: '2026-08-30T12:00:00.000Z',
     updated_at: '2026-08-30T12:00:00.000Z',
     version: 2,

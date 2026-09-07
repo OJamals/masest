@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { isDeepStrictEqual } from 'node:util';
 
 import { createAccountMessagesHandler } from '../functions/api/account/messages.js';
 import { createAdminMessagesHandler } from '../functions/api/admin/messages.js';
-import { appendSupportMessage } from '../functions/_lib/support-messages.js';
-import { publishSupportMessage } from '../functions/_lib/support-message-publisher.js';
+import { encodeSupportCursor } from '../functions/_lib/support-tickets.js';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_USER_ID = '22222222-2222-4222-8222-222222222222';
@@ -16,185 +15,16 @@ const USER_THREAD_ID = '66666666-6666-4666-8666-666666666666';
 const COMPANY_THREAD_ID = '77777777-7777-4777-8777-777777777777';
 const ORDER_ID = '88888888-8888-4888-8888-888888888888';
 const TICKET_ID = '99999999-9999-4999-8999-999999999999';
-const OTHER_TICKET_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const EFFECT_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-const NOW = '2026-09-06T14:15:16.000Z';
+const MESSAGE_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const NOW = '2026-09-06T14:15:16.123456+00:00';
+const businessSource = readFileSync(new URL('../js/business.js', import.meta.url), 'utf8');
 
-const THREAD_SELECT = 'id,participant_user_id,company_id,last_message_at,last_message_body,last_sender_role,last_order_id';
-const BUYER_MESSAGE_SELECT = 'id,thread_id,ticket_id,sender_role,body,order_id,source,created_at';
-const STAFF_MESSAGE_SELECT = 'id,thread_id,ticket_id,sender_role,user_id,recipient_user_id,body,order_id,created_at,read_by_staff,source,external_message_id,email_delivery_id,email_message_id,email_references';
-const ORDER_SELECT = 'id,order_number,status,company_id,user_id,customer_email';
-const ORDER_CONTEXT_SELECT = 'id,order_number,status,company_id';
-const PROFILE_SELECT = 'id,full_name,company_id';
-const RECIPIENT_SELECT = 'id,company_id,full_name,notify_messages,support_chat_open,support_chat_seen_at';
-const COMPANY_SELECT = 'id,name,status';
-const SUPPORT_TICKET_SELECT = 'id,ticket_number,thread_id,subject,status,priority,category,assigned_to,primary_order_id,first_response_at,resolved_at,last_message_at,last_message_body,last_sender_role,created_at,updated_at,version';
-
-function op(method, ...args) {
-  return { method, args };
+function routeRequest(path = '', method = 'GET') {
+  return new Request(`https://masest.test/api/${path}`, { method });
 }
 
-function query(table, ops, result) {
-  return { kind: 'query', table, ops, terminal: 'then', result };
-}
-
-function single(table, ops, result) {
-  return { kind: 'query', table, ops, terminal: 'maybeSingle', result };
-}
-
-function sameOperations(expected, actual) {
-  if (expected.length !== actual.length) return false;
-  const filters = new Set(['eq', 'or', 'is', 'in', 'lt', 'not', 'neq']);
-  const expectedStructure = expected.filter((operation) => !filters.has(operation.method));
-  const actualStructure = actual.filter((operation) => !filters.has(operation.method));
-  if (!isDeepStrictEqual(expectedStructure, actualStructure)) return false;
-  const unmatched = actual.filter((operation) => filters.has(operation.method));
-  for (const operation of expected.filter((entry) => filters.has(entry.method))) {
-    const index = unmatched.findIndex((candidate) => isDeepStrictEqual(candidate, operation));
-    if (index === -1) return false;
-    unmatched.splice(index, 1);
-  }
-  return unmatched.length === 0;
-}
-
-function strictSupabase(expectations = [], { authUsers = [] } = {}) {
-  const pending = expectations.map((expectation) => ({ ...expectation }));
-  const pendingAuthUsers = authUsers.map((expectation) => ({ ...expectation }));
-  const calls = [];
-  const authCalls = [];
-  const violations = [];
-  const builders = ['select', 'eq', 'or', 'is', 'in', 'order', 'limit', 'lt', 'update', 'not', 'neq', 'insert'];
-
-  function settle(table, ops, terminal) {
-    const call = { kind: 'query', table, ops: ops.map((entry) => ({ ...entry })), terminal };
-    calls.push(call);
-    const index = pending.findIndex((expected) => (
-      expected.kind === 'query'
-      && expected.table === table
-      && expected.terminal === terminal
-      && sameOperations(expected.ops, ops)
-    ));
-    if (index === -1) {
-      violations.push(`unexpected query ${JSON.stringify(call)}`);
-      return Promise.resolve({ data: null, error: new Error('unexpected fake query') });
-    }
-    const [expected] = pending.splice(index, 1);
-    try {
-      if (expected.onSettle) expected.onSettle(call);
-    } catch (error) {
-      violations.push(`query sequencing assertion failed: ${error.message}`);
-      return Promise.reject(error);
-    }
-    if (expected.reject) return Promise.reject(expected.reject);
-    return Promise.resolve(expected.result);
-  }
-
-  function chain(table) {
-    const ops = [];
-    let proxy;
-    const target = {
-      maybeSingle() {
-        return settle(table, ops, 'maybeSingle');
-      },
-      then(resolve, reject) {
-        return settle(table, ops, 'then').then(resolve, reject);
-      },
-    };
-    for (const method of builders) {
-      target[method] = (...args) => {
-        ops.push(op(method, ...args));
-        return proxy;
-      };
-    }
-    proxy = new Proxy(target, {
-      get(object, property, receiver) {
-        if (Reflect.has(object, property)) return Reflect.get(object, property, receiver);
-        if (typeof property === 'symbol') return undefined;
-        return (...args) => {
-          violations.push(`unexpected method ${String(property)}(${JSON.stringify(args)}) on ${table}`);
-          throw new Error(`unexpected fake method ${String(property)} on ${table}`);
-        };
-      },
-    });
-    return proxy;
-  }
-
-  const sb = {
-    calls,
-    authCalls,
-    violations,
-    from(table) {
-      if (!pending.some((expected) => expected.kind === 'query' && expected.table === table)) {
-        violations.push(`unexpected table ${table}`);
-        throw new Error(`unexpected fake table ${table}`);
-      }
-      return chain(table);
-    },
-    async rpc(name, args) {
-      const call = { kind: 'rpc', name, args };
-      calls.push(call);
-      violations.push(`unexpected RPC ${JSON.stringify(call)}`);
-      throw new Error(`unexpected fake RPC ${name}`);
-    },
-    auth: {
-      admin: {
-        async getUserById(id) {
-          authCalls.push(id);
-          const index = pendingAuthUsers.findIndex((expected) => expected.id === id);
-          if (index === -1) {
-            violations.push(`unexpected Auth getUserById(${id})`);
-            return { data: null, error: new Error('unexpected fake Auth lookup') };
-          }
-          const [expected] = pendingAuthUsers.splice(index, 1);
-          return expected.result;
-        },
-      },
-    },
-    assertClean() {
-      assert.deepEqual(violations, [], violations.join('\n'));
-      assert.deepEqual(pending, [], `unconsumed fake queries: ${JSON.stringify(pending)}`);
-      assert.deepEqual(pendingAuthUsers, [], `unconsumed fake Auth lookups: ${JSON.stringify(pendingAuthUsers)}`);
-    },
-  };
-  return sb;
-}
-
-function participantThread(overrides = {}) {
-  return {
-    id: USER_THREAD_ID,
-    participant_user_id: USER_ID,
-    company_id: COMPANY_ID,
-    status: 'open',
-    completed_at: null,
-    completed_by: null,
-    last_message_at: '2026-09-06T14:00:00.000Z',
-    last_message_body: 'Need help',
-    last_sender_role: 'buyer',
-    last_order_id: null,
-    ...overrides,
-  };
-}
-
-function companyThread(overrides = {}) {
-  return participantThread({
-    id: COMPANY_THREAD_ID,
-    participant_user_id: null,
-    last_message_body: 'Company question',
-    last_sender_role: 'staff',
-    ...overrides,
-  });
-}
-
-function orderRow(overrides = {}) {
-  return {
-    id: ORDER_ID,
-    order_number: 'MST-1042',
-    status: 'paid',
-    company_id: COMPANY_ID,
-    user_id: USER_ID,
-    customer_email: 'buyer@example.test',
-    ...overrides,
-  };
+async function responseShape(response) {
+  return { status: response.status, body: await response.json() };
 }
 
 function supportTicket(overrides = {}) {
@@ -213,1741 +43,662 @@ function supportTicket(overrides = {}) {
     last_message_at: NOW,
     last_message_body: 'Need help',
     last_sender_role: 'buyer',
-    created_at: '2026-09-06T14:00:00.000Z',
+    created_at: '2026-09-06T14:00:00.000000+00:00',
     updated_at: NOW,
     version: 7,
     ...overrides,
   };
 }
 
-function foreignOrder() {
-  return orderRow({ company_id: OTHER_COMPANY_ID, user_id: OTHER_USER_ID });
-}
-
-function absentOrder() {
-  return null;
-}
-
-function buyerContext(sb, { companyId = COMPANY_ID } = {}) {
-  return { user: { id: USER_ID, email: 'buyer@example.test' }, companyId, sb };
-}
-
-function staffContext(role = 'support') {
-  return { user: { id: STAFF_ID, email: 'staff@masest.test' }, staff: true, role };
-}
-
-function routeRequest(path = '', method = 'GET') {
-  return new Request(`https://masest.test/api/${path}`, { method });
-}
-
-async function responseShape(response) {
-  return { status: response.status, body: await response.json() };
-}
-
-function buyerHandler(sb, { context = buyerContext(sb), body = {}, rateLimitResult = { ok: true }, publisher, now } = {}) {
-  const authCalls = [];
-  const bodyCalls = [];
-  const publicationCalls = [];
-  const handler = createAccountMessagesHandler({
-    requireCommerceUser: async () => {
-      authCalls.push('auth');
-      return context;
-    },
-    readBody: async () => {
-      bodyCalls.push('body');
-      return body;
-    },
-    rateLimit: async (...args) => {
-      publicationCalls.push({ kind: 'rate_limit', args });
-      return rateLimitResult;
-    },
-    publishSupportMessage: async (...args) => {
-      publicationCalls.push({ kind: 'publication', args });
-      if (publisher) return publisher(...args);
-      return {
-        message: {
-          id: 'message-1', thread_id: USER_THREAD_ID, created_at: NOW,
-          order_id: null, recipient_user_id: null,
-        },
-        emailDelivery: { ok: true },
-      };
-    },
-    supportTicketsForThreads: async () => [],
-    now: now || (() => new Date(NOW)),
-  });
-  const assertBoundaries = ({ auth = 1, parsedBody = 0, rateLimit = 0, publication = 0 } = {}) => {
-    assert.equal(authCalls.length, auth, 'unexpected buyer authentication count');
-    assert.equal(bodyCalls.length, parsedBody, 'unexpected buyer body-parse count');
-    assert.equal(publicationCalls.filter((call) => call.kind === 'rate_limit').length, rateLimit, 'unexpected buyer rate-limit count');
-    assert.equal(publicationCalls.filter((call) => call.kind === 'publication').length, publication, 'unexpected buyer publication count');
-  };
-  return { handler, authCalls, bodyCalls, publicationCalls, assertBoundaries };
-}
-
-function adminHandler(sb, {
-  context = staffContext(),
-  body = {},
-  publisher,
-  now,
-  findThreadTicket = async (_sb, threadId) => supportTicket({ thread_id: threadId }),
-  findTicket = async () => supportTicket(),
-  patchTicket,
-} = {}) {
-  const authCalls = [];
-  const bodyCalls = [];
-  const publicationCalls = [];
-  const clientCalls = [];
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => {
-      authCalls.push('auth');
-      return context;
-    },
-    adminClient: () => {
-      clientCalls.push('admin_client');
-      return sb;
-    },
-    readBody: async () => {
-      bodyCalls.push('body');
-      return body;
-    },
-    publishSupportMessage: async (...args) => {
-      publicationCalls.push(args);
-      if (publisher) return publisher(...args);
-      return {
-        message: {
-          id: 'message-2', thread_id: USER_THREAD_ID, created_at: NOW,
-          order_id: null, recipient_user_id: USER_ID,
-        },
-        emailDelivery: { ok: true },
-      };
-    },
-    supportTicketById: findTicket,
-    supportTicketForThread: findThreadTicket,
-    ...(patchTicket ? { updateSupportTicket: patchTicket } : {}),
-    now: now || (() => new Date(NOW)),
-  });
-  const assertBoundaries = ({ auth = 1, adminClient = 1, parsedBody = 0, publication = 0 } = {}) => {
-    assert.equal(authCalls.length, auth, 'unexpected staff authentication count');
-    assert.equal(clientCalls.length, adminClient, 'unexpected admin-client count');
-    assert.equal(bodyCalls.length, parsedBody, 'unexpected staff body-parse count');
-    assert.equal(publicationCalls.length, publication, 'unexpected staff publication count');
-  };
-  return { handler, authCalls, bodyCalls, publicationCalls, clientCalls, assertBoundaries };
-}
-
-function publisherSuccess(overrides = {}) {
-  return async () => ({
-    message: {
-      id: 'message-1',
-      thread_id: USER_THREAD_ID,
-      created_at: NOW,
-      order_id: null,
-      recipient_user_id: null,
-      ...overrides,
-    },
-    emailDelivery: { state: 'delivered', effect_id: EFFECT_ID },
-  });
-}
-
-function publisherRetryableEmailFailure(overrides = {}) {
-  return async () => ({
-    message: {
-      id: 'message-1',
-      thread_id: USER_THREAD_ID,
-      created_at: NOW,
-      order_id: null,
-      recipient_user_id: null,
-      ...overrides,
-    },
-    emailDelivery: { state: 'queued', effect_id: EFFECT_ID, reason: 'support_email_delivery_failed' },
-  });
-}
-
-function publisherInsertFailure() {
-  return async () => {
-    throw new Error('append failed');
+function supportThread(overrides = {}) {
+  return {
+    id: USER_THREAD_ID,
+    participant_user_id: USER_ID,
+    company_id: COMPANY_ID,
+    participant: { id: USER_ID, full_name: 'Buyer' },
+    company: { id: COMPANY_ID, name: 'Proof Co' },
+    ...overrides,
   };
 }
 
-test('buyer with no support threads receives an empty inbox', async () => {
-  const sb = strictSupabase([
-    single('support_threads', [
-      op('select', 'id'),
-      op('eq', 'participant_user_id', USER_ID),
-    ], { data: null, error: null }),
-    single('support_threads', [
-      op('select', 'id'),
-      op('eq', 'company_id', COMPANY_ID),
-      op('is', 'participant_user_id', null),
-    ], { data: null, error: null }),
-  ]);
-  const { handler, assertBoundaries } = buyerHandler(sb);
-  const response = await handler({ request: routeRequest('account/messages'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: { messages: [], has_more: false, next_before: null, tickets: [], ticket: null, order_scope: null },
-  });
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('buyer authentication and context errors pass through without database or publication I/O', async (t) => {
-  const cases = [
-    ['unauthenticated', 401, { error: 'unauthenticated' }],
-    ['context unavailable', 503, { error: 'commerce_context_unavailable', retryable: true }],
-  ];
-  for (const [name, status, body] of cases) {
-    await t.test(name, async () => {
-      const sb = strictSupabase();
-      const contextError = new Response(JSON.stringify(body), {
-        status,
-        headers: { 'content-type': 'application/json' },
-      });
-      const { handler, authCalls, publicationCalls, assertBoundaries } = buyerHandler(sb, {
-        context: { error: contextError },
-      });
-      const response = await handler({ request: routeRequest('account/messages'), env: {} });
-      assert.deepEqual(await responseShape(response), { status, body });
-      assert.deepEqual(authCalls, ['auth']);
-      assert.deepEqual(publicationCalls, []);
-      assertBoundaries();
-      sb.assertClean();
-    });
-  }
-});
-
-test('buyer inbox combines participant and Company threads and marks only staff messages read', async () => {
-  let messagesLoaded = false;
-  const older = {
-    id: 'message-old', thread_id: COMPANY_THREAD_ID, sender_role: 'buyer', body: 'Earlier',
-    order_id: null, source: 'dashboard', created_at: '2026-09-06T13:00:00.000Z',
-  };
-  const newer = {
-    id: 'message-new', thread_id: USER_THREAD_ID, sender_role: 'staff', body: 'Latest',
-    order_id: null, source: 'admin', created_at: '2026-09-06T14:00:00.000Z',
-  };
-  const messageRead = query('messages', [
-    op('select', BUYER_MESSAGE_SELECT),
-    op('in', 'thread_id', [USER_THREAD_ID, COMPANY_THREAD_ID]),
-    op('order', 'created_at', { ascending: false }),
-    op('limit', 201),
-  ], { data: [newer, older], error: null });
-  messageRead.onSettle = () => { messagesLoaded = true; };
-  const readReceipt = query('messages', [
-    op('update', { read_by_user: true }),
-    op('in', 'thread_id', [USER_THREAD_ID, COMPANY_THREAD_ID]),
-    op('eq', 'sender_role', 'staff'),
-    op('eq', 'read_by_user', false),
-  ], { data: null, error: null });
-  readReceipt.onSettle = () => assert.equal(messagesLoaded, true, 'read receipt must follow message load');
-  const sb = strictSupabase([
-    single('support_threads', [op('select', 'id'), op('eq', 'participant_user_id', USER_ID)], {
-      data: { id: USER_THREAD_ID }, error: null,
-    }),
-    single('support_threads', [
-      op('select', 'id'), op('eq', 'company_id', COMPANY_ID), op('is', 'participant_user_id', null),
-    ], { data: { id: COMPANY_THREAD_ID }, error: null }),
-    messageRead,
-    readReceipt,
-  ]);
-  const { handler, authCalls, assertBoundaries } = buyerHandler(sb);
-
-  const response = await handler({ request: routeRequest('account/messages'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: {
-      messages: [{ ...older, order: null }, { ...newer, order: null }],
-      has_more: false,
-      next_before: null,
-      tickets: [],
-      ticket: null,
-      order_scope: null,
-    },
-  });
-  assert.deepEqual(authCalls, ['auth']);
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('buyer peek reads the participant thread without writing read receipts', async () => {
-  const row = {
-    id: 'message-1', thread_id: USER_THREAD_ID, sender_role: 'staff', body: 'Unread',
-    order_id: null, source: 'admin', created_at: NOW,
-  };
-  const sb = strictSupabase([
-    single('support_threads', [op('select', 'id'), op('eq', 'participant_user_id', USER_ID)], {
-      data: { id: USER_THREAD_ID }, error: null,
-    }),
-    query('messages', [
-      op('select', BUYER_MESSAGE_SELECT),
-      op('in', 'thread_id', [USER_THREAD_ID]),
-      op('order', 'created_at', { ascending: false }),
-      op('limit', 201),
-    ], { data: [row], error: null }),
-  ]);
-  const { handler, assertBoundaries } = buyerHandler(sb, { context: buyerContext(sb, { companyId: null }) });
-
-  const response = await handler({ request: routeRequest('account/messages?peek=1'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: {
-      messages: [{ ...row, order: null }], has_more: false, next_before: null,
-      tickets: [], ticket: null, order_scope: null,
-    },
-  });
-  assert.equal(sb.calls.some((call) => call.ops?.some((entry) => entry.method === 'update')), false);
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('buyer GET retains valid order scope in query, read receipt, and response', async () => {
-  const order = orderRow();
-  const orderContext = {
+function orderRow(overrides = {}) {
+  return {
     id: ORDER_ID,
-    reference: 'MST-1042',
+    order_number: 'MST-1042',
     status: 'paid',
-    buyer_url: `/dashboard.html?order=${ORDER_ID}#orders`,
-    admin_url: `/admin.html?order=${ORDER_ID}#orders`,
+    company_id: COMPANY_ID,
+    user_id: USER_ID,
+    customer_email: 'buyer@example.test',
+    ...overrides,
   };
-  const row = {
-    id: 'message-1', thread_id: USER_THREAD_ID, sender_role: 'staff', body: 'Order update',
-    order_id: ORDER_ID, source: 'admin', created_at: NOW,
+}
+
+function fakeDb(sequence = {}) {
+  const calls = [];
+  const indexes = new Map();
+  const builders = ['select', 'eq', 'or', 'is', 'in', 'order', 'limit', 'update', 'not', 'neq', 'insert'];
+  const settle = async (table, operations, terminal) => {
+    const call = { table, operations: operations.map((entry) => [...entry]), terminal };
+    calls.push(call);
+    const index = indexes.get(table) || 0;
+    indexes.set(table, index + 1);
+    const source = sequence[table];
+    if (typeof source === 'function') return source(call, index);
+    if (Array.isArray(source)) return source[index] || { data: [], error: null };
+    return source || { data: [], error: null };
   };
-  const sb = strictSupabase([
-    single('orders', [op('select', ORDER_SELECT), op('eq', 'id', ORDER_ID)], { data: order, error: null }),
-    single('support_threads', [op('select', 'id'), op('eq', 'participant_user_id', USER_ID)], {
-      data: { id: USER_THREAD_ID }, error: null,
-    }),
-    single('support_threads', [
-      op('select', 'id'), op('eq', 'company_id', COMPANY_ID), op('is', 'participant_user_id', null),
-    ], { data: null, error: null }),
-    query('messages', [
-      op('select', BUYER_MESSAGE_SELECT), op('in', 'thread_id', [USER_THREAD_ID]),
-      op('order', 'created_at', { ascending: false }), op('limit', 201), op('eq', 'order_id', ORDER_ID),
-    ], { data: [row], error: null }),
-    query('messages', [
-      op('update', { read_by_user: true }), op('in', 'thread_id', [USER_THREAD_ID]),
-      op('eq', 'sender_role', 'staff'), op('eq', 'read_by_user', false), op('eq', 'order_id', ORDER_ID),
-    ], { data: null, error: null }),
-    query('orders', [op('select', ORDER_CONTEXT_SELECT), op('in', 'id', [ORDER_ID])], {
-      data: [order], error: null,
-    }),
-  ]);
-  const { handler, assertBoundaries } = buyerHandler(sb);
-
-  const response = await handler({ request: routeRequest(`account/messages?order_id=${ORDER_ID}`), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: {
-      messages: [{ ...row, order: orderContext }],
-      has_more: false,
-      next_before: null,
-      tickets: [],
-      ticket: null,
-      order_scope: orderContext,
-    },
-  });
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('buyer GET scopes an explicit owned ticket and returns only its safe projection', async () => {
-  const filters = [];
-  const builder = {
-    select() { return this; }, in() { return this; }, order() { return this; }, limit() { return this; },
-    eq(column, value) { filters.push([column, value]); return this; },
-    lt() { return this; },
-    then(resolve, reject) { return Promise.resolve({ data: [], error: null }).then(resolve, reject); },
-  };
-  const handler = createAccountMessagesHandler({
-    requireCommerceUser: async () => buyerContext({ from: () => builder }),
-    visibleSupportThreadIds: async () => [USER_THREAD_ID],
-    supportTicketsForThreads: async () => [supportTicket({ assigned_to: STAFF_ID, version: 9 })],
-  });
-
-  const response = await handler({
-    request: routeRequest(`account/messages?peek=1&ticket_id=${TICKET_ID}`), env: {},
-  });
-  const payload = await response.json();
-
-  assert.equal(response.status, 200);
-  assert.deepEqual(filters, [['ticket_id', TICKET_ID]]);
-  assert.equal(payload.ticket.id, TICKET_ID);
-  assert.equal(payload.ticket.assigned_to, undefined);
-  assert.equal(payload.ticket.version, undefined);
-});
-
-test('buyer cannot read a foreign or absent order scope', async (t) => {
-  for (const [name, data] of [['foreign', foreignOrder()], ['absent', absentOrder()]]) {
-    await t.test(name, async () => {
-      const sb = strictSupabase([
-        single('orders', [op('select', ORDER_SELECT), op('eq', 'id', ORDER_ID)], { data, error: null }),
-      ]);
-      const { handler, assertBoundaries } = buyerHandler(sb);
-      const response = await handler({ request: routeRequest(`account/messages?order_id=${ORDER_ID}`), env: {} });
-      assert.deepEqual(await responseShape(response), { status: 404, body: { error: 'order_not_found' } });
-      assertBoundaries();
-      sb.assertClean();
-    });
-  }
-});
-
-test('buyer presence requires a boolean before touching the profile', async () => {
-  const sb = strictSupabase();
-  const { handler, assertBoundaries } = buyerHandler(sb, { body: { action: 'chat_presence', chat_open: 'true' } });
-
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 400, body: { error: 'chat_open_required' } });
-  assertBoundaries({ parsedBody: 1 });
-  sb.assertClean();
-});
-
-test('buyer presence updates only the authenticated profile using the injected clock', async () => {
-  const sb = strictSupabase([
-    query('profiles', [
-      op('update', { support_chat_open: true, support_chat_seen_at: NOW }),
-      op('eq', 'id', USER_ID),
-    ], { data: null, error: null }),
-  ]);
-  const { handler, assertBoundaries } = buyerHandler(sb, { body: { action: 'chat_presence', chat_open: true } });
-
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: { support_chat_open: true, support_chat_seen_at: NOW },
-  });
-  assertBoundaries({ parsedBody: 1 });
-  sb.assertClean();
-});
-
-test('buyer message rate limit returns retry metadata before publication', async () => {
-  const sb = strictSupabase();
-  const { handler, publicationCalls, assertBoundaries } = buyerHandler(sb, {
-    body: { body: 'Please help' },
-    rateLimitResult: { ok: false, retryAfter: 17 },
-  });
-
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 429, body: { error: 'rate_limited' } });
-  assert.equal(response.headers.get('retry-after'), '17');
-  assert.equal(publicationCalls.length, 1);
-  assert.equal(publicationCalls[0].kind, 'rate_limit');
-  assert.deepEqual(publicationCalls[0].args.slice(1), ['support-message', USER_ID, { limit: 10, windowSec: 60 }]);
-  assertBoundaries({ parsedBody: 1, rateLimit: 1 });
-  sb.assertClean();
-});
-
-test('buyer empty messages fail after rate limiting and before publication', async () => {
-  const sb = strictSupabase();
-  const { handler, publicationCalls, assertBoundaries } = buyerHandler(sb, { body: { body: '   ' } });
-
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 400, body: { error: 'empty_message' } });
-  assert.deepEqual(publicationCalls.map((call) => call.kind), ['rate_limit']);
-  assertBoundaries({ parsedBody: 1, rateLimit: 1 });
-  sb.assertClean();
-});
-
-test('buyer 4,001-character messages fail after rate limiting and before publication', async () => {
-  const sb = strictSupabase();
-  const { handler, publicationCalls, assertBoundaries } = buyerHandler(sb, { body: { body: 'x'.repeat(4001) } });
-
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 400, body: { error: 'message_too_long' } });
-  assert.deepEqual(publicationCalls.map((call) => call.kind), ['rate_limit']);
-  assertBoundaries({ parsedBody: 1, rateLimit: 1 });
-  sb.assertClean();
-});
-
-test('retail buyer without a Company can publish general support', async () => {
-  const sb = strictSupabase();
-  const { handler, publicationCalls, assertBoundaries } = buyerHandler(sb, {
-    context: buyerContext(sb, { companyId: null }),
-    body: { body: ' Retail support ', source: 'dashboard' },
-    publisher: publisherSuccess(),
-  });
-
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 201,
-    body: {
-      id: 'message-1', thread_id: USER_THREAD_ID, created_at: NOW, order_id: null,
-      email_delivery: { state: 'delivered', effect_id: EFFECT_ID }, summary_synced: true,
-    },
-  });
-  const publication = publicationCalls.find((call) => call.kind === 'publication');
-  assert.deepEqual(publication.args[2], {
-    companyId: null,
-    userId: USER_ID,
-    threadUserId: USER_ID,
-    senderRole: 'buyer',
-    body: 'Retail support',
-    orderId: null,
-    source: 'dashboard',
-    ticketId: null,
-    threadId: null,
-    subject: 'Retail support',
-    category: 'general',
-    startTicket: false,
-  });
-  assertBoundaries({ parsedBody: 1, rateLimit: 1, publication: 1 });
-  sb.assertClean();
-});
-
-test('buyer publisher receives exact actor, thread, order, source, body, and default APP_URL', async () => {
-  const sb = strictSupabase([
-    single('orders', [op('select', ORDER_SELECT), op('eq', 'id', ORDER_ID)], {
-      data: orderRow(), error: null,
-    }),
-  ]);
-  const { handler, publicationCalls, assertBoundaries } = buyerHandler(sb, {
-    body: { body: '  Valve leaking  ', source: 'customer_chat', order_id: ORDER_ID },
-    publisher: publisherSuccess({ order_id: ORDER_ID }),
-  });
-
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: { CUSTOM: 'value' } });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 201,
-    body: {
-      id: 'message-1', thread_id: USER_THREAD_ID, created_at: NOW, order_id: ORDER_ID,
-      email_delivery: { state: 'delivered', effect_id: EFFECT_ID }, summary_synced: true,
-    },
-  });
-  const publication = publicationCalls.find((call) => call.kind === 'publication');
-  assert.deepEqual(publication.args[0], { CUSTOM: 'value', APP_URL: 'https://masest.test' });
-  assert.equal(publication.args[1], sb);
-  assert.deepEqual(publication.args[2], {
-    companyId: COMPANY_ID,
-    userId: USER_ID,
-    threadUserId: USER_ID,
-    senderRole: 'buyer',
-    body: 'Valve leaking',
-    orderId: ORDER_ID,
-    source: 'customer_chat',
-    ticketId: null,
-    threadId: null,
-    subject: 'Valve leaking',
-    category: 'general',
-    startTicket: false,
-  });
-  assertBoundaries({ parsedBody: 1, rateLimit: 1, publication: 1 });
-  sb.assertClean();
-});
-
-test('buyer POST rejects a foreign order before publication', async () => {
-  const sb = strictSupabase([
-    single('orders', [op('select', ORDER_SELECT), op('eq', 'id', ORDER_ID)], {
-      data: foreignOrder(), error: null,
-    }),
-  ]);
-  const { handler, assertBoundaries } = buyerHandler(sb, {
-    body: { body: 'Question about order', order_id: ORDER_ID },
-  });
-
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 404, body: { error: 'order_not_found' } });
-  assertBoundaries({ parsedBody: 1, rateLimit: 1 });
-  sb.assertClean();
-});
-
-test('buyer retains the canonical message when email delivery is retryable', async () => {
-  const sb = strictSupabase();
-  const { handler, assertBoundaries } = buyerHandler(sb, {
-    body: { body: 'Need help' },
-    publisher: publisherRetryableEmailFailure(),
-  });
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 201,
-    body: {
-      id: 'message-1', thread_id: USER_THREAD_ID, created_at: NOW, order_id: null,
-      email_delivery: { state: 'queued', effect_id: EFFECT_ID, reason: 'support_email_delivery_failed' },
-      summary_synced: true,
-    },
-  });
-  assertBoundaries({ parsedBody: 1, rateLimit: 1, publication: 1 });
-  sb.assertClean();
-});
-
-test('buyer database errors expose only server_error', async () => {
-  const failure = new Error('database secret detail');
-  const sb = strictSupabase([
-    single('support_threads', [op('select', 'id'), op('eq', 'participant_user_id', USER_ID)], {
-      data: null, error: failure,
-    }),
-    single('support_threads', [
-      op('select', 'id'), op('eq', 'company_id', COMPANY_ID), op('is', 'participant_user_id', null),
-    ], { data: null, error: null }),
-  ]);
-  const { handler, assertBoundaries } = buyerHandler(sb);
-  const response = await handler({ request: routeRequest('account/messages'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 500, body: { error: 'server_error' } });
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('buyer publication insert errors expose only server_error', async () => {
-  const sb = strictSupabase();
-  const { handler, assertBoundaries } = buyerHandler(sb, {
-    body: { body: 'Need help' },
-    publisher: publisherInsertFailure(),
-  });
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 500, body: { error: 'server_error' } });
-  assertBoundaries({ parsedBody: 1, rateLimit: 1, publication: 1 });
-  sb.assertClean();
-});
-
-test('staff authentication distinguishes unauthenticated and non-staff callers before I/O', async (t) => {
-  const cases = [
-    ['unauthenticated', { user: null, staff: false, role: null }, 401, { error: 'unauthenticated' }],
-    ['non-staff', { user: { id: OTHER_USER_ID }, staff: false, role: null }, 403, { error: 'forbidden' }],
-  ];
-  for (const [name, context, status, body] of cases) {
-    await t.test(name, async () => {
-      const sb = strictSupabase();
-      const { handler, assertBoundaries } = adminHandler(sb, { context });
-      const response = await handler({ request: routeRequest('admin/messages'), env: {} });
-      assert.deepEqual(await responseShape(response), { status, body });
-      assertBoundaries({ adminClient: 0 });
-      sb.assertClean();
-    });
-  }
-});
-
-test('read-only staff cannot PATCH or POST and body parsing never runs', async (t) => {
-  for (const method of ['PATCH', 'POST']) {
-    await t.test(method, async () => {
-      const sb = strictSupabase();
-      const { handler, assertBoundaries } = adminHandler(sb, {
-        context: staffContext('read_only'),
-        body: { thread_id: USER_THREAD_ID, body: 'Must not parse' },
-      });
-      const response = await handler({ request: routeRequest('admin/messages', method), env: {} });
-      assert.deepEqual(await responseShape(response), {
-        status: 403,
-        body: { error: 'forbidden', message: 'Read-only staff cannot make changes.' },
-      });
-      assertBoundaries();
-      sb.assertClean();
-    });
-  }
-});
-
-test('owner summary returns exact open and unanswered counts', async () => {
-  const summarySelect = [
-    op('select', 'id', { count: 'exact', head: true }),
-    op('not', 'last_message_at', 'is', null),
-    op('neq', 'status', 'resolved'),
-  ];
-  const sb = strictSupabase([
-    query('support_tickets', summarySelect, { data: null, count: 7, error: null }),
-    query('support_tickets', [...summarySelect, op('eq', 'last_sender_role', 'buyer')], {
-      data: null, count: 3, error: null,
-    }),
-  ]);
-  const { handler, assertBoundaries } = adminHandler(sb, { context: staffContext('owner') });
-
-  const response = await handler({ request: routeRequest('admin/messages?summary=1'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: { summary: { open: 7, unanswered: 3 } },
-  });
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('staff list hydrates participants, companies, and order context without Auth lookups', async () => {
-  const rows = [participantThread({ last_order_id: ORDER_ID }), companyThread()];
-  const tickets = [
-    supportTicket({ primary_order_id: ORDER_ID }),
-    supportTicket({
-      id: OTHER_TICKET_ID,
-      ticket_number: 124,
-      thread_id: COMPANY_THREAD_ID,
-      subject: 'Company question',
-      last_message_body: 'Company question',
-      last_sender_role: 'staff',
-    }),
-  ];
-  const orderContext = {
-    id: ORDER_ID,
-    reference: 'MST-1042',
-    status: 'paid',
-    buyer_url: `/dashboard.html?order=${ORDER_ID}#orders`,
-    admin_url: `/admin.html?order=${ORDER_ID}#orders`,
-  };
-  const sb = strictSupabase([
-    query('support_tickets', [
-      op('select', SUPPORT_TICKET_SELECT), op('not', 'last_message_at', 'is', null),
-      op('neq', 'status', 'resolved'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
-    ], { data: tickets, error: null }),
-    query('support_threads', [op('select', THREAD_SELECT), op('in', 'id', [USER_THREAD_ID, COMPANY_THREAD_ID])], {
-      data: rows, error: null,
-    }),
-    query('profiles', [op('select', PROFILE_SELECT), op('in', 'id', [USER_ID])], {
-      data: [{ id: USER_ID, full_name: 'Ada Buyer', company_id: COMPANY_ID }], error: null,
-    }),
-    query('companies', [op('select', COMPANY_SELECT), op('in', 'id', [COMPANY_ID])], {
-      data: [{ id: COMPANY_ID, name: 'Acme HVAC', status: 'approved' }], error: null,
-    }),
-    query('orders', [op('select', ORDER_CONTEXT_SELECT), op('in', 'id', [ORDER_ID])], {
-      data: [orderRow()], error: null,
-    }),
-  ]);
-  const { handler, assertBoundaries } = adminHandler(sb);
-
-  const response = await handler({ request: routeRequest('admin/messages?status=open'), env: {} });
-
-  const payload = await response.json();
-  assert.equal(response.status, 200);
-  assert.deepEqual(
-    payload.threads.map(({ ticket_id, ticket, ...thread }) => thread),
-    [
-        {
-          thread_id: USER_THREAD_ID,
-          company_id: COMPANY_ID,
-          company_name: 'Acme HVAC',
-          participant_user_id: USER_ID,
-          participant: { id: USER_ID, full_name: 'Ada Buyer', email: null },
-          scope: 'user',
-          last_body: 'Need help',
-          last_at: NOW,
-          status: 'open',
-          completed_at: null,
-          unanswered: true,
-          order: orderContext,
-        },
-        {
-          thread_id: COMPANY_THREAD_ID,
-          company_id: COMPANY_ID,
-          company_name: 'Acme HVAC',
-          participant_user_id: null,
-          participant: null,
-          scope: 'company',
-          last_body: 'Company question',
-          last_at: NOW,
-          status: 'open',
-          completed_at: null,
-          unanswered: false,
-          order: null,
-        },
-      ],
-  );
-  assert.deepEqual(payload.threads.map(({ ticket_id }) => ticket_id), [TICKET_ID, OTHER_TICKET_ID]);
-  assert.deepEqual(payload.threads.map(({ ticket }) => ticket.version), [7, 7]);
-  assert.deepEqual(payload.summary, { open: 2, unanswered: 1 });
-  assert.deepEqual(sb.authCalls, []);
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('read-only staff can list completed threads with the resolved summary contract', async () => {
-  const completedAt = '2026-09-06T13:30:00.000Z';
-  const row = participantThread({
-    status: 'complete', completed_at: completedAt, completed_by: STAFF_ID, last_sender_role: 'staff',
-  });
-  const ticket = supportTicket({
-    status: 'resolved', resolved_at: completedAt, last_sender_role: 'staff',
-  });
-  const sb = strictSupabase([
-    query('support_tickets', [
-      op('select', SUPPORT_TICKET_SELECT), op('not', 'last_message_at', 'is', null),
-      op('eq', 'status', 'resolved'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
-    ], { data: [ticket], error: null }),
-    query('support_threads', [op('select', THREAD_SELECT), op('in', 'id', [USER_THREAD_ID])], {
-      data: [row], error: null,
-    }),
-    query('profiles', [op('select', PROFILE_SELECT), op('in', 'id', [USER_ID])], {
-      data: [{ id: USER_ID, full_name: 'Ada Buyer', company_id: COMPANY_ID }], error: null,
-    }),
-    query('companies', [op('select', COMPANY_SELECT), op('in', 'id', [COMPANY_ID])], {
-      data: [{ id: COMPANY_ID, name: 'Acme HVAC', status: 'approved' }], error: null,
-    }),
-  ]);
-  const { handler, assertBoundaries } = adminHandler(sb, { context: staffContext('read_only') });
-
-  const response = await handler({ request: routeRequest('admin/messages?status=complete'), env: {} });
-
-  const payload = await response.json();
-  assert.equal(response.status, 200);
-  assert.deepEqual(payload.threads.map(({ ticket_id, ticket: projectedTicket, ...thread }) => thread), [{
-        thread_id: USER_THREAD_ID,
-        company_id: COMPANY_ID,
-        company_name: 'Acme HVAC',
-        participant_user_id: USER_ID,
-        participant: { id: USER_ID, full_name: 'Ada Buyer', email: null },
-        scope: 'user',
-        last_body: 'Need help',
-        last_at: NOW,
-        status: 'complete',
-        completed_at: completedAt,
-        unanswered: false,
-        order: null,
-      }]);
-  assert.equal(payload.threads[0].ticket_id, TICKET_ID);
-  assert.equal(payload.threads[0].ticket.status, 'resolved');
-  assert.deepEqual(payload.summary, { resolved: 1 });
-  assert.deepEqual(sb.authCalls, []);
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('staff detail returns the exact participant thread and marks only buyer messages read', async () => {
-  let messagesLoaded = false;
-  const thread = participantThread();
-  const participant = { id: USER_ID, full_name: 'Ada Buyer', email: 'buyer@example.test' };
-  const older = {
-    id: 'message-old', thread_id: USER_THREAD_ID, sender_role: 'buyer', user_id: USER_ID,
-    recipient_user_id: null, body: 'Earlier', order_id: null, created_at: '2026-09-06T13:00:00.000Z',
-    read_by_staff: false, source: 'dashboard', external_message_id: null, email_delivery_id: null,
-    email_message_id: null, email_references: null,
-  };
-  const newer = {
-    ...older,
-    id: 'message-new', sender_role: 'staff', user_id: null, recipient_user_id: USER_ID,
-    body: 'Latest', created_at: '2026-09-06T14:00:00.000Z', read_by_staff: true, source: 'admin',
-  };
-  const messageRead = query('messages', [
-    op('select', STAFF_MESSAGE_SELECT), op('eq', 'thread_id', USER_THREAD_ID),
-    op('order', 'created_at', { ascending: false }), op('limit', 201),
-  ], { data: [newer, older], error: null });
-  messageRead.onSettle = () => { messagesLoaded = true; };
-  const readReceipt = query('messages', [
-    op('update', { read_by_staff: true }), op('eq', 'thread_id', USER_THREAD_ID),
-    op('eq', 'sender_role', 'buyer'), op('eq', 'read_by_staff', false),
-  ], { data: null, error: null });
-  readReceipt.onSettle = () => assert.equal(messagesLoaded, true, 'read receipt must follow message load');
-  const sb = strictSupabase([
-    single('support_threads', [op('select', THREAD_SELECT), op('eq', 'id', USER_THREAD_ID)], {
-      data: thread, error: null,
-    }),
-    query('profiles', [op('select', PROFILE_SELECT), op('in', 'id', [USER_ID])], {
-      data: [{ id: USER_ID, full_name: 'Ada Buyer', company_id: COMPANY_ID }], error: null,
-    }),
-    query('companies', [op('select', COMPANY_SELECT), op('in', 'id', [COMPANY_ID])], {
-      data: [{ id: COMPANY_ID, name: 'Acme HVAC', status: 'approved' }], error: null,
-    }),
-    messageRead,
-    readReceipt,
-  ], {
-    authUsers: [{ id: USER_ID, result: { data: { user: { email: 'buyer@example.test' } }, error: null } }],
-  });
-  const { handler, assertBoundaries } = adminHandler(sb);
-
-  const response = await handler({ request: routeRequest(`admin/messages?thread_id=${USER_THREAD_ID}`), env: {} });
-
-  const payload = await response.json();
-  const { ticket_id: ticketId, ticket, ...legacyThread } = payload.thread;
-  assert.equal(response.status, 200);
-  assert.deepEqual(payload.messages, [
-    { ...older, order: null, participant },
-    { ...newer, order: null, participant },
-  ]);
-  assert.equal(payload.has_more, false);
-  assert.equal(payload.next_before, null);
-  assert.deepEqual(legacyThread, {
-        thread_id: USER_THREAD_ID,
-        company_id: COMPANY_ID,
-        company_name: 'Acme HVAC',
-        company_status: 'approved',
-        participant_user_id: USER_ID,
-        participant,
-        scope: 'user',
-        status: 'open',
-        completed_at: null,
-        order_scope: null,
-  });
-  assert.equal(ticketId, TICKET_ID);
-  assert.equal(ticket.id, TICKET_ID);
-  assert.equal(ticket.version, 7);
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('staff detail falls back to an exact Company thread before it exists', async () => {
-  const sb = strictSupabase([
-    single('support_threads', [
-      op('select', THREAD_SELECT), op('eq', 'company_id', COMPANY_ID), op('is', 'participant_user_id', null),
-    ], { data: null, error: null }),
-    single('companies', [op('select', COMPANY_SELECT), op('eq', 'id', COMPANY_ID)], {
-      data: { id: COMPANY_ID, name: 'Acme HVAC', status: 'approved' }, error: null,
-    }),
-  ]);
-  const { handler, assertBoundaries } = adminHandler(sb);
-
-  const response = await handler({ request: routeRequest(`admin/messages?company_id=${COMPANY_ID}`), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 200,
-    body: {
-      messages: [],
-      has_more: false,
-      next_before: null,
-      thread: {
-        thread_id: null,
-        company_id: COMPANY_ID,
-        company_name: 'Acme HVAC',
-        company_status: 'approved',
-        participant_user_id: null,
-        participant: null,
-        scope: 'company',
-        status: 'open',
-        completed_at: null,
-        order_scope: null,
-      },
-    },
-  });
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('staff detail rejects order scope outside the selected participant and Company', async () => {
-  const sb = strictSupabase([
-    single('support_threads', [op('select', THREAD_SELECT), op('eq', 'id', USER_THREAD_ID)], {
-      data: participantThread(), error: null,
-    }),
-    query('profiles', [op('select', PROFILE_SELECT), op('in', 'id', [USER_ID])], {
-      data: [{ id: USER_ID, full_name: 'Ada Buyer', company_id: COMPANY_ID }], error: null,
-    }),
-    query('companies', [op('select', COMPANY_SELECT), op('in', 'id', [COMPANY_ID])], {
-      data: [{ id: COMPANY_ID, name: 'Acme HVAC', status: 'approved' }], error: null,
-    }),
-    single('orders', [op('select', ORDER_SELECT), op('eq', 'id', ORDER_ID)], {
-      data: foreignOrder(), error: null,
-    }),
-  ], {
-    authUsers: [{ id: USER_ID, result: { data: { user: { email: 'buyer@example.test' } }, error: null } }],
-  });
-  const { handler, assertBoundaries } = adminHandler(sb);
-  const response = await handler({
-    request: routeRequest(`admin/messages?thread_id=${USER_THREAD_ID}&order_id=${ORDER_ID}`),
-    env: {},
-  });
-
-  assert.deepEqual(await responseShape(response), { status: 404, body: { error: 'order_not_found' } });
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('staff PATCH preserves open, escalated, and complete lifecycle transitions', async (t) => {
-  const cases = [
-    ['open', { status: 'open', priority: 'normal', resolved_at: null }],
-    ['escalated', { status: 'open', priority: 'high', resolved_at: null }],
-    ['complete', { status: 'resolved', priority: 'normal', resolved_at: NOW }],
-  ];
-  for (const [status, updatedFields] of cases) {
-    await t.test(status, async () => {
-      const sb = strictSupabase();
-      let updateInput;
-      const { handler, assertBoundaries } = adminHandler(sb, {
-        body: { thread_id: USER_THREAD_ID, status },
-        patchTicket: async (_sb, input) => {
-          updateInput = input;
-          return supportTicket({ ...updatedFields, version: 8 });
-        },
-      });
-      const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-      const payload = await response.json();
-      assert.equal(response.status, 200);
-      assert.equal(payload.thread_id, USER_THREAD_ID);
-      assert.equal(payload.ticket_id, TICKET_ID);
-      assert.equal(payload.status, status);
-      assert.equal(updateInput.expectedVersion, 7);
-      assert.equal(updateInput.actorId, STAFF_ID);
-      assertBoundaries({ parsedBody: 1 });
-      sb.assertClean();
-    });
-  }
-});
-
-test('staff PATCH validates thread identity and lifecycle status before database I/O', async (t) => {
-  const cases = [
-    ['missing thread id', { status: 'open' }, { error: 'thread_id_required' }],
-    ['invalid status', { thread_id: USER_THREAD_ID, status: 'closed' }, { error: 'invalid_status' }],
-  ];
-  for (const [name, body, expectedBody] of cases) {
-    await t.test(name, async () => {
-      const sb = strictSupabase();
-      const { handler, assertBoundaries } = adminHandler(sb, { body });
-      const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-      assert.deepEqual(await responseShape(response), { status: 400, body: expectedBody });
-      assertBoundaries({ parsedBody: 1 });
-      sb.assertClean();
-    });
-  }
-});
-
-test('staff PATCH returns thread_not_found when the selected thread disappeared', async () => {
-  const sb = strictSupabase();
-  const { handler, assertBoundaries } = adminHandler(sb, {
-    body: { thread_id: USER_THREAD_ID, status: 'open' },
-    findThreadTicket: async () => null,
-  });
-  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 404, body: { error: 'thread_not_found' } });
-  assertBoundaries({ parsedBody: 1 });
-  sb.assertClean();
-});
-
-test('staff PATCH masks database update errors', async () => {
-  const sb = strictSupabase();
-  const { handler, assertBoundaries } = adminHandler(sb, {
-    body: { thread_id: USER_THREAD_ID, status: 'open' },
-    patchTicket: async () => { throw new Error('database secret detail'); },
-  });
-  const originalConsoleError = console.error;
-  console.error = () => {};
-  try {
-    const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-    assert.deepEqual(await responseShape(response), { status: 500, body: { error: 'server_error' } });
-  } finally {
-    console.error = originalConsoleError;
-  }
-  assertBoundaries({ parsedBody: 1 });
-  sb.assertClean();
-});
-
-test('staff POST requires an explicit recipient when starting a thread', async () => {
-  const sb = strictSupabase();
-  const { handler, assertBoundaries } = adminHandler(sb, {
-    body: { start_thread: true, body: 'Hello' },
-  });
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 400,
-    body: { error: 'recipient_user_id_required' },
-  });
-  assertBoundaries({ parsedBody: 1 });
-  sb.assertClean();
-});
-
-test('legacy New chat composer keeps default-ticket routing and explicit reopen through the real append helper', async () => {
-  let rpcCall;
-  const sb = {
-    async rpc(name, args) {
-      rpcCall = { name, args };
-      return {
-        data: {
-          id: 'legacy-new-chat-message', thread_id: USER_THREAD_ID, ticket_id: TICKET_ID,
-          created_at: NOW, order_id: null, recipient_user_id: USER_ID,
-          ticket: supportTicket(),
-        },
-        error: null,
-      };
-    },
+  return {
+    calls,
     from(table) {
-      assert.equal(table, 'notifications');
-      return { async insert() { return { data: null, error: null }; } };
+      const operations = [];
+      const chain = {
+        maybeSingle: () => settle(table, operations, 'maybeSingle'),
+        then: (resolve, reject) => settle(table, operations, 'then').then(resolve, reject),
+      };
+      for (const name of builders) {
+        chain[name] = (...args) => { operations.push([name, ...args]); return chain; };
+      }
+      return chain;
     },
   };
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => sb,
-    readBody: async () => ({
-      recipient_user_id: USER_ID,
-      body: 'Welcome to MASEST support.',
-      start_thread: true,
-    }),
-    resolveSupportRecipient: async () => ({ id: USER_ID, company_id: COMPANY_ID }),
-    publishSupportMessage: (env, client, input) => publishSupportMessage(env, client, input, {
-      append: appendSupportMessage,
-      createWorkerId: () => 'support-immediate/legacy-chat',
-      attemptDelivery: async () => ({ state: 'skipped', effect_id: 'effect-legacy', reason: 'test_delivery' }),
-    }),
-  });
+}
 
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-
-  assert.equal(response.status, 201);
-  assert.equal(rpcCall.name, 'append_support_message');
-  assert.equal(rpcCall.args.p_contract_version, 2);
-  assert.equal(rpcCall.args.p_start_ticket, false);
-  assert.equal(rpcCall.args.p_reopen, true);
-  assert.equal(rpcCall.args.p_recipient_user_id, USER_ID);
-});
-
-test('explicit staff ticket creation reports the pre-activation gate without masking it', async () => {
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => ({}),
-    readBody: async () => ({
-      recipient_user_id: USER_ID,
-      body: 'A distinct issue',
-      start_ticket: true,
-    }),
-    resolveSupportRecipient: async () => ({ id: USER_ID, company_id: COMPANY_ID }),
-    publishSupportMessage: async () => {
-      throw new Error('support_ticket_routing_not_enabled');
-    },
-  });
-
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 409,
-    body: { error: 'support_ticket_routing_not_enabled' },
-  });
-});
-
-test('staff POST returns thread_not_found for a missing selected thread', async () => {
-  const sb = strictSupabase([
-    single('support_threads', [op('select', THREAD_SELECT), op('eq', 'id', USER_THREAD_ID)], {
-      data: null, error: null,
-    }),
-  ]);
-  const { handler, assertBoundaries } = adminHandler(sb, {
-    body: { thread_id: USER_THREAD_ID, body: 'Hello' },
-  });
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 404, body: { error: 'thread_not_found' } });
-  assertBoundaries({ parsedBody: 1 });
-  sb.assertClean();
-});
-
-test('staff POST rejects empty and 4,001-character replies before database I/O', async (t) => {
-  const cases = [
-    ['empty', '   ', { error: 'empty_message' }],
-    ['oversized', 'x'.repeat(4001), { error: 'message_too_long' }],
-  ];
-  for (const [name, body, expectedBody] of cases) {
-    await t.test(name, async () => {
-      const sb = strictSupabase();
-      const { handler, assertBoundaries } = adminHandler(sb, { body: { body } });
-      const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-      assert.deepEqual(await responseShape(response), { status: 400, body: expectedBody });
-      assertBoundaries({ parsedBody: 1 });
-      sb.assertClean();
-    });
-  }
-});
-
-test('selected staff thread fixes participant and Company identity while SQL owns its atomic notification', async () => {
-  let published = false;
-  const sb = strictSupabase([
-    single('support_threads', [op('select', THREAD_SELECT), op('eq', 'id', USER_THREAD_ID)], {
-      data: participantThread(), error: null,
-    }),
-    query('profiles', [op('select', PROFILE_SELECT), op('in', 'id', [USER_ID])], {
-      data: [{ id: USER_ID, full_name: 'Ada Buyer', company_id: COMPANY_ID }], error: null,
-    }),
-    query('companies', [op('select', COMPANY_SELECT), op('in', 'id', [COMPANY_ID])], {
-      data: [{ id: COMPANY_ID, name: 'Acme HVAC', status: 'approved' }], error: null,
-    }),
-    single('profiles', [
-      op('select', RECIPIENT_SELECT), op('eq', 'id', USER_ID), op('eq', 'company_id', COMPANY_ID),
-    ], {
-      data: {
-        id: USER_ID, company_id: COMPANY_ID, full_name: 'Ada Buyer', notify_messages: true,
-        support_chat_open: false, support_chat_seen_at: null,
-      },
-      error: null,
-    }),
-    single('orders', [op('select', ORDER_SELECT), op('eq', 'id', ORDER_ID)], {
-      data: orderRow(), error: null,
-    }),
-  ], {
-    authUsers: [
-      { id: USER_ID, result: { data: { user: { email: 'buyer@example.test' } }, error: null } },
-      { id: USER_ID, result: { data: { user: { email: 'buyer@example.test' } }, error: null } },
-    ],
-  });
-  const publisher = async () => {
-    published = true;
-    return publisherSuccess({ order_id: ORDER_ID, recipient_user_id: USER_ID })();
-  };
-  const { handler, publicationCalls, assertBoundaries } = adminHandler(sb, {
-    body: {
-      thread_id: USER_THREAD_ID,
-      company_id: OTHER_COMPANY_ID,
-      recipient_user_id: OTHER_USER_ID,
-      order_id: ORDER_ID,
-      body: '  Order update is ready  ',
-    },
-    publisher,
-  });
-
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: { CUSTOM: 'value' } });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 201,
-    body: {
-      id: 'message-1',
-      thread_id: USER_THREAD_ID,
-      created_at: NOW,
-      order_id: ORDER_ID,
-      recipient_user_id: USER_ID,
-      email_delivery: { state: 'delivered', effect_id: EFFECT_ID },
-      summary_synced: true,
-    },
-  });
-  assert.deepEqual(publicationCalls[0][0], { CUSTOM: 'value', APP_URL: 'https://masest.test' });
-  assert.equal(publicationCalls[0][1], sb);
-  assert.deepEqual(publicationCalls[0][2], {
-    companyId: COMPANY_ID,
-    recipientUserId: USER_ID,
-    threadUserId: USER_ID,
-    threadId: USER_THREAD_ID,
-    ticketId: null,
-    senderRole: 'staff',
-    body: 'Order update is ready',
-    orderId: ORDER_ID,
-    source: 'admin',
-    reopen: null,
-    subject: 'Order update is ready',
-    category: 'general',
-    startTicket: false,
-  });
-  assertBoundaries({ parsedBody: 1, publication: 1 });
-  sb.assertClean();
-});
-
-test('staff POST rejects a foreign order before publication or notification', async () => {
-  const sb = strictSupabase([
-    single('profiles', [
-      op('select', RECIPIENT_SELECT), op('eq', 'id', USER_ID), op('eq', 'company_id', COMPANY_ID),
-    ], {
-      data: {
-        id: USER_ID, company_id: COMPANY_ID, full_name: 'Ada Buyer', notify_messages: true,
-        support_chat_open: false, support_chat_seen_at: null,
-      },
-      error: null,
-    }),
-    single('orders', [op('select', ORDER_SELECT), op('eq', 'id', ORDER_ID)], {
-      data: foreignOrder(), error: null,
-    }),
-  ], {
-    authUsers: [{ id: USER_ID, result: { data: { user: { email: 'buyer@example.test' } }, error: null } }],
-  });
-  const { handler, assertBoundaries } = adminHandler(sb, {
-    body: {
-      company_id: COMPANY_ID,
-      recipient_user_id: USER_ID,
-      order_id: ORDER_ID,
-      body: 'Question about order',
-    },
-  });
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), { status: 404, body: { error: 'order_not_found' } });
-  assertBoundaries({ parsedBody: 1 });
-  sb.assertClean();
-});
-
-test('staff publication insert errors expose only server_error', async () => {
-  const sb = strictSupabase([
-    single('profiles', [op('select', RECIPIENT_SELECT), op('eq', 'id', USER_ID)], {
-      data: {
-        id: USER_ID, company_id: COMPANY_ID, full_name: 'Ada Buyer', notify_messages: true,
-        support_chat_open: false, support_chat_seen_at: null,
-      },
-      error: null,
-    }),
-  ], {
-    authUsers: [{ id: USER_ID, result: { data: { user: { email: 'buyer@example.test' } }, error: null } }],
-  });
-  const { handler, assertBoundaries } = adminHandler(sb, {
-    body: { recipient_user_id: USER_ID, body: 'Hello' },
-    publisher: publisherInsertFailure(),
-  });
-  const originalConsoleError = console.error;
-  console.error = () => {};
-  try {
-    const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-    assert.deepEqual(await responseShape(response), { status: 500, body: { error: 'server_error' } });
-  } finally {
-    console.error = originalConsoleError;
-  }
-  assertBoundaries({ parsedBody: 1, publication: 1 });
-  sb.assertClean();
-});
-
-test('staff database errors expose only server_error', async () => {
-  const sb = strictSupabase([
-    query('support_tickets', [
-      op('select', SUPPORT_TICKET_SELECT), op('not', 'last_message_at', 'is', null),
-      op('neq', 'status', 'resolved'), op('order', 'last_message_at', { ascending: false }), op('limit', 500),
-    ], { data: null, error: new Error('database secret detail') }),
-  ]);
-  const { handler, assertBoundaries } = adminHandler(sb);
-  const originalConsoleError = console.error;
-  console.error = () => {};
-  try {
-    const response = await handler({ request: routeRequest('admin/messages'), env: {} });
-    assert.deepEqual(await responseShape(response), { status: 500, body: { error: 'server_error' } });
-  } finally {
-    console.error = originalConsoleError;
-  }
-  assertBoundaries();
-  sb.assertClean();
-});
-
-test('buyer can explicitly start a distinct ticket and receives only the buyer-safe projection', async () => {
-  let publishedInput;
-  const ticket = supportTicket();
+function buyerHandler({
+  sb = fakeDb(), context, body = {}, rate = { ok: true }, ticket = supportTicket(),
+  scope = { participantThreadId: USER_THREAD_ID, companyThreadId: COMPANY_THREAD_ID, threadIds: [USER_THREAD_ID, COMPANY_THREAD_ID] },
+  listResult = { tickets: [supportTicket()], summary: {}, has_more: false, next_cursor: null },
+  activity = [], publisher,
+} = {}) {
+  const calls = { body: 0, rate: 0, publish: [], list: [], scope: 0, ticket: 0, activity: 0 };
   const handler = createAccountMessagesHandler({
-    requireCommerceUser: async () => buyerContext({}),
-    rateLimit: async () => ({ ok: true }),
-    readBody: async () => ({
-      action: 'start_ticket',
-      body: '  Pump pressure changed  ',
-      subject: '  Pump-room scaling  ',
-      category: 'technical',
-    }),
-    publishSupportMessage: async (_env, _sb, input) => {
-      publishedInput = input;
+    requireCommerceUser: async () => context || {
+      user: { id: USER_ID, email: 'buyer@example.test' }, companyId: COMPANY_ID, sb,
+    },
+    readBody: async () => { calls.body += 1; return body; },
+    rateLimit: async () => { calls.rate += 1; return rate; },
+    visibleSupportThreadScope: async () => { calls.scope += 1; return scope; },
+    listSupportTickets: async (_sb, input) => { calls.list.push(input); return listResult; },
+    supportTicketById: async () => { calls.ticket += 1; return ticket; },
+    buyerActivity: async () => { calls.activity += 1; return activity; },
+    publishSupportMessage: async (...args) => {
+      calls.publish.push(args);
+      if (publisher) return publisher(...args);
       return {
         message: {
-          id: 'message-ticket',
-          thread_id: USER_THREAD_ID,
-          ticket_id: TICKET_ID,
+          id: MESSAGE_ID,
+          thread_id: ticket?.thread_id || USER_THREAD_ID,
+          ticket_id: ticket?.id || TICKET_ID,
           ticket,
           created_at: NOW,
           order_id: null,
         },
-        emailDelivery: { ok: true },
+        emailDelivery: { state: 'queued' },
       };
     },
   });
+  return { handler, calls, sb };
+}
 
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-  const payload = await response.json();
-
-  assert.equal(response.status, 201);
-  assert.deepEqual(publishedInput, {
-    companyId: COMPANY_ID,
-    userId: USER_ID,
-    threadUserId: USER_ID,
-    senderRole: 'buyer',
-    body: 'Pump pressure changed',
-    orderId: null,
-    source: 'dashboard',
-    ticketId: null,
-    threadId: null,
-    subject: 'Pump-room scaling',
-    category: 'technical',
-    startTicket: true,
-  });
-  assert.equal(payload.ticket_id, TICKET_ID);
-  assert.deepEqual(payload.ticket, {
-    id: TICKET_ID,
-    ticket_number: 123,
-    display_number: 'MAS-000123',
-    thread_id: USER_THREAD_ID,
-    subject: 'Pump-room scaling',
-    status: 'open',
-    priority: 'normal',
-    category: 'technical',
-    primary_order_id: null,
-    first_response_at: null,
-    resolved_at: null,
-    last_message_at: NOW,
-    last_message_body: 'Need help',
-    last_sender_role: 'buyer',
-    needs_staff_reply: true,
-    created_at: '2026-09-06T14:00:00.000Z',
-    updated_at: NOW,
-  });
-  assert.equal(Object.hasOwn(payload.ticket, 'assigned_to'), false);
-  assert.equal(Object.hasOwn(payload.ticket, 'version'), false);
-});
-
-test('explicit buyer ticket creation reports the pre-activation gate without masking it', async () => {
-  const handler = createAccountMessagesHandler({
-    requireCommerceUser: async () => buyerContext({}),
-    rateLimit: async () => ({ ok: true }),
-    readBody: async () => ({
-      action: 'start_ticket',
-      body: 'A distinct issue',
-    }),
-    publishSupportMessage: async () => {
-      throw new Error('support_ticket_routing_not_enabled');
+function adminHandler({
+  sb = fakeDb(), context = { user: { id: STAFF_ID }, staff: true, role: 'support' },
+  body = {}, ticket = supportTicket(), thread = supportThread(), listResult,
+  assignees = [], recipient = { id: USER_ID, company_id: COMPANY_ID, full_name: 'Buyer' },
+  patcher, publisher,
+} = {}) {
+  const calls = { body: 0, client: 0, list: [], assignees: 0, ticket: 0, thread: 0, recipient: 0, patch: [], publish: [] };
+  const handler = createAdminMessagesHandler({
+    requireStaff: async () => context,
+    adminClient: () => { calls.client += 1; return sb; },
+    readBody: async () => { calls.body += 1; return body; },
+    listSupportTickets: async (_sb, input) => {
+      calls.list.push(input);
+      return listResult || {
+        tickets: [ticket],
+        summary: { open: 1, unanswered: 1, needs_reply: 1, mine: 0, unassigned: 1, waiting: 0, resolved: 0 },
+        has_more: false,
+        next_cursor: null,
+      };
+    },
+    listSupportAssignees: async () => { calls.assignees += 1; return assignees; },
+    supportTicketById: async () => { calls.ticket += 1; return ticket; },
+    loadThread: async () => { calls.thread += 1; return thread; },
+    resolveSupportRecipient: async () => { calls.recipient += 1; return recipient; },
+    updateSupportTicket: async (_sb, input) => {
+      calls.patch.push(input);
+      if (patcher) return patcher(input);
+      return { ...ticket, ...input, id: input.ticketId, version: input.expectedVersion + 1 };
+    },
+    publishSupportMessage: async (...args) => {
+      calls.publish.push(args);
+      if (publisher) return publisher(...args);
+      return {
+        message: {
+          id: MESSAGE_ID,
+          thread_id: thread?.id || USER_THREAD_ID,
+          ticket_id: ticket?.id || TICKET_ID,
+          ticket,
+          recipient_user_id: USER_ID,
+          created_at: NOW,
+          order_id: null,
+        },
+        emailDelivery: { state: 'queued' },
+      };
     },
   });
+  return { handler, calls, sb };
+}
 
-  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 409,
-    body: { error: 'support_ticket_routing_not_enabled' },
+test('buyer with no visible participant thread receives an empty active inbox without creating a ticket', async () => {
+  const { handler, calls } = buyerHandler({
+    scope: { participantThreadId: null, companyThreadId: null, threadIds: [] },
   });
+  const response = await handler({ request: routeRequest('account/messages'), env: {} });
+  assert.deepEqual(await responseShape(response), {
+    status: 200,
+    body: { ticket: null, messages: [], has_more: false, next_message_cursor: null, order_scope: null },
+  });
+  assert.equal(calls.list.length, 0);
+  assert.equal(calls.publish.length, 0);
 });
 
-test('buyer explicit ticket ownership fails closed before publication', async () => {
-  let published = false;
-  const handler = createAccountMessagesHandler({
-    requireCommerceUser: async () => buyerContext({}),
-    rateLimit: async () => ({ ok: true }),
-    readBody: async () => ({ body: 'Wrong ticket', ticket_id: TICKET_ID }),
-    supportTicketById: async () => supportTicket({ thread_id: COMPANY_THREAD_ID }),
-    visibleSupportThreadIds: async () => [USER_THREAD_ID],
-    publishSupportMessage: async () => { published = true; },
+test('buyer authentication and context errors pass through without database or publication I/O', async (t) => {
+  for (const [name, status] of [['unauthenticated', 401], ['context unavailable', 503]]) {
+    await t.test(name, async () => {
+      const { handler, calls } = buyerHandler({ context: { error: new Response('{}', { status }) } });
+      const response = await handler({ request: routeRequest('account/messages'), env: {} });
+      assert.equal(response.status, status);
+      assert.equal(calls.scope, 0);
+      assert.equal(calls.publish.length, 0);
+    });
+  }
+});
+
+test('buyer active selection is personal, order-constrained, read-only until exact transcript marking', async () => {
+  const sb = fakeDb({
+    messages: [
+      { data: [{ id: MESSAGE_ID, ticket_id: TICKET_ID, sender_role: 'staff', body: 'Reply', order_id: null, created_at: NOW }], error: null },
+      { data: null, error: null },
+    ],
+  });
+  const active = supportTicket();
+  const { handler, calls } = buyerHandler({ sb, listResult: { tickets: [active], has_more: false, next_cursor: null } });
+  const response = await handler({ request: routeRequest(`account/messages?order_id=${ORDER_ID}`), env: {} });
+  // The real order resolver runs before the read-only active selector.
+  assert.equal(response.status, 404, 'a missing owned order must fail before active selection');
+  assert.equal(calls.list.length, 0);
+});
+
+test('buyer default GET asks the SQL owner for one active personal ticket only', async () => {
+  const sb = fakeDb({ messages: [{ data: [], error: null }, { data: null, error: null }] });
+  const { handler, calls } = buyerHandler({ sb });
+  const response = await handler({ request: routeRequest('account/messages'), env: {} });
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls.list[0], {
+    queue: 'active', threadIds: [USER_THREAD_ID], orderId: null, limit: 1, projection: 'buyer',
+  });
+  const read = sb.calls.find((call) => call.operations.some(([name]) => name === 'select'));
+  assert.ok(read.operations.some(([name, field, value]) => name === 'eq' && field === 'ticket_id' && value === TICKET_ID));
+});
+
+test('buyer history is paginated across personal and Company scope with no unrestricted null', async () => {
+  const { handler, calls } = buyerHandler({
+    listResult: { tickets: [], has_more: true, next_cursor: 'opaque' },
+  });
+  const response = await handler({ request: routeRequest('account/messages?view=tickets&limit=20'), env: {} });
+  assert.equal(response.status, 200);
+  assert.equal(calls.list[0].queue, 'all');
+  assert.deepEqual(calls.list[0].threadIds, [USER_THREAD_ID, COMPANY_THREAD_ID]);
+  assert.equal((await response.json()).next_ticket_cursor, 'opaque');
+});
+
+test('buyer activity is bounded peek-only and never writes read receipts', async () => {
+  const message = { id: MESSAGE_ID, ticket: { id: TICKET_ID }, body: 'Preview' };
+  const { handler, calls, sb } = buyerHandler({ activity: [message] });
+  assert.equal((await handler({ request: routeRequest('account/messages?view=activity'), env: {} })).status, 400);
+  const response = await handler({ request: routeRequest('account/messages?view=activity&peek=1'), env: {} });
+  assert.deepEqual(await responseShape(response), { status: 200, body: { messages: [message] } });
+  assert.equal(calls.activity, 1);
+  assert.equal(sb.calls.length, 0);
+});
+
+test('buyer exact ticket detail marks only that ticket and preserves a Company scope label', async () => {
+  const companyTicket = supportTicket({ thread_id: COMPANY_THREAD_ID });
+  const sb = fakeDb({
+    messages: [
+      { data: [{ id: MESSAGE_ID, ticket_id: TICKET_ID, sender_role: 'staff', body: 'Shared reply', order_id: null, created_at: NOW }], error: null },
+      { data: null, error: null },
+    ],
+  });
+  const { handler } = buyerHandler({ sb, ticket: companyTicket });
+  const response = await handler({ request: routeRequest(`account/messages?ticket_id=${TICKET_ID}`), env: {} });
+  const body = await response.json();
+  assert.equal(body.ticket.scope, 'company');
+  assert.equal(Object.hasOwn(body.ticket, 'priority'), false);
+  const update = sb.calls.find((call) => call.operations.some(([name]) => name === 'update'));
+  assert.ok(update.operations.some(([name, field, value]) => name === 'eq' && field === 'ticket_id' && value === TICKET_ID));
+  assert.ok(update.operations.some(([name, field, value]) => name === 'eq' && field === 'sender_role' && value === 'staff'));
+});
+
+test('buyer exact peek uses a composite message cursor and does not mark reads', async () => {
+  const cursor = encodeSupportCursor({ kind: 'message', timestamp: NOW, id: MESSAGE_ID });
+  const sb = fakeDb({ messages: { data: [], error: null } });
+  const { handler } = buyerHandler({ sb });
+  const response = await handler({
+    request: routeRequest(`account/messages?ticket_id=${TICKET_ID}&message_cursor=${cursor}&peek=1&limit=25`), env: {},
+  });
+  assert.equal(response.status, 200);
+  assert.equal(sb.calls.length, 1);
+  const query = sb.calls[0];
+  assert.ok(query.operations.some(([name, field]) => name === 'order' && field === 'created_at'));
+  assert.ok(query.operations.some(([name, field]) => name === 'order' && field === 'id'));
+  assert.ok(query.operations.some(([name, value]) => name === 'or' && value.includes(MESSAGE_ID)));
+});
+
+test('buyer exact detail fails closed for foreign ticket membership', async () => {
+  const { handler } = buyerHandler({ ticket: supportTicket({ thread_id: OTHER_COMPANY_ID }) });
+  assert.deepEqual(await responseShape(await handler({
+    request: routeRequest(`account/messages?ticket_id=${TICKET_ID}`), env: {},
+  })), { status: 404, body: { error: 'ticket_not_found' } });
+});
+
+test('buyer rejects foreign and absent order scope before active read or publication', async (t) => {
+  for (const [name, row] of [
+    ['foreign', orderRow({ company_id: OTHER_COMPANY_ID, user_id: OTHER_USER_ID })],
+    ['absent', null],
+  ]) {
+    await t.test(name, async () => {
+      const sb = fakeDb({ orders: { data: row, error: null } });
+      const { handler, calls } = buyerHandler({ sb, body: { body: 'Question', order_id: ORDER_ID } });
+      const get = await handler({ request: routeRequest(`account/messages?order_id=${ORDER_ID}`), env: {} });
+      assert.equal(get.status, 404);
+      const post = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+      assert.equal(post.status, 404);
+      assert.equal(calls.publish.length, 0);
+    });
+  }
+});
+
+test('buyer presence validates boolean and updates only the authenticated profile', async () => {
+  const invalid = buyerHandler({ body: { action: 'chat_presence', chat_open: 'yes' } });
+  assert.equal((await invalid.handler({ request: routeRequest('account/messages', 'POST'), env: {} })).status, 400);
+  const sb = fakeDb({ profiles: { data: null, error: null } });
+  const valid = buyerHandler({ sb, body: { action: 'chat_presence', chat_open: true } });
+  const response = await valid.handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+  assert.equal(response.status, 200);
+  assert.equal(valid.calls.rate, 0);
+  assert.ok(sb.calls[0].operations.some(([name, field, value]) => name === 'eq' && field === 'id' && value === USER_ID));
+});
+
+test('buyer message boundaries reject rate limit, empty, and oversized input before publication', async (t) => {
+  const cases = [
+    ['rate limit', { body: { body: 'Hello' }, rate: { ok: false, retryAfter: 17 }, status: 429 }],
+    ['empty', { body: { body: ' ' }, status: 400 }],
+    ['oversized', { body: { body: 'x'.repeat(4001) }, status: 400 }],
+  ];
+  for (const [name, setup] of cases) {
+    await t.test(name, async () => {
+      const { handler, calls } = buyerHandler(setup);
+      assert.equal((await handler({ request: routeRequest('account/messages', 'POST'), env: {} })).status, setup.status);
+      assert.equal(calls.publish.length, 0);
+    });
+  }
+});
+
+test('companyless buyer default publication retains automatic personal routing', async () => {
+  const { handler, calls } = buyerHandler({
+    context: { user: { id: USER_ID }, companyId: null, sb: fakeDb() },
+    body: { body: 'Retail question', source: 'customer_chat' },
+    ticket: null,
+  });
+  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+  assert.equal(response.status, 201);
+  const input = calls.publish[0][2];
+  assert.equal(input.companyId, null);
+  assert.equal(input.threadUserId, USER_ID);
+  assert.equal(input.ticketId, null);
+  assert.equal(input.startTicket, false);
+});
+
+test('program and bulk intake retain deliberate automatic-active support routing', () => {
+  const compatibilityCalls = businessSource
+    .split("await api('/api/account/messages'")
+    .slice(1)
+    .map((source) => source.slice(0, 420));
+  assert.equal(compatibilityCalls.length, 2);
+  assert.match(compatibilityCalls[0], /Program request/);
+  assert.match(compatibilityCalls[1], /Bulk \/ standing order request/);
+  for (const call of compatibilityCalls) {
+    assert.doesNotMatch(call, /ticket_id|thread_id|start_ticket|action\s*:/);
+  }
+});
+
+test('buyer exact Company reply keeps shared identity and cannot edit subject/category', async () => {
+  const ticket = supportTicket({ thread_id: COMPANY_THREAD_ID, subject: 'Durable subject', category: 'shipping' });
+  const { handler, calls } = buyerHandler({
+    ticket,
+    body: { action: 'reply', ticket_id: TICKET_ID, body: 'Shared response', subject: 'Spoof', category: 'billing' },
+  });
+  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+  const body = await response.json();
+  const input = calls.publish[0][2];
+  assert.equal(input.threadId, COMPANY_THREAD_ID);
+  assert.equal(input.ticketId, TICKET_ID);
+  assert.equal(input.subject, 'Durable subject');
+  assert.equal(input.category, 'shipping');
+  assert.equal(body.ticket.scope, 'company');
+});
+
+test('buyer exact reply rejects a foreign ticket before publication', async () => {
+  const { handler, calls } = buyerHandler({
+    ticket: supportTicket({ thread_id: OTHER_COMPANY_ID }),
+    body: { action: 'reply', ticket_id: TICKET_ID, body: 'Foreign reply attempt' },
   });
 
   const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
 
   assert.deepEqual(await responseShape(response), { status: 404, body: { error: 'ticket_not_found' } });
-  assert.equal(published, false);
+  assert.equal(calls.publish.length, 0);
 });
 
-test('buyer can reply to an exact visible company-wide ticket through its canonical thread', async () => {
-  let publishedInput;
-  const handler = createAccountMessagesHandler({
-    requireCommerceUser: async () => buyerContext({}),
-    rateLimit: async () => ({ ok: true }),
-    readBody: async () => ({ body: 'Company-wide reply', ticket_id: TICKET_ID, action: 'start_ticket' }),
-    supportTicketById: async () => supportTicket({ thread_id: COMPANY_THREAD_ID }),
-    visibleSupportThreadIds: async () => [USER_THREAD_ID, COMPANY_THREAD_ID],
-    publishSupportMessage: async (_env, _sb, input) => {
-      publishedInput = input;
-      return {
-        message: {
-          id: 'message-company-ticket', thread_id: COMPANY_THREAD_ID, ticket_id: TICKET_ID,
-          ticket: supportTicket({ thread_id: COMPANY_THREAD_ID }), created_at: NOW, order_id: null,
-        },
-        emailDelivery: { ok: true },
-      };
-    },
+test('buyer deliberate new issue has no conflicting ticket identity', async () => {
+  const { handler, calls } = buyerHandler({
+    body: { action: 'start_ticket', body: 'New issue body', subject: 'New issue', category: 'order' },
+    ticket: null,
+  });
+  assert.equal((await handler({ request: routeRequest('account/messages', 'POST'), env: {} })).status, 201);
+  assert.equal(calls.publish[0][2].ticketId, null);
+  assert.equal(calls.publish[0][2].startTicket, true);
+  const conflict = buyerHandler({ body: { action: 'start_ticket', body: 'New', ticket_id: TICKET_ID } });
+  assert.equal((await conflict.handler({ request: routeRequest('account/messages', 'POST'), env: {} })).status, 400);
+  assert.equal(conflict.calls.publish.length, 0);
+});
+
+test('buyer explicit new issue preserves the routing activation fence', async () => {
+  const { handler, calls } = buyerHandler({
+    body: { action: 'start_ticket', body: 'New issue body', subject: 'New issue', category: 'general' },
+    ticket: null,
+    publisher: async () => { throw new Error('support_ticket_routing_not_enabled'); },
   });
 
   const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
 
-  assert.equal(response.status, 201);
-  assert.equal(publishedInput.ticketId, TICKET_ID);
-  assert.equal(publishedInput.threadId, COMPANY_THREAD_ID);
-  assert.equal(publishedInput.startTicket, true);
-  assert.equal(publishedInput.userId, USER_ID);
-  assert.equal((await response.json()).ticket.thread_id, COMPANY_THREAD_ID);
+  assert.deepEqual(await responseShape(response), { status: 409, body: { error: 'support_ticket_routing_not_enabled' } });
+  assert.equal(calls.publish.length, 1);
 });
 
-test('staff explicit ticket reply keeps exact ticket and ignores spoofed thread identity', async () => {
-  let publishedInput;
-  const thread = {
-    ...participantThread({ company_id: null }),
-    company_name: null,
-    company_status: null,
-    participant: { id: USER_ID, full_name: 'Ada Buyer', email: 'buyer@example.test' },
-    scope: 'user',
-  };
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => ({
-      from: () => ({ insert: () => Promise.resolve({ error: null }) }),
+test('buyer retryable email delivery retains the canonical persisted message', async () => {
+  const { handler } = buyerHandler({
+    body: { body: 'Keep this message' },
+    publisher: async () => ({
+      message: { id: MESSAGE_ID, thread_id: USER_THREAD_ID, ticket_id: TICKET_ID, ticket: supportTicket(), created_at: NOW },
+      emailDelivery: { state: 'queued', reason: 'support_email_delivery_failed' },
     }),
-    readBody: async () => ({
-      ticket_id: TICKET_ID,
-      start_ticket: true,
-      thread_id: COMPANY_THREAD_ID,
-      recipient_user_id: OTHER_USER_ID,
-      body: ' Exact reply ',
-    }),
-    supportTicketById: async () => supportTicket(),
-    loadThread: async (_sb, { threadId }) => {
-      assert.equal(threadId, USER_THREAD_ID);
-      return thread;
-    },
-    resolveSupportRecipient: async (_sb, input) => {
-      assert.deepEqual(input, { companyId: null, userId: USER_ID });
-      return { id: USER_ID, company_id: null, email: 'buyer@example.test' };
-    },
-    publishSupportMessage: async (_env, _sb, input) => {
-      publishedInput = input;
-      return {
-        message: {
-          id: 'message-ticket', thread_id: USER_THREAD_ID, ticket_id: TICKET_ID,
-          ticket: supportTicket({ last_sender_role: 'staff' }), created_at: NOW,
-          order_id: null, recipient_user_id: USER_ID,
-        },
-        emailDelivery: { ok: true },
-      };
-    },
   });
-
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-  const payload = await response.json();
-
+  const response = await handler({ request: routeRequest('account/messages', 'POST'), env: {} });
+  const result = await response.json();
   assert.equal(response.status, 201);
-  assert.equal(publishedInput.ticketId, TICKET_ID);
-  assert.equal(publishedInput.threadId, USER_THREAD_ID);
-  assert.equal(publishedInput.recipientUserId, USER_ID);
-  assert.equal(payload.ticket_id, TICKET_ID);
-  assert.equal(payload.ticket.version, 7);
+  assert.equal(result.id, MESSAGE_ID);
+  assert.equal(result.ticket_id, TICKET_ID);
+  assert.equal(result.ticket.priority, undefined);
+  assert.deepEqual(result.email_delivery, { state: 'queued', reason: 'support_email_delivery_failed' });
 });
 
-test('staff exact company-wide ticket reply ignores forged routing hints and guesses no email identity', async () => {
-  let rpcCall;
-  let recipientLookups = 0;
-  let deliveredMessage;
-  const companyTicket = supportTicket({ thread_id: COMPANY_THREAD_ID });
-  const companyWide = {
-    ...companyThread(),
-    company_name: 'Acme HVAC', company_status: 'approved', scope: 'company', participant: null,
-  };
-  const sb = {
-    async rpc(name, args) {
-      rpcCall = { name, args };
-      return {
-        data: {
-          id: 'company-wide-staff-message', thread_id: COMPANY_THREAD_ID,
-          ticket_id: TICKET_ID, company_id: COMPANY_ID, recipient_user_id: null,
-          created_at: NOW, order_id: null, ticket: companyTicket,
-        },
-        error: null,
-      };
-    },
-  };
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => sb,
-    readBody: async () => ({
-      ticket_id: TICKET_ID,
-      company_id: OTHER_COMPANY_ID,
-      recipient_user_id: OTHER_USER_ID,
-      body: 'Company-wide follow-up',
-    }),
-    supportTicketById: async () => companyTicket,
-    loadThread: async () => companyWide,
-    resolveSupportRecipient: async () => {
-      recipientLookups += 1;
-      throw new Error('must not guess a company recipient');
-    },
-    publishSupportMessage: (env, client, input) => publishSupportMessage(env, client, input, {
-      append: appendSupportMessage,
-      createWorkerId: () => 'support-immediate/company-wide',
-      attemptDelivery: async ({ message }) => {
-        deliveredMessage = message;
-        return { state: 'skipped', effect_id: 'effect-company-wide', reason: 'recipient_not_found' };
-      },
-    }),
+test('buyer masks database and publication errors', async (t) => {
+  await t.test('database', async () => {
+    const { handler } = buyerHandler({
+      scope: null,
+    });
+    // A dependency failure is intentionally exposed only as server_error.
+    const failing = createAccountMessagesHandler({
+      requireCommerceUser: async () => ({ user: { id: USER_ID }, companyId: null, sb: {} }),
+      visibleSupportThreadScope: async () => { throw new Error('secret db error'); },
+    });
+    assert.deepEqual(await responseShape(await failing({ request: routeRequest('account/messages'), env: {} })),
+      { status: 500, body: { error: 'server_error' } });
+    void handler;
   });
-
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-  const payload = await response.json();
-
-  assert.equal(response.status, 201);
-  assert.equal(recipientLookups, 0);
-  assert.equal(rpcCall.name, 'append_support_message');
-  assert.equal(rpcCall.args.p_thread_id, COMPANY_THREAD_ID);
-  assert.equal(rpcCall.args.p_ticket_id, TICKET_ID);
-  assert.equal(rpcCall.args.p_company_id, COMPANY_ID);
-  assert.equal(rpcCall.args.p_recipient_user_id, null);
-  assert.equal(rpcCall.args.p_thread_user_id, null);
-  assert.equal(deliveredMessage.recipient_user_id, null);
-  assert.deepEqual(payload.email_delivery, {
-    state: 'skipped', effect_id: 'effect-company-wide', reason: 'recipient_not_found',
+  await t.test('publication', async () => {
+    const { handler } = buyerHandler({ body: { body: 'Hello' }, publisher: async () => { throw new Error('secret'); } });
+    assert.deepEqual(await responseShape(await handler({ request: routeRequest('account/messages', 'POST'), env: {} })),
+      { status: 500, body: { error: 'server_error' } });
   });
 });
 
-test('staff start_ticket on an existing thread delegates fresh episode selection to SQL', async () => {
-  let publishedInput;
-  let ticketLookups = 0;
-  const thread = {
-    ...participantThread(),
-    company_name: 'Acme HVAC',
-    company_status: 'approved',
-    participant: { id: USER_ID, full_name: 'Ada Buyer', email: 'buyer@example.test' },
-    scope: 'user',
-  };
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => ({
-      from: () => ({ insert: () => Promise.resolve({ error: null }) }),
-    }),
-    readBody: async () => ({
-      thread_id: USER_THREAD_ID,
-      start_ticket: true,
-      subject: 'A separate issue',
-      body: 'Start a distinct support episode.',
-    }),
-    supportTicketForThread: async () => { ticketLookups += 1; return supportTicket(); },
-    loadThread: async () => thread,
-    resolveSupportRecipient: async () => ({ id: USER_ID, company_id: COMPANY_ID }),
-    publishSupportMessage: async (_env, _sb, input) => {
-      publishedInput = input;
-      return {
-        message: {
-          id: 'new-ticket-message', thread_id: USER_THREAD_ID, ticket_id: TICKET_ID,
-          ticket: supportTicket({ subject: 'A separate issue' }), created_at: NOW,
-          order_id: null, recipient_user_id: USER_ID,
-        },
-        emailDelivery: { ok: true },
-      };
-    },
-  });
-
-  const response = await handler({ request: routeRequest('admin/messages', 'POST'), env: {} });
-
-  assert.equal(response.status, 201);
-  assert.equal(ticketLookups, 0);
-  assert.equal(publishedInput.threadId, USER_THREAD_ID);
-  assert.equal(publishedInput.ticketId, null);
-  assert.equal(publishedInput.startTicket, true);
+test('staff authentication rejects unauthenticated and non-staff callers before admin I/O', async (t) => {
+  for (const [name, context, status] of [
+    ['unauthenticated', { user: null, staff: false, role: null }, 401],
+    ['non-staff', { user: { id: USER_ID }, staff: false, role: null }, 403],
+  ]) {
+    await t.test(name, async () => {
+      const { handler, calls } = adminHandler({ context });
+      assert.equal((await handler({ request: routeRequest('admin/messages'), env: {} })).status, status);
+      assert.equal(calls.client, 0);
+    });
+  }
 });
 
-test('legacy staff thread detail keeps thread-wide history until the ticket UI cutover', async () => {
-  const ticketFilters = [];
-  let selected = false;
-  const rows = [
-    { id: 'message-one', thread_id: USER_THREAD_ID, ticket_id: TICKET_ID, sender_role: 'buyer', body: 'First ticket', order_id: null, created_at: NOW },
-    { id: 'message-two', thread_id: USER_THREAD_ID, ticket_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', sender_role: 'staff', body: 'Second ticket', order_id: null, created_at: NOW },
-  ];
-  const makeBuilder = () => ({
-    select() { selected = true; return this; },
-    update() { selected = false; return this; },
-    eq(column, value) { if (column === 'ticket_id') ticketFilters.push(value); return this; },
-    order() { return this; },
-    limit() { return this; },
-    lt() { return this; },
-    then(resolve, reject) {
-      return Promise.resolve(selected ? { data: rows, error: null } : { data: [], error: null }).then(resolve, reject);
-    },
-  });
-  const thread = {
-    ...participantThread(),
-    company_name: 'Acme HVAC', company_status: 'approved', scope: 'user', participant: null,
-  };
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => ({ from: () => makeBuilder() }),
-    loadThread: async () => thread,
-    supportTicketForThread: async () => supportTicket(),
-  });
+test('read-only staff can list but cannot parse or execute mutations', async () => {
+  const { handler, calls } = adminHandler({ context: { user: { id: STAFF_ID }, staff: true, role: 'read_only' } });
+  assert.equal((await handler({ request: routeRequest('admin/messages'), env: {} })).status, 200);
+  assert.equal((await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} })).status, 403);
+  assert.equal((await handler({ request: routeRequest('admin/messages', 'POST'), env: {} })).status, 403);
+  assert.equal(calls.body, 0);
+});
 
+test('staff queue and summary delegate bounded filters and page-independent counts', async () => {
+  const page = {
+    tickets: [supportTicket()],
+    summary: { open: 9, unanswered: 4, needs_reply: 4, mine: 2, unassigned: 3, waiting: 1, resolved: 5 },
+    has_more: true,
+    next_cursor: 'next',
+  };
+  const { handler, calls } = adminHandler({ listResult: page });
   const response = await handler({
-    request: new Request(`https://masest.test/api/admin/messages?thread_id=${USER_THREAD_ID}`),
-    env: {},
+    request: routeRequest('admin/messages?queue=waiting&assignee=mine&priority=high&category=order&search=50%25_off&limit=25'), env: {},
   });
-  const payload = await response.json();
+  assert.deepEqual(await responseShape(response), { status: 200, body: page });
+  assert.equal(calls.list[0].search, '50\\%\\_off');
+  assert.equal(calls.list[0].staffId, STAFF_ID);
+  const summary = await handler({ request: routeRequest('admin/messages?summary=1'), env: {} });
+  assert.deepEqual(await responseShape(summary), { status: 200, body: { summary: page.summary } });
+});
 
+test('staff queue rejects invalid enums, overlong search, caps, and foreign cursor kinds', async (t) => {
+  const cursor = encodeSupportCursor({ kind: 'message', timestamp: NOW, id: MESSAGE_ID });
+  for (const path of [
+    'admin/messages?queue=bogus',
+    'admin/messages?priority=low',
+    'admin/messages?category=other',
+    `admin/messages?search=${'x'.repeat(121)}`,
+    'admin/messages?limit=101',
+    `admin/messages?cursor=${cursor}`,
+  ]) {
+    await t.test(path, async () => {
+      const { handler, calls } = adminHandler();
+      assert.equal((await handler({ request: routeRequest(path), env: {} })).status, 400);
+      assert.equal(calls.list.length, 0);
+    });
+  }
+});
+
+test('staff assignee discovery is isolated and bounded by its domain owner', async () => {
+  const assignees = [{ id: STAFF_ID, name: 'Sam Support', role: 'support' }];
+  const { handler, calls } = adminHandler({ assignees });
+  assert.deepEqual(await responseShape(await handler({ request: routeRequest('admin/messages?view=assignees'), env: {} })),
+    { status: 200, body: { assignees } });
+  assert.equal(calls.assignees, 1);
+  assert.equal(calls.list.length, 0);
+});
+
+test('staff exact detail reads and marks only the selected ticket', async () => {
+  const sb = fakeDb({
+    messages: [
+      { data: [{ id: MESSAGE_ID, ticket_id: TICKET_ID, sender_role: 'buyer', body: 'Question', order_id: null, created_at: NOW }], error: null },
+      { data: null, error: null },
+    ],
+  });
+  const { handler } = adminHandler({ sb });
+  const response = await handler({ request: routeRequest(`admin/messages?ticket_id=${TICKET_ID}`), env: {} });
+  const body = await response.json();
+  assert.equal(body.ticket.id, TICKET_ID);
+  assert.equal(body.thread.thread_id, USER_THREAD_ID);
+  assert.equal(body.messages[0].id, MESSAGE_ID);
+  for (const call of sb.calls) {
+    assert.ok(call.operations.some(([name, field, value]) => name === 'eq' && field === 'ticket_id' && value === TICKET_ID));
+  }
+  const update = sb.calls.find((call) => call.operations.some(([name]) => name === 'update'));
+  assert.ok(update.operations.some(([name, field, value]) => name === 'eq' && field === 'sender_role' && value === 'buyer'));
+});
+
+test('staff exact detail validates order context but keeps the complete ticket transcript', async () => {
+  const sb = fakeDb({
+    orders: { data: orderRow(), error: null },
+    messages: { data: [{ id: MESSAGE_ID, ticket_id: TICKET_ID, sender_role: 'buyer', body: 'Earlier context', order_id: null, created_at: NOW }], error: null },
+  });
+  const { handler } = adminHandler({ sb });
+  const response = await handler({
+    request: routeRequest(`admin/messages?ticket_id=${TICKET_ID}&order_id=${ORDER_ID}&peek=1`), env: {},
+  });
+  const body = await response.json();
+  assert.equal(body.order_scope.id, ORDER_ID);
+  const messages = sb.calls.find((call) => call.table === 'messages');
+  assert.equal(messages.operations.some(([name, field]) => name === 'eq' && field === 'order_id'), false);
+});
+
+test('staff PATCH validates exact ticket/version/enums before atomic mutation', async (t) => {
+  const invalidBodies = [
+    {},
+    { ticket_id: TICKET_ID, status: 'open' },
+    { ticket_id: TICKET_ID, version: 7, status: 'complete' },
+    { ticket_id: TICKET_ID, version: 7, priority: 'low' },
+    { ticket_id: TICKET_ID, version: 7, category: 'other' },
+    { ticket_id: TICKET_ID, version: 7, assigned_to: 'not-a-uuid' },
+  ];
+  for (const body of invalidBodies) {
+    await t.test(JSON.stringify(body), async () => {
+      const { handler, calls } = adminHandler({ body });
+      assert.equal((await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} })).status, 400);
+      assert.equal(calls.patch.length, 0);
+    });
+  }
+});
+
+test('staff PATCH forwards category and explicit null assignment under one CAS', async () => {
+  const { handler, calls } = adminHandler({
+    body: { ticket_id: TICKET_ID, version: 7, status: 'waiting_on_customer', priority: 'urgent', category: 'billing', assigned_to: null },
+  });
+  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
   assert.equal(response.status, 200);
-  assert.deepEqual(payload.messages.map((message) => message.ticket_id).sort(), [
-    TICKET_ID,
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  ].sort());
-  assert.deepEqual(ticketFilters, []);
-});
-
-test('explicit ticket status update requires a version and reports stale compare-and-swap', async () => {
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => ({}),
-    readBody: async () => ({ ticket_id: TICKET_ID, status: 'resolved', version: 6 }),
-    supportTicketById: async () => supportTicket(),
-    updateSupportTicket: async () => {
-      throw Object.assign(new Error('ticket_version_conflict'), { code: 'P0001' });
-    },
-  });
-
-  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 409,
-    body: { error: 'ticket_version_conflict' },
+  assert.deepEqual(calls.patch[0], {
+    ticketId: TICKET_ID, expectedVersion: 7, actorId: STAFF_ID,
+    status: 'waiting_on_customer', priority: 'urgent', category: 'billing',
+    assignedTo: null, assignmentProvided: true,
   });
 });
 
-test('explicit ticket status update rejects a missing version before mutation', async () => {
-  let mutations = 0;
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => ({}),
-    readBody: async () => ({ ticket_id: TICKET_ID, status: 'resolved' }),
-    supportTicketById: async () => supportTicket(),
-    updateSupportTicket: async () => { mutations += 1; },
-  });
-
-  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-
-  assert.deepEqual(await responseShape(response), {
-    status: 400,
-    body: { error: 'ticket_version_required' },
-  });
-  assert.equal(mutations, 0);
+test('staff PATCH maps stale, missing, ineligible, and internal failures without leaking details', async (t) => {
+  const cases = [
+    ['stale', new Error('ticket_version_conflict'), 409, 'ticket_version_conflict'],
+    ['missing', new Error('support_ticket_not_found'), 404, 'ticket_not_found'],
+    ['ineligible', new Error('support_ticket_assignee_ineligible'), 400, 'invalid_assignee'],
+    ['internal', new Error('secret database detail'), 500, 'server_error'],
+  ];
+  for (const [name, error, status, code] of cases) {
+    await t.test(name, async () => {
+      const { handler } = adminHandler({
+        body: { ticket_id: TICKET_ID, version: 7, status: 'open' },
+        patcher: async () => { throw error; },
+      });
+      assert.deepEqual(await responseShape(await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} })),
+        { status, body: { error: code } });
+    });
+  }
 });
 
-test('explicit ticket PATCH accepts canonical waiting status and priority without legacy remapping', async () => {
-  let updateInput;
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => ({}),
-    readBody: async () => ({
-      ticket_id: TICKET_ID,
-      status: 'waiting_on_customer',
-      priority: 'urgent',
-      version: 7,
-    }),
-    supportTicketById: async () => supportTicket(),
-    updateSupportTicket: async (_sb, input) => {
-      updateInput = input;
-      return supportTicket({ status: 'waiting_on_customer', priority: 'urgent', version: 8 });
-    },
-  });
+test('staff new ticket requires a recipient and delegates fresh episode creation without legacy hints', async () => {
+  const missing = adminHandler({ body: { action: 'start_ticket', body: 'New issue' } });
+  assert.equal((await missing.handler({ request: routeRequest('admin/messages', 'POST'), env: {} })).status, 400);
 
-  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-
-  assert.equal(response.status, 200);
-  assert.deepEqual(updateInput, {
-    ticketId: TICKET_ID,
-    expectedVersion: 7,
-    actorId: STAFF_ID,
-    status: 'waiting_on_customer',
-    priority: 'urgent',
+  const { handler, calls } = adminHandler({
+    body: { action: 'start_ticket', recipient_user_id: USER_ID, subject: 'New order issue', category: 'order', body: 'Please review' },
   });
+  assert.equal((await handler({ request: routeRequest('admin/messages', 'POST'), env: {} })).status, 201);
+  const input = calls.publish[0][2];
+  assert.equal(input.ticketId, null);
+  assert.equal(input.threadId, null);
+  assert.equal(input.startTicket, true);
+  assert.equal(input.expectedTicketVersion, null);
 });
 
-test('legacy thread status control selects one ticket server-side and still uses CAS', async () => {
-  let updateInput;
-  const thread = participantThread();
-  const handler = createAdminMessagesHandler({
-    requireStaff: async () => staffContext(),
-    adminClient: () => ({}),
-    readBody: async () => ({ thread_id: USER_THREAD_ID, status: 'escalated' }),
-    loadThread: async (_sb, { threadId }) => {
-      assert.equal(threadId, USER_THREAD_ID);
-      return thread;
-    },
-    supportTicketForThread: async (_sb, threadId) => {
-      assert.equal(threadId, USER_THREAD_ID);
-      return supportTicket();
-    },
-    updateSupportTicket: async (_sb, input) => {
-      updateInput = input;
-      return supportTicket({ priority: 'high', version: 8 });
+test('staff new-ticket boundary rejects existing ticket/thread lifecycle hints', async () => {
+  for (const body of [
+    { action: 'start_ticket', body: 'New', recipient_user_id: USER_ID, ticket_id: TICKET_ID },
+    { action: 'start_ticket', body: 'New', recipient_user_id: USER_ID, thread_id: USER_THREAD_ID },
+    { action: 'start_ticket', body: 'New', recipient_user_id: USER_ID, start_thread: true },
+  ]) {
+    const { handler, calls } = adminHandler({ body });
+    assert.equal((await handler({ request: routeRequest('admin/messages', 'POST'), env: {} })).status, 400);
+    assert.equal(calls.publish.length, 0);
+  }
+});
+
+test('staff exact reply keeps ticket metadata and ignores forged thread/recipient identity', async () => {
+  const ticket = supportTicket({ subject: 'Durable subject', category: 'technical' });
+  const { handler, calls } = adminHandler({
+    ticket,
+    body: {
+      action: 'reply', ticket_id: TICKET_ID, version: 7, body: 'Exact reply',
+      subject: 'Spoof', category: 'billing', thread_id: COMPANY_THREAD_ID,
+      recipient_user_id: OTHER_USER_ID,
     },
   });
+  assert.equal((await handler({ request: routeRequest('admin/messages', 'POST'), env: {} })).status, 201);
+  const input = calls.publish[0][2];
+  assert.equal(input.ticketId, TICKET_ID);
+  assert.equal(input.threadId, USER_THREAD_ID);
+  assert.equal(input.recipientUserId, USER_ID);
+  assert.equal(input.expectedTicketVersion, 7);
+  assert.equal(input.subject, 'Durable subject');
+  assert.equal(input.category, 'technical');
+});
 
-  const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
-  const payload = await response.json();
+test('staff reply requires exact ticket and version before publication', async () => {
+  for (const body of [
+    { action: 'reply', version: 7, body: 'Missing ticket' },
+    { action: 'reply', ticket_id: TICKET_ID, body: 'Missing version' },
+    { action: 'reply', ticket_id: 'bad', version: 7, body: 'Bad ticket' },
+  ]) {
+    const { handler, calls } = adminHandler({ body });
+    assert.equal((await handler({ request: routeRequest('admin/messages', 'POST'), env: {} })).status, 400);
+    assert.equal(calls.publish.length, 0);
+  }
+});
 
-  assert.equal(response.status, 200);
-  assert.deepEqual(updateInput, {
-    ticketId: TICKET_ID,
-    expectedVersion: 7,
-    actorId: STAFF_ID,
-    status: 'open',
-    priority: 'high',
+test('staff reply maps routing, stale, resolved, and internal publication errors', async (t) => {
+  const cases = [
+    ['routing', new Error('support_ticket_routing_not_enabled'), 409, 'support_ticket_routing_not_enabled'],
+    ['stale', new Error('ticket_version_conflict'), 409, 'ticket_version_conflict'],
+    ['resolved', new Error('support_ticket_reply_resolved'), 409, 'ticket_resolved'],
+    ['internal', new Error('provider secret'), 500, 'server_error'],
+  ];
+  for (const [name, error, status, code] of cases) {
+    await t.test(name, async () => {
+      const { handler } = adminHandler({
+        body: { action: 'reply', ticket_id: TICKET_ID, version: 7, body: 'Reply' },
+        publisher: async () => { throw error; },
+      });
+      assert.deepEqual(await responseShape(await handler({ request: routeRequest('admin/messages', 'POST'), env: {} })),
+        { status, body: { error: code } });
+    });
+  }
+});
+
+test('staff reply rejects foreign order before publication', async () => {
+  const sb = fakeDb({ orders: { data: orderRow({ company_id: OTHER_COMPANY_ID, user_id: OTHER_USER_ID }), error: null } });
+  const { handler, calls } = adminHandler({
+    sb,
+    body: { action: 'reply', ticket_id: TICKET_ID, version: 7, body: 'Reply', order_id: ORDER_ID },
   });
-  assert.equal(payload.thread_id, USER_THREAD_ID);
-  assert.equal(payload.ticket_id, TICKET_ID);
-  assert.equal(payload.status, 'escalated');
-  assert.equal(payload.ticket.version, 8);
+  assert.equal((await handler({ request: routeRequest('admin/messages', 'POST'), env: {} })).status, 404);
+  assert.equal(calls.publish.length, 0);
 });

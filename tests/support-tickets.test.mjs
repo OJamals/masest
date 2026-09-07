@@ -13,8 +13,6 @@ import {
   normalizeSupportTicketVersion,
   projectAdminSupportTicket,
   projectBuyerSupportTicket,
-  supportTicketLegacyStatus,
-  supportTicketTransition,
 } from '../functions/_lib/support-tickets.js';
 
 const ticket = {
@@ -107,7 +105,6 @@ test('buyer ticket projection is an explicit allowlist with a derived reply stat
     thread_id: ticket.thread_id,
     subject: ticket.subject,
     status: 'open',
-    priority: 'high',
     category: 'shipping',
     primary_order_id: ticket.primary_order_id,
     first_response_at: ticket.first_response_at,
@@ -116,6 +113,8 @@ test('buyer ticket projection is an explicit allowlist with a derived reply stat
     last_message_body: ticket.last_message_body,
     last_sender_role: 'buyer',
     needs_staff_reply: true,
+    scope: 'personal',
+    order: null,
     created_at: ticket.created_at,
     updated_at: ticket.updated_at,
   });
@@ -131,7 +130,11 @@ test('buyer projection never leaks assignee, version, private events, notes, or 
 test('admin ticket projection adds only managed staff fields', () => {
   assert.deepEqual(projectAdminSupportTicket(ticket), {
     ...projectBuyerSupportTicket(ticket),
+    priority: ticket.priority,
     assigned_to: ticket.assigned_to,
+    assignee: null,
+    participant: null,
+    company: null,
     version: 4,
   });
   assert.equal(Object.hasOwn(projectAdminSupportTicket(ticket), 'events'), false);
@@ -150,15 +153,4 @@ test('ticket version compare-and-swap input is a positive integer without coerci
   for (const invalid of [0, -1, 1.5, '4', null, undefined, Number.MAX_SAFE_INTEGER + 1]) {
     assert.equal(normalizeSupportTicketVersion(invalid), null);
   }
-});
-
-test('legacy admin lifecycle values map onto ticket status and priority', () => {
-  assert.deepEqual(supportTicketTransition('open'), { status: 'open', priority: 'normal' });
-  assert.deepEqual(supportTicketTransition('escalated'), { status: 'open', priority: 'high' });
-  assert.deepEqual(supportTicketTransition('complete'), { status: 'resolved', priority: null });
-  assert.equal(supportTicketTransition('closed'), null);
-
-  assert.equal(supportTicketLegacyStatus({ status: 'resolved', priority: 'urgent' }), 'complete');
-  assert.equal(supportTicketLegacyStatus({ status: 'open', priority: 'high' }), 'escalated');
-  assert.equal(supportTicketLegacyStatus({ status: 'waiting_on_customer', priority: 'normal' }), 'open');
 });

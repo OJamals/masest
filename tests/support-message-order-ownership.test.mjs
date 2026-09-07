@@ -209,7 +209,8 @@ test('support order schema enforces exact participant or company thread ownershi
 test('buyer message route inserts only the resolved order id', () => {
   const source = readFileSync(new URL('../functions/api/account/messages.js', import.meta.url), 'utf8');
   const publisher = readFileSync(new URL('../functions/_lib/support-message-publisher.js', import.meta.url), 'utf8');
-  assert.match(source, /resolveSupportOrderId\(sb,/);
+  assert.match(source, /const resolveOrder = dependencies\.resolveSupportOrderId \|\| resolveSupportOrderId/);
+  assert.match(source, /resolveOrder\(sb,/);
   assert.match(source, /dependencies\.publishSupportMessage \|\| publishSupportMessage/);
   assert.match(source, /publication = await publishMessage\(/);
   assert.match(publisher, /appendSupportMessage/);

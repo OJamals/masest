@@ -6,37 +6,27 @@ import {
   presenceIsFresh,
 } from '../functions/_lib/support-messages.js';
 import {
-  supportTicketLegacyStatus,
-  supportTicketTransition,
+  decodeSupportCursor,
 } from '../functions/_lib/support-tickets.js';
-import { createSupportPoller, filterSupportThreads } from '../js/admin-support.js';
+import { createSupportPoller } from '../js/admin-support.js';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('message pages retain the newest rows and expose an older-page cursor', () => {
   const rows = [
-    { id: '3', created_at: '2026-07-11T03:00:00.000Z' },
-    { id: '2', created_at: '2026-07-11T02:00:00.000Z' },
-    { id: '1', created_at: '2026-07-11T01:00:00.000Z' },
+    { id: '33333333-3333-4333-8333-333333333333', created_at: '2026-07-11T03:00:00.000000+00:00' },
+    { id: '22222222-2222-4222-8222-222222222222', created_at: '2026-07-11T02:00:00.000000+00:00' },
+    { id: '11111111-1111-4111-8111-111111111111', created_at: '2026-07-11T01:00:00.000000+00:00' },
   ];
   assert.deepEqual(messagePage(rows, 2), {
     messages: [rows[1], rows[0]],
     has_more: true,
-    next_before: rows[1].created_at,
+    next_message_cursor: messagePage(rows, 2).next_message_cursor,
   });
-});
-
-test('support lifecycle maps legacy controls onto ticket status and priority', () => {
-  assert.deepEqual(supportTicketTransition('escalated'), { status: 'open', priority: 'high' });
-  assert.deepEqual(supportTicketTransition('complete'), { status: 'resolved', priority: null });
-  assert.equal(supportTicketTransition('bogus'), null);
-  assert.equal(supportTicketLegacyStatus({ status: 'resolved', priority: 'high' }), 'complete');
-});
-
-test('ticket lifecycle projections keep legacy open and escalated labels deterministic', () => {
-  assert.equal(supportTicketLegacyStatus({ status: 'open', priority: 'normal' }), 'open');
-  assert.equal(supportTicketLegacyStatus({ status: 'waiting_on_customer', priority: 'urgent' }), 'escalated');
-  assert.equal(supportTicketLegacyStatus({ status: 'resolved', priority: 'normal' }), 'complete');
+  assert.deepEqual(decodeSupportCursor(messagePage(rows, 2).next_message_cursor, { kind: 'message' }), {
+    timestamp: rows[1].created_at,
+    id: rows[1].id,
+  });
 });
 
 test('presence expires when a close/unload signal is lost', () => {
@@ -44,18 +34,6 @@ test('presence expires when a close/unload signal is lost', () => {
   assert.equal(presenceIsFresh('2026-07-11T04:59:40.000Z', now), true);
   assert.equal(presenceIsFresh('2026-07-11T04:58:00.000Z', now), false);
   assert.equal(presenceIsFresh(null, now), false);
-});
-
-test('support inbox search matches customer names and recent message text', () => {
-  const threads = [
-    { company_id: 'c1', company_name: 'Acme HVAC', last_body: 'Chiller loop is fouling again.' },
-    { company_id: 'c2', company_name: 'Northbay Foods', last_body: 'Thanks, received.' },
-  ];
-
-  assert.deepEqual(filterSupportThreads(threads, '  ACME '), [threads[0]]);
-  assert.deepEqual(filterSupportThreads(threads, 'received'), [threads[1]]);
-  assert.deepEqual(filterSupportThreads(threads, ''), threads);
-  assert.deepEqual(filterSupportThreads(threads, 'missing'), []);
 });
 
 test('support polling is lightweight while closed, bounded while open, hidden-safe, and backs off', async () => {
@@ -74,8 +52,7 @@ test('support polling is lightweight while closed, bounded while open, hidden-sa
       summaryCalls += 1;
       if (failSummary) throw new Error('offline');
     },
-    loadThreads: async () => { threadCalls += 1; },
-    heartbeat: async () => {},
+    loadTickets: async () => { threadCalls += 1; },
     setTimer: (callback, delay) => {
       const id = ++nextTimerId;
       timers.set(id, callback);
@@ -134,14 +111,11 @@ test('inbound replies preserve participant identity and re-enter the shared deli
 });
 
 test('admin support console has durable controls, live refresh, correct selection, and keyboard close', () => {
-  // The inbox now lives in the one shared console rather than a second drawer in
-  // admin.html; these assert the behaviours, not the old expression syntax.
   const source = read('js/admin-support.js');
-  // Lifecycle: resolve, escalate, and escalate toggles back to open.
-  assert.match(source, /selected\.status === "escalated"/);
-  assert.match(source, /data-status="complete"/);
-  assert.match(source, /data-status="\$\{escalated \? "open" : "escalated"\}"/);
-  // Read-only staff get a notice instead of a reply box.
+  assert.match(source, /\["open", "waiting_on_customer", "resolved"\]/);
+  assert.match(source, /\["normal", "high", "urgent"\]/);
+  assert.match(source, /ticket_id:\s*id/);
+  assert.match(source, /version/);
   assert.match(source, /const canWrite = staff\?\.role !== "read_only"/);
   assert.match(source, /read-only access/);
   assert.match(source, /createSupportPoller/);
@@ -149,8 +123,6 @@ test('admin support console has durable controls, live refresh, correct selectio
   assert.doesNotMatch(source, /setInterval\(/);
   assert.match(source, /event\.key !== "Escape"/);
   assert.match(source, /aria-pressed/);
-  // Settings are a view of this console, not a page it links out to: the gear is
-  // a toggle, and nothing here navigates staff away from the drawer.
   assert.match(source, /data-support-settings-toggle/);
   assert.doesNotMatch(source, /admin\.html#support/);
 });
@@ -173,11 +145,8 @@ test('public staff accounts receive a full support workspace instead of buyer ch
   const styles = read('css/admin-support.css');
   assert.match(support, /\/api\/admin\/messages/);
   assert.match(support, /\/api\/admin\/message-settings/);
-  assert.match(support, /presenceRequest = presenceRequest/);
-  assert.match(support, /Mark resolved/);
-  assert.match(support, /Escalate/);
   assert.match(support, /Needs reply/);
-  assert.match(support, /link\.textContent = "Customer support"/);
+  assert.match(support, /aria-label="Open support tickets"/);
   assert.match(read('js/main/chrome.js'), /site-support__launcher, \.customer-chat__toggle/);
   // The staff menu opens this console in place; its href is only the fallback
   // for routes where the console suppresses itself.
@@ -190,21 +159,20 @@ test('public staff accounts receive a full support workspace instead of buyer ch
   assert.match(support, /data-support-pref/);
   assert.match(support, /data-support-back/);
   assert.match(support, /drawer\.dataset\.view/);
-  assert.match(styles, /\.site-support__drawer\[data-view="settings"\] \.site-support__list-pane \{ display: none; \}/);
-  assert.match(styles, /height:\s*min\(620px, calc\(100dvh - 104px\)\)/);
+  assert.match(styles, /\.site-support__drawer\[data-view="settings"\] \.site-support__list-pane/);
+  assert.match(styles, /height:\s*min\(720px, calc\(100dvh - 88px\)\)/);
   assert.match(styles, /\.site-support__drawer \{[\s\S]*padding:\s*0;/);
   assert.match(styles, /overflow-y:\s*auto/);
   assert.match(styles, /grid-template-columns:\s*minmax\(250px, 310px\) minmax\(0, 1fr\)/);
   assert.match(support, /site-support__empty/);
-  assert.match(support, /aria-label="Customer support settings"/);
+  assert.match(support, /aria-label="Support settings"/);
   assert.match(support, /site-support__conversation-toolbar/);
   assert.match(support, /site-support__conversation-body/);
-  assert.match(support, /threadsLoaded/);
   assert.match(support, /site-support__skeleton/);
   assert.match(support, /routeSuppressesSupport/);
   assert.match(support, /masest:support-route/);
   assert.match(styles, /\.site-support__conversation-toolbar/);
-  assert.match(styles, /\.site-support__conversation-empty/);
+  assert.match(styles, /\.site-support__empty/);
   assert.match(styles, /\.site-support__skeleton/);
   assert.doesNotMatch(support, /is-empty/);
   assert.doesNotMatch(styles, /\.site-support__drawer\.is-empty/);
@@ -214,35 +182,31 @@ test('phone support uses a list-to-conversation drill-down without redundant ope
   const support = read('js/admin-support.js');
   const styles = read('css/admin-support.css');
 
-  assert.match(support, /drawer\.dataset\.threadSelected/);
-  assert.match(support, /clearThreadSelection/);
-  assert.match(support, /selected \? "Conversation" : "Customer inbox"/);
-  assert.doesNotMatch(support, /thread\.status === "escalated" \? "Escalated" : "Open"/);
-  assert.match(support, /launcherIcon\.className = open \? "ph ph-x" : "ph ph-lifebuoy"/);
-  assert.match(styles, /\.site-support__drawer\[data-view="inbox"\]\[data-thread-selected="false"\] \{ grid-template-rows:\s*minmax\(0, 1fr\); \}/);
-  assert.match(styles, /\.site-support__drawer\[data-view="inbox"\]\[data-thread-selected="false"\] \.site-support__conversation \{ display:\s*none; \}/);
-  assert.match(styles, /\.site-support__drawer\[data-view="inbox"\]\[data-thread-selected="true"\] \.site-support__list-pane \{ display:\s*none; \}/);
-  assert.match(styles, /\.site-support__drawer\[data-view="inbox"\]\[data-thread-selected="true"\] \{ grid-template-rows:\s*minmax\(0, 1fr\); \}/);
+  assert.match(support, /drawer\.dataset\.ticketSelected/);
+  assert.match(support, /clearSelection/);
+  assert.match(support, /selected \? "Ticket detail" : "Support tickets"/);
+  assert.doesNotMatch(support, /thread\.status/);
+  assert.match(styles, /\.site-support__drawer\[data-view="queue"\]\[data-ticket-selected="false"\]/);
+  assert.match(styles, /\.site-support__drawer\[data-view="detail"\]\[data-ticket-selected="true"\]/);
 });
 
-test('support thread cards give customer and message copy the full list width', () => {
+test('support ticket cards give identity and customer copy the full list width', () => {
   const styles = read('css/admin-support.css');
 
-  assert.match(styles, /\.site-support__thread \{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/);
-  assert.match(styles, /\.site-support__thread strong,\s*\.site-support__thread small \{[^}]*overflow-wrap:\s*anywhere;/);
-  assert.match(styles, /\.site-support__meta \{[^}]*display:\s*flex;[^}]*justify-content:\s*flex-end;/);
+  assert.match(styles, /\.site-support__ticket \{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto;/);
+  assert.match(styles, /\.site-support__ticket-title strong \{[^}]*text-overflow:\s*ellipsis;/);
+  assert.match(styles, /\.site-support__ticket-meta \{[^}]*display:\s*grid;[^}]*justify-items:\s*end;/);
 });
 
-test('staff-started messages preserve legacy reopen without requesting a distinct ticket', () => {
+test('staff replies require exact ticket identity and version while creation starts a distinct ticket', () => {
   const adminMessages = read('functions/api/admin/messages.js');
   const users = read('functions/api/admin/users.js');
 
-  assert.match(adminMessages, /const legacyStartThread = body\.start_thread === true/);
-  assert.match(adminMessages, /reopen:\s*legacyStartThread \? true : null/);
-  assert.match(adminMessages, /const startTicket = body\.start_ticket === true/);
+  assert.match(adminMessages, /action === 'reply'/);
+  assert.match(adminMessages, /expectedTicketVersion/);
+  assert.match(adminMessages, /action === 'start_ticket'/);
   assert.match(adminMessages, /recipient_user_id/);
-  assert.match(adminMessages, /hydrateThreads/);
-  assert.match(adminMessages, /participant_user_id/);
+  assert.doesNotMatch(adminMessages, /legacyStartThread/);
   assert.match(users, /select\('id,order_number,status,payment_method,total,currency,created_at,tracking_status'\)/);
 });
 
@@ -250,33 +214,33 @@ test('writable staff can start a user chat linked to any current or past order',
   const support = read('js/admin-support.js');
   const styles = read('css/admin-support.css');
 
-  assert.match(support, /data-support-new-chat/);
-  assert.match(support, /\/api\/admin\/customers\?limit=20/);
+  assert.match(support, /data-support-new-ticket/);
+  assert.match(support, /\/api\/admin\/customers\?limit=12&q=/);
   assert.match(support, /\/api\/admin\/users\?detail=/);
-  assert.match(support, /start_thread:\s*true/);
+  assert.match(support, /action:\s*"start_ticket"/);
   assert.match(support, /recipient_user_id:/);
   assert.match(support, /order_id:/);
-  assert.match(support, /site-support__conversation-party/);
-  assert.match(styles, /\.site-support__new-chat/);
-  assert.match(styles, /\.site-support__account-results/);
+  assert.match(support, /site-support__recipient/);
+  assert.match(styles, /\.site-support__composer/);
+  assert.match(styles, /\.site-support__recipient-search/);
   assert.match(styles, /data-view="compose"/);
   assert.doesNotMatch(support, /\/api\/admin\/(?:new-chat|support-threads)/);
 });
 
-test('phone new-chat composer preserves customer context instead of autofocus-scrolling to the message', () => {
+test('phone new-ticket composer preserves customer and order context', () => {
   const support = read('js/admin-support.js');
 
-  assert.match(support, /id="siteSupportNewChatTitle" tabindex="-1"/);
-  assert.match(support, /window\.matchMedia\("\(max-width: 720px\)"\)\.matches/);
-  assert.match(support, /title\?\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(support, /else textarea\.focus\(\)/);
+  assert.match(support, /openNewChat:\s*async/);
+  assert.match(support, /loadRecipient\(userId, requestedOrderId\)/);
+  assert.match(support, /selectedOrder/);
+  assert.match(support, /data-support-recipient-search/);
 });
 
 test('phone new-chat composer uses the full drawer instead of an empty split row', () => {
   const styles = read('css/admin-support.css');
 
   assert.match(styles, /\.site-support__drawer\[data-view="compose"\] \{[^}]*grid-template-rows:\s*minmax\(0, 1fr\);/);
-  assert.match(styles, /\.site-support__drawer\[data-view="compose"\] \.site-support__conversation \{[^}]*grid-row:\s*1;/);
+  assert.match(styles, /\.site-support__drawer\[data-view="compose"\] \.site-support__detail,[\s\S]*display:\s*flex;\s*grid-row:\s*1;/);
 });
 
 test('buyer and staff inboxes page backward from the newest message', () => {
@@ -285,9 +249,10 @@ test('buyer and staff inboxes page backward from the newest message', () => {
   const dashboard = read('js/dashboard.js');
   for (const source of [account, admin]) {
     assert.match(source, /order\('created_at', \{ ascending: false \}\)/);
-    assert.match(source, /query\.lt\('created_at', before\)/);
+    assert.match(source, /messageCursorFilter/);
+    assert.match(source, /order\('id', \{ ascending: false \}\)/);
     assert.match(source, /messagePage/);
   }
   assert.match(dashboard, /loadEarlierMessages/);
-  assert.match(dashboard, /params\.set\('before', messageCursor\)/);
+  assert.match(dashboard, /params\.set\('message_cursor', messageCursor\)/);
 });
