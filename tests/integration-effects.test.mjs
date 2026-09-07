@@ -184,6 +184,22 @@ test('generic worker preserves completed provider-stage counters when final comp
   }
 });
 
+test('quote intake worker renders only the frozen effect snapshot', async () => {
+  const { deliverIntegrationEffect } = await import('../functions/_lib/integration-effects.js');
+  const sent = [];
+  const base = { id: 'quote-1', email: 'frozen@example.test', name: 'Frozen Name', company: 'Frozen Co', type: 'sample', priority: 'urgent', lead_score: 90, payload: { current_chemical: 'X' } };
+  const sb = {};
+  const result = await deliverIntegrationEffect({ env: { SALES_EMAIL: 'sales@example.test' }, sb, effect: {
+    effect_type: 'quote_intake_email', provider: 'masest', payload: { quote_id: 'quote-1', kind: 'internal' }, source_snapshot: base,
+  } }, { sendEmail: async (_env, options) => { sent.push(options); return { ok: true, providerMessageId: 'mail-1' }; } });
+  assert.equal(result.skipped, false);
+  assert.match(sent[0].subject, /Frozen Co/);
+  assert.match(sent[0].html, /Cleaner used now/);
+  await assert.rejects(() => deliverIntegrationEffect({ env: {}, sb, effect: {
+    effect_type: 'quote_intake_email', provider: 'masest', payload: { quote_id: 'quote-1', kind: 'internal' }, source_snapshot: { ...base, id: 'other' },
+  } }, { sendEmail: async () => { throw new Error('must not send'); } }), /quote_intake_missing/);
+});
+
 test('cutover removes legacy table/RPCs only after exact parity and rollback reconstructs them', () => {
   const cutover = read('supabase/cutover-integration-effects.sql');
   const rollback = read('supabase/rollback-integration-effects-cutover.sql');
