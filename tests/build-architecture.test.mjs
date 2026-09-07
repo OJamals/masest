@@ -24,12 +24,13 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/admin-newsletter.spec.mjs",
     "tools/blog-index.spec.mjs",
   ];
-  const verifyCore = "npm run check && npm test && npm run build && npm run verify:site && npm run qa:workspace-regressions && npm run qa:commerce-smoke && npm run qa:ui-critical:interaction";
+  const verifyCore = "npm run check && npm test && npm run qa:support-tickets:db && npm run build && npm run verify:site && npm run qa:workspace-regressions && npm run qa:commerce-smoke && npm run qa:ui-critical:interaction";
 
   assert.match(scripts.check || "", /node tools\/check-js\.mjs/);
   assert.match(scripts.test || "", /node --test --test-concurrency=1 --test-timeout=\d+ tests\/\*\.test\.mjs/);
   assert.match(scripts.build || "", /node tools\/cf-build\.mjs/);
   assert.equal(scripts["verify:core"], verifyCore);
+  assert.equal(scripts["qa:support-tickets:db"], "node tools/verify-support-tickets-db.mjs");
   assert.equal(scripts.verify, "npm run verify:core && npm run qa:ui-critical:performance");
   assert.equal(
     scripts["qa:workspace-regressions"],
@@ -49,6 +50,16 @@ test("package exposes one-command build and verification scripts", () => {
     `playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --retries=0 --reporter=line`,
   );
   assert.doesNotMatch(scripts["qa:ui-critical:interaction"], /tools\/\*\.spec/);
+  assert.ok(
+    scripts["verify:core"].indexOf("npm test")
+      < scripts["verify:core"].indexOf("npm run qa:support-tickets:db"),
+    "support database proof must follow the Node test suite",
+  );
+  assert.ok(
+    scripts["verify:core"].indexOf("npm run qa:support-tickets:db")
+      < scripts["verify:core"].indexOf("npm run build"),
+    "support database proof must precede the build",
+  );
   assert.ok(
     scripts["verify:core"].indexOf("npm run build")
       < scripts["verify:core"].indexOf("npm run verify:site"),
@@ -80,6 +91,20 @@ test("package exposes one-command build and verification scripts", () => {
   ]) {
     assert.match(scripts["qa:commerce-smoke"] || "", new RegExp(`tools/${spec}\\.spec\\.mjs`));
   }
+});
+
+test("verify workflow pins and exports supported PostgreSQL tooling", () => {
+  const workflow = read(".github/workflows/verify.yml");
+  const verifyJob = workflow.slice(workflow.indexOf("  verify:"), workflow.indexOf("  story_performance:"));
+
+  assert.match(verifyJob, /runs-on: ubuntu-24\.04/);
+  assert.match(verifyJob, /timeout-minutes: 20/);
+  assert.match(verifyJob, /pg_config --bindir/);
+  assert.match(verifyJob, /for binary in initdb pg_ctl postgres/);
+  assert.match(verifyJob, /test -x "\$pg_bin\/\$binary"/);
+  assert.match(verifyJob, /16\|17\|18/);
+  assert.match(verifyJob, /PG_BIN=\$pg_bin.*GITHUB_ENV/);
+  assert.doesNotMatch(verifyJob, /(?:service|systemctl)\s+(?:start|restart).*postgres/i);
 });
 
 test("Cloudflare build emits baseline security headers", () => {

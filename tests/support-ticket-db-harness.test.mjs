@@ -15,6 +15,7 @@ import {
   runPostgresCommand,
   withOwnedPostgres,
 } from '../tools/support-db-harness.mjs';
+import { runSupportDbProofs } from '../tools/verify-support-tickets-db.mjs';
 
 const { Client } = pg;
 const LOCAL_PG_BIN = process.env.PG_BIN || '/opt/homebrew/opt/postgresql@18/bin';
@@ -53,6 +54,22 @@ test('PostgreSQL subprocess errors retain the command and bounded failure detail
     () => runPostgresCommand(process.execPath, ['-e', 'process.stderr.write("proof failure"); process.exit(7)'], { timeoutMs: 2_000 }),
     /node.*proof failure/i,
   );
+});
+
+test('the coordinator is serial and stops after the first failed phase', async () => {
+  const calls = [];
+  const phaseList = [
+    ['first', new URL('file:///proof/first.mjs')],
+    ['second', new URL('file:///proof/second.mjs')],
+  ];
+  await assert.rejects(runSupportDbProofs({
+    phaseList,
+    async execute(_binary, [script]) {
+      calls.push(script);
+      throw Object.assign(new Error('forced phase failure'), { stdout: '', stderr: '' });
+    },
+  }), /first support database proof failed.*forced phase failure/i);
+  assert.deepEqual(calls, ['/proof/first.mjs']);
 });
 
 test('only pg_ctl status 3 confirms that an owned cluster is stopped', () => {

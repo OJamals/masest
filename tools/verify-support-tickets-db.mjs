@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { execFile } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -9,13 +10,13 @@ const phases = [
   ['ticket-queue', new URL('./verify-support-ticket-queue.mjs', import.meta.url)],
 ];
 
-async function main() {
+export async function runSupportDbProofs({ execute = execFileAsync, phaseList = phases } = {}) {
   const startedAt = performance.now();
   const results = [];
-  for (const [name, scriptUrl] of phases) {
+  for (const [name, scriptUrl] of phaseList) {
     const phaseStartedAt = performance.now();
     try {
-      const { stdout, stderr } = await execFileAsync(process.execPath, [scriptUrl.pathname], {
+      const { stdout = '', stderr = '' } = await execute(process.execPath, [fileURLToPath(scriptUrl)], {
         env: process.env,
         encoding: 'utf8',
         maxBuffer: 4 * 1024 * 1024,
@@ -39,7 +40,9 @@ async function main() {
   }));
 }
 
-main().catch((error) => {
-  console.error(error.stack || error);
-  process.exitCode = 1;
-});
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  runSupportDbProofs().catch((error) => {
+    console.error(error.stack || error);
+    process.exitCode = 1;
+  });
+}
