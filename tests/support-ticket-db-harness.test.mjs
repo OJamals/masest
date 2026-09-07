@@ -13,6 +13,7 @@ import {
   cleanupOwnedPostgres,
   checkOwnedPostgresStatus,
   discoverPostgresBinaries,
+  postgresServerOptions,
   runPostgresCommand,
   withOwnedPostgres,
 } from '../tools/support-db-harness.mjs';
@@ -20,6 +21,13 @@ import { runSupportDbProofs } from '../tools/verify-support-tickets-db.mjs';
 
 const { Client } = pg;
 const LOCAL_PG_BIN = process.env.PG_BIN || '/opt/homebrew/opt/postgresql@18/bin';
+
+test('owned PostgreSQL startup keeps its Unix socket inside the disposable cluster', () => {
+  assert.equal(
+    postgresServerOptions({ port: 54321, socketDir: '/tmp/masest-support-proof' }),
+    "-F -h 127.0.0.1 -p 54321 -k '/tmp/masest-support-proof'",
+  );
+});
 
 function waitForChildExit(child, timeoutMs) {
   if (child.exitCode !== null || child.signalCode !== null) {

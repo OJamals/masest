@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { accessSync, constants as fsConstants, rmSync } from 'node:fs';
+import { accessSync, constants as fsConstants, readFileSync, rmSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -7,6 +7,25 @@ import { basename, dirname, join, resolve } from 'node:path';
 
 const SUPPORTED_POSTGRES_MAJORS = new Set([16, 17, 18]);
 const OWNED_PREFIX = 'masest-support-';
+
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`;
+}
+
+export function postgresServerOptions({ port, socketDir }) {
+  return `-F -h 127.0.0.1 -p ${port} -k ${shellQuote(socketDir)}`;
+}
+
+function startupLogDetail(logFile) {
+  try {
+    const detail = readFileSync(logFile, 'utf8')
+      .replace(/[^\t\n\r\x20-\x7e]/g, '?')
+      .trim();
+    return detail.slice(-4_000);
+  } catch {
+    return '';
+  }
+}
 
 export function runPostgresCommand(binary, args, { timeoutMs = 30_000 } = {}) {
   try {
@@ -148,25 +167,32 @@ export async function startOwnedPostgres({
       '-D', cluster.dataDir, '--auth=trust', '--username=postgres', '--no-locale', '--encoding=UTF8',
     ]);
     runPostgresCommand(cluster.pgCtl, [
-      '-D', cluster.dataDir, '-l', cluster.logFile, '-o', `-F -h 127.0.0.1 -p ${cluster.port}`, '-w', 'start',
+      '-D', cluster.dataDir, '-l', cluster.logFile, '-o', postgresServerOptions({
+        port: cluster.port,
+        socketDir: cluster.tempDir,
+      }), '-w', 'start',
     ]);
     cluster.started = true;
   } catch (startError) {
+    const logDetail = startupLogDetail(cluster.logFile);
+    const reportedStartError = logDetail
+      ? new Error(`${startError.message}\nPostgreSQL startup log:\n${logDetail}`)
+      : startError;
     const status = checkOwnedPostgresStatus(cluster.pgCtl, cluster.dataDir);
     if (status === 'stopped') {
       await rm(tempDir, { recursive: true, force: true });
-      throw startError;
+      throw reportedStartError;
     }
     if (status === 'unknown') {
-      throw new AggregateError([startError], `PostgreSQL start failed and owned status is unknown; preserved ${tempDir}`);
+      throw new AggregateError([reportedStartError], `PostgreSQL start failed and owned status is unknown; preserved ${tempDir}`);
     }
     cluster.started = true;
     try {
       await cleanupOwnedPostgres(cluster);
     } catch (cleanupError) {
-      throw new AggregateError([startError, cleanupError], `PostgreSQL start failed and owned cleanup was not confirmed; preserved ${tempDir}`);
+      throw new AggregateError([reportedStartError, cleanupError], `PostgreSQL start failed and owned cleanup was not confirmed; preserved ${tempDir}`);
     }
-    throw startError;
+    throw reportedStartError;
   }
 
   cluster.clientConfig = {
