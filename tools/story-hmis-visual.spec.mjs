@@ -4,6 +4,10 @@ import {
   STORY_PERFORMANCE_SAMPLE_COUNT,
   evaluateStoryPerformanceSamples,
 } from "./story-performance-budget.mjs";
+import {
+  collectStoryPerformanceDiagnostic,
+  diagnoseStoryPerformanceFailure,
+} from "./story-performance-diagnostics.mjs";
 
 let BASE_URL = "";
 const STORY_SCENES = [
@@ -983,10 +987,11 @@ test("live 200-percent zoom crossing reconfigures the story without hidden chapt
   });
 });
 
-test("desktop story stays inside a controlled-scroll frame budget", async ({ page }) => {
+test("desktop story stays inside a controlled-scroll frame budget", async ({ page }, testInfo) => {
   // Three 9.4-second measurement samples leave too little setup/teardown headroom
   // under Playwright's 30-second default on shared CI runners.
   test.setTimeout(45_000);
+  const testStartedAt = Date.now();
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
 
@@ -1093,5 +1098,86 @@ test("desktop story stays inside a controlled-scroll frame budget", async ({ pag
 
   const evaluation = evaluateStoryPerformanceSamples(samples);
   console.log("story-performance", JSON.stringify({ samples, evaluation }));
+  const diagnosticHeadroomMs = testInfo.timeout - (Date.now() - testStartedAt) - 2500;
+  const diagnosticTimeoutMs = Math.min(6000, diagnosticHeadroomMs);
+  const diagnosticWorkMs = Math.max(750, diagnosticTimeoutMs - 1200);
+  await diagnoseStoryPerformanceFailure({
+    evaluation,
+    deadlineMs: diagnosticWorkMs,
+    collect: (signal) => diagnosticHeadroomMs >= 3000
+      ? collectStoryPerformanceDiagnostic(page, {
+        durationMs: Math.min(2000, diagnosticHeadroomMs - 1500),
+        timeoutMs: diagnosticWorkMs,
+        signal,
+      })
+      : Promise.resolve({
+        diagnosticVersion: 1,
+        skipped: "insufficient_test_headroom",
+        remainingMs: Math.max(0, Math.round(diagnosticHeadroomMs)),
+      }),
+  });
   expect(evaluation.pass, JSON.stringify({ samples, evaluation })).toBe(true);
+});
+
+test("failed-budget diagnostics profile a separate scroll without changing gate authority", async ({ page }) => {
+  test.setTimeout(20_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  const syntheticFailedEvaluation = {
+    pass: false,
+    passingSamples: 1,
+    requiredPassingSamples: 2,
+    failures: [{ metric: "sampleQuorum", actual: 1, budget: 2, direction: "minimum" }],
+  };
+  const messages = [];
+
+  const result = await diagnoseStoryPerformanceFailure({
+    evaluation: syntheticFailedEvaluation,
+    collect: (signal) => collectStoryPerformanceDiagnostic(page, {
+      durationMs: 750,
+      timeoutMs: 8000,
+      signal,
+    }),
+    log: (...parts) => messages.push(parts.join(" ")),
+  });
+
+  expect(result.evaluation).toBe(syntheticFailedEvaluation);
+  expect(result.evaluation.pass).toBe(false);
+  expect(result.diagnostic.error).toBeUndefined();
+  expect(result.diagnostic.durationMs).toBe(750);
+  expect(result.diagnostic.host.cpuCount).toBeGreaterThan(0);
+  expect(result.diagnostic.browser.product).toBeTruthy();
+  expect(Object.keys(result.diagnostic.performanceMetricDelta)).toContain("TaskDuration");
+  expect(result.diagnostic.performanceMetricDelta.TaskDuration).toBeGreaterThan(0);
+  expect(Object.keys(result.diagnostic.trace).length).toBeGreaterThan(0);
+  expect(messages).toHaveLength(1);
+  expect(messages[0]).toContain("story-performance-diagnostic");
+});
+
+test("an active diagnostic timeout terminates scrolling and releases the page", async ({ page }) => {
+  test.setTimeout(15_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  const syntheticFailedEvaluation = { pass: false, failures: [{ metric: "sampleQuorum" }] };
+
+  const result = await diagnoseStoryPerformanceFailure({
+    evaluation: syntheticFailedEvaluation,
+    deadlineMs: 700,
+    collect: (signal) => collectStoryPerformanceDiagnostic(page, {
+      durationMs: 5000,
+      timeoutMs: 300,
+      signal,
+    }),
+    log: () => {},
+  });
+
+  expect(result.evaluation).toBe(syntheticFailedEvaluation);
+  expect(result.diagnostic.error).toBe("diagnostic collection timed out");
+  const scrollAtReturn = await page.evaluate(() => scrollY);
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => scrollY)).toBe(scrollAtReturn);
+  expect(await page.evaluate(() => 2 + 2)).toBe(4);
+  const freshSession = await page.context().newCDPSession(page);
+  await expect(freshSession.send("Performance.getMetrics")).resolves.toHaveProperty("metrics");
+  await freshSession.detach();
 });
