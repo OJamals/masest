@@ -6,8 +6,11 @@ database, deploy an application, send mail, or delete test data.
 
 ## Current release status
 
-Production release is not authorized by this document. Staging acceptance is also
-blocked until all of the following are proven and approved:
+Production release is not authorized by this document. The current user-authorized
+production execution is governed by the separately reviewed
+`advisor-plans/043-production-integration.md` addendum maintained by the release owner;
+that authorization does not establish that staging passed. Staging acceptance remains
+unproven until all of the following are proven and approved:
 
 - the target has an authoritative nonproduction identity that is demonstrably distinct
   from production;
@@ -97,44 +100,72 @@ their SQL bodies.
    completes the backfill, makes `messages.ticket_id` required, installs replacement
    RPCs, and leaves `support_ticket_routing_contract.version = 1`. Version 1 protects
    old caller shapes; it is not the final activation.
-3. **041 — live-compatible future-only delivery effects:**
+3. **Predecessor compatibility:**
    `supabase/migrate-support-ticket-live-cutover-2026-09-07.sql` refuses undrained
    predecessor support-email effects, retires the predecessor message triggers before
-   replacing their shared function, and installs the single ticket-owned
-   `support_message_email` effect/envelope contract. It preserves completed/dead legacy
-   ledger history and does not synthesize delivery effects for earlier messages.
-4. **042 — queue and optimistic mutation contracts:**
+   the canonical producer is installed, and preserves completed/dead legacy ledger
+   history. It does not install the future delivery envelope or synthesize effects for
+   earlier messages.
+4. **041 — canonical future-only delivery effects:**
+   `supabase/migrate-support-message-delivery-effects-2026-09-06.sql` installs the
+   single ticket-owned `support_message_email` producer, immutable delivery envelope,
+   claim/store functions, and final readiness contract.
+5. **042 — queue and optimistic mutation contracts:**
    `supabase/migrate-support-ticket-queue-2026-09-06.sql` installs bounded ticket-list
    pagination and the final exact-ticket reply/update RPC shapes.
 
-039 may be installed before the traffic pause because it is additive and leaves runtime
-routing unchanged. Before 040, pause every support write path, including buyer/admin
-dashboard writes, order-support creation, inbound email replies, and any worker capable
-of appending a support message. Drain already-running callers. Keep support ingress
-paused through 040, 041, 042, the Pages deployment, old-instance drain, and activation;
-otherwise a message can cross a mixed contract or miss 041's future-only delivery
-trigger.
+Although 039 is additive, the production sequence below closes the fence before 039 so
+one observable boundary covers the entire six-file operation. Keep support ingress
+paused through the migrations, Pages deployment, deployment-identity checks, and
+activation; otherwise a message can cross a mixed contract or miss 041's future-only
+delivery trigger.
 
-With the database URL loaded into the operator environment rather than written into the
-shell history, apply the four files in this exact order:
+Use an approved libpq service entry (and protected password file where required), so
+credentials do not appear in command arguments or shell history. Apply all six files
+individually in this exact order. The checks deliberately stop the shell if any expected
+postcondition is absent:
 
 ```bash
 set -euo pipefail
 : "${PG_BIN:?set PG_BIN to the approved PostgreSQL binary directory}"
-: "${SUPABASE_DB_URL:?supply the explicitly approved target database URL}"
+: "${PGSERVICE:?set PGSERVICE to the approved target's libpq service name}"
 export PGOPTIONS='-c lock_timeout=5s -c statement_timeout=120s'
-"$PG_BIN/psql" "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+psql_args=(-X -v ON_ERROR_STOP=1)
+assert_sql() {
+  "$PG_BIN/psql" "${psql_args[@]}" -Atqc "$1" | grep -qx t
+}
+
+"$PG_BIN/psql" "${psql_args[@]}" \
   -f supabase/migrate-support-write-fence-2026-09-07.sql
-"$PG_BIN/psql" "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+assert_sql "select exists (select 1 from pg_trigger where tgrelid = 'public.messages'::regclass and tgname = 'messages_support_ingress_fence' and tgenabled in ('O','A')) and exists (select 1 from public.support_ingress_control where singleton and accepting)"
+
+support_generation=$("$PG_BIN/psql" "${psql_args[@]}" -Atqc \
+  "select generation from public.support_ingress_control where singleton and accepting")
+[[ "$support_generation" =~ ^[0-9]+$ ]]
+"$PG_BIN/psql" "${psql_args[@]}" -v expected_generation="$support_generation" -c \
+  "select public.set_support_ingress_accepting(:'expected_generation'::bigint, false, 'support ticket production cutover')"
+closed_generation=$((support_generation + 1))
+assert_sql "select exists (select 1 from public.support_ingress_control where singleton and not accepting and generation = $closed_generation)"
+
+"$PG_BIN/psql" "${psql_args[@]}" \
   -f supabase/migrate-support-tickets-2026-09-06.sql
-"$PG_BIN/psql" "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+assert_sql "select to_regclass('public.support_tickets') is not null and exists (select 1 from pg_attribute where attrelid = 'public.messages'::regclass and attname = 'ticket_id' and not attisdropped) and exists (select 1 from public.support_ingress_control where singleton and not accepting and generation = $closed_generation)"
+
+"$PG_BIN/psql" "${psql_args[@]}" \
   -f supabase/migrate-support-ticket-routing-2026-09-06.sql
-"$PG_BIN/psql" "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+assert_sql "select exists (select 1 from pg_attribute where attrelid = 'public.messages'::regclass and attname = 'ticket_id' and attnotnull and not attisdropped) and exists (select 1 from public.support_ticket_routing_contract where singleton and version = 1) and exists (select 1 from public.support_ingress_control where singleton and not accepting and generation = $closed_generation)"
+
+"$PG_BIN/psql" "${psql_args[@]}" \
   -f supabase/migrate-support-ticket-live-cutover-2026-09-07.sql
-"$PG_BIN/psql" "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+assert_sql "select not exists (select 1 from pg_trigger where tgrelid = 'public.messages'::regclass and tgname in ('messages_support_email_effect','messages_support_alert_kind') and tgenabled <> 'D') and not exists (select 1 from public.integration_effects effect join public.integration_events event on event.id = effect.event_id where effect.effect_type = 'support_message_email' and event.provider_event_type = 'support_message_created' and effect.effect_key = 'support-email' and effect.status in ('pending','processing')) and exists (select 1 from public.support_ingress_control where singleton and not accepting and generation = $closed_generation)"
+
+"$PG_BIN/psql" "${psql_args[@]}" \
   -f supabase/migrate-support-message-delivery-effects-2026-09-06.sql
-"$PG_BIN/psql" "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+assert_sql "select public.assert_email_effects_ready() and to_regclass('public.support_message_email_envelopes') is not null and exists (select 1 from public.support_ingress_control where singleton and not accepting and generation = $closed_generation)"
+
+"$PG_BIN/psql" "${psql_args[@]}" \
   -f supabase/migrate-support-ticket-queue-2026-09-06.sql
+assert_sql "select exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'list_support_tickets') and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'update_support_ticket') and exists (select 1 from public.support_ticket_routing_contract where singleton and version = 1) and exists (select 1 from public.support_ingress_control where singleton and not accepting and generation = $closed_generation)"
 ```
 
 Stop on the first error. Do not activate version 2 after a partial sequence.
@@ -151,8 +182,12 @@ Stop on the first error. Do not activate version 2 after a partial sequence.
    verify that the served dashboard/admin assets and Functions belong to that same
    commit before continuing. A cache purge is a separate operator action, not an
    automatic substitute for commit parity.
-3. Wait for every old Pages Functions instance to drain. A successful deployment record
-   alone is not old-instance-drain proof.
+3. The closed database fence prevents both old and new callers from committing support
+   writes. Record the fence generation, zero active predecessor effects, and exact Pages
+   deployment identity. These observations establish the database/application contract;
+   they do not prove physical retirement of every old Pages isolate. If isolate-level
+   telemetry is unavailable, record that limitation rather than calling the isolates
+   drained.
 4. Confirm the deployed application is the version-2 caller and that the routing row is
    still exactly version 1. Do not infer readiness from an empty queue.
 5. Under separately approved database authority, activate exactly once:
@@ -163,8 +198,23 @@ Stop on the first error. Do not activate version 2 after a partial sequence.
 
    The result must report version 2. Any version conflict or unexpected result is a
    release stop.
-6. Resume support ingress only after the version-2 result is recorded. Observe the first
+6. Resume support ingress with `set_support_ingress_accepting`, using the currently
+   closed generation as the expected CAS value, only after the version-2 result is
+   recorded. Verify the returned generation and `accepting = true`; observe the first
    controlled writes and their durable delivery states before widening traffic.
+
+   ```bash
+   closed_generation=$("$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -Atqc \
+     "select generation from public.support_ingress_control where singleton and not accepting")
+   [[ "$closed_generation" =~ ^[0-9]+$ ]]
+   "$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -v expected_generation="$closed_generation" -c \
+     "select public.set_support_ingress_accepting(:'expected_generation'::bigint, true, null)"
+   "$PG_BIN/psql" -X -v ON_ERROR_STOP=1 -Atqc \
+     "select accepting, generation from public.support_ingress_control where singleton"
+   ```
+
+   The final output must be `t|<closed generation + 1>`; any other value is a release
+   stop.
 
 ## Monitoring and stop conditions
 
