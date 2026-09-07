@@ -403,6 +403,15 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   };
   const loadTickets = async ({ append = false, cursor = null } = {}) => {
     if (scopedHandoff) return true;
+    const pendingSearch = searchTimer !== null;
+    if (pendingSearch) {
+      clearTimeout(searchTimer);
+      searchTimer = null;
+    }
+    if (pendingSearch && append) {
+      append = false;
+      cursor = null;
+    }
     listAbort?.abort();
     listAbort = new AbortController();
     const request = ++listRequest;
@@ -682,7 +691,10 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     const companyId = ticketAccount.dataset.contextId;
     if (companyId) void openLinkedContext(event, "company", companyId);
   });
-  search.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => void loadTickets(), SEARCH_DELAY_MS); });
+  search.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => { searchTimer = null; void loadTickets(); }, SEARCH_DELAY_MS);
+  });
   more.addEventListener("click", () => { more.disabled = true; void loadTickets({ append: true, cursor: nextCursor }); });
   launcher.addEventListener("click", () => setOpen(drawer.hidden));
   $("[data-support-close]").addEventListener("click", () => setOpen(false));

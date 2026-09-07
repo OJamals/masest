@@ -588,6 +588,7 @@ test("cursor pagination deduplicates equal-time tickets and preserves server fil
   const calls = [];
   const secondId = "44444444-4444-4444-8444-444444444444";
   await boot(page);
+  await page.clock.install();
   await page.unroute("**/api/admin/messages**");
   await page.route("**/api/admin/messages**", (route) => {
     const url = new URL(route.request().url());
@@ -595,29 +596,85 @@ test("cursor pagination deduplicates equal-time tickets and preserves server fil
     if (url.searchParams.get("view") === "assignees") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ assignees: [] }) });
     calls.push(url.search);
     const secondPage = url.searchParams.get("cursor") === "page-2";
+    const phaseTicket = ticket({ subject: url.searchParams.get("priority") === "high" ? "Filtered Acme ticket" : "Unfiltered Acme ticket" });
     return route.fulfill({
       status: 200, contentType: "application/json",
       body: JSON.stringify({
-        tickets: secondPage ? [ticket(), ticket({ id: secondId, display_number: "MAS-000043", subject: "Second ticket" })] : [ticket()],
+        tickets: secondPage ? [phaseTicket, ticket({ id: secondId, display_number: "MAS-000043", subject: "Second ticket" })] : [phaseTicket],
         summary: { open: 2, needs_reply: 1 }, has_more: !secondPage, next_cursor: secondPage ? null : "page-2",
       }),
     });
   });
   await page.goto(BASE_URL + "/admin.html#support");
+  await expect(page.getByText("Unfiltered Acme ticket", { exact: true })).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now()));
   await page.locator("#siteSupportSearch").fill("Acme");
   await page.locator('[data-support-queue="waiting"]').click();
   await page.getByRole("button", { name: "Filters" }).click();
   await page.locator('[data-support-priority]').selectOption("high");
-  await expect.poll(() => calls.some((query) => query.includes("priority=high") && query.includes("queue=waiting") && query.includes("search=Acme"))).toBe(true);
+  await expect(page.getByText("Filtered Acme ticket", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Filters, 1 active/ })).toBeVisible();
+  const callsBeforeClear = calls.length;
   await page.locator("[data-support-filters-clear]").click();
   await expect(page.locator("#siteSupportSearch")).toHaveValue("Acme");
-  await expect.poll(() => calls.some((query) => query.includes("queue=waiting") && query.includes("search=Acme") && !query.includes("priority="))).toBe(true);
+  await expect(page.getByText("Unfiltered Acme ticket", { exact: true })).toBeVisible();
+  const clearPhaseCalls = calls.slice(callsBeforeClear);
+  expect(clearPhaseCalls).toHaveLength(1);
+  expect(clearPhaseCalls[0]).toContain("queue=waiting");
+  expect(clearPhaseCalls[0]).toContain("search=Acme");
+  expect(clearPhaseCalls[0]).not.toContain("priority=");
+  expect(clearPhaseCalls[0]).not.toContain("cursor=");
+  const callsBeforeRefilter = calls.length;
   await page.locator('[data-support-priority]').selectOption("high");
-  await expect.poll(() => calls.some((query) => query.includes("priority=high") && query.includes("queue=waiting") && query.includes("search=Acme"))).toBe(true);
+  await expect(page.getByText("Filtered Acme ticket", { exact: true })).toBeVisible();
+  const refilterPhaseCalls = calls.slice(callsBeforeRefilter);
+  expect(refilterPhaseCalls).toHaveLength(1);
+  expect(refilterPhaseCalls[0]).toContain("queue=waiting");
+  expect(refilterPhaseCalls[0]).toContain("search=Acme");
+  expect(refilterPhaseCalls[0]).toContain("priority=high");
+  expect(refilterPhaseCalls[0]).not.toContain("cursor=");
+  const matchingFirstPages = () => calls.filter((query) => query.includes("priority=high") && query.includes("queue=waiting") && query.includes("search=Acme") && !query.includes("cursor=")).length;
+  const firstPagesBeforeDeadline = matchingFirstPages();
   await page.locator("[data-support-load-more]").click();
   await expect(page.locator("[data-support-ticket-id]")).toHaveCount(2);
   expect(calls.some((query) => query.includes("cursor=page-2") && query.includes("priority=high") && query.includes("queue=waiting") && query.includes("search=Acme"))).toBe(true);
+  await page.clock.fastForward(251);
+  expect(matchingFirstPages()).toBe(firstPagesBeforeDeadline);
+  await expect(page.locator("[data-support-ticket-id]")).toHaveCount(2);
+});
+
+test("a pending new search turns Load more into a current-query first page", async ({ page }) => {
+  const calls = [];
+  const secondId = "44444444-4444-4444-8444-444444444444";
+  await boot(page);
+  await page.clock.install();
+  await page.unroute("**/api/admin/messages**");
+  await page.route("**/api/admin/messages**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("summary") === "1") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: { open: 2, needs_reply: 1 } }) });
+    if (url.searchParams.get("view") === "assignees") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ assignees: [] }) });
+    calls.push(url.search);
+    const currentSearch = url.searchParams.get("search");
+    const secondPage = url.searchParams.get("cursor") === "page-2";
+    const firstTicket = ticket({ subject: currentSearch === "Beta" ? "Beta current-search ticket" : "Initial cursor ticket" });
+    return route.fulfill({
+      status: 200, contentType: "application/json",
+      body: JSON.stringify({
+        tickets: secondPage ? [firstTicket, ticket({ id: secondId, display_number: "MAS-000043", subject: "Old cursor second ticket" })] : [firstTicket],
+        summary: { open: 2, needs_reply: 1 }, has_more: !secondPage, next_cursor: secondPage ? null : "page-2",
+      }),
+    });
+  });
+  await page.goto(BASE_URL + "/admin.html#support");
+  await expect(page.getByText("Initial cursor ticket", { exact: true })).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+  await page.locator("#siteSupportSearch").fill("Beta");
+  await page.locator("[data-support-load-more]").click();
+  await expect(page.getByText("Beta current-search ticket", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-support-ticket-id]")).toHaveCount(1);
+  const betaCalls = calls.filter((query) => query.includes("search=Beta"));
+  expect(betaCalls).toHaveLength(1);
+  expect(betaCalls[0]).not.toContain("cursor=");
 });
 
 test("a list failure has an in-place retry", async ({ page }) => {
