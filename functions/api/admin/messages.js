@@ -310,6 +310,9 @@ export async function handleAdminMessages({ request, env }, dependencies = {}) {
       return json(200, { ticket_id: ticket.id, ticket });
     } catch (error) {
       const message = String(error?.message || '');
+      if (error?.code === 'support_writes_paused' || message.includes('support_writes_paused')) {
+        return json(503, { error: 'support_writes_paused', retryable: true }, { 'Retry-After': '60' });
+      }
       if (message.includes('ticket_version_conflict')) return json(409, { error: 'ticket_version_conflict' });
       if (message.includes('support_ticket_not_found')) return json(404, { error: 'ticket_not_found' });
       if (message.includes('support_ticket_assignee_ineligible')) return json(400, { error: 'invalid_assignee' });

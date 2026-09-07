@@ -615,6 +615,24 @@ test('staff PATCH maps stale, missing, ineligible, and internal failures without
   }
 });
 
+test('staff PATCH maps a paused support fence to a retryable response', async (t) => {
+  for (const [name, pausedError] of [
+    ['message', new Error('support_writes_paused')],
+    ['code', Object.assign(new Error('database rejected write'), { code: 'support_writes_paused' })],
+  ]) {
+    await t.test(name, async () => {
+      const { handler } = adminHandler({
+        body: { ticket_id: TICKET_ID, version: 7, priority: 'urgent' },
+        patcher: async () => { throw pausedError; },
+      });
+      const response = await handler({ request: routeRequest('admin/messages', 'PATCH'), env: {} });
+      assert.equal(response.status, 503);
+      assert.equal(response.headers.get('retry-after'), '60');
+      assert.deepEqual(await response.json(), { error: 'support_writes_paused', retryable: true });
+    });
+  }
+});
+
 test('staff new ticket requires a recipient and delegates fresh episode creation without legacy hints', async () => {
   const missing = adminHandler({ body: { action: 'start_ticket', body: 'New issue' } });
   assert.equal((await missing.handler({ request: routeRequest('admin/messages', 'POST'), env: {} })).status, 400);
