@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { startOwnedPostgres } from './support-db-harness.mjs';
+import { SUPPORT_THREAD_PARENT_COLUMNS } from '../functions/_lib/support-email-delivery.js';
 
 const { Client } = pg;
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -138,6 +139,10 @@ async function one(client, text, params = []) {
   return result.rows[0];
 }
 
+async function assertRuntimeMessageProjection(client) {
+  await client.query(`select ${SUPPORT_THREAD_PARENT_COLUMNS} from public.messages limit 0`);
+}
+
 async function fixtureState(client) {
   const rows = async (text) => (await client.query(text)).rows;
   return {
@@ -195,6 +200,7 @@ async function main() {
     assert.equal(before.count, 0, '041 must not create a historical backlog');
     await apply(client, migrations[4]);
     await apply(client, migrations[4]);
+    await assertRuntimeMessageProjection(client);
     const afterMigration = await one(client, `select count(*)::int as count from public.integration_events where provider = 'masest'`);
     assert.equal(afterMigration.count, 0, '041 migration backfilled a historical message');
     const historicalClaim = await one(client, `select public.claim_support_message_email_effect($1,'proof-legacy',60) result`, [historical.result.id]);

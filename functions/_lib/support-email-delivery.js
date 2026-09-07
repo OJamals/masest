@@ -11,6 +11,7 @@ import { sendEmailResult } from './supabase.js';
 
 const MESSAGE_ID_RE = /<[^<>\s]+>/g;
 const MAX_REFERENCE_IDS = 30;
+export const SUPPORT_THREAD_PARENT_COLUMNS = 'id,email_message_id,email_references,sender_role,body,created_at';
 const POLICY_SKIPS = new Set([
   'recipient_not_found',
   'recipient_email_missing',
@@ -49,7 +50,7 @@ async function orderContext(sb, message) {
 async function threadParent(sb, message) {
   if (!message?.thread_id && !message?.company_id) return null;
   let query = sb.from('messages')
-    .select('id,email_message_id,email_references,sender_role,sender_name,body,created_at')
+    .select(SUPPORT_THREAD_PARENT_COLUMNS)
     .or('email_message_id.not.is.null,email_references.not.is.null')
     .order('created_at', { ascending: false })
     .limit(3);
@@ -76,9 +77,8 @@ async function threadParent(sb, message) {
   return messageId ? {
     messageId,
     references: parent.email_references || null,
-    history: priorMessages.slice(0, 2).map(({ sender_role, sender_name, body, created_at }) => ({
+    history: priorMessages.slice(0, 2).map(({ sender_role, body, created_at }) => ({
       sender_role,
-      sender_name,
       body,
       created_at,
     })),
