@@ -17,9 +17,16 @@ test('pushes and pull requests run the complete verification gate', () => {
   assert.match(workflow, /playwright install --with-deps chromium/);
   assert.match(workflow, /run: npm run verify:core/);
   assert.match(workflow, /story_performance:[\s\S]+run: npm run qa:ui-critical:performance/);
-  assert.match(workflow, /deploy:[\s\S]+needs: \[verify, story_performance\]/);
-  assert.match(workflow, /uses: actions\/upload-artifact@v7/);
-  assert.match(workflow, /uses: actions\/download-artifact@v8/);
+  assert.match(workflow, /verify:\s+needs: \[story_performance\]/);
+  const verifyStep = workflow.indexOf('run: npm run verify:core');
+  const deployStep = workflow.indexOf('- name: Deploy production to Cloudflare Pages');
+  const performanceJob = workflow.indexOf('  story_performance:');
+  assert.ok(verifyStep >= 0 && deployStep > verifyStep && deployStep < performanceJob,
+    'the performance-gated verify workspace must deploy only after the full core gate');
+  assert.doesNotMatch(workflow.slice(verifyStep, deployStep), /run: npm run (?:build|build:content)/,
+    'the verified dist must not be rebuilt before deployment');
+  assert.match(workflow, /wrangler pages deploy dist[^\r\n]+--commit-hash="\$GITHUB_SHA" --commit-dirty=false/);
+  assert.doesNotMatch(workflow, /actions\/(?:upload|download)-artifact/);
   assert.match(workflow, /contents:\s*read/);
 });
 
