@@ -120,6 +120,50 @@ async function boot(page, { post = null, patch = null, onList = null, onDetail =
   });
 }
 
+async function delayFirstTicketDetail(page, { patches = null, nextVersion = 4 } = {}) {
+  let detailCount = 0;
+  let releaseFirst;
+  let markFirstArrived;
+  let markFirstSettled;
+  const firstRelease = new Promise((resolve) => { releaseFirst = resolve; });
+  const firstArrived = new Promise((resolve) => { markFirstArrived = resolve; });
+  const firstSettled = new Promise((resolve) => { markFirstSettled = resolve; });
+  const detailResponse = (version) => ({
+    status: 200, contentType: "application/json",
+    body: JSON.stringify({
+      ticket: detailTicket({ version }),
+      thread: { id: "thread-1", participant: { id: USER_ID, full_name: "Avery Buyer" }, company_id: "company-1", company_name: "Acme HVAC" },
+      order_scope: { id: ORDER_ID, reference: "MST-2042", status: "delivered", admin_url: "/admin.html?order=" + ORDER_ID + "#orders" },
+      messages: [], has_more: false, next_message_cursor: null,
+    }),
+  });
+
+  await page.route("**/api/admin/messages**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === "PATCH" && patches) {
+      const body = request.postDataJSON();
+      patches.push(body);
+      return route.fulfill({
+        status: 200, contentType: "application/json",
+        body: JSON.stringify({ ticket: detailTicket({ ...body, version: nextVersion + 1 }) }),
+      });
+    }
+    if (request.method() !== "GET" || !url.searchParams.get("ticket_id")) return route.fallback();
+    detailCount += 1;
+    if (detailCount === 1) {
+      markFirstArrived();
+      await firstRelease;
+      try { await route.fulfill(detailResponse(4)); } catch {}
+      finally { markFirstSettled(); }
+      return;
+    }
+    return route.fulfill(detailResponse(nextVersion));
+  });
+
+  return { firstArrived, firstSettled, releaseFirst };
+}
+
 async function wireRealAdminEntrypoints(page, {
   orders = [],
   users = [],
@@ -486,6 +530,58 @@ test("settings cannot be stolen by ticket refresh and returning restores propert
   await page.locator('[data-ticket-field="category"]').selectOption("technical");
   await expect.poll(() => patches.length).toBe(2);
   expect(patches[1]).toEqual({ ticket_id: TICKET_ID, version: 5, category: "technical" });
+});
+
+test("a delayed ticket load cannot steal Settings and returning uses the latest ticket version", async ({ page }) => {
+  const patches = [];
+  await boot(page);
+  const barrier = await delayFirstTicketDetail(page, { patches, nextVersion: 8 });
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("[data-support-ticket-id]").click();
+  await barrier.firstArrived;
+  await page.locator("[data-support-settings-toggle]").click();
+  await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "settings");
+  barrier.releaseFirst();
+  await barrier.firstSettled;
+  await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "settings");
+  await expect(page.locator("#adminNotifySupportRequests")).toBeVisible();
+
+  await page.locator("[data-support-back]").click();
+  await page.locator("[data-support-ticket-id]").click();
+  await expect(page.getByRole("heading", { level: 3, name: "Damaged pail on delivery" })).toBeVisible();
+  await page.getByRole("button", { name: "Properties" }).click();
+  await page.locator('[data-ticket-field="category"]').selectOption("shipping");
+  await expect.poll(() => patches.length).toBe(1);
+  expect(patches[0]).toEqual({ ticket_id: TICKET_ID, version: 8, category: "shipping" });
+});
+
+test("a delayed ticket load cannot replace the new-ticket composer", async ({ page }) => {
+  await boot(page);
+  const barrier = await delayFirstTicketDetail(page);
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("[data-support-ticket-id]").click();
+  await barrier.firstArrived;
+  await page.locator("[data-support-new-ticket]").click();
+  await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "compose");
+  barrier.releaseFirst();
+  await barrier.firstSettled;
+  await expect(page.locator(".site-support__drawer")).toHaveAttribute("data-view", "compose");
+  await expect(page.locator(".site-support__composer")).toBeVisible();
+  await expect(page.locator("[data-support-ticket-head]")).toBeHidden();
+});
+
+test("a delayed ticket load cannot revive a closed support drawer", async ({ page }) => {
+  await boot(page);
+  const barrier = await delayFirstTicketDetail(page);
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("[data-support-ticket-id]").click();
+  await barrier.firstArrived;
+  await page.locator("[data-support-close]").click();
+  await expect(page.locator(".site-support__drawer")).toBeHidden();
+  barrier.releaseFirst();
+  await barrier.firstSettled;
+  await expect(page.locator(".site-support__drawer")).toBeHidden();
+  await expect(page.locator("[data-support-ticket-head]")).toHaveAttribute("hidden", "");
 });
 
 test("cursor pagination deduplicates equal-time tickets and preserves server filter queries", async ({ page }) => {

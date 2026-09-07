@@ -209,6 +209,15 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     ticketHead.hidden = true;
     [ticketStatus, ticketAssignee, ticketPriority, propertiesToggle].forEach((node) => { node.hidden = true; });
   };
+  const invalidateTicketContext = ({ hideChrome = false } = {}) => {
+    closeSupportPopover();
+    propertyContextGeneration += 1;
+    ticketContextReady = false;
+    detailAbort?.abort();
+    detailAbort = null;
+    detailRequest += 1;
+    if (hideChrome) hideTicketChrome();
+  };
 
   // Serialize transitions: a delayed open must settle before a later close is
   // sent, otherwise the server can retain an active inbox after the drawer is
@@ -225,10 +234,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
 
   const setView = (view) => {
     closeSupportPopover();
-    if ((view === "settings" || view === "compose") && selected && ticketContextReady) {
-      propertyContextGeneration += 1;
-      ticketContextReady = false;
-    }
+    if (view === "settings" || view === "compose") invalidateTicketContext();
     drawer.dataset.view = view;
     settings.hidden = view !== "settings";
     detail.hidden = view === "settings";
@@ -241,18 +247,14 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     if (view === "settings") void loadSettings();
   };
   const setOpen = (open, focus = null) => {
-    if (!open) {
-      closeSupportPopover();
-      propertyContextGeneration += 1;
-      ticketContextReady = false;
-    }
+    if (!open) invalidateTicketContext({ hideChrome: true });
     drawer.hidden = !open;
     launcher.setAttribute("aria-expanded", String(open));
     if (open) { void setPresence(true); void poller?.refresh();
       if (selected && !ticketContextReady && !["settings", "compose"].includes(drawer.dataset.view)) void loadTicket(idOf(selected), { scopedOrderId: orderId });
       requestAnimationFrame(() => (focus || search).focus());
     }
-    else { void setPresence(false); setView("queue"); launcher.focus(); }
+    else { void setPresence(false); setView("queue"); hideTicketChrome(); launcher.focus(); }
   };
   const openLinkedContext = async (event, type, id) => {
     if (typeof openContext !== "function") return;
@@ -654,7 +656,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
     catch { status.textContent = "Could not save settings."; }
   };
   const clearSelection = () => {
-    propertyContextGeneration += 1; ticketContextReady = false; hideTicketChrome(); detailAbort?.abort(); detailRequest += 1; selected = null; orderId = null; messages = []; nextMessageCursor = null; detailFeedback = ""; drawer.dataset.ticketSelected = "false"; setView("queue"); renderList(); detail.innerHTML = '<div class="site-support__empty"><i class="ph ph-ticket" aria-hidden="true"></i><div><strong>No ticket selected</strong><p>Choose a ticket to review its conversation.</p></div></div>';
+    invalidateTicketContext({ hideChrome: true }); selected = null; orderId = null; messages = []; nextMessageCursor = null; detailFeedback = ""; drawer.dataset.ticketSelected = "false"; setView("queue"); renderList(); detail.innerHTML = '<div class="site-support__empty"><i class="ph ph-ticket" aria-hidden="true"></i><div><strong>No ticket selected</strong><p>Choose a ticket to review its conversation.</p></div></div>';
   };
   const openQueue = async (next) => {
     handoffRequest += 1;
@@ -730,12 +732,8 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   });
   window.addEventListener("resize", () => closeSupportPopover());
   const invalidateAuthContext = () => {
-    closeSupportPopover();
-    propertyContextGeneration += 1;
-    ticketContextReady = false;
-    detailAbort?.abort();
-    detailRequest += 1;
     if (!drawer.hidden) setOpen(false);
+    else invalidateTicketContext({ hideChrome: true });
   };
   document.addEventListener("masest:session-expired", invalidateAuthContext);
   document.addEventListener("masest:auth", invalidateAuthContext);

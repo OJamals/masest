@@ -104,7 +104,7 @@ test('admin inbox presence follows the drawer lifecycle and serializes late resp
   assert.match(threads, /if \(presenceOpen === open\) presenceOpen = !open;/,
     'a failed request must not undo a newer presence transition');
   assert.match(threads, /if \(open\) \{ void setPresence\(true\); void poller\?\.refresh\(\);/);
-  assert.match(threads, /else \{ void setPresence\(false\); setView\("queue"\); launcher\.focus\(\); \}/);
+  assert.match(threads, /else \{ void setPresence\(false\); setView\("queue"\); hideTicketChrome\(\); launcher\.focus\(\); \}/);
   assert.match(threads, /visibilitychange", \(\) => \{[\s\S]*setPresence\(!document\.hidden, \{ force: true, keepalive: document\.hidden \}\)/);
   assert.match(threads, /pagehide", \(\) => \{[\s\S]*poller\?\.stop\(\);[\s\S]*setPresence\(false, \{ force: true, keepalive: true \}\)/);
   assert.match(threads, /pageshow", \(event\) => \{[\s\S]*event\.persisted[\s\S]*setPresence\(true, \{ force: true \}\)/,
@@ -222,7 +222,9 @@ test('support overlays dismiss topmost-first and restore focus without closing t
     'Escape must dismiss the active overlay before the drawer');
   assert.match(source, /restoreFocus && trigger\.isConnected[\s\S]{0,100}trigger\.focus\(\)/,
     'overlay dismissal must restore its trigger focus');
-  assert.match(source, /if \(!open\) \{[\s\S]{0,220}propertyContextGeneration \+= 1/,
+  assert.match(source, /const invalidateTicketContext = \(\{ hideChrome = false \} = \{\}\) => \{[\s\S]{0,220}propertyContextGeneration \+= 1/,
+    'ticket lifecycle invalidation must retire delayed property work');
+  assert.match(source, /if \(!open\) invalidateTicketContext\(\{ hideChrome: true \}\)/,
     'drawer close must invalidate delayed property work');
 });
 
