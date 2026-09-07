@@ -50,7 +50,7 @@
   padding: 0 !important;
   min-block-size: 0 !important;
   block-size: fit-content !important;
-  max-block-size: min(440px, calc(100dvh - 96px));
+  max-block-size: min(560px, calc(100dvh - 96px));
   overflow: hidden;
   border-radius: 18px;
   background: var(--paper, #fff);
@@ -62,7 +62,7 @@
 .customer-chat__panel:not([hidden]):has(.customer-chat__thread:not([hidden])) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  block-size: min(440px, calc(100dvh - 96px)) !important;
+  block-size: min(560px, calc(100dvh - 96px)) !important;
 }
 .customer-chat__guest[hidden],
 .customer-chat__thread[hidden] { display: none; }
@@ -84,6 +84,19 @@
 .customer-chat__message time { display: block; margin-top: 5px; font-size: .68rem; font-weight: 800; letter-spacing: .04em; opacity: .72; text-transform: uppercase; }
 .customer-chat__empty { margin: auto 0; color: var(--ink-soft); line-height: 1.55; text-align: center; }
 .customer-chat__form { display: grid; gap: 8px; padding: 14px 16px 16px; border-top: 1px solid var(--line); }
+.customer-chat__ticket-bar { display: flex; min-height: 32px; align-items: center; justify-content: space-between; gap: 8px; }
+.customer-chat__ticket { min-width: 0; color: var(--ink-soft); font-size: .74rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
+.customer-chat__ticket b { color: var(--ink); }
+.customer-chat__ticket span { font-weight: 650; letter-spacing: 0; text-transform: none; }
+.customer-chat__new-ticket { min-height: 32px; margin-left: auto; padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--accent-ink); font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.customer-chat__new-ticket:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.customer-chat__new-ticket-fields[hidden] { display: none; }
+.customer-chat__new-ticket-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(110px, .55fr); gap: 8px; }
+.customer-chat__new-ticket-grid label { display: block; margin-bottom: 4px; color: var(--ink-soft); font-size: .72rem; font-weight: 800; }
+.customer-chat__new-ticket-grid input,
+.customer-chat__new-ticket-grid select { width: 100%; min-height: 40px; border: 1px solid var(--line); border-radius: 9px; padding: 8px; background: var(--paper, #fff); color: var(--ink); font: inherit; font-size: .82rem; }
+.customer-chat__new-ticket-grid input:focus-visible,
+.customer-chat__new-ticket-grid select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .customer-chat__order-context { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 9px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 10px; background: color-mix(in srgb, var(--accent) 9%, var(--paper)); color: var(--ink); font-size: .78rem; }
 .customer-chat__order-context[hidden] { display: none; }
 .customer-chat__order-context span { display: inline-flex; min-width: 0; align-items: center; gap: 5px; }
@@ -106,7 +119,8 @@
 
 @media (max-width: 480px) {
   .customer-chat { right: 12px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + var(--customer-chat-avoid, 0px)); }
-  .customer-chat__panel { width: min(100vw - 24px, 392px); max-block-size: min(440px, calc(100dvh - 80px)); }
+  .customer-chat__panel { width: min(100vw - 24px, 392px); max-block-size: min(560px, calc(100dvh - 80px)); }
+  .customer-chat__panel:not([hidden]):has(.customer-chat__thread:not([hidden])) { block-size: min(560px, calc(100dvh - 80px)) !important; }
   .customer-chat__thread { grid-template-rows: minmax(0, min(200px, 28dvh)) auto; }
   .customer-chat__toggle { width: 52px; min-width: 52px; min-height: 52px; padding: 0; }
   .customer-chat__toggle span { display: none; }
@@ -127,13 +141,15 @@
     align-items: center;
     padding: 8px 12px;
   }
+  .customer-chat__ticket-bar { min-height: 26px; }
+  .customer-chat__new-ticket { min-height: 28px; }
   .customer-chat__header h2 { margin: 0; }
   .customer-chat__eyebrow { display: none; }
   .customer-chat__thread { grid-template-rows: minmax(44px, 1fr) auto; }
   .customer-chat__messages { padding: 8px 12px; }
   .customer-chat__form {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 4px 8px;
+    gap: 2px 8px;
     padding: 8px 12px;
   }
   .customer-chat__form textarea,
@@ -146,8 +162,10 @@
     padding: 8px;
     resize: none;
   }
+  .customer-chat__new-ticket-grid { grid-template-columns: 1fr; }
   .customer-chat__inbox-link,
   .customer-chat__quote-link {
+    min-height: 30px;
     justify-content: center;
     justify-self: stretch;
     text-align: center;

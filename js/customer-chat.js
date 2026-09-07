@@ -98,9 +98,19 @@ export async function initCustomerChat() {
       <div class="customer-chat__thread" hidden>
         <div class="customer-chat__messages" aria-live="polite" aria-label="Messages"></div>
         <form class="customer-chat__form">
+          <div class="customer-chat__ticket-bar">
+            <span class="customer-chat__ticket" data-customer-chat-ticket hidden><i class="ph ph-ticket" aria-hidden="true"></i> <b data-customer-chat-ticket-number></b><span data-customer-chat-ticket-status></span></span>
+            <button class="customer-chat__new-ticket" type="button" data-customer-chat-new-ticket>Start a new issue</button>
+          </div>
+          <div class="customer-chat__new-ticket-fields" data-customer-chat-new-ticket-fields hidden>
+            <div class="customer-chat__new-ticket-grid">
+              <div><label for="customerChatSubject">Subject</label><input id="customerChatSubject" name="ticket_subject" maxlength="200" placeholder="What do you need help with?"></div>
+              <div><label for="customerChatCategory">Category</label><select id="customerChatCategory" name="ticket_category"><option value="general">General</option><option value="product">Product</option><option value="order">Order</option><option value="shipping">Shipping</option><option value="billing">Billing</option><option value="account">Account</option><option value="technical">Technical</option></select></div>
+            </div>
+          </div>
           <div class="customer-chat__order-context" hidden>
             <span><i class="ph ph-package" aria-hidden="true"></i> About <b data-customer-chat-order></b></span>
-            <button type="button" data-customer-chat-order-clear aria-label="Return to full company conversation">Clear</button>
+            <button type="button" data-customer-chat-order-clear aria-label="Return to all support messages">Clear</button>
           </div>
           <label class="sr-only" for="customerChatBody">Message</label>
           <textarea id="customerChatBody" name="chat_message" autocomplete="off" maxlength="4000" required placeholder="Ask about VertKleen, an order, or your account…"></textarea>
@@ -127,8 +137,23 @@ export async function initCustomerChat() {
   const orderLabel = shell.querySelector("[data-customer-chat-order]");
   const orderClear = shell.querySelector("[data-customer-chat-order-clear]");
   const inboxLink = shell.querySelector(".customer-chat__inbox-link");
+  const ticket = shell.querySelector("[data-customer-chat-ticket]");
+  const ticketNumber = shell.querySelector("[data-customer-chat-ticket-number]");
+  const ticketStatus = shell.querySelector("[data-customer-chat-ticket-status]");
+  const newTicketButton = shell.querySelector("[data-customer-chat-new-ticket]");
+  const newTicketFields = shell.querySelector("[data-customer-chat-new-ticket-fields]");
+  const ticketSubject = shell.querySelector("#customerChatSubject");
+  const ticketCategory = shell.querySelector("#customerChatCategory");
   const quoteActions = [...shell.querySelectorAll(".customer-chat__quote-link")];
   let activeOrder = null;
+  let activeTicket = null;
+  let newTicketMode = false;
+  let messageFetchGeneration = 0;
+  let messageContextGeneration = 0;
+  let messageRequestController = null;
+  const chatDrafts = new Map();
+  const chatDraftRevisions = new Map();
+  let nextChatDraftRevision = 0;
   let authenticated = false;
   let pollId = 0;
   let chatPresenceOpen = false;
@@ -197,18 +222,92 @@ export async function initCustomerChat() {
     status.textContent = text;
     status.dataset.state = state;
   };
+  const chatDraftKey = (ticketId = activeTicket?.id || null, orderId = activeOrder?.id || null, mode = newTicketMode) => `${mode ? "new" : (ticketId || "inbox")}:${orderId || "all"}`;
+  const saveChatDraft = (key = chatDraftKey()) => {
+    const value = body.value || "";
+    if (value) {
+      if (chatDrafts.get(key) !== value || !chatDraftRevisions.has(key)) {
+        chatDrafts.set(key, value);
+        chatDraftRevisions.set(key, ++nextChatDraftRevision);
+      }
+    } else {
+      chatDrafts.delete(key);
+      chatDraftRevisions.delete(key);
+    }
+  };
+  const restoreChatDraft = (key = chatDraftKey()) => { body.value = chatDrafts.get(key) || ""; };
+  const renderTicket = () => {
+    ticket.hidden = !activeTicket;
+    ticketNumber.textContent = activeTicket?.number || "";
+    ticketStatus.textContent = activeTicket ? ` · ${ticketStatusLabel(activeTicket.status)}` : "";
+    newTicketButton.textContent = newTicketMode
+      ? (activeTicket ? "Use active issue" : "Cancel new issue")
+      : (activeTicket ? "New issue" : "Start a new issue");
+  };
   const setOrderContext = (order) => {
     const id = String(order?.id || "").trim();
-    activeOrder = id ? {
-      id,
-      reference: String(order?.reference || order?.order_number || id).trim(),
-      status: order?.status || null,
-    } : null;
+    const previousId = activeOrder?.id || null;
+    if (previousId !== (id || null)) {
+      saveChatDraft(chatDraftKey(activeTicket?.id || null, previousId));
+      activeOrder = id ? {
+        id,
+        reference: String(order?.reference || order?.order_number || id).trim(),
+        status: order?.status || null,
+      } : null;
+      activeTicket = null;
+      messageContextGeneration += 1;
+      list.innerHTML = '<p class="customer-chat__empty">Loading messages…</p>';
+      setStatus();
+      renderTicket();
+      restoreChatDraft();
+    } else if (id) {
+      activeOrder = {
+        id,
+        reference: String(order?.reference || order?.order_number || id).trim(),
+        status: order?.status || null,
+      };
+    } else activeOrder = null;
     orderContext.hidden = !activeOrder;
     orderLabel.textContent = activeOrder ? `order ${activeOrder.reference}` : "";
     inboxLink.href = activeOrder
       ? `${root}dashboard.html?order=${encodeURIComponent(activeOrder.id)}#messages`
       : `${root}dashboard.html#messages`;
+  };
+  const ticketStatusLabel = (value) => ({
+    open: "Open",
+    waiting_on_customer: "Waiting for your reply",
+    resolved: "Resolved",
+  }[value] || "Support issue");
+  const setTicket = (value) => {
+    const nextTicket = value?.id ? {
+      id: String(value.id),
+      number: String(value.display_number || value.ticket_number || "Support issue"),
+      status: String(value.status || "open"),
+    } : null;
+    const previousId = activeTicket?.id || null;
+    const nextId = nextTicket?.id || null;
+    if (previousId !== nextId) {
+      saveChatDraft(chatDraftKey(previousId));
+      activeTicket = nextTicket;
+      messageContextGeneration += 1;
+      restoreChatDraft();
+    } else activeTicket = nextTicket;
+    renderTicket();
+  };
+  const setNewTicketMode = (enabled) => {
+    if (newTicketMode === Boolean(enabled)) return;
+    saveChatDraft();
+    newTicketMode = Boolean(enabled);
+    messageContextGeneration += 1;
+    newTicketFields.hidden = !newTicketMode;
+    newTicketButton.textContent = newTicketMode
+      ? (activeTicket ? "Use active issue" : "Cancel new issue")
+      : (activeTicket ? "New issue" : "Start a new issue");
+    if (!newTicketMode) {
+      ticketSubject.value = "";
+      ticketCategory.value = "general";
+    }
+    restoreChatDraft();
   };
   const setChatPresence = async (open, { force = false, keepalive = false } = {}) => {
     if (!authenticated || (!force && chatPresenceOpen === open)) return;
@@ -281,14 +380,25 @@ export async function initCustomerChat() {
   };
   const loadMessages = async ({ quiet = false } = {}) => {
     if (!authenticated) return;
+    const fetchGeneration = ++messageFetchGeneration;
+    const contextGeneration = messageContextGeneration;
+    const orderId = activeOrder?.id || null;
+    messageRequestController?.abort();
+    const controller = new AbortController();
+    messageRequestController = controller;
     try {
       const { api } = await auth();
-      const suffix = activeOrder ? `?order_id=${encodeURIComponent(activeOrder.id)}` : "";
+      const params = new URLSearchParams();
+      if (orderId) params.set("order_id", orderId);
+      const suffix = params.size ? `?${params}` : "";
       const result = await api(`/api/account/messages${suffix}`);
-      if (activeOrder && result.order_scope) setOrderContext(result.order_scope);
+      if (controller.signal.aborted || fetchGeneration !== messageFetchGeneration || contextGeneration !== messageContextGeneration || orderId !== (activeOrder?.id || null)) return;
+      if (Object.prototype.hasOwnProperty.call(result, "order_scope")) setOrderContext(result.order_scope);
+      setTicket(result.ticket || null);
       renderMessages(result.messages || []);
       if (!quiet) setStatus();
     } catch (error) {
+      if (controller.signal.aborted || fetchGeneration !== messageFetchGeneration || contextGeneration !== messageContextGeneration || orderId !== (activeOrder?.id || null)) return;
       if (error.status === 401) return showGuest();
       setStatus(needsCompany(error) ? "Finish business setup in your dashboard before messaging support." : "Could not load messages. Retry shortly.", "err");
     }
@@ -309,7 +419,7 @@ export async function initCustomerChat() {
     setOpen(true);
     void updateQuoteHref();
     await refresh();
-    (authenticated ? body : guestAction).focus();
+    (authenticated ? (newTicketMode ? ticketSubject : body) : guestAction).focus();
   };
   openSupportOrder = (order) => {
     setOrderContext(order);
@@ -322,6 +432,10 @@ export async function initCustomerChat() {
 
   toggle.addEventListener("click", () => panel.hidden ? void open() : setOpen(false));
   close.addEventListener("click", () => setOpen(false));
+  newTicketButton.addEventListener("click", () => {
+    setNewTicketMode(!newTicketMode);
+    (newTicketMode ? ticketSubject : body).focus();
+  });
   orderClear.addEventListener("click", () => {
     setOrderContext(null);
     void loadMessages();
@@ -360,25 +474,79 @@ export async function initCustomerChat() {
     void setChatPresence(!document.hidden, { force: true, keepalive: document.hidden });
   });
   window.addEventListener("pagehide", () => { if (!panel.hidden) void setChatPresence(false, { force: true, keepalive: true }); });
+  body.addEventListener("input", () => saveChatDraft());
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const text = body.value.trim();
+    const rawText = body.value;
+    const text = rawText.trim();
     if (!text || !authenticated) return;
+    const mutationContextGeneration = messageContextGeneration;
+    const mutationOrderId = activeOrder?.id || null;
+    const mutationTicketId = activeTicket?.id || null;
+    const mutationNewTicketMode = newTicketMode;
+    const mutationSubject = ticketSubject.value.trim()
+      || text.split(/\r?\n/).find(Boolean)?.slice(0, 120)
+      || "Support request";
+    const mutationCategory = ticketCategory.value || "general";
+    const mutationDraftKey = chatDraftKey(mutationTicketId, mutationOrderId, mutationNewTicketMode);
+    saveChatDraft(mutationDraftKey);
+    const mutationDraftRevision = chatDraftRevisions.get(mutationDraftKey);
     const send = form.querySelector('[type="submit"]');
     send.disabled = true;
     setStatus("Sending…");
     try {
       const { api } = await auth();
-      await api("/api/account/messages", {
+      const payload = { body: text, source: "customer_chat", order_id: mutationOrderId };
+      if (mutationNewTicketMode) {
+        payload.action = "start_ticket";
+        payload.subject = mutationSubject;
+        payload.category = mutationCategory;
+      } else if (mutationTicketId) {
+        payload.ticket_id = mutationTicketId;
+      }
+      const response = await api("/api/account/messages", {
         method: "POST",
-        body: { body: text, source: "customer_chat", order_id: activeOrder?.id || null },
+        body: payload,
       });
-      body.value = "";
+      const draftUnchanged = chatDraftRevisions.get(mutationDraftKey) === mutationDraftRevision
+        && chatDrafts.get(mutationDraftKey) === rawText;
+      const newerDraft = draftUnchanged ? null : (chatDrafts.get(mutationDraftKey) ?? body.value);
+      const newerDraftRevision = draftUnchanged ? null : chatDraftRevisions.get(mutationDraftKey);
+      if (draftUnchanged) {
+        chatDrafts.delete(mutationDraftKey);
+        chatDraftRevisions.delete(mutationDraftKey);
+        if (chatDraftKey() === mutationDraftKey && body.value === rawText) body.value = "";
+      }
+      if (mutationContextGeneration !== messageContextGeneration
+        || mutationOrderId !== (activeOrder?.id || null)
+        || mutationTicketId !== (activeTicket?.id || null)) return;
+      if (response?.ticket) setTicket(response.ticket);
+      setNewTicketMode(false);
+      if (newerDraft !== null) {
+        const nextDraftKey = chatDraftKey(response?.ticket?.id || activeTicket?.id || null, mutationOrderId, false);
+        if (newerDraft) {
+          chatDrafts.set(nextDraftKey, newerDraft);
+          chatDraftRevisions.set(nextDraftKey, ++nextChatDraftRevision);
+        } else {
+          chatDrafts.delete(nextDraftKey);
+          chatDraftRevisions.delete(nextDraftKey);
+        }
+        if (nextDraftKey !== mutationDraftKey
+          && chatDraftRevisions.get(mutationDraftKey) === newerDraftRevision
+          && chatDrafts.get(mutationDraftKey) === newerDraft) {
+          chatDrafts.delete(mutationDraftKey);
+          chatDraftRevisions.delete(mutationDraftKey);
+        }
+        body.value = newerDraft;
+      }
       setStatus("Sent.", "ok");
       await loadMessages({ quiet: true });
     } catch (error) {
+      const sameContext = mutationContextGeneration === messageContextGeneration
+        && mutationOrderId === (activeOrder?.id || null)
+        && mutationTicketId === (activeTicket?.id || null);
       if (error.status === 401) showGuest();
-      else setStatus(
+      else if (sameContext) setStatus(
         error.status === 429 ? "Too many messages. Wait a minute, then retry."
           : needsCompany(error) ? "Finish business setup in your dashboard before messaging support."
             : "Could not send. Retry shortly.",

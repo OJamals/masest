@@ -21,13 +21,29 @@ const pages = {                // offset-pagination state per list (#29)
   notifs: { items: [], offset: 0, total: null, hasMore: false },
   quotes: { items: [], offset: 0, total: null, hasMore: false },
 };
-let lastMsgCount = -1;         // messages currently rendered in the thread (for live-poll diffing)
+let lastMsgCount = -1;         // messages currently rendered in the selected ticket
 let lastMsgId = null;
 let messageHistory = [];
 let messageCursor = null;
 let messageHasMore = false;
 let messageOrderScope = null;
+let supportTickets = [];
+let ticketCursor = null;
+let ticketHasMore = false;
+let selectedMessageTicketId = null;
+let selectedMessageTicket = null;
+let renderedMessageTicketId = null;
+let selectedMessageExplicit = false;
+let selectedMessageAuthoritative = false;
 let activeMessageOrderId = new URLSearchParams(location.search).get('order') || null;
+let messageSelectionGeneration = 0;
+let messageRenderGeneration = 0;
+let ticketHistoryRequest = null;
+let ticketDetailRequest = null;
+const messageDrafts = new Map();
+const messageDraftRevisions = new Map();
+let nextMessageDraftRevision = 0;
+let newTicketComposerGeneration = 0;
 let pollTimer = null;          // live-refresh interval handle
 const POLL_MS = 30000;         // poll cadence while the tab is visible
 let activeDashboardTab = '';
@@ -403,7 +419,7 @@ function renderRecentMessages(messages = []) {
 
 async function renderOverviewActivity(orders = [], notif = { notifications: [] }, activeTotal = 0) {
   let messages = [];
-  try { messages = (await api('/api/account/messages?peek=1')).messages || []; } catch { messages = []; }
+  try { messages = (await api('/api/account/messages?view=activity&peek=1')).messages || []; } catch { messages = []; }
   renderBuyerActionRail({ activeTotal, notifications: notif.notifications || [], messages });
   renderRecentOrders(orders);
   renderRecentMessages(messages);
@@ -520,7 +536,7 @@ async function renderOrders({ append = false } = {}) {
         <div class="dash-order-actions">
         ${items.length ? `<button class="btn btn-ghost btn-sm dash-reorder" data-reorder="${i}">Reorder</button>` : ''}
         ${o.payment_method === 'stripe' ? `<button class="btn btn-ghost btn-sm" data-receipt="${esc(o.id)}">Receipt</button>` : ''}
-        ${ACCOUNT?.company ? `<button class="btn btn-ghost btn-sm" type="button" data-message-order="${esc(o.id)}" data-order-reference="${esc(reference)}" data-order-status="${esc(o.status || '')}">Message about this order</button>` : ''}
+        <button class="btn btn-ghost btn-sm" type="button" data-message-order="${esc(o.id)}" data-order-reference="${esc(reference)}" data-order-status="${esc(o.status || '')}">Message about this order</button>
         ${orderRequestButton(o)}
         </div>
       </div></details>`;
@@ -751,72 +767,378 @@ async function renderQuoteRequests({ append = false } = {}) {
 }
 
 /* ---------- messages ---------- */
-async function renderMessages({ older = false } = {}) {
-  loaded.messages = true;
+function supportTicketNumber(ticket) {
+  return ticket?.display_number || ticket?.ticket_number || 'Support issue';
+}
+
+function supportTicketStatusLabel(status) {
+  return ({ open: 'Open', waiting_on_customer: 'Waiting for you', resolved: 'Resolved' })[status] || 'Support issue';
+}
+
+function supportTicketScopeLabel(ticket) {
+  return ticket?.scope === 'company' || ticket?.thread_scope === 'company' ? 'Company' : 'Personal';
+}
+
+function supportTicketOrder(ticket) {
+  return ticket?.order?.reference || ticket?.order_reference || ticket?.primary_order_reference || ticket?.primary_order_id || '';
+}
+
+function messageOrderQuery(params) {
+  if (activeMessageOrderId) params.set('order_id', activeMessageOrderId);
+  return params;
+}
+
+function messageDraftKey(ticketId = selectedMessageTicketId, orderId = activeMessageOrderId) {
+  return `${ticketId || 'new'}:${orderId || 'all'}`;
+}
+
+function saveMessageDraft(ticketId = selectedMessageTicketId, orderId = activeMessageOrderId) {
+  const input = $('msgInput');
+  if (!input) return;
+  const key = messageDraftKey(ticketId, orderId);
+  const value = input.value || '';
+  if (value) {
+    if (messageDrafts.get(key) !== value || !messageDraftRevisions.has(key)) {
+      messageDrafts.set(key, value);
+      messageDraftRevisions.set(key, ++nextMessageDraftRevision);
+    }
+  } else {
+    messageDrafts.delete(key);
+    messageDraftRevisions.delete(key);
+  }
+}
+
+function restoreMessageDraft(ticketId = selectedMessageTicketId, orderId = activeMessageOrderId) {
+  const input = $('msgInput');
+  if (!input) return;
+  input.value = messageDrafts.get(messageDraftKey(ticketId, orderId)) || '';
+}
+
+function messageSelectionIsCurrent(generation, ticketId = selectedMessageTicketId) {
+  return generation === messageSelectionGeneration
+    && String(ticketId || '') === String(selectedMessageTicketId || '');
+}
+
+function renderTicketHistory() {
+  const list = $('msgTickets');
+  const more = $('loadMoreTickets');
+  if (!list) return;
+  if (!supportTickets.length) {
+    list.innerHTML = '<p class="msg-ticket-empty">No issues yet. Start a new issue and the MASEST team will reply here.</p>';
+  } else {
+    list.innerHTML = supportTickets.map((ticket) => {
+      const id = esc(ticket.id);
+      const order = supportTicketOrder(ticket);
+      return `<button class="msg-ticket" type="button" data-ticket-id="${id}" aria-pressed="${String(ticket.id) === String(selectedMessageTicketId)}">
+        <span class="msg-ticket-top"><span>${esc(supportTicketNumber(ticket))}</span><span class="msg-ticket-scope">${esc(supportTicketScopeLabel(ticket))}</span></span>
+        <span class="msg-ticket-subject">${esc(ticket.subject || 'Support issue')}</span>
+        <span class="msg-ticket-meta"><span>${esc(supportTicketStatusLabel(ticket.status))}</span><span>${esc(order ? `Order ${order}` : fmtDT(ticket.last_message_at || ticket.updated_at || ticket.created_at))}</span></span>
+      </button>`;
+    }).join('');
+  }
+  if (more) { more.hidden = !ticketHasMore; more.disabled = false; }
+  list.querySelectorAll('[data-ticket-id]').forEach((button) => button.addEventListener('click', async () => {
+    saveMessageDraft();
+    messageSelectionGeneration += 1;
+    const generation = messageSelectionGeneration;
+    selectedMessageTicketId = button.dataset.ticketId;
+    selectedMessageExplicit = true;
+    selectedMessageAuthoritative = false;
+    selectedMessageTicket = supportTickets.find((ticket) => String(ticket.id) === selectedMessageTicketId) || null;
+    messageHistory = []; messageCursor = null; messageHasMore = false;
+    restoreMessageDraft(selectedMessageTicketId, activeMessageOrderId);
+    renderTicketHistory();
+    await renderSelectedTicket({ generation, ticketId: selectedMessageTicketId });
+  }));
+}
+
+async function loadTicketHistory({ append = false, generation = messageRenderGeneration } = {}) {
+  ticketHistoryRequest?.abort();
+  const controller = new AbortController();
+  ticketHistoryRequest = controller;
+  const params = messageOrderQuery(new URLSearchParams({ view: 'tickets', limit: '20' }));
+  if (append && ticketCursor) params.set('ticket_cursor', ticketCursor);
+  const result = await api(`/api/account/messages?${params}`);
+  if (controller.signal.aborted || generation !== messageRenderGeneration) return false;
+  const rows = result.tickets || [];
+  supportTickets = append
+    ? [...supportTickets, ...rows.filter((ticket) => !supportTickets.some((existing) => existing.id === ticket.id))]
+    : rows;
+  ticketCursor = result.next_ticket_cursor || null;
+  ticketHasMore = result.has_more === true;
+  if (selectedMessageTicket && (selectedMessageExplicit || selectedMessageAuthoritative)
+    && !supportTickets.some((ticket) => String(ticket.id) === String(selectedMessageTicket.id))) {
+    supportTickets = [...supportTickets, selectedMessageTicket];
+  }
+  selectedMessageTicket = supportTickets.find((ticket) => String(ticket.id) === String(selectedMessageTicketId)) || null;
+  renderTicketHistory();
+  return true;
+}
+
+async function loadDefaultMessageTicket({ generation = messageRenderGeneration } = {}) {
+  const params = messageOrderQuery(new URLSearchParams());
+  const result = await api(`/api/account/messages${params.size ? `?${params}` : ''}`);
+  if (generation !== messageRenderGeneration) return false;
+  if (!selectedMessageExplicit) {
+    selectedMessageTicket = result.ticket || null;
+    selectedMessageTicketId = result.ticket?.id || null;
+    selectedMessageAuthoritative = Boolean(result.ticket?.id);
+  }
+  messageOrderScope = result.order_scope || null;
+  return true;
+}
+
+async function renderSelectedTicket({ older = false, generation = messageSelectionGeneration, ticketId = selectedMessageTicketId } = {}) {
   const thread = $('msgThread');
-  const form = $('msgForm');
   const count = $('msgCount');
   const earlier = $('loadEarlierMessages');
-  if (!ACCOUNT?.company) {
-    thread.innerHTML = `<div class="empty-state"><i class="ph ph-briefcase empty-icon" aria-hidden="true"></i><div class="empty-title">Business setup required</div><div class="empty-body">Create a business profile before starting account-team message threads.</div><a class="btn btn-primary btn-sm" href="#business">Set up business</a></div>`;
-    if (count) count.textContent = '';
-    if (earlier) earlier.hidden = true;
-    if (form) form.hidden = true; // the API rejects sends without a company
-    wirePanelLinks(thread);
-    return;
-  }
-  if (form) form.hidden = false;
-  const previousHeight = older ? thread.scrollHeight : 0;
-  let result;
-  try {
-    const params = new URLSearchParams();
-    if (activeMessageOrderId) params.set('order_id', activeMessageOrderId);
-    if (older && messageCursor) params.set('before', messageCursor);
-    const suffix = params.size ? `?${params}` : '';
-    result = await api(`/api/account/messages${suffix}`);
-  } catch {
-    loaded.messages = false;
-    if (earlier) earlier.disabled = false;
-    showLoadError(thread, 'Could not load messages.', () => renderMessages({ older }));
-    return;
-  }
-  const page = result.messages || [];
-  messageHistory = older
-    ? [...page, ...messageHistory.filter((message) => !page.some((olderMessage) => olderMessage.id === message.id))]
-    : page;
-  messageCursor = result.next_before || null;
-  messageHasMore = result.has_more === true;
-  messageOrderScope = result.order_scope || null;
-  const msgs = messageHistory;
-  lastMsgCount = msgs.length;
-  lastMsgId = msgs.at(-1)?.id || null;
-  if (earlier) { earlier.hidden = !messageHasMore; earlier.disabled = false; }
+  const form = $('msgForm');
+  const heading = $('msgTicketHeading');
   const orderContext = $('msgOrderContext');
   const orderLabel = $('msgOrderLabel');
   if (orderContext) orderContext.hidden = !messageOrderScope;
   if (orderLabel) orderLabel.textContent = messageOrderScope ? `Order ${messageOrderScope.reference}` : '';
-  if (count) count.textContent = msgs.length ? `${msgs.length}${messageHasMore ? '+' : ''} message${msgs.length === 1 ? '' : 's'} loaded${messageOrderScope ? ` for order ${messageOrderScope.reference}` : ''}.` : 'No messages in this conversation yet.';
-  if (!msgs.length) { thread.innerHTML = `<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Send us a question about orders, pricing, NET terms, or anything else.</div></div>`; }
+  if (generation !== messageSelectionGeneration) return;
+  if (!ticketId || !selectedMessageTicketId) {
+    if (!messageSelectionIsCurrent(generation, ticketId)) return;
+    selectedMessageTicket = null;
+    selectedMessageTicketId = null;
+    renderedMessageTicketId = null;
+    selectedMessageAuthoritative = false;
+    if (heading) heading.hidden = true;
+    if (count) count.textContent = '';
+    if (earlier) earlier.hidden = true;
+    if (form) form.hidden = true;
+    thread.innerHTML = '<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No issue selected</div><div class="empty-body">Start a new issue to contact the MASEST team.</div></div>';
+    return;
+  }
+  if (!messageSelectionIsCurrent(generation, ticketId)) return;
+  const changedTicket = !older && String(renderedMessageTicketId || '') !== String(ticketId);
+  if (changedTicket) {
+    renderedMessageTicketId = null;
+    if (heading) heading.hidden = true;
+    if (count) count.textContent = 'Loading issue…';
+    if (earlier) earlier.hidden = true;
+    if (form) form.hidden = true;
+    thread.innerHTML = '<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">Loading issue…</div></div>';
+  }
+  const previousHeight = older ? thread.scrollHeight : 0;
+  const params = messageOrderQuery(new URLSearchParams({ ticket_id: ticketId }));
+  if (older && messageCursor) params.set('message_cursor', messageCursor);
+  ticketDetailRequest?.abort();
+  const controller = new AbortController();
+  ticketDetailRequest = controller;
+  let result;
+  try { result = await api(`/api/account/messages?${params}`); }
+  catch {
+    if (controller.signal.aborted || !messageSelectionIsCurrent(generation, ticketId)) return;
+    if (earlier) earlier.disabled = false;
+    if (changedTicket) showLoadError(thread, 'Could not load this issue.', () => renderSelectedTicket({ older }));
+    return;
+  }
+  if (controller.signal.aborted || !messageSelectionIsCurrent(generation, ticketId)) return;
+  selectedMessageTicket = result.ticket || selectedMessageTicket;
+  renderedMessageTicketId = ticketId;
+  const page = result.messages || [];
+  messageHistory = older
+    ? [...page, ...messageHistory.filter((message) => !page.some((olderMessage) => olderMessage.id === message.id))]
+    : page;
+  messageCursor = result.next_message_cursor || null;
+  messageHasMore = result.has_more === true;
+  messageOrderScope = result.order_scope || null;
+  const subject = $('msgTicketSubject');
+  const meta = $('msgTicketMeta');
+  const status = $('msgTicketStatus');
+  if (heading) heading.hidden = false;
+  if (subject) subject.textContent = selectedMessageTicket?.subject || 'Support issue';
+  if (meta) meta.textContent = `${supportTicketNumber(selectedMessageTicket)} · ${supportTicketScopeLabel(selectedMessageTicket)}${supportTicketOrder(selectedMessageTicket) ? ` · Order ${supportTicketOrder(selectedMessageTicket)}` : ''}`;
+  if (status) { status.textContent = supportTicketStatusLabel(selectedMessageTicket?.status); status.dataset.s = selectedMessageTicket?.status || ''; }
+  if (count) count.textContent = messageHistory.length ? `${messageHistory.length}${messageHasMore ? '+' : ''} message${messageHistory.length === 1 ? '' : 's'} loaded.` : 'No messages in this issue yet.';
+  if (earlier) { earlier.hidden = !messageHasMore; earlier.disabled = false; }
+  if (form) form.hidden = false;
+  lastMsgCount = messageHistory.length;
+  lastMsgId = messageHistory.at(-1)?.id || null;
+  if (!messageHistory.length) thread.innerHTML = '<div class="empty-state"><i class="ph ph-chat-circle empty-icon" aria-hidden="true"></i><div class="empty-title">No messages yet</div><div class="empty-body">Reply here to add context for the MASEST team.</div></div>';
   else {
-    thread.innerHTML = msgs.map((m) => `<div class="msg ${m.sender_role === 'staff' ? 'staff' : 'buyer'}">${m.order ? `<a class="msg-order" href="${esc(m.order.buyer_url)}">Order ${esc(m.order.reference)}</a>` : ''}${esc(m.body)}<time>${fmtDT(m.created_at)}${m.source === 'email_reply' ? ' · <span class="msg-source">Email reply</span>' : ''}</time></div>`).join('');
-    requestAnimationFrame(() => {
-      thread.scrollTop = older ? thread.scrollHeight - previousHeight : thread.scrollHeight;
-    });
+    thread.innerHTML = messageHistory.map((message) => `<div class="msg ${message.sender_role === 'staff' ? 'staff' : 'buyer'}">${message.order ? `<a class="msg-order" href="${esc(message.order.buyer_url)}">Order ${esc(message.order.reference)}</a>` : ''}${esc(message.body)}<time>${fmtDT(message.created_at)}${message.source === 'email_reply' ? ' · <span class="msg-source">Email reply</span>' : ''}</time></div>`).join('');
+    requestAnimationFrame(() => { thread.scrollTop = older ? thread.scrollHeight - previousHeight : thread.scrollHeight; });
   }
 }
+
+async function renderMessages({ older = false } = {}) {
+  const generation = ++messageRenderGeneration;
+  loaded.messages = true;
+  const thread = $('msgThread');
+  if (!older) {
+    selectedMessageExplicit = Boolean(selectedMessageExplicit && selectedMessageTicketId);
+    try {
+      await loadDefaultMessageTicket({ generation });
+      if (generation !== messageRenderGeneration) return;
+      await loadTicketHistory({ generation });
+    }
+    catch { loaded.messages = false; showLoadError(thread, 'Could not load support issues.', () => renderMessages()); return; }
+  }
+  if (generation !== messageRenderGeneration) return;
+  if (!selectedMessageExplicit && !selectedMessageTicketId) {
+    messageSelectionGeneration += 1;
+  }
+  restoreMessageDraft();
+  await renderSelectedTicket({ older, generation: messageSelectionGeneration, ticketId: selectedMessageTicketId });
+}
 function wireMessageForm() {
-  $('msgForm').addEventListener('submit', async (e) => {
+  const replyForm = $('msgForm');
+  const newTicketForm = $('newTicketForm');
+  const newTicketButton = $('newTicketButton');
+  const replyInput = $('msgInput');
+  let ownedOrdersLoaded = false;
+  replyInput?.addEventListener('input', () => saveMessageDraft());
+  const populateOwnedOrders = async () => {
+    const select = $('msgNewOrder');
+    if (!select || ownedOrdersLoaded) return;
+    try {
+      const result = await fetchOrders({ limit: 50, summary: true });
+      (result.orders || []).forEach((order) => {
+        const option = document.createElement('option');
+        option.value = order.id;
+        option.textContent = order.reference || order.order_number || order.id;
+        select.append(option);
+      });
+    } catch { /* the no-order option remains usable */ }
+    ownedOrdersLoaded = true;
+  };
+  newTicketButton?.addEventListener('click', async () => {
+    if (!newTicketForm) return;
+    newTicketComposerGeneration += 1;
+    newTicketForm.hidden = false;
+    newTicketForm.querySelector('[type="submit"]')?.removeAttribute('disabled');
+    $('newTicketStatus').textContent = '';
+    $('newTicketStatus').dataset.state = '';
+    await populateOwnedOrders();
+    const orderSelect = $('msgNewOrder');
+    if (activeMessageOrderId && orderSelect && [...orderSelect.options].some((option) => option.value === activeMessageOrderId)) {
+      orderSelect.value = activeMessageOrderId;
+    }
+    $('msgNewSubject')?.focus();
+  });
+  $('cancelNewTicket')?.addEventListener('click', () => {
+    if (!newTicketForm) return;
+    newTicketComposerGeneration += 1;
+    newTicketForm.reset();
+    newTicketForm.hidden = true;
+    $('newTicketStatus').textContent = '';
+    newTicketButton?.focus();
+  });
+  newTicketForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const subjectRaw = $('msgNewSubject').value;
+    const bodyRaw = $('msgNewBody').value;
+    const subject = subjectRaw.trim();
+    const body = bodyRaw.trim();
+    const category = $('msgNewCategory').value;
+    const orderSelect = $('msgNewOrder');
+    const selectedOrderId = orderSelect.value || null;
+    const selectedOrderReference = orderSelect.selectedOptions[0]?.textContent?.trim() || selectedOrderId;
+    const status = $('newTicketStatus');
+    const submit = e.target.querySelector('[type="submit"]');
+    if (!subject || !body) return;
+    const composerGeneration = newTicketComposerGeneration;
+    const selectionGeneration = messageSelectionGeneration;
+    const composerSnapshot = { subjectRaw, bodyRaw, category, selectedOrderId };
+    submit.disabled = true; status.textContent = 'Starting…'; status.dataset.state = '';
+    try {
+      const response = await api('/api/account/messages', {
+        method: 'POST',
+        body: {
+          action: 'start_ticket',
+          subject,
+          category,
+          order_id: selectedOrderId,
+          body,
+          source: 'dashboard',
+        },
+      });
+      const composerUnchanged = composerGeneration === newTicketComposerGeneration
+        && selectionGeneration === messageSelectionGeneration
+        && $('msgNewSubject').value === composerSnapshot.subjectRaw
+        && $('msgNewBody').value === composerSnapshot.bodyRaw
+        && $('msgNewCategory').value === composerSnapshot.category
+        && ($('msgNewOrder').value || null) === composerSnapshot.selectedOrderId;
+      if (!composerUnchanged) {
+        if (composerGeneration === newTicketComposerGeneration && status.textContent === 'Starting…') {
+          status.textContent = '';
+          status.dataset.state = '';
+        }
+        return;
+      }
+      activeMessageOrderId = selectedOrderId;
+      messageOrderScope = selectedOrderId
+        ? (response.ticket?.order || { id: selectedOrderId, reference: selectedOrderReference })
+        : null;
+      const url = new URL(location.href);
+      if (selectedOrderId) url.searchParams.set('order', selectedOrderId);
+      else url.searchParams.delete('order');
+      history.replaceState(null, '', `${url.pathname}${url.search}#messages`);
+      selectedMessageTicketId = response.ticket_id || response.ticket?.id || null;
+      selectedMessageTicket = response.ticket || null;
+      selectedMessageExplicit = true;
+      selectedMessageAuthoritative = false;
+      messageSelectionGeneration += 1;
+      newTicketForm.reset(); newTicketForm.hidden = true;
+      status.textContent = '';
+      loaded.messages = false; await renderMessages();
+    } catch (error) {
+      const composerStillCurrent = composerGeneration === newTicketComposerGeneration
+        && selectionGeneration === messageSelectionGeneration
+        && $('msgNewSubject').value === composerSnapshot.subjectRaw
+        && $('msgNewBody').value === composerSnapshot.bodyRaw
+        && $('msgNewCategory').value === composerSnapshot.category
+        && ($('msgNewOrder').value || null) === composerSnapshot.selectedOrderId;
+      if (composerStillCurrent) {
+        status.textContent = error.status === 429 ? 'Too many messages. Wait a minute, then retry.' : 'Could not start this issue. Try again.';
+        status.dataset.state = 'err';
+      } else if (composerGeneration === newTicketComposerGeneration && status.textContent === 'Starting…') {
+        status.textContent = '';
+        status.dataset.state = '';
+      }
+    } finally {
+      if (composerGeneration === newTicketComposerGeneration) submit.disabled = false;
+    }
+  });
+  replyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = $('msgInput'); const status = $('msgStatus');
     const sendBtn = e.target.querySelector('[type="submit"]');
-    const body = input.value.trim(); if (!body) return;
+    const rawBody = input.value;
+    const body = rawBody.trim(); if (!body) return;
+    if (!selectedMessageTicketId) { status.textContent = 'Select an issue before replying.'; status.dataset.state = 'err'; return; }
+    const ticketId = selectedMessageTicketId;
+    const orderId = activeMessageOrderId;
+    const generation = messageSelectionGeneration;
+    const draftKey = messageDraftKey(ticketId, orderId);
+    saveMessageDraft(ticketId, orderId);
+    const submittedRevision = messageDraftRevisions.get(draftKey);
     if (sendBtn) sendBtn.disabled = true;
     status.textContent = 'Sending…'; status.dataset.state = '';
     try {
-      await api('/api/account/messages', { method: 'POST', body: { body, order_id: activeMessageOrderId } });
-      input.value = ''; status.textContent = '';
+      const params = { body, ticket_id: ticketId, source: 'dashboard' };
+      if (orderId) params.order_id = orderId;
+      await api('/api/account/messages', { method: 'POST', body: params });
+      const draftUnchanged = messageDraftRevisions.get(draftKey) === submittedRevision
+        && messageDrafts.get(draftKey) === rawBody;
+      if (draftUnchanged) {
+        messageDrafts.delete(draftKey);
+        messageDraftRevisions.delete(draftKey);
+        if (messageDraftKey() === draftKey && input.value === rawBody) input.value = '';
+      }
+      if (generation !== messageSelectionGeneration || String(ticketId) !== String(selectedMessageTicketId)) return;
+      status.textContent = '';
       loaded.messages = false; await renderMessages();
-    } catch { status.textContent = 'Could not send. Try again.'; status.dataset.state = 'err'; }
+    } catch {
+      if (generation === messageSelectionGeneration && String(ticketId) === String(selectedMessageTicketId)) {
+        status.textContent = 'Could not send. Try again.';
+        status.dataset.state = 'err';
+      }
+    }
     finally { if (sendBtn) sendBtn.disabled = false; }
   });
   $('refreshMessages')?.addEventListener('click', async (event) => {
@@ -827,13 +1149,26 @@ function wireMessageForm() {
   });
   $('loadEarlierMessages')?.addEventListener('click', async (event) => {
     event.currentTarget.disabled = true;
-    await renderMessages({ older: true });
+    await renderSelectedTicket({ older: true, generation: messageSelectionGeneration, ticketId: selectedMessageTicketId });
+  });
+  $('loadMoreTickets')?.addEventListener('click', async (event) => {
+    event.currentTarget.disabled = true;
+    try { await loadTicketHistory({ append: true }); }
+    catch { event.currentTarget.disabled = false; }
   });
   $('msgOrderClear')?.addEventListener('click', async () => {
+    saveMessageDraft();
+    messageSelectionGeneration += 1;
     activeMessageOrderId = null;
     messageOrderScope = null;
     messageHistory = [];
     messageCursor = null;
+    supportTickets = [];
+    ticketCursor = null;
+    selectedMessageTicketId = null;
+    selectedMessageTicket = null;
+    selectedMessageExplicit = false;
+    selectedMessageAuthoritative = false;
     const url = new URL(location.href);
     url.searchParams.delete('order');
     history.replaceState(null, '', `${url.pathname}${url.search}#messages`);
@@ -1334,11 +1669,12 @@ function syncNavDot(unread) {
 
 async function pollLive() {
   if (document.hidden) return;
-  if (!ACCOUNT?.company) return; // notifications/messages endpoints reject company-less accounts
   let unread = 0;
-  try { unread = (await api('/api/account/notifications')).unread || 0; } catch { return; }
-  setBadge('badgeNotifs', unread);
-  syncNavDot(unread);
+  if (ACCOUNT?.company) {
+    try { unread = (await api('/api/account/notifications')).unread || 0; } catch { unread = 0; }
+    setBadge('badgeNotifs', unread);
+    syncNavDot(unread);
+  }
   // With the Notifications tab open, fold in newly arrived items instead of
   // only bumping the badge (the badge would say 3 while the list shows 0 new).
   const notifPanel = document.querySelector('[data-panel="notifications"]');
@@ -1349,12 +1685,16 @@ async function pollLive() {
   // If the Messages tab is open, fold in any new staff replies (only re-render when the
   // thread actually grew, so we don't yank the scroll position while the user is reading).
   const msgPanel = document.querySelector('[data-panel="messages"]');
-  if (msgPanel && !msgPanel.hidden) {
+  if (msgPanel && !msgPanel.hidden && selectedMessageTicketId) {
     try {
-      const params = new URLSearchParams({ peek: '1' });
-      if (activeMessageOrderId) params.set('order_id', activeMessageOrderId);
-      const msgs = (await api(`/api/account/messages?${params}`)).messages || [];
-      if ((msgs.at(-1)?.id || null) !== lastMsgId) { loaded.messages = false; await renderMessages(); }
+      const params = messageOrderQuery(new URLSearchParams({ ticket_id: selectedMessageTicketId, peek: '1', limit: '1' }));
+      const preview = await api(`/api/account/messages?${params}`);
+      const msgs = preview.messages || [];
+      const latestId = msgs[0]?.id || null;
+      if (latestId !== lastMsgId && String(selectedMessageTicketId) === String(preview.ticket?.id || selectedMessageTicketId)) {
+        loaded.messages = false;
+        await renderSelectedTicket({ generation: messageSelectionGeneration, ticketId: selectedMessageTicketId });
+      }
     } catch { /* keep current view */ }
   }
 }
