@@ -1,8 +1,9 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260830h";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260908b";
 import { smoothPref } from "./engagement.js";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260830h";
+import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260908b";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260908b";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -37,6 +38,7 @@ export function productCard(id, heroCard = false, eager = false) {
 const commerceState = {
   loaded: false,
   products: new Map(),
+  productsByMarket: new Map(),
   promise: null
 };
 
@@ -50,10 +52,11 @@ export function adminCatalogHref(id) {
   return `/admin.html?product_q=${encodeURIComponent(sku)}#products`;
 }
 
-function commerceRowFor(id) {
+function commerceRowFor(id, market = commerceMarket()) {
   const key = String(id || "").toLowerCase();
   if (QUOTE_FIRST_IDS.includes(key)) return null;
-  return commerceState.products.get(key) || commerceState.products.get(COMMERCE_SKU_ALIASES[key]);
+  const products = commerceState.productsByMarket.get(market) || commerceState.products;
+  return products.get(key) || products.get(COMMERCE_SKU_ALIASES[key]);
 }
 
 function fmtMoney(n, currency = "USD") {
@@ -152,10 +155,13 @@ function dedupeVariants(variants = []) {
 
 function commerceMarket() {
   const query = typeof location === "undefined" ? "" : location.search;
-  return new URLSearchParams(query).get("market") === "marine" ? "marine" : "industrial";
+  const params = new URLSearchParams(query);
+  return params.get("market") === "marine" || params.get("category") === "marine"
+    ? "marine"
+    : "industrial";
 }
 
-function normalizeCommerceRow(row) {
+function normalizeCommerceRow(row, market = commerceMarket()) {
   const parent = row?.products && typeof row.products === "object" ? row.products : row;
   const sku = String(parent?.sku || row?.sku || "").trim().toLowerCase();
   const rawVariants = row?.vsku
@@ -200,7 +206,6 @@ function normalizeCommerceRow(row) {
     requires_quote: v.requires_quote === true,
     sort: Number(v.sort || 0),
   });
-  const market = commerceMarket();
   const variants = dedupeVariants(rawVariants
     .filter(v => v && String(v.market || "industrial").toLowerCase() === market
       && v.active !== false && v.price != null && Number(v.price) > 0)
@@ -238,6 +243,33 @@ function normalizeCommerceRow(row) {
   };
 }
 
+function buildCommerceProducts(rows, market) {
+  const products = rows
+    .map((row) => normalizeCommerceRow(row, market))
+    .filter((row) => row.sku)
+    .reduce((map, row) => {
+      const existing = map.get(row.sku);
+      if (!existing) {
+        map.set(row.sku, row);
+        return map;
+      }
+      existing.active = existing.active && row.active;
+      existing.mode = existing.mode || row.mode;
+      existing.variants = dedupeVariants(existing.variants.concat(row.variants));
+      existing.caseVariants = dedupeVariants((existing.caseVariants || []).concat(row.caseVariants || []));
+      existing.quoteVariants = dedupeVariants((existing.quoteVariants || []).concat(row.quoteVariants || []));
+      if (!existing.image_url && row.image_url) existing.image_url = row.image_url;
+      if (!existing.photo_alt && row.photo_alt) existing.photo_alt = row.photo_alt;
+      existing.purchasable = existing.purchasable || row.purchasable;
+      return map;
+    }, new Map());
+  for (const [alias, sku] of Object.entries(COMMERCE_SKU_ALIASES)) {
+    const row = products.get(sku);
+    if (row && !products.has(alias)) products.set(alias, row);
+  }
+  return products;
+}
+
 export async function loadCommerceCatalog() {
   if (commerceState.promise) return commerceState.promise;
   commerceState.promise = fetch("/api/products", {
@@ -248,41 +280,24 @@ export async function loadCommerceCatalog() {
       if (!response.ok) throw new Error("catalog_unavailable");
       const payload = await response.json();
       const rows = Array.isArray(payload?.products) ? payload.products : [];
-      commerceState.products = rows
-        .map(normalizeCommerceRow)
-        .filter(row => row.sku)
-      .reduce((map, row) => {
-        const existing = map.get(row.sku);
-        if (!existing) {
-          map.set(row.sku, row);
-          return map;
-          }
-          existing.active = existing.active && row.active;
-      existing.mode = existing.mode || row.mode;
-      existing.variants = dedupeVariants(existing.variants.concat(row.variants));
-      existing.caseVariants = dedupeVariants((existing.caseVariants || []).concat(row.caseVariants || []));
-      existing.quoteVariants = dedupeVariants((existing.quoteVariants || []).concat(row.quoteVariants || []));
-      if (!existing.image_url && row.image_url) existing.image_url = row.image_url;
-      if (!existing.photo_alt && row.photo_alt) existing.photo_alt = row.photo_alt;
-        existing.purchasable = existing.purchasable || row.purchasable;
-        return map;
-      }, new Map());
-      for (const [alias, sku] of Object.entries(COMMERCE_SKU_ALIASES)) {
-        const row = commerceState.products.get(sku);
-        if (row && !commerceState.products.has(alias)) commerceState.products.set(alias, row);
-      }
+      commerceState.productsByMarket = new Map([
+        ["industrial", buildCommerceProducts(rows, "industrial")],
+        ["marine", buildCommerceProducts(rows, "marine")],
+      ]);
+      commerceState.products = commerceState.productsByMarket.get(commerceMarket());
       commerceState.loaded = true;
       return commerceState.products;
     })
     .catch(() => {
       commerceState.loaded = true;
       commerceState.products = new Map();
+      commerceState.productsByMarket = new Map();
       return commerceState.products;
     });
   return commerceState.promise;
 }
 
-function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
+function commerceActionHTML(id, variant = "chip", quoteFallback = "on", market = commerceMarket()) {
   const p = PRODUCTS[id];
   // Quote-first SKUs never expose a buy control here (catalogCard renders quoteActionHTML).
   if (QUOTE_FIRST_IDS.includes(String(id || "").toLowerCase())) return "";
@@ -306,7 +321,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on") {
     }
     return `<span class="commerce-buy commerce-buy-loading" aria-hidden="true"><span class="skeleton commerce-skeleton"></span></span>`;
   }
-  const row = commerceRowFor(id);
+  const row = commerceRowFor(id, market);
   if (row?.purchasable && row.variants.length) {
     // Root-absolute paths: these controls also hydrate on /products/<id> subpages,
     // where a relative "contact" or "account.html" would resolve under /products/.
@@ -484,6 +499,7 @@ function productMarketMedia() {
 function refreshCommerceMedia(root = document) {
   root.querySelectorAll(".shop-card[data-id], [data-commerce-media]").forEach(container => {
     const isDetail = container.hasAttribute("data-commerce-media");
+    if (!isDetail && container.dataset.market === "marine") return;
     const media = isDetail
       ? productMarketMedia() || commerceMediaFor(container.dataset.commerceMedia)
       : commerceMediaFor(container.dataset.id);
@@ -579,11 +595,16 @@ export function refreshCommerceActions(root = document) {
   });
   root.querySelectorAll("[data-commerce-action]").forEach(slot => {
     const id = slot.dataset.commerceAction;
-    slot.innerHTML = commerceActionHTML(id, slot.dataset.commerceSize || "chip", slot.dataset.quoteFallback || "on");
+    slot.innerHTML = commerceActionHTML(
+      id,
+      slot.dataset.commerceSize || "chip",
+      slot.dataset.quoteFallback || "on",
+      slot.dataset.commerceMarket || commerceMarket(),
+    );
   });
 }
 
-export function catalogDecisionHTML(id, copy) {
+export function catalogDecisionHTML(id, copy, context = null) {
   const fits = Array.isArray(copy?.fits)
     ? copy.fits.filter((fit) => typeof fit === "string" && fit.trim()).slice(0, 3)
     : [];
@@ -598,12 +619,14 @@ export function catalogDecisionHTML(id, copy) {
         </ul>
       </div>`
     : "";
+  const detailHref = context?.href || `products/${id}`;
+  const displayName = context?.name || PRODUCTS[id]?.name || id;
   const proofRow = proof
     ? `<p class="shop-card-decision-row shop-card-proof">
         <span class="shop-card-decision-label" aria-hidden="true">Results</span>
         <span class="shop-card-proof-copy">
           <span class="shop-card-proof-cue">${proof}</span>
-          <a class="shop-card-proof-link" href="products/${id}" aria-label="See results for ${PRODUCTS[id]?.name || id}">See details</a>
+          <a class="shop-card-proof-link" href="${htmlEscape(detailHref)}" aria-label="See results for ${htmlEscape(displayName)}">See details</a>
         </span>
       </p>`
     : "";
@@ -611,37 +634,44 @@ export function catalogDecisionHTML(id, copy) {
   return `<div class="shop-card-decision">${fitRow}${proofRow}</div>`;
 }
 
-export function catalogCard(id, eager = false) {
+export function catalogCard(id, eager = false, context = null) {
   const p = PRODUCTS[id];
   if (!p) return "";
   const copy = PRODUCT_CATALOG_COPY[id] || {};
+  const displayName = context?.name || p.name;
+  const detailHref = context?.href || `products/${id}`;
+  const summary = context?.summary || copy.summary || p.replaces;
   const badge = `<span class="hmis-badge note">${copy.platform || `HMIS ${p.hmis || "0-0-0"}`}</span>`;
-  const mediaInfo = commerceMediaFor(id);
+  const mediaInfo = context?.image
+    ? { src: context.image, alt: `${displayName} marine product jug` }
+    : commerceMediaFor(id);
   const group = CATALOG_GROUPS.find((g) => g.ids.includes(id));
   const media = mediaInfo.src
     ? `<img src="${htmlEscape(mediaInfo.src)}" alt="${htmlEscape(mediaInfo.alt)}" loading="${eager ? "eager" : "lazy"}"${eager ? ' fetchpriority="high"' : ""} ${imageDimsAttr(mediaInfo.src)}>`
     : `<span class="shop-card-placeholder" aria-hidden="true"><i class="ph ${p.icon}"></i><span>${group?.label || "VertKleen line"}</span></span>`;
-  const type = p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial cleaner");
+  const type = context?.market === "marine"
+    ? "VertKleen Marine Line"
+    : (p.cat === "glycol" ? "VertKleen Glycols" : (copy.job || "Industrial cleaner"));
   const quoteFirst = QUOTE_FIRST_IDS.includes(id);
   const buybar = quoteFirst
     ? quoteActionHTML(id)
     : bulkPriceHTML(id);
   const quickCommerce = quoteFirst
     ? ""
-    : `<span class="shop-card-quick-commerce" data-commerce-action="${id}" data-commerce-size="quick" data-customer-chat-obstruction></span>`;
-  const decision = CATALOG_ORDER.includes(id) ? catalogDecisionHTML(id, copy) : "";
+    : `<span class="shop-card-quick-commerce" data-commerce-action="${id}" data-commerce-size="quick"${context?.market ? ` data-commerce-market="${htmlEscape(context.market)}"` : ""} data-customer-chat-obstruction></span>`;
+  const decision = CATALOG_ORDER.includes(id) ? catalogDecisionHTML(id, copy, context) : "";
   return `
-    <article class="shop-card" data-id="${id}">
+    <article class="shop-card" data-id="${id}"${context?.market ? ` data-market="${htmlEscape(context.market)}"` : ""}>
       <div class="shop-card-core">
         <span class="shop-card-media-wrap">
-          <a class="shop-card-media" href="products/${id}" aria-label="View ${p.name} details">${media}${badge}</a>
+          <a class="shop-card-media" href="${htmlEscape(detailHref)}" aria-label="View ${htmlEscape(displayName)} details">${media}${badge}</a>
           ${quickCommerce}
         </span>
-        <a class="shop-card-link" href="products/${id}" aria-label="See how ${p.name} works">
+        <a class="shop-card-link" href="${htmlEscape(detailHref)}" aria-label="See how ${htmlEscape(displayName)} works">
         <span class="shop-card-body">
           <span class="shop-card-type">${type}</span>
-          <b class="shop-card-name">${p.name}</b>
-          <span class="shop-card-replaces">${copy.summary || p.replaces}</span>
+          <b class="shop-card-name">${htmlEscape(displayName)}</b>
+          <span class="shop-card-replaces">${htmlEscape(summary)}</span>
           <span class="shop-card-cta">See how it works <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
         </span>
         </a>
@@ -743,8 +773,9 @@ export function initShop() {
     addToCartFromButton(button);
   });
 
+  const catalogGroups = [...CATALOG_GROUPS, MARINE_CATALOG_GROUP];
   const groupOf = (id) => (CATALOG_GROUPS.find((g) => g.ids.includes(id)) || {}).key || "";
-  const validGroup = (group) => group === "all" || CATALOG_GROUPS.some((item) => item.key === group);
+  const validGroup = (group) => group === "all" || catalogGroups.some((item) => item.key === group);
   const groupFromHash = () => {
     const group = (location.hash.match(/^#cat-(.+)$/) || [])[1] || "";
     return validGroup(group) ? group : "";
@@ -766,11 +797,14 @@ export function initShop() {
   const state = {
     ...initialUrlState,
     expanded: false,
+    marineEntries: [],
+    marineById: new Map(),
+    marineLoaded: false,
   };
   if (searchEl) searchEl.value = state.query;
   if (sortSel) sortSel.value = state.sort;
 
-  const chips = [{ key: "all", label: "All products" }, ...CATALOG_GROUPS.map((g) => ({ key: g.key, label: g.label }))];
+  const chips = [{ key: "all", label: "All products" }, ...catalogGroups.map((g) => ({ key: g.key, label: g.label }))];
   chipsBox.innerHTML = chips
     .map((c) => `<button type="button" class="shop-chip${c.key === "all" ? " active" : ""}" data-group="${c.key}" aria-pressed="${c.key === "all"}">${c.label}</button>`)
     .join("");
@@ -784,12 +818,21 @@ export function initShop() {
   };
 
   const visibleIds = () => {
-    let ids = state.sort === "az"
-      ? [...CATALOG_ORDER].sort((a, b) => PRODUCTS[a].name.localeCompare(PRODUCTS[b].name))
-      : [...CATALOG_ORDER];
-    if (state.group !== "all") ids = ids.filter((id) => groupOf(id) === state.group);
+    const marineView = state.group === MARINE_CATALOG_GROUP.key;
+    let ids = marineView ? state.marineEntries.map(({ id }) => id) : [...CATALOG_ORDER];
+    if (state.sort === "az") {
+      ids.sort((a, b) => {
+        const nameA = state.marineById.get(a)?.name || PRODUCTS[a].name;
+        const nameB = state.marineById.get(b)?.name || PRODUCTS[b].name;
+        return nameA.localeCompare(nameB);
+      });
+    }
+    if (state.group !== "all" && !marineView) ids = ids.filter((id) => groupOf(id) === state.group);
     if (state.search) {
-      const matches = rankProductIds(ids, state.search, commerceRowFor);
+      const matches = rankProductIds(ids, state.search, (id) => marineSearchRow(
+        commerceRowFor(id, marineView ? "marine" : commerceMarket()),
+        marineView ? state.marineById.get(id) : null,
+      ));
       const matchIds = new Set(matches);
       ids = state.sort === "featured" ? matches : ids.filter((id) => matchIds.has(id));
     }
@@ -813,7 +856,13 @@ export function initShop() {
     const ids = visibleIds();
     const canCollapse = state.group === "all" && !state.search && ids.length > 6;
     const collapsed = canCollapse && !state.expanded;
-    grid.innerHTML = ids.map((id, index) => catalogCard(id, index < 2)).join("");
+    const marineView = state.group === MARINE_CATALOG_GROUP.key;
+    const marinePending = marineView && !state.marineLoaded;
+    grid.innerHTML = ids.map((id, index) => catalogCard(
+      id,
+      index < 2,
+      marineView ? state.marineById.get(id) : null,
+    )).join("");
     grid.classList.toggle("is-collapsed", collapsed);
     if (moreButton) moreButton.hidden = !collapsed;
     if (moreCount) moreCount.textContent = String(Math.max(0, ids.length - 6));
@@ -822,8 +871,10 @@ export function initShop() {
     refreshCommerceActions(grid);
     if (countEl) {
       const shown = collapsed && matchMedia("(max-width: 560px)").matches ? 6 : ids.length;
-      const groupLabel = CATALOG_GROUPS.find((group) => group.key === state.group)?.label;
-      if (state.search) {
+      const groupLabel = catalogGroups.find((group) => group.key === state.group)?.label;
+      if (marinePending) {
+        countEl.textContent = "Loading Marine Line…";
+      } else if (state.search) {
         const noun = ids.length === 1 ? "result" : "results";
         countEl.textContent = ids.length
           ? `${ids.length} ${noun} for “${state.query}”${groupLabel ? ` in ${groupLabel}` : ""}`
@@ -837,7 +888,7 @@ export function initShop() {
       }
     }
     if (emptyEl) {
-      const nextHidden = ids.length > 0;
+      const nextHidden = ids.length > 0 || marinePending;
       if (emptyEl.hidden !== nextHidden) {
         emptyEl.hidden = nextHidden;
         emptyEl.dispatchEvent(new CustomEvent("masest:customer-chat-obstruction-change", { bubbles: true }));
@@ -959,6 +1010,12 @@ export function initShop() {
   syncChips();
   apply();
   loadCommerceCatalog().then(apply);
+  loadMarineCatalog().then((entries) => {
+    state.marineEntries = entries;
+    state.marineById = new Map(entries.map((entry) => [entry.id, entry]));
+    state.marineLoaded = true;
+    apply({ updateUrl: false });
+  });
 
   if (initialHashGroup) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });
 }

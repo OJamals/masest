@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSyn
 import { dirname, extname, join } from 'node:path';
 
 import { canonicalPublicImageUrl, SITE_MEDIA_BASE, rewriteCmsImageReferences } from '../js/image-url.js';
+import { parseMarineCatalog } from '../js/main/marine-catalog.js';
 import { renderIndustryRedirects } from './build-industry-pages.mjs';
 import { validatePublicDocumentReview } from './public-document-policy.mjs';
 
@@ -17,6 +18,23 @@ const siteImageManifest = JSON.parse(readFileSync('data/content/site-images.json
 const { industries: industryApplications } = JSON.parse(
   readFileSync('data/industry-applications.json', 'utf8'),
 );
+const marineSource = industryApplications.find(({ slug }) => slug === 'marine');
+const publicMarineCatalog = {
+  industries: [{
+    slug: 'marine',
+    marine_brand_release: { status: marineSource?.marine_brand_release?.status },
+    approved_product_names: (marineSource?.approved_product_names || []).map((product) => ({
+      name: product.name,
+      base_product: product.base_product,
+      sku: product.sku,
+      job_focus: product.job_focus,
+      image: product.image,
+    })),
+  }],
+};
+if (parseMarineCatalog(publicMarineCatalog).length !== 8) {
+  throw new Error('cf-build: public marine catalog must contain 8 valid owner-approved products');
+}
 const siteImagePaths = (siteImageManifest.assets || []).map((asset) => asset.public_url);
 const configuredMediaBase = String(process.env.CMS_MEDIA_BASE || '').trim().replace(/\/+$/, '');
 const cmsMediaBase = configuredMediaBase || SITE_MEDIA_BASE;
@@ -100,6 +118,12 @@ writeFileSync(join(OUT, '_headers'),
   Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()
   Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.gstatic.com; connect-src 'self' https://challenges.cloudflare.com https://*.supabase.co https://api.stripe.com https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.gstatic.com; frame-src 'self' https://challenges.cloudflare.com; form-action 'self'; upgrade-insecure-requests
 `);
+mkdirSync(join(OUT, 'data'), { recursive: true });
+writeFileSync(
+  join(OUT, 'data/marine-catalog.json'),
+  `${rewriteCmsImageReferences(JSON.stringify(publicMarineCatalog, null, 2), siteImagePaths, cmsMediaBase)}\n`,
+);
+n++;
 writeFileSync(join(OUT, '_redirects'), renderIndustryRedirects(industryApplications));
 
 console.log(`cf-build: copied ${n} static files to ${OUT}/; CMS media linked in ${rewritten}`);

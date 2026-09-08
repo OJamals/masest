@@ -405,7 +405,7 @@ export const CATALOG_GROUPS = [
   { key: "descale", label: "Descaling & Rust", ids: ["hcr", "hcr-t16", "descaler", "sar"] },
   { key: "degrease", label: "Degreasers", ids: ["cr", "crhd", "cr-hd-low-foam", "neutral", "multiwash"] },
   { key: "water", label: "Water Treatment", ids: ["cr2", "purgo", "watersafe60"] },
-  { key: "exterior", label: "Exterior & Marine", ids: ["lam3", "alumibrite", "torque"] }
+  { key: "exterior", label: "Exterior & Fleet", ids: ["lam3", "alumibrite", "torque"] }
 ];
 
 export const QUOTE_FIRST_IDS = ["crs"];

@@ -216,6 +216,70 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
   });
 });
 
+test("products page exposes the eight marine aliases as a dedicated catalog view", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
+    try {
+      await gotoDomReady(page, "products.html?category=marine", "[data-group=\"marine\"]");
+      await page.waitForFunction(() => document.querySelectorAll(".shop-card[data-market=\"marine\"]").length === 8);
+      await page.locator(".shop-card").last().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+
+      const view = await page.evaluate(() => ({
+        activeChip: document.querySelector("[data-group=\"marine\"]")?.getAttribute("aria-pressed"),
+        count: document.getElementById("shopCount")?.textContent,
+        ids: [...document.querySelectorAll(".shop-card")].map((card) => card.dataset.id),
+        names: [...document.querySelectorAll(".shop-card-name")].map((node) => node.textContent),
+        links: [...document.querySelectorAll(".shop-card-link")].map((link) => link.getAttribute("href")),
+        images: [...document.querySelectorAll(".shop-card img")].map((image) => image.getAttribute("src")),
+        loadedImages: [...document.querySelectorAll(".shop-card img")].map((image) => ({ src: image.getAttribute("src"), width: image.naturalWidth })),
+        commerceIds: [...document.querySelectorAll("[data-commerce-action]")].map((slot) => slot.dataset.commerceAction),
+      }));
+
+      assert.equal(view.activeChip, "true");
+      assert.equal(view.count, "8 products in Marine Line");
+      assert.equal(new Set(view.ids).size, 8);
+      assert.deepEqual(view.names, [
+        "Scale Buster",
+        "SeaVap Coil Kleener",
+        "Sea Drain Kleener",
+        "MultiWash Marine",
+        "Marine Degreaser",
+        "AlumiBrite Marine",
+        "Marine Wash & Wax",
+        "Marine Antimicrobial",
+      ]);
+      assert.ok(view.links.every((href) => /^products\/[a-z0-9-]+\?market=marine$/.test(href)));
+      assert.ok(view.images.every((src) => /^\/img\/products\/vertkleen-.+-marine-studio\.webp$/.test(src)), JSON.stringify(view.images));
+      assert.ok(view.loadedImages.every(({ width }) => width > 0), JSON.stringify(view.loadedImages));
+      assert.deepEqual(view.commerceIds, view.ids);
+
+      await page.locator("#shopSearch").fill("seavap");
+      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 1);
+      assert.equal(await page.locator(".shop-card").getAttribute("data-id"), "descaler");
+      assert.match(page.url(), /[?&]category=marine(?:&|$)/);
+      assert.match(page.url(), /[?&]q=seavap(?:&|$)/);
+
+      await page.locator("#shopSearch").fill("");
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForFunction(() => document.querySelectorAll(".shop-card").length === 8);
+      const mobile = await page.evaluate(() => ({
+        viewport: innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        cardsInsideViewport: [...document.querySelectorAll(".shop-card")].every((card) => {
+          const rect = card.getBoundingClientRect();
+          return rect.left >= 0 && rect.right <= innerWidth;
+        }),
+      }));
+      assert.ok(mobile.documentWidth <= mobile.viewport, JSON.stringify(mobile));
+      assert.equal(mobile.cardsInsideViewport, true);
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
 test("single product search result keeps a catalog-width card on desktop", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
