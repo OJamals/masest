@@ -137,6 +137,7 @@
 .site-support__conversation-body { display: flex; flex-direction: column; }
 .site-support__conversation-toolbar :is(.site-support__status-trigger, .site-support__optional-action, .site-support__properties-trigger)[hidden] { display: none; }
 .site-support__settings { display: grid; align-content: start; gap: 10px; }
+.site-support__conversation-body[hidden],
 .site-support__settings[hidden] { display: none; }
 .site-support__settings-intro { margin: 0 0 2px; color: var(--ink-soft, #626a73); font-size: .85rem; line-height: 1.5; }
 .site-support__settings label { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px; border: 1px solid var(--line, #dfe3e7); border-radius: 11px; background: var(--paper, #fff); cursor: pointer; }
