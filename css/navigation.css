@@ -127,7 +127,7 @@
   .nav-links a {
     min-height: 44px;
     padding: 12px 0;
-    font-size: 1.05rem;
+    font-size: var(--fs-body);
   }
 
   .nav-burger {

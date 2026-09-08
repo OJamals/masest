@@ -288,7 +288,7 @@ export function renderChrome({
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
-  import("/js/account-nav.js?v=20260822c").then((m) => (
+  import("/js/account-nav.js?v=20260907c").then((m) => (
     m.initAccountNav && m.initAccountNav({ nav, root, authModule, resolveSession })
   )).catch(() => {});
   const setMenuOpen = open => {
@@ -373,7 +373,7 @@ export function renderChrome({
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
           <a href="tel:+18134063852">(813) 406-3852</a>
           <a href="#customerChat" data-customer-chat-open>Customer chat</a>
-          <p style="margin-top:10px;font-size:.8rem;line-height:1.7">Government quote and bid help is available.</p>
+          <p style="margin-top:10px;font-size:var(--fs-caption,.8125rem);line-height:1.7">Government quote and bid help is available.</p>
         </div>
       </div>
       ${page === "newsletter" ? "" : `<div class="foot-news">
