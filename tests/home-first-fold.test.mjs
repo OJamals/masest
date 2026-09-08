@@ -114,7 +114,7 @@ test("homepage keeps a primary action visible on short mobile", async () => {
   });
 });
 
-test("homepage first scene keeps the persistent object clear of compact iPad copy", async () => {
+test("homepage first scene separates the persistent object from compact iPad copy", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const page = await browser.newPage({
@@ -156,11 +156,78 @@ test("homepage first scene keeps the persistent object clear of compact iPad cop
 
       assert.equal(result.mobileReady, true, JSON.stringify(result));
       assert.ok(result.sceneEnvelope >= 656 * 0.75, JSON.stringify(result));
-      assert.ok(result.copy.top >= result.object.bottom + 16, JSON.stringify(result));
-      assert.ok(result.copy.width >= 250, JSON.stringify(result));
-      assert.ok(result.object.width >= 560, JSON.stringify(result));
+      assert.ok(result.copy.left >= 15, JSON.stringify(result));
+      assert.ok(result.copy.right <= result.object.left - 16, JSON.stringify(result));
+      assert.ok(result.copy.width >= 230, JSON.stringify(result));
+      assert.ok(result.object.width >= 320, JSON.stringify(result));
       assert.ok(result.object.right <= 656, JSON.stringify(result));
       assert.equal(result.overflow, false, JSON.stringify(result));
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("homepage compact iPad story never layers its proof card over chapter copy", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage({
+      viewport: { width: 760, height: 1024 },
+      deviceScaleFactor: 2,
+      reducedMotion: "no-preference",
+    });
+
+    try {
+      await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => (
+        document.getElementById("story")?.classList.contains("story-mobile-ready")
+      ));
+      await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+      await page.evaluate(() => document.fonts.ready);
+      const overlaps = await page.evaluate(async () => {
+        const story = document.getElementById("story");
+        const card = story.querySelector(".story-object__card");
+        const samples = [];
+        const visited = new Set();
+        const start = story.offsetTop;
+        const end = story.offsetTop + story.offsetHeight - innerHeight;
+
+        for (let step = 0; step <= 36; step += 1) {
+          const y = start + (end - start) * (step / 36);
+          scrollTo(0, y);
+          await new Promise((resolve) => setTimeout(resolve, 80));
+          visited.add(story.dataset.activeScene);
+          const visual = card.getBoundingClientRect();
+
+          for (const content of story.querySelectorAll(".act-content")) {
+            const style = getComputedStyle(content);
+            if (style.visibility === "hidden" || Number(style.opacity) < .05) continue;
+            const copy = content.getBoundingClientRect();
+            const width = Math.max(0, Math.min(visual.right, copy.right) - Math.max(visual.left, copy.left));
+            const height = Math.max(0, Math.min(visual.bottom, copy.bottom) - Math.max(visual.top, copy.top));
+            if (width > 1 && height > 1) {
+              samples.push({
+                step,
+                scene: story.dataset.activeScene,
+                width: Math.round(width),
+                height: Math.round(height),
+              });
+            }
+          }
+        }
+
+        return { overlaps: samples, visited: [...visited] };
+      });
+
+      assert.deepEqual(overlaps.overlaps, []);
+      assert.deepEqual(overlaps.visited, [
+        "kitchen-grease",
+        "cip-vessel",
+        "labelle-fermenter",
+        "shower-track",
+        "airboat-panel",
+        "pool-cartridge",
+      ]);
     } finally {
       await browser.close();
     }

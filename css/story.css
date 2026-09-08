@@ -1381,6 +1381,75 @@
   }
 }
 
+/*
+ * Tablet story: keep the proof and prose in separate columns. The compact
+ * full-width pin is useful on phones, but at iPad widths it reads as a modal
+ * laid over the chapter. A short viewport keeps the single-column reflow for
+ * browser zoom and landscape-height accessibility.
+ */
+@media (min-width: 600px) and (max-width: 760px) and (min-height: 600px) {
+  .story-mobile-ready .story-object,
+  .story-mobile-ready .stage {
+    display: grid;
+    grid-template-columns: minmax(0, .88fr) minmax(310px, 1.12fr);
+    gap: clamp(18px, 3vw, 24px);
+    width: calc(100% - 32px);
+  }
+
+  .story-mobile-ready .story-object {
+    top: calc(var(--story-nav-h) + var(--story-actions-h));
+    height: calc(100dvh - var(--story-nav-h) - var(--story-actions-h));
+    margin: 0 auto calc(-1 * (100dvh - var(--story-nav-h) - var(--story-actions-h)));
+    padding: 0;
+    align-items: center;
+    background: transparent;
+  }
+
+  .story-mobile-ready .story-object__card {
+    grid-column: 2;
+  }
+
+  .story-mobile-ready .story-object__media {
+    aspect-ratio: 1.55 / 1;
+  }
+
+  .story-mobile-ready .act {
+    min-height: calc(100dvh - var(--story-nav-h) - var(--story-actions-h));
+  }
+
+  .story-mobile-ready .stage {
+    min-height: calc(100dvh - var(--story-nav-h) - var(--story-actions-h));
+    margin: 0 auto;
+    padding: 28px 0;
+    align-items: center;
+  }
+
+  .story-mobile-ready .act-content {
+    grid-column: 1;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .story-mobile-ready .act-h {
+    max-width: 12ch;
+    font-size: clamp(2rem, 5.3vw, 2.55rem);
+    line-height: 1.02;
+  }
+
+  .story-mobile-ready .act-p {
+    margin-top: 14px;
+    font-size: .88rem;
+    line-height: 1.5;
+  }
+
+  .story-mobile-ready .story-job-note {
+    margin-top: 15px;
+    padding-top: 10px;
+    font-size: .66rem;
+  }
+}
+
 @media (max-width: 430px) {
   .story-actions__match small {
     display: none;
