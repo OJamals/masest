@@ -941,7 +941,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   </section>
   ${contentPageMount(`products/${id}`)}
 </main>
-<script type="module" src="../js/main.js?v=20260908c"></script>
+<script type="module" src="../js/main.js?v=20260908d"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>
@@ -1177,7 +1177,7 @@ ${jsonLd(serviceCategorySchema(category, items))}
     </div>
   </section>
 </main>
-<script type="module" src="../js/main.js?v=20260908c"></script>
+<script type="module" src="../js/main.js?v=20260908d"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>
