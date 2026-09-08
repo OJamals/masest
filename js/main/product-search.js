@@ -1,5 +1,5 @@
-import { CATALOG_GROUPS, PRODUCT_CATALOG_COPY, PRODUCTS } from "./catalog-data.js?v=20260907d";
-import { normalizeSearchText, searchValueTokenQuality } from "./fuzzy-search.js?v=20260907d";
+import { CATALOG_GROUPS, PRODUCT_CATALOG_COPY, PRODUCTS } from "./catalog-data.js?v=20260908c";
+import { normalizeSearchText, searchValueTokenQuality } from "./fuzzy-search.js?v=20260908c";
 
 export const normalizeProductSearch = normalizeSearchText;
 
@@ -24,6 +24,7 @@ function productSearchGroups(id, commerceRow) {
         productName,
         productName.replace(/^VertKleen\s+/i, ""),
         commerceRow?.sku,
+        ...(commerceRow?.catalog_aliases || []),
         ...variants.flatMap((variant) => [variant?.vsku, variant?.marketing_name]),
       ],
     },
@@ -35,6 +36,7 @@ function productSearchGroups(id, commerceRow) {
         group?.label,
         copy.job,
         copy.platform,
+        commerceRow?.catalog_job_focus,
         ...variants.map((variant) => variant?.label),
       ],
     },

@@ -95,7 +95,7 @@ test("products page wires the catalog grid from product data", () => {
   assert.match(read("js/main.js"), /initShop\(\);/);
   // whole-card link + one footer action: buy controls for buyable items, quote CTA for quote-first items
   assert.match(commerceUi, /<article class="shop-card"/);
-  assert.match(commerceUi, /class="shop-card-link" href="products\//);
+  assert.match(commerceUi, /class="shop-card-link" href="\$\{htmlEscape\(detailHref\)\}"/);
   assert.doesNotMatch(commerceUi, /<a class="shop-card"[\s\S]*?<button class="shop-card-add"/);
   assert.match(commerceUi, /QUOTE_FIRST_IDS\.includes\(id\)/);
   assert.match(commerceUi, /shop-card-quote/);

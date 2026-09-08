@@ -6,7 +6,7 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260711w";
 const CHAT_RELEASE = "20260711b";
-const MAIN_RELEASE = "20260907d";
+const MAIN_RELEASE = "20260908c";
 const ADMIN_RELEASE = "20260907d";
 const ADMIN_PAGE_RELEASE = "20260907d";
 const ADMIN_ACCOUNTS_RELEASE = "20260907d";

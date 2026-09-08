@@ -1151,6 +1151,16 @@ no number circles) ---------- */
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(14,124,134,.15);
 }
 .form-note { font-size: .82rem; color: var(--muted); margin-top: 14px; }
+.quote-form-footer { display: grid; gap: 20px; margin-top: 24px; }
+.quote-form-footer .form-note { margin: 0; }
+.quote-marketing-option { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.quote-marketing-option input { flex: 0 0 auto; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.quote-form-footer .btn { justify-self: start; min-width: min(220px, 100%); max-width: 100%; }
+.quote-form-footnotes { display: grid; gap: 8px; }
+.quote-form-footnotes .form-note { font-size: .75rem; }
+@media (max-width: 600px) {
+  .quote-form-footer .btn { width: 100%; }
+}
 .field-err { display: block; margin-top: 6px; font-size: .8rem; font-weight: 700; color: var(--danger); }
 .field [aria-invalid="true"] { border-color: var(--danger); }
 .form-success { display: none; text-align: center; padding: 40px 20px; }
