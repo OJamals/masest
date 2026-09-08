@@ -57,7 +57,7 @@
   /* Reserve for the floating lead bar lives on the footer so the strip
      below the last content stays the footer's dark surface, not bare body. */
   body:has(.lead-action-bar) footer {
-    padding-bottom: 116px;
+    padding-bottom: var(--s12);
   }
 
   .nav {
@@ -70,9 +70,9 @@
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 8px;
+    gap: var(--s2);
     max-width: none;
-    padding-inline: 12px;
+    padding-inline: var(--s3);
   }
 
   .nav-logo {
@@ -90,11 +90,11 @@
 
   .nav-actions {
     justify-self: end;
-    gap: 8px;
+    gap: var(--s2);
   }
 
   .nav-signin {
-    padding-inline: 12px;
+    padding-inline: var(--s3);
   }
 
   .nav-cart,
@@ -113,7 +113,7 @@
     z-index: 85;
     flex-direction: column;
     gap: 0;
-    padding: 12px 28px 20px;
+    padding: var(--s3) var(--s7) var(--s5);
     border-bottom: 1px solid var(--line);
     background: #fff;
     box-shadow: var(--shadow-md);
@@ -126,7 +126,7 @@
 
   .nav-links a {
     min-height: 44px;
-    padding: 12px 0;
+    padding: var(--s3) 0;
     font-size: var(--fs-body);
   }
 
@@ -142,8 +142,8 @@
     z-index: 48;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 8px;
+    gap: var(--s2);
+    padding: var(--s2);
     border: 1px solid rgba(15, 23, 42, .12);
     border-radius: 999px;
     background: rgba(255, 255, 255, .94);
@@ -188,7 +188,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: var(--s2);
     border-radius: 999px;
     color: var(--ink);
     font-weight: 800;

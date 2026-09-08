@@ -31,13 +31,13 @@ function injectStyle() {
   s.textContent = `
   /* Sized by its host: inside the dashboard it sits above the account cards and has
      to match their width, so only the standalone page takeover gets centred. */
-  .staff-surface { padding: 28px; border: 1px solid var(--line, #e4e6e9); border-radius: var(--r-card, 16px);
+  .staff-surface { padding: var(--s7,32px); border: 1px solid var(--line, #e4e6e9); border-radius: var(--r-card, 16px);
     background: var(--surface, #fff); box-shadow: var(--shadow-xs, 0 1px 2px rgba(0,0,0,.06)); }
   .staff-surface-standalone { max-width: 640px; margin: 0 auto; }
-  .staff-surface .eyebrow { margin: 0 0 6px; }
-  .staff-surface h2 { margin: 0 0 10px; }
-  .staff-surface p { margin: 0 0 18px; }
-  .staff-surface-actions { display: flex; flex-wrap: wrap; gap: 12px; }`;
+  .staff-surface .eyebrow { margin: 0 0 var(--s2,8px); }
+  .staff-surface h2 { margin: 0 0 var(--s3,12px); }
+  .staff-surface p { margin: 0 0 var(--s5,20px); }
+  .staff-surface-actions { display: flex; flex-wrap: wrap; gap: var(--s3,12px); }`;
   document.head.appendChild(s);
 }
 

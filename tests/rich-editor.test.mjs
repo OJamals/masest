@@ -72,8 +72,10 @@ test("shared image picker has a bounded preview and scrollable image grid", () =
   assert.doesNotMatch(source, /PAGE_SIZE|data-shared-image-page/);
   assert.match(source, /data-shared-image-search/);
   assert.match(source, /CMS uploads first/);
-  assert.match(css, /\.confirm-dialog-body\s*\{[^}]*display:\s*grid[^}]*gap:\s*16px/s);
-  assert.match(css, /\.confirm-dialog-actions\s*\{[^}]*gap:\s*12px/s);
+  // --s4 is 16px and --s3 is 12px; these gaps moved onto the spacing scale
+  // without changing value.
+  assert.match(css, /\.confirm-dialog-body\s*\{[^}]*display:\s*grid[^}]*gap:\s*var\(--s4\)/s);
+  assert.match(css, /\.confirm-dialog-actions\s*\{[^}]*gap:\s*var\(--s3\)/s);
   assert.match(css, /\.shared-image-library-grid\s*\{[^}]*repeat\(4,[^}]*overflow-y:\s*auto/);
   assert.match(css, /\.shared-image-picker \.confirm-dialog-body\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/);
   assert.match(css, /\.shared-image-library\s*\{[^}]*padding-block:\s*0/);

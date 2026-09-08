@@ -47,7 +47,7 @@
   z-index: 30;
   display: inline-flex;
   align-items: baseline;
-  gap: 9px;
+  gap: var(--s2);
   color: #fff;
   font-size: .76rem;
   font-weight: 700;
@@ -85,7 +85,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--s2);
   width: 100%;
   height: var(--story-actions-h);
   margin-bottom: 0;
@@ -112,7 +112,7 @@
 
 .story-actions__match {
   display: grid;
-  margin-right: 8px;
+  margin-right: var(--s2);
   line-height: 1.05;
   text-align: right;
 }
@@ -126,7 +126,7 @@
 }
 
 .story-actions__match b {
-  margin-top: 4px;
+  margin-top: var(--s1);
   font-size: .78rem;
   letter-spacing: -.01em;
 }
@@ -138,7 +138,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  padding: 7px 14px;
+  padding: var(--s2) var(--s4);
   font-size: .76rem;
   font-weight: 800;
   line-height: 1;
@@ -194,7 +194,7 @@
   position: absolute;
   left: max(20px, calc((100vw - 1400px) / 2));
   display: grid;
-  gap: 6px;
+  gap: var(--s2);
   width: 76px;
   transform: translateY(-50%);
   pointer-events: auto;
@@ -206,7 +206,7 @@
   grid-template-columns: 20px minmax(0, 62px);
   min-height: 32px;
   align-items: center;
-  gap: 8px;
+  gap: var(--s2);
   color: #7f898a;
   font-size: .64rem;
   line-height: 1.25;
@@ -350,7 +350,7 @@
   z-index: 7;
   border: 1px solid rgba(255, 255, 255, .2);
   border-radius: 999px;
-  padding: 5px 9px;
+  padding: var(--s1) var(--s2);
   color: #fff;
   background: rgba(7, 11, 12, .8);
   font-size: .58rem;
@@ -410,10 +410,10 @@
   z-index: 7;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--s2);
   border: 1px solid rgba(255, 255, 255, .22);
   border-radius: 999px;
-  padding: 7px 10px;
+  padding: var(--s2) var(--s3);
   color: #fff;
   background: rgba(8, 13, 15, .88);
   box-shadow: 0 8px 26px rgba(0, 0, 0, .24);
@@ -458,11 +458,11 @@
   z-index: 7;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s2);
   min-height: 26px;
   border: 1px solid rgba(255, 255, 255, .17);
   border-radius: 999px;
-  padding: 5px 10px;
+  padding: var(--s1) var(--s3);
   color: rgba(255, 255, 255, .86);
   background: rgba(7, 11, 12, .86);
   font-size: .62rem;
@@ -500,7 +500,7 @@
   appearance: none;
   width: 32px;
   height: 32px;
-  margin-top: -15px;
+  margin-top: calc(-1 * var(--s4));
   border: 2px solid #fff;
   border-radius: 50%;
   background:
@@ -545,9 +545,9 @@
   grid-template-columns: 1fr minmax(150px, auto);
   min-height: 76px;
   align-items: center;
-  gap: 18px;
+  gap: var(--s5);
   border-top: 1px solid var(--story-line);
-  padding: 12px 16px 12px 18px;
+  padding: var(--s3) var(--s4) var(--s3) var(--s5);
 }
 
 .story-object__identity,
@@ -568,7 +568,7 @@
 .story-object__identity b,
 .story-object__product b {
   overflow: hidden;
-  margin-top: 4px;
+  margin-top: var(--s1);
   font-size: .78rem;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -580,7 +580,7 @@
   min-width: 0;
   align-items: center;
   justify-content: flex-end;
-  gap: 9px;
+  gap: var(--s2);
   opacity: 1;
   transform: none;
   transition:
@@ -632,7 +632,7 @@
 
 .kicker {
   display: block;
-  margin-bottom: 18px;
+  margin-bottom: var(--s5);
   color: var(--story-accent-strong);
   font-size: .68rem;
   font-weight: 800;
@@ -652,7 +652,7 @@
 
 .act-p {
   max-width: 49ch;
-  margin-top: 18px;
+  margin-top: var(--s5);
   color: #c0c7c8;
   font-size: clamp(.98rem, 1.25vw, 1.16rem);
   line-height: 1.58;
@@ -660,9 +660,9 @@
 
 .story-job-note {
   max-width: 460px;
-  margin-top: 20px;
+  margin-top: var(--s5);
   border-top: 1px solid var(--story-line);
-  padding-top: 13px;
+  padding-top: var(--s3);
   color: var(--story-muted);
   font-size: .72rem;
   line-height: 1.48;
@@ -678,7 +678,7 @@
 }
 
 .story-job-note p {
-  margin-top: 6px;
+  margin-top: var(--s2);
 }
 
 .story-job-note b {
@@ -688,8 +688,8 @@
 .story-job-note a {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  gap: var(--s2);
+  margin-top: var(--s2);
   color: #e8ffff;
   font-size: .68rem;
   font-weight: 700;
@@ -754,12 +754,12 @@
   display: grid;
   grid-template-columns: minmax(210px, .72fr) minmax(0, 1.28fr);
   gap: clamp(24px, 5vw, 64px);
-  padding-block: 26px;
+  padding-block: var(--s6);
 }
 
 .story-summary__head > span {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: var(--s2);
   color: var(--accent-ink);
   font-size: .68rem;
   font-weight: 800;
@@ -776,7 +776,7 @@
 .story-summary ol {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0 18px;
+  gap: 0 var(--s5);
   counter-reset: summary-step;
   list-style: none;
 }
@@ -785,7 +785,7 @@
   position: relative;
   min-width: 0;
   border-top: 1px solid #d9dfe0;
-  padding: 10px 6px 10px 28px;
+  padding: var(--s3) var(--s2) var(--s3) var(--s7);
   color: #596164;
   font-size: .78rem;
   line-height: 1.45;
@@ -824,8 +824,8 @@
   min-height: 82px;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 20px 24px;
+  gap: var(--s6);
+  padding: var(--s5) var(--s6);
   cursor: pointer;
   list-style: none;
 }
@@ -869,7 +869,7 @@
 
 .replacement-ledger-shell {
   border-top: 1px solid var(--line);
-  padding: 0 24px 24px;
+  padding: 0 var(--s6) var(--s6);
 }
 
 .replacement-ledger {
@@ -883,7 +883,7 @@
 .replacement-ledger td {
   min-width: 0;
   border-bottom: 1px solid var(--line);
-  padding: 17px 12px;
+  padding: var(--s4) var(--s3);
   overflow-wrap: anywhere;
   text-align: left;
   vertical-align: top;
@@ -920,7 +920,7 @@
 
 .replacement-ledger td small {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--s1);
   color: #697174;
   font-size: .66rem;
   line-height: 1.45;
@@ -939,7 +939,7 @@
   justify-content: center;
   min-width: 55px;
   border-radius: 999px;
-  padding: 5px 8px;
+  padding: var(--s1) var(--s2);
   font-size: .68rem;
   font-weight: 850;
   font-variant-numeric: tabular-nums;
@@ -958,7 +958,7 @@
 
 .ledger-qualification {
   max-width: 94ch;
-  margin-top: 17px;
+  margin-top: var(--s4);
   color: #666f72;
   font-size: .68rem;
   line-height: 1.55;
@@ -979,7 +979,7 @@
   .story-object,
   .story .stage {
     grid-template-columns: minmax(0, .82fr) minmax(390px, 1.18fr);
-    gap: 38px;
+    gap: var(--s8);
     width: min(100% - 88px, 1050px);
   }
 
@@ -996,7 +996,7 @@
   .story-object,
   .story .stage {
     grid-template-columns: minmax(0, .85fr) minmax(350px, 1.15fr);
-    gap: 28px;
+    gap: var(--s7);
     width: calc(100% - 40px);
   }
 
@@ -1053,7 +1053,7 @@
     top: var(--story-nav-h);
     height: var(--story-actions-h);
     margin-bottom: 0;
-    padding-inline: 12px;
+    padding-inline: var(--s3);
   }
 
   .story-actions__match {
@@ -1072,7 +1072,7 @@
   .story-actions__shop,
   .story-actions__trial {
     min-height: 32px;
-    padding: 6px 11px;
+    padding: var(--s2) var(--s3);
     font-size: .68rem;
   }
 
@@ -1092,7 +1092,7 @@
     position: relative;
     top: auto;
     z-index: 6;
-    padding: 16px 16px 0;
+    padding: var(--s4) var(--s4) 0;
   }
 
   .story-mobile-ready .story-object {
@@ -1114,7 +1114,7 @@
 
   .story-object__label {
     top: 8px;
-    padding: 4px 7px;
+    padding: var(--s1) var(--s2);
     font-size: .5rem;
   }
 
@@ -1127,7 +1127,7 @@
   }
 
   .story-object__target {
-    padding: 5px 8px;
+    padding: var(--s1) var(--s2);
     font-size: .56rem;
   }
 
@@ -1146,7 +1146,7 @@
     left: 9px;
     max-width: calc(100% - 18px);
     min-height: 22px;
-    padding: 4px 8px;
+    padding: var(--s1) var(--s2);
     overflow: hidden;
     font-size: .53rem;
     text-overflow: ellipsis;
@@ -1156,7 +1156,7 @@
   .story-object__footer {
     grid-template-columns: minmax(0, 1fr) minmax(118px, auto);
     min-height: 52px;
-    padding: 7px 10px 7px 12px;
+    padding: var(--s2) var(--s3) var(--s2) var(--s3);
   }
 
   .story-object__identity small,
@@ -1183,7 +1183,7 @@
   .story .stage {
     position: relative;
     top: auto;
-    padding: 58px 20px 56px;
+    padding: var(--s10) var(--s5) var(--s10);
   }
 
   .story-mobile-ready .act {
@@ -1191,8 +1191,12 @@
   }
 
   .story-mobile-ready .stage {
-    /* Reserve the responsive sticky card, without a second screen of dead road. */
-    padding-top: calc(48.8vw + 55px);
+    /* Reserve the responsive sticky card, without a second screen of dead road.
+       The constant trails the card's own height: when the card's internal
+       padding moved onto the spacing scale it grew, and the reservation has to
+       grow with it or the copy rides up into the card. home-first-fold asserts
+       16px of clearance at 656px wide and is the guard on this number. */
+    padding-top: calc(48.8vw + var(--s10));
   }
 
   .act-content {
@@ -1216,7 +1220,7 @@
   }
 
   .kicker {
-    margin-bottom: 13px;
+    margin-bottom: var(--s3);
     font-size: .62rem;
   }
 
@@ -1228,13 +1232,13 @@
 
   .act-p {
     max-width: 44ch;
-    margin-top: 17px;
+    margin-top: var(--s4);
     font-size: .94rem;
   }
 
   .story-job-note {
-    margin-top: 16px;
-    padding-top: 11px;
+    margin-top: var(--s4);
+    padding-top: var(--s3);
   }
 
   body.story-in-view .customer-chat__toggle {
@@ -1245,8 +1249,8 @@
 
   .story-summary .wrap {
     grid-template-columns: 1fr;
-    gap: 23px;
-    padding: 32px 20px;
+    gap: var(--s6);
+    padding: var(--s7) var(--s5);
   }
 
   .story-summary__head h2 {
@@ -1258,11 +1262,11 @@
   }
 
   .story-summary li {
-    padding-block: 12px;
+    padding-block: var(--s3);
   }
 
   .replacement-guide .wrap {
-    padding-inline: 14px;
+    padding-inline: var(--s4);
   }
 
   .replacement-guide details {
@@ -1272,11 +1276,11 @@
 
   .replacement-guide summary {
     min-height: 76px;
-    padding: 17px 6px;
+    padding: var(--s4) var(--s2);
   }
 
   .replacement-ledger-shell {
-    padding: 0 0 20px;
+    padding: 0 0 var(--s5);
   }
 
   .replacement-ledger,
@@ -1299,8 +1303,8 @@
 
   .replacement-ledger tbody {
     display: grid;
-    gap: 12px;
-    padding-top: 14px;
+    gap: var(--s3);
+    padding-top: var(--s4);
   }
 
   .replacement-ledger tr {
@@ -1316,7 +1320,7 @@
   .replacement-ledger tbody th {
     grid-column: 1 / -1;
     border-bottom: 1px solid var(--line);
-    padding: 13px 14px;
+    padding: var(--s3) var(--s4);
     color: #fff;
     background: #172325;
     font-size: .79rem;
@@ -1325,7 +1329,7 @@
   .replacement-ledger td {
     min-height: 94px;
     border-bottom: 1px solid var(--line);
-    padding: 12px 13px;
+    padding: var(--s3) var(--s3);
   }
 
   .replacement-ledger td:nth-of-type(odd) {
@@ -1342,7 +1346,7 @@
   .replacement-ledger td[data-label]::before {
     content: attr(data-label);
     display: block;
-    margin-bottom: 7px;
+    margin-bottom: var(--s2);
     color: #778083;
     font-size: .54rem;
     font-weight: 800;
@@ -1365,8 +1369,12 @@
 
 @media (min-width: 540px) and (max-width: 760px) {
   .story-mobile-ready .stage {
-    /* The wider mobile card is taller; keep scene copy below its sticky edge. */
-    padding-top: calc(48.8vw + 230px);
+    /* The wider mobile card is taller; keep scene copy below its sticky edge.
+       This constant trails the card's real height, so it has to be re-tuned
+       whenever the card's internal spacing changes — moving that padding onto
+       the spacing scale grew the card by about 10px. home-first-fold asserts
+       16px of clearance at 656px wide and is the guard on this number. */
+    padding-top: calc(48.8vw + 240px);
   }
 }
 
@@ -1380,11 +1388,11 @@
   }
 
   .story-object {
-    padding-inline: 10px;
+    padding-inline: var(--s3);
   }
 
   .story .stage {
-    padding-inline: 16px;
+    padding-inline: var(--s4);
   }
 
   .story-object__target--channels {
@@ -1415,12 +1423,12 @@
   }
 
   .act-p {
-    margin-top: 15px;
+    margin-top: var(--s4);
     font-size: .96rem;
   }
 
   .story-job-note {
-    margin-top: 12px;
+    margin-top: var(--s3);
   }
 }
 
