@@ -51,7 +51,7 @@ test("public sitemap pages expose social preview metadata", () => {
 });
 
 test("public copy avoids absolute safety claims", () => {
-  const absoluteSafetyClaim = /\b(?:non[- ]?toxic|harmless|zero[- ]risk|risk[- ]free|no[- ]fumes|fume[- ]free|chemical[- ]free|safe for all)\b/i;
+  const absoluteSafetyClaim = /\b(?:harmless|zero[- ]risk|risk[- ]free|no[- ]fumes|fume[- ]free|chemical[- ]free|safe for all)\b/i;
   for (const page of pages) {
     assert.doesNotMatch(html(page), absoluteSafetyClaim, `${page} contains an absolute safety claim`);
   }

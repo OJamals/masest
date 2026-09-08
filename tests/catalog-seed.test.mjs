@@ -413,7 +413,7 @@ test("site copy respects documentation claim guardrails", () => {
   );
   assert.match(
     publicMarketingCopy,
-    /Every VertKleen product MASEST offers is rated HMIS 0-0-0\./i,
+    /Every VertKleen product MASEST offers (?:is rated|carries) HMIS 0-0-0\./i,
   );
   assert.match(productsHtml, /Compare what each product removes, where it works best, pack pricing, and real-world results\./i);
   assert.doesNotMatch(productsHtml, /exact-product record|before purchase and use/i);

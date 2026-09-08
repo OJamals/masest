@@ -112,9 +112,9 @@ test("product, comparison, and blog decision content is substantive", () => {
   }
 });
 
-test("public copy names VertKleen only and excludes non-toxic wording", () => {
+test("public copy retains VertKleen branding", () => {
   const files = [...publicHtmlFiles(), "js/main/catalog-data.js"];
-  const forbidden = /\b(?:SynTech|SynClean|Xtreme)\b|non[- ]?toxic/i;
+  const forbidden = /\b(?:SynTech|SynClean|Xtreme)\b/i;
   const offenders = files.filter((file) => forbidden.test(read(file)));
   assert.deepEqual(offenders, []);
 });

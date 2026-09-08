@@ -52,11 +52,11 @@
       "sha256": "821f70f7015adbbc3108bf28458e4d453e52c680f0933500b6efb1f694ff43d6"
     },
     "blog.json": {
-      "count": 27,
+      "count": 35,
       "counts": {
-        "blog_posts": 27
+        "blog_posts": 35
       },
-      "sha256": "c7d4c9852e4995aa9d49f9bb71ca1faf4419bccac23384aa5de2d6bc746255ce"
+      "sha256": "2fd9da3277eaa847b9deada87f4b702310308f7abc4e60f139cbc53ac45e1657"
     }
   }
 }

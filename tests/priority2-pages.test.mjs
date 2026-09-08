@@ -53,11 +53,11 @@ const comparisonPages = [
 ];
 
 const comparisonBlogPosts = [
-  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR PRO MAX for industrial descaling", "HCR-25G", "2–3 hours", "280× less corrosion"],
-  ["blog/hcr-vs-rydlyme.html", "VertKleen HCR vs RYDLYME: compare the complete descaling job", "HCR-25G", "2–4 hours", "280× less corrosion"],
-  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green for heavy industrial degreasing", "CRHD-25G", "full strength to 1:10", "three Walmart facilities"],
-  ["blog/lam3-vs-wet-forget.html", "VertKleen LAM3 vs Wet & Forget: compare the finished area", "LAM3-25G", "dilute its concentrate 1:5", "improvement after two weeks"],
-  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost: what a full CIP cycle really costs", "CRCIP-25G", "2–3% use concentration", "seven Florida breweries"],
+  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR PRO MAX for industrial descaling", "HCR-25G", "two-to-three-hour use window", "280 times less corrosion"],
+  ["blog/hcr-vs-rydlyme.html", "VertKleen HCR vs RYDLYME: compare the complete descaling job", "HCR-25G", "2–4 hours", "280 times less corrosion"],
+  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green for heavy industrial degreasing", "CRHD-25G", "full strength through 1:10", "DC-8851"],
+  ["blog/lam3-vs-wet-forget.html", "VertKleen LAM3 vs Wet & Forget: compare the finished area", "LAM3-25G", "dilute concentrate 1:5", "improvement after two weeks"],
+  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost: what a full CIP cycle really costs", "CRCIP-25G", "caustic alkaline cleaner at 2–3%", "seven Florida breweries"],
 ];
 
 const industryLabelPages = [
@@ -243,7 +243,7 @@ test("comparison SEO pages are also generated as mechanism-first blog posts", ()
     assert.match(html, new RegExp(`data-price-vsku="${vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `${title} blog post should bind VertKleen pricing`);
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show current competitor context`);
     assert.match(html, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should include a proof point`);
-    assert.match(html, /href="(?:\.\.\/|\/)contact\?type=(?:quote|audit)(?:&amp;industry=)?/, `${title} blog post should include a task CTA`);
+    assert.match(html, /href="(?:\.\.\/|\/)contact\?type=(?:quote|audit|sample)(?:&amp;industry=)?/, `${title} blog post should include a task CTA`);
   }
 });
 
