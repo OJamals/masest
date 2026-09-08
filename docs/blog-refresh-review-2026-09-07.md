@@ -62,6 +62,10 @@ The canonical CMS exporter then regenerated the 35-post snapshot and blog manife
 
 Automatic blog newsletters were already disabled and remain disabled. The delivery queue remained at 17 existing rows and the blog newsletter ledger retained its three existing entries. No newsletter dispatch or email send was requested by this release.
 
-Production publication uses an isolated checkout from `origin/main` and the normal Verify workflow. Deployment and live-site evidence are recorded after that gate completes.
+Production publication uses an isolated checkout from `origin/main`. The user directed local verification and direct Cloudflare deployment because the GitHub Actions budget was depleted. The attempted Actions run `34173717914` was cancelled, and all three workflows were restored to their pre-existing disabled state.
+
+The isolated release passed `npm run verify:core`: 2,912 tests, both hermetic database phases, build and site validation, 49 workspace browser checks, 36 commerce smoke checks, and 76 interaction checks. All four blog-specific browser tests also passed. These release results supersede the earlier mixed-workspace test count above. Deployment and live-site evidence are retained in the local release artifacts after upload.
+
+The local story performance gate also passed all three measured samples, with no long tasks.
 
 Unrelated admin and email changes already present in this checkout were preserved.
