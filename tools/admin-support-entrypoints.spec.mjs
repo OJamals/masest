@@ -532,6 +532,50 @@ test("settings cannot be stolen by ticket refresh and returning restores propert
   expect(patches[1]).toEqual({ ticket_id: TICKET_ID, version: 5, category: "technical" });
 });
 
+test("settings exclusively fills ticket detail while preserving an unsent reply draft", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 674 });
+  await boot(page);
+  await page.goto(BASE_URL + "/admin.html#support");
+  await page.locator("[data-support-ticket-id]").click();
+
+  const reply = page.locator("#siteSupportReply");
+  await expect(reply).toBeVisible();
+  await reply.fill("Unsent draft stays with this ticket.");
+  await page.locator("[data-support-settings-toggle]").click();
+
+  const drawer = page.locator(".site-support__drawer");
+  const conversation = page.locator(".site-support__conversation-body");
+  const settings = page.locator(".site-support__settings");
+  await expect(drawer).toHaveAttribute("data-view", "settings");
+  await expect(settings).toBeVisible();
+  await expect(conversation).toHaveAttribute("hidden", "");
+
+  const layout = await page.locator(".site-support__detail").evaluate((detail) => {
+    const toolbar = detail.querySelector(".site-support__conversation-toolbar");
+    const conversationBody = detail.querySelector(".site-support__conversation-body");
+    const reply = detail.querySelector("#siteSupportReply");
+    const settingsPanel = detail.querySelector(".site-support__settings");
+    return {
+      detailHeight: detail.getBoundingClientRect().height,
+      toolbarHeight: toolbar.getBoundingClientRect().height,
+      conversationDisplay: getComputedStyle(conversationBody).display,
+      conversationHeight: conversationBody.getBoundingClientRect().height,
+      replyVisible: reply.checkVisibility(),
+      replyHeight: reply.getBoundingClientRect().height,
+      settingsHeight: settingsPanel.getBoundingClientRect().height,
+    };
+  });
+  expect.soft(layout.conversationDisplay).toBe("none");
+  expect.soft(layout.conversationHeight).toBe(0);
+  expect.soft(layout.replyVisible).toBe(false);
+  expect.soft(layout.replyHeight).toBe(0);
+  expect.soft(layout.settingsHeight).toBeGreaterThanOrEqual(layout.detailHeight - layout.toolbarHeight - 1);
+
+  await page.locator("[data-support-back]").click();
+  await expect(reply).toBeVisible();
+  await expect(reply).toHaveValue("Unsent draft stays with this ticket.");
+});
+
 test("a delayed ticket load cannot steal Settings and returning uses the latest ticket version", async ({ page }) => {
   const patches = [];
   await boot(page);
