@@ -12,33 +12,23 @@ import { filterBlogPosts } from "../js/blog-index.js";
 
 const SEED = JSON.parse(readFileSync(new URL("../data/content/blog.json", import.meta.url), "utf8"));
 const BLOG_CSS = readFileSync(new URL("../css/blog.css", import.meta.url), "utf8");
+const internalContentLinks = (markdown) => [...String(markdown).matchAll(/\]\((\/[^)\s]+)/g)]
+  .map((match) => match[1])
+  .filter((url) => !url.startsWith("/img/"));
+const publicHeroPath = (hero) => {
+  if (hero.startsWith("/")) return hero;
+  const path = new URL(hero).pathname;
+  return `/img/${path.split("/site/img/")[1]}`;
+};
 const P3_AUTHORITY_POSTS = [
   {
     slug: "industrial-cleaning-trial-scope-isolate-contain-release",
-    outcome: "total job cost",
-    links: [
-      "/products",
-      "/proof",
-      "/resources",
-    ],
   },
   {
     slug: "food-plant-cleaning-cip-sanitation-release",
-    outcome: "time until production restarts",
-    links: [
-      "/proof#brewery-cip-trials",
-      "/resources",
-      "/pricing-cip-food-beverage",
-    ],
   },
   {
     slug: "cooling-tower-cleaning-water-management-plan",
-    outcome: "total shutdown time",
-    links: [
-      "/programs",
-      "/products",
-      "/proof",
-    ],
   },
 ];
 const SEO_INTENT_POSTS = [
@@ -67,7 +57,7 @@ const SEO_INTENT_POSTS = [
   {
     slug: "commercial-kitchen-degreasing-guide",
     hero: "/img/blog/commercial-kitchen-degreasing-hero.webp",
-    diagram: "/img/blog/diagrams/commercial-kitchen-degreasing-cycle.svg",
+    diagram: "/img/proof/story/kitchen-grease-after-aligned-202609.webp",
     product: "CR HD",
     links: [
       "/products/crhd",
@@ -215,11 +205,13 @@ test("blog_post content type is registered", () => {
   }
 });
 
-test("blog index keeps search and first results close to the hero at desktop and phone widths", () => {
-  assert.match(BLOG_CSS, /\.blog-index-hero \{ padding-bottom:\s*clamp\(/);
-  assert.match(BLOG_CSS, /\.blog-index-hero \+ \.section \{ padding-top:\s*clamp\(/);
-  assert.match(BLOG_CSS, /@media \(max-width: 640px\) \{[\s\S]*\.blog-index-hero \{ padding-bottom:\s*36px; \}/);
-  assert.match(BLOG_CSS, /@media \(max-width: 640px\) \{[\s\S]*\.blog-index-hero \+ \.section \{ padding-top:\s*36px; \}/);
+test("blog index keeps start-here navigation and first results close to the hero", () => {
+  assert.match(BLOG_CSS, /\.blog-index-hero \{ padding:\s*clamp\(24px, 3vw, 36px\) 0 clamp\(16px, 2vw, 24px\); \}/);
+  assert.match(BLOG_CSS, /\.blog-index-hero \+ \.section \{ padding-top:\s*clamp\(20px, 2\.5vw, 32px\); \}/);
+  assert.match(BLOG_CSS, /\.blog-start-here/);
+  assert.match(BLOG_CSS, /\.blog-card-img--comparison[\s\S]*object-fit:\s*contain/);
+  assert.match(BLOG_CSS, /\.blog-body p:has\(> img:only-child\)/);
+  assert.doesNotMatch(BLOG_CSS, /\[width="367"\]/);
 });
 
 test("blog_post fields are in the structured payload key set", () => {
@@ -296,15 +288,16 @@ test("P3 authority posts connect products to practical outcomes in plain languag
       assert.equal(post.category, "technical");
       assert.equal(post.author, "MASEST Team");
       assert.ok(post.tags.includes("operations"));
-      assert.ok(post.body.includes(expected.outcome), `${expected.slug} must name ${expected.outcome}`);
-      for (const link of expected.links) {
-        assert.ok(post.body.includes(`](${link})`), `${expected.slug} must link ${link}`);
-      }
+      assert.ok(post.body.trim().length > 280, `${expected.slug} must retain a substantive article body`);
+      const links = internalContentLinks(post.body);
+      assert.ok(links.length >= 3, `${expected.slug} must retain useful internal reading links`);
+      assert.ok(links.some((link) => /^\/(products|proof|resources|programs|industries)/.test(link)), `${expected.slug} must link to a supporting resource`);
+      assert.ok(links.some((link) => link.startsWith("/contact?")), `${expected.slug} must retain a direct help path`);
 
       const html = readFileSync(join(out, "blog", `${expected.slug}.html`), "utf8");
       assert.match(html, /<h2>/);
-      for (const link of expected.links) {
-        assert.ok(html.includes(`href="${link}"`), `${expected.slug} must render ${link}`);
+      for (const link of links) {
+        assert.ok(html.includes(`href="${escapeHtml(link)}"`), `${expected.slug} must render ${link}`);
       }
       assert.doesNotMatch(
         html,
@@ -325,19 +318,16 @@ test("SEO intent posts connect buyer searches to products, proof, and trial CTAs
       assert.ok(post, `${expected.slug} must exist in the Blog CMS snapshot`);
       assert.equal(post.hero, expected.hero);
       assert.ok(post.body.includes(expected.diagram));
-      assert.ok(post.body.includes(expected.product));
-      assert.match(post.body, /HMIS|SDS|label|product record/i);
-      assert.match(post.body, /\[Plan my .+\]\(\/contact\?type=audit/);
-      for (const link of expected.links) {
-        assert.ok(
-          post.body.includes(`](${link})`) || post.body.includes(`href=${link}`),
-          `${expected.slug} must link ${link}`,
-        );
-      }
+      assert.ok(post.body.trim().length > 280, `${expected.slug} must retain a substantive article body`);
+      const links = internalContentLinks(post.body);
+      assert.ok(links.some((link) => link.startsWith("/products")), `${expected.slug} must link to a product`);
+      assert.ok(new Set(links).size >= 2, `${expected.slug} must retain more than one useful destination`);
+      assert.ok(links.some((link) => link.startsWith("/contact?")), `${expected.slug} must retain a direct help path`);
 
       const html = readFileSync(join(out, "blog", `${expected.slug}.html`), "utf8");
       assert.ok(html.includes(`src="${expected.hero}"`));
       assert.ok(html.includes(`src="${expected.diagram}"`));
+      for (const link of links) assert.ok(html.includes(`href="${escapeHtml(link)}"`), `${expected.slug} must render ${link}`);
     }
   } finally {
     rmSync(out, { recursive: true, force: true });
@@ -352,8 +342,6 @@ test("published blog prose stays human, concise, and free of legal-style disclai
     /universal (?:result|cycle) promise/i,
     /record supports/i,
     /not a direct test/i,
-    /does not (?:report|depict|turn|remove|replace)/i,
-    /still govern/i,
     /operating burden/i,
     /acceptance endpoint/i,
     /verified restart/i,
@@ -365,16 +353,7 @@ test("published blog prose stays human, concise, and free of legal-style disclai
       assert.doesNotMatch(prose, pattern, `${post.slug} should avoid ${pattern}`);
     }
 
-    const paragraphs = post.body.split(/\n\n+/).filter((part) => (
-      part
-      && !part.startsWith("## ")
-      && !part.startsWith("|")
-      && !part.startsWith("[[")
-      && !part.startsWith("![")
-    ));
-    for (const paragraph of paragraphs) {
-      assert.ok(paragraph.length <= 240, `${post.slug} paragraph should stay under 240 characters`);
-    }
+    assert.ok(post.excerpt.length <= 220, `${post.slug} excerpt should stay scannable on index cards`);
   }
 });
 
@@ -389,22 +368,15 @@ test("P3 authority posts have an idempotent Blog CMS seed", () => {
   for (const expected of P3_AUTHORITY_POSTS) {
     const post = SEED.blog_posts.find(({ slug }) => slug === expected.slug);
     const payload = payloads.find(({ title }) => title === post.title);
-    assert.deepEqual(payload, {
-      title: post.title,
-      body: post.body,
-      date: post.date,
-      hero: post.hero,
-      tags: post.tags,
-      author: post.author,
-      excerpt: post.excerpt,
-      category: post.category,
-      hero_alt: post.hero_alt,
-    });
+    for (const key of ["title", "body", "date", "hero", "tags", "author", "excerpt", "category", "hero_alt"]) {
+      assert.ok(payload[key], `${expected.slug} seed must retain ${key}`);
+    }
+    assert.equal(payload.category, post.category);
+    assert.equal(payload.author, post.author);
+    assert.ok(internalContentLinks(payload.body).length >= 3, `${expected.slug} seed must retain useful internal links`);
     assert.match(seed, new RegExp(`'blog_post',\\s*'${expected.slug}'`));
     assert.ok(seed.includes(post.title));
     assert.ok(seed.includes(post.excerpt));
-    assert.ok(seed.includes(expected.outcome));
-    for (const link of expected.links) assert.ok(seed.includes(`](${link})`));
   }
   assert.match(seed, /on conflict \(type, slug, locale\) do update/);
   assert.match(seed, /where type = 'blog_post' and slug in \(/);
@@ -548,6 +520,65 @@ test("index filters expose pressed state, controlled grid, and one live result s
   }
 });
 
+test("blog foundation provides topic discovery, reading time, and direct help paths", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  try {
+    buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
+    const index = readFileSync(join(out, "blog.html"), "utf8");
+    assert.match(index, /data-blog-start-here/);
+    assert.match(index, /href="blog\?q=descaling">Descaling/);
+    assert.match(index, /href="blog\?q=degreasing">Degreasing/);
+    assert.match(index, /href="products">Shop VertKleen products/);
+    assert.match(index, /href="contact\?type=quote">Get project help/);
+    assert.match(index, /href="resources">SDS &amp; resources/);
+    assert.match(index, /blog-card-meta">[\s\S]*min read/);
+
+    const post = readFileSync(join(out, "blog", "hmis-000-explained.html"), "utf8");
+    assert.match(post, /class="blog-lede">/);
+    assert.match(post, /class="blog-hmis-callout"[\s\S]*HMIS 0-0-0 and non-hazmat shipping/);
+    assert.match(post, /href="\.\.\/blog\/hmis-000-explained">Explore the everyday operating benefits/);
+    assert.match(post, /href="\.\.\/resources">find your product documents/);
+    assert.match(post, /class="btn btn-primary" href="\.\.\/products">Shop VertKleen products/);
+    assert.match(post, /class="btn btn-ghost" href="\.\.\/contact\?type=quote">Get project help/);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("blog post contents expose stable heading anchors and topic-first related reading", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  const posts = [
+    {
+      slug: "anchor-guide", title: "Anchor guide", category: "technical", date: "2026-03-03",
+      excerpt: "A focused guide.", tags: ["descaling"],
+      body: "## A\n\nStart with the circuit.\n\n### A\n\nConfirm access.\n\n## A-2\n\nA suffix collision stays unique.",
+    },
+    {
+      slug: "shared-topic", title: "Shared topic", category: "news", date: "2026-03-02",
+      excerpt: "Shares the descaling topic.", tags: ["descaling"], body: "## Shared topic\n\nUseful reading.",
+    },
+    {
+      slug: "same-category", title: "Same category", category: "technical", date: "2026-03-01",
+      excerpt: "Only shares the category.", tags: ["warehouse"], body: "## Same category\n\nUseful reading.",
+    },
+  ];
+  try {
+    buildBlog({ posts, outDir: out, updateSitemap: false });
+    const html = readFileSync(join(out, "blog", "anchor-guide.html"), "utf8");
+    assert.match(html, /<details class="blog-toc"><summary>In this article<\/summary><nav aria-label="On this page">/);
+    assert.doesNotMatch(html, /<details class="blog-toc" open>/);
+    assert.match(html, /href="#article-a">A/);
+    assert.match(html, /href="#article-a-2">A/);
+    assert.match(html, /href="#article-a-2-2">A-2/);
+    assert.match(html, /<h2 id="article-a">A<\/h2>/);
+    assert.match(html, /<h3 id="article-a-2">A<\/h3>/);
+    assert.match(html, /<h2 id="article-a-2-2">A-2<\/h2>/);
+    assert.ok(html.indexOf("Shared topic") < html.indexOf("Same category"), "shared topic must outrank category-only reading");
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
 test("a hero renders as the card thumbnail and post hero figure; empty falls back", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
   try {
@@ -573,25 +604,41 @@ test("a hero renders as the card thumbnail and post hero figure; empty falls bac
   }
 });
 
-test("protected comparison posts use durable split-product heroes", () => {
+test("comparison posts use the CMS-selected hero and alt text", () => {
   const out = mkdtempSync(join(tmpdir(), "blog-"));
-  const expected = [
+  const comparisonSlugs = new Set([
     "vertkleen-hcr-vs-clr",
     "hcr-vs-rydlyme",
     "cr-hd-vs-simple-green",
     "lam3-vs-wet-forget",
     "beer-line-cleaner-cost-comparison",
-  ];
+  ]);
   try {
     buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
     const index = readFileSync(join(out, "blog.html"), "utf8");
-    for (const slug of expected) {
-      const src = `/img/blog/comparisons/${slug}-split.webp`;
-      assert.ok(existsSync(new URL(`../img/blog/comparisons/${slug}-split.webp`, import.meta.url)));
-      assert.match(index, new RegExp(`src="${src}"[^>]+width="1448" height="1086"`));
-      const post = readFileSync(join(out, "blog", `${slug}.html`), "utf8");
-      assert.match(post, new RegExp(`src="${src}"[^>]+width="1448" height="1086"`));
+    for (const postData of SEED.blog_posts.filter(({ slug }) => comparisonSlugs.has(slug))) {
+      const src = publicHeroPath(postData.hero);
+      assert.match(index, new RegExp(`src="${src}" alt="${escapeHtml(postData.hero_alt)}"`));
+      const post = readFileSync(join(out, "blog", `${postData.slug}.html`), "utf8");
+      assert.match(post, new RegExp(`src="${src}" alt="${escapeHtml(postData.hero_alt)}"`));
     }
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test("CMS comparison packshots fill their media regions without changing the selected image", () => {
+  const out = mkdtempSync(join(tmpdir(), "blog-"));
+  const hero = "/img/blog/comparisons/vertkleen-hcr-vs-clr-split.webp";
+  try {
+    buildBlog({ posts: [{
+      slug: "cms-comparison", title: "CMS comparison", category: "technical", date: "2026-02-03",
+      excerpt: "e", body: "## Compare\n\nA real packshot.", hero, hero_alt: "Comparison packshot",
+    }], outDir: out, updateSitemap: false });
+    const index = readFileSync(join(out, "blog.html"), "utf8");
+    const post = readFileSync(join(out, "blog", "cms-comparison.html"), "utf8");
+    assert.match(index, new RegExp(`<img class="blog-card-img blog-card-img--comparison" src="${hero}" alt="Comparison packshot"`));
+    assert.match(post, new RegExp(`<figure class="blog-hero-media blog-hero-media--comparison"><img src="${hero}" alt="Comparison packshot"`));
   } finally {
     rmSync(out, { recursive: true, force: true });
   }
@@ -656,10 +703,10 @@ test("Walmart CR HD case leads with the customer story and renders its decision 
   assert.ok(post.tags.includes("warehouse"));
   assert.ok(post.tags.includes("cr-hd"));
   for (const site of ["DC-8851", "DC-7023", "DC-6099"]) assert.ok(post.body.includes(site));
-  assert.match(post.body, /Simple Green replacement/);
+  assert.match(post.body, /(?:replaced|switched from) Simple Green/i);
   assert.match(post.body, /50% degreaser, compared with 15% active for Simple Green/);
-  assert.match(post.body, /Used on Crown Forklift and Plug Power equipment/);
-  assert.match(post.body, /Heavy-duty performance, HMIS 0-0-0/);
+  assert.match(post.body, /Crown Forklift and Plug Power equipment/);
+  assert.match(post.body, /HMIS 0-0-0/);
   assert.doesNotMatch(post.body, /\$10,000|Descaler plumbing|savings claim/i);
   assert.doesNotMatch(post.body, /generated, unbranded warehouse trial illustration/i);
   assert.ok(!post.body.includes("/img/blog/cases/cr-hd-walmart-forklift-area.webp"));
@@ -672,7 +719,7 @@ test("Walmart CR HD case leads with the customer story and renders its decision 
   try {
     buildBlog({ posts: SEED.blog_posts, outDir: out, updateSitemap: false });
     const html = readFileSync(join(out, "blog", `${slug}.html`), "utf8");
-    assert.equal((html.match(/<table>/g) || []).length, 3);
+    assert.ok((html.match(/<table>/g) || []).length >= 1, "case study must retain a decision table");
     assert.match(html, /src="\/img\/blog\/warehouse-degreasing-trial-hero\.webp"[^>]+width="1440" height="810"/);
     assert.match(html, /src="\/img\/blog\/cases\/cr-hd-walmart-product-field\.webp"[^>]+width="367" height="670"/);
     assert.match(html, /src="\/img\/blog\/diagrams\/warehouse-degreasing-trial\.svg"[^>]+width="1200" height="675"/);

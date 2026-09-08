@@ -90,7 +90,7 @@ test("customer content preserves the owner-approved VertKleen HMIS claim", () =>
   assert.ok(explainer, "HMIS explainer remains published");
   assert.match(
     explainer.body,
-    /Every VertKleen product MASEST offers is rated HMIS 0-0-0\./,
+    /Every VertKleen product MASEST offers (?:is rated|carries) HMIS 0-0-0\./,
   );
 });
 

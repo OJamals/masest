@@ -29,29 +29,6 @@ const CATEGORY_LABELS = {
 };
 const categoryLabel = (category) => CATEGORY_LABELS[category] || category;
 const REQUIRED = ["title", "category", "date", "excerpt", "body"];
-const COMPARISON_HERO_SIZE = { width: 1448, height: 1086 };
-const COMPARISON_HEROES = new Map([
-  ["vertkleen-hcr-vs-clr", {
-    url: "/img/blog/comparisons/vertkleen-hcr-vs-clr-split.webp",
-    alt: "VertKleen HVAC HCR and CLR PRO MAX Industrial Descaler containers side by side",
-  }],
-  ["hcr-vs-rydlyme", {
-    url: "/img/blog/comparisons/hcr-vs-rydlyme-split.webp",
-    alt: "VertKleen HVAC HCR and RYDLYME descaler containers side by side",
-  }],
-  ["cr-hd-vs-simple-green", {
-    url: "/img/blog/comparisons/cr-hd-vs-simple-green-split.webp",
-    alt: "VertKleen CR HD and Simple Green Industrial Cleaner and Degreaser containers side by side",
-  }],
-  ["lam3-vs-wet-forget", {
-    url: "/img/blog/comparisons/lam3-vs-wet-forget-split.webp",
-    alt: "VertKleen LAM3 and Wet and Forget Outdoor Concentrate containers side by side",
-  }],
-  ["beer-line-cleaner-cost-comparison", {
-    url: "/img/blog/comparisons/beer-line-cleaner-cost-comparison-split.webp",
-    alt: "VertKleen CIP CR and CIP HCR beside Micro Matic Alkaline Beer Line Cleaner",
-  }],
-]);
 const ORG = organizationJsonLd();
 
 const text = (s) => escapeHtml(s);
@@ -91,7 +68,7 @@ function relatedPosts(post, all) {
   const others = all.filter((p) => p.slug !== post.slug);
   const tags = new Set(post.tags || []);
   const score = (p) =>
-    (p.category === post.category ? 100 : 0) + (p.tags || []).filter((t) => tags.has(t)).length;
+    (p.tags || []).filter((t) => tags.has(t)).length * 100 + (p.category === post.category ? 1 : 0);
   return [...others]
     .sort((a, b) => score(b) - score(a) || Date.parse(b.date) - Date.parse(a.date) || a.slug.localeCompare(b.slug))
     .slice(0, 3);
@@ -118,12 +95,61 @@ function publicSiteImageUrl(value) {
 }
 
 function postHero(post) {
-  const comparison = COMPARISON_HEROES.get(post.slug);
-  if (comparison) return { ...comparison, size: COMPARISON_HERO_SIZE };
   const heroUrl = publicSiteImageUrl(post.hero);
   if (!heroUrl?.startsWith("/")) return null;
   const size = SITE_IMAGE_DIMENSIONS.get(new URL(heroUrl, BASE).pathname);
   return size ? { url: heroUrl, size, alt: post.hero_alt || post.title } : null;
+}
+
+function isComparisonHero(hero) {
+  return hero?.url.startsWith("/img/blog/comparisons/");
+}
+
+function isProductHero(hero) {
+  return hero?.url.startsWith("/img/products/");
+}
+
+function headingLabel(html) {
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+function headingId(label, index) {
+  return label
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || `section-${index}`;
+}
+
+function articleBody(markdown) {
+  const headings = [];
+  const usedIds = new Set();
+  const html = renderMarkdown(markdown).replace(/<h([23])>([\s\S]*?)<\/h\1>/g, (match, level, contents) => {
+    const label = headingLabel(contents);
+    const baseId = `article-${headingId(label, headings.length + 1)}`;
+    let id = baseId;
+    let suffix = 2;
+    while (usedIds.has(id)) id = `${baseId}-${suffix++}`;
+    usedIds.add(id);
+    headings.push({ id, label, level });
+    return `<h${level} id="${id}">${contents}</h${level}>`;
+  });
+  return { html, headings };
+}
+
+function tableOfContents(headings) {
+  if (!headings.length) return "";
+  return `<details class="blog-toc"><summary>In this article</summary><nav aria-label="On this page"><ol>${headings
+    .map(({ id, label, level }) => `<li class="blog-toc-level-${level}"><a href="#${attr(id)}">${text(label)}</a></li>`)
+    .join("")}</ol></nav></details>`;
 }
 
 function articleSchema(post, heroUrl = "") {
@@ -142,10 +168,12 @@ function articleSchema(post, heroUrl = "") {
 
 function postPage(post, all) {
   const rt = readingTime(post.body);
-  const bodyHtml = renderMarkdown(post.body);
+  const { html: bodyHtml, headings } = articleBody(post.body);
   const hero = postHero(post);
+  const mediaClass = isComparisonHero(hero) ? " blog-hero-media--comparison"
+    : isProductHero(hero) ? " blog-hero-media--product" : "";
   const heroImg = hero
-    ? `<figure class="blog-hero-media"><img src="${attr(hero.url)}" alt="${attr(hero.alt)}" width="${hero.size.width}" height="${hero.size.height}" fetchpriority="high" decoding="async"></figure>`
+    ? `<figure class="blog-hero-media${mediaClass}"><img src="${attr(hero.url)}" alt="${attr(hero.alt)}" width="${hero.size.width}" height="${hero.size.height}" fetchpriority="high" decoding="async"></figure>`
     : "";
   const related = relatedPosts(post, all);
   const relatedHtml = related.length
@@ -196,18 +224,27 @@ function postPage(post, all) {
 </noscript>
 <main id="main">
   <article class="blog-post wrap">
-    <p class="blog-eyebrow"><a href="../blog">Blog</a> · <span class="blog-cat">${text(categoryLabel(post.category))}</span></p>
-    <h1 class="display">${text(post.title)}</h1>
-    <p class="blog-byline">${post.author ? `${text(post.author)} · ` : ""}${text(fmtDate(post.date))} · ${rt} min read</p>
+    <header class="blog-post-header">
+      <p class="blog-eyebrow"><a href="../blog">Blog</a> · <span class="blog-cat">${text(categoryLabel(post.category))}</span></p>
+      <h1 class="display">${text(post.title)}</h1>
+      <p class="blog-lede">${text(post.excerpt)}</p>
+      <p class="blog-byline">${post.author ? `${text(post.author)} · ` : ""}${text(fmtDate(post.date))} · ${rt} min read</p>
+    </header>
     ${heroImg}
+    ${tableOfContents(headings)}
     <div class="blog-body">${bodyHtml}</div>
     ${relatedHtml}
+    <aside class="blog-hmis-callout">
+      <strong>HMIS 0-0-0</strong>
+      <p>Industrial cleaning power with HMIS 0-0-0 and non-hazmat shipping. <a href="../blog/hmis-000-explained">Explore the everyday operating benefits</a> or <a href="../resources">find your product documents</a>.</p>
+    </aside>
     <aside class="blog-cta">
-      <h2>Want help with this cleaning job?</h2>
-      <p>Tell us what needs to come off and what it is stuck to. We will point you to the right VertKleen product.</p>
+      <h2>Put the right cleaner to work.</h2>
+      <p>Choose a product and available size, then order directly. For equipment, treatment, or application support, explore <a href="../services">MASEST services</a>.</p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="../contact?type=quote">Get a quote</a>
-        <a class="btn btn-ghost" href="../products">Browse products</a>
+        <a class="btn btn-primary" href="../products">Shop VertKleen products</a>
+        <a class="btn btn-ghost" href="../contact?type=quote">Get project help</a>
+        <a class="btn btn-ghost" href="../proof">See field results</a>
       </div>
     </aside>
   </article>
@@ -221,8 +258,10 @@ function postPage(post, all) {
 
 function postCard(post) {
   const hero = postHero(post);
+  const mediaClass = isComparisonHero(hero) ? " blog-card-img--comparison"
+    : isProductHero(hero) ? " blog-card-img--product" : "";
   const thumb = hero
-    ? `<img class="blog-card-img" src="${attr(hero.url)}" alt="${attr(hero.alt)}" width="${hero.size.width}" height="${hero.size.height}" loading="lazy" decoding="async">`
+    ? `<img class="blog-card-img${mediaClass}" src="${attr(hero.url)}" alt="${attr(hero.alt)}" width="${hero.size.width}" height="${hero.size.height}" loading="lazy" decoding="async">`
     : `<div class="blog-card-img blog-card-img--fallback" aria-hidden="true"></div>`;
   const tags = (post.tags || []).map((t) => attr(t)).join(" ");
   return `<article class="blog-card" data-slug="${attr(post.slug)}" data-category="${attr(post.category)}" data-tags="${tags}">
@@ -231,7 +270,7 @@ function postCard(post) {
       <span class="blog-card-cat">${text(categoryLabel(post.category))}</span>
       <h2 class="blog-card-title">${text(post.title)}</h2>
       <p class="blog-card-excerpt">${text(post.excerpt)}</p>
-      <span class="blog-card-date">${text(fmtDate(post.date))}</span>
+      <span class="blog-card-meta">${text(fmtDate(post.date))} · ${readingTime(post.body)} min read</span>
     </a>
   </article>`;
 }
@@ -242,6 +281,15 @@ function indexPage(posts) {
     .map((c) => `<button type="button" class="blog-chip${c === "all" ? " is-active" : ""}" data-filter-cat="${c}" aria-pressed="${c === "all" ? "true" : "false"}" aria-controls="blogPostGrid">${c === "all" ? "All" : text(categoryLabel(c))}</button>`)
     .join("");
   const cards = posts.map(postCard).join("\n");
+  const topics = [
+    ["descaling", "Descaling"],
+    ["degreasing", "Degreasing"],
+    ["hvac", "HVAC & water"],
+    ["facility-maintenance", "Facility care"],
+    ["exterior-cleaning", "Exterior cleaning"],
+    ["food-beverage", "Food & beverage"],
+  ].filter(([tag]) => posts.some((post) => (post.tags || []).includes(tag)));
+  const topicLinks = topics.map(([tag, label]) => `<a href="blog?q=${encodeURIComponent(tag)}">${text(label)}</a>`).join("");
   const schema = {
     "@context": "https://schema.org",
     "@type": "Blog",
@@ -294,8 +342,11 @@ function indexPage(posts) {
   <section class="hero blog-index-hero">
     <div class="wrap">
       <span class="eyebrow">Cleaning tips &amp; real results</span>
-      <h1 class="display">Make hard cleaning jobs easier.</h1>
-      <p class="subhead">Straight answers on what to use, how to start, what it costs, and what customers saw on real jobs.</p>
+      <h1 class="display">Clean faster. Keep work moving.</h1>
+      <p class="subhead">Practical guides, product comparisons, and field results for crews solving hard cleaning problems.</p>
+      <nav class="blog-start-here" aria-label="Start here by topic" data-blog-start-here>
+        <span>Start here</span><a href="blog/hmis-000-explained">HMIS 0-0-0</a>${topicLinks}
+      </nav>
     </div>
   </section>
   <section class="section">
@@ -317,9 +368,13 @@ ${cards}
   </section>
   <section class="block-dark on-dark cta-band">
     <div class="wrap reveal">
-      <h2 class="headline">Start with the cleaning problem.</h2>
-      <p class="subhead">Tell us what needs to come off and what it is stuck to. We will show you the best VertKleen place to start.</p>
-      <a class="btn btn-primary" href="products#catalog">Browse by cleaning problem</a>
+      <h2 class="headline">Need a direct path?</h2>
+      <p class="subhead">Shop VertKleen products, get help with a project, or review the resources that support your team.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="products">Shop VertKleen products</a>
+        <a class="btn btn-ghost" href="contact?type=quote">Get project help</a>
+        <a class="btn btn-ghost" href="resources">SDS &amp; resources</a>
+      </div>
     </div>
   </section>
   <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="blog" data-cms-region="body"></div>
