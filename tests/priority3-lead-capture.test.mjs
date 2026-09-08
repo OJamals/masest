@@ -99,11 +99,11 @@ test("contact page exposes all six public request types", () => {
   assert.match(contact, /<option>Data Centers<\/option>/);
   const marketingControl = contact.match(/<input id="fMarketingEmail"[^>]*>/)?.[0];
   assert.ok(marketingControl, "contact form should expose the marketing consent control");
-  assert.doesNotMatch(marketingControl, /\bchecked\b/, "marketing consent must default to explicit opt-in");
+  assert.match(marketingControl, /\bchecked\b/, "email updates should be selected by default");
   assert.match(contact, /Unsubscribe anytime\./);
 });
 
-test("quote form serializes marketing consent only after explicit opt-in", async () => {
+test("quote form defaults to email updates and respects an unchecked option", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser({ channel: "chrome" });
     const requests = [];
@@ -118,7 +118,8 @@ test("quote form serializes marketing consent only after explicit opt-in", async
         });
       });
       await page.goto(`${BASE_URL}/contact.html?type=quote`, { waitUntil: "load" });
-      assert.equal(await page.locator("#fMarketingEmail").isChecked(), false, "consent should start unchecked");
+      assert.equal(await page.locator("#fMarketingEmail").isChecked(), true, "email updates should start checked");
+      await page.locator("#fMarketingEmail").uncheck();
       await page.fill("#fName", "Opt-in Buyer");
       await page.fill("#fCompany", "Opt-in Company");
       await page.fill("#fEmail", "opt-in@example.com");
@@ -128,7 +129,7 @@ test("quote form serializes marketing consent only after explicit opt-in", async
       assert.equal(hasMultipartField(requests[0], "marketing_email_enabled", "on"), false);
 
       await page.goto(`${BASE_URL}/contact.html?type=quote`, { waitUntil: "load" });
-      await page.locator("#fMarketingEmail").check();
+      assert.equal(await page.locator("#fMarketingEmail").isChecked(), true);
       await page.fill("#fName", "Opt-in Buyer");
       await page.fill("#fCompany", "Opt-in Company");
       await page.fill("#fEmail", "opt-in@example.com");

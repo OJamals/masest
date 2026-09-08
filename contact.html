@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260829b">
+<link rel="stylesheet" href="css/style.css?v=20260907a">
 <link rel="stylesheet" href="css/navigation.css?v=20260822b">
 <link rel="stylesheet" href="css/components.css?v=20260830g">
 <!-- seo:auto -->
@@ -281,13 +281,17 @@
           <textarea id="fMessage" name="message" rows="5" aria-required="true" placeholder="Share the buildup, surface, current cleaner, and result you want…"></textarea>
         </div>
 
-        <label class="form-note" for="fMarketingEmail">
-          <input id="fMarketingEmail" name="marketing_email_enabled" type="checkbox">
-          Email me practical VertKleen product proof, field comparisons, and occasional offers. Unsubscribe anytime.
-        </label>
-
-        <button class="btn btn-primary u-cta-wide" type="submit">Send my cleaning job</button>
-        <p class="form-note">* Required. Your information goes only to the MASEST sales team, never sold or shared.</p>
+        <div class="quote-form-footer">
+          <label class="form-note quote-marketing-option" for="fMarketingEmail">
+            <input id="fMarketingEmail" name="marketing_email_enabled" type="checkbox" checked aria-describedby="quoteMarketingFootnote">
+            <span>Email me practical VertKleen product proof, field comparisons, and occasional offers.<sup aria-hidden="true">*</sup></span>
+          </label>
+          <button class="btn btn-primary u-cta-wide" type="submit">Send my cleaning job</button>
+          <div class="quote-form-footnotes">
+            <p class="form-note">Your information goes only to the MASEST sales team, never sold or shared.</p>
+            <p class="form-note" id="quoteMarketingFootnote"><span aria-hidden="true">*</span> Optional emails. Unsubscribe anytime.</p>
+          </div>
+        </div>
       </form>
 
       <div class="form-card form-success" id="formSuccess" style="display:none" role="status" aria-live="polite">
