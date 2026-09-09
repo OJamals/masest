@@ -57,13 +57,18 @@ test("loaded commerce SKU and package data are searchable", () => {
   assert.equal(productSearchScore("descaler", "not-a-real-product", rowFor("descaler")), -1);
 });
 
-test("products toolbar exposes clear, filter, and recommended controls", () => {
+// SQ-14: default order runs $25.99, $25.99, $28.99, $28.99, $20.49, $14.49...
+// — not price, not alphabetical, not category. "Recommended" implied a ranking
+// (personalized, algorithmic, best-seller) that doesn't exist; the option's own
+// value ("featured") already named what it actually is — a curated default
+// order — so the visible label now matches it instead of over-promising.
+test("products toolbar exposes clear, filter, and featured-order controls", () => {
   const html = read("products.html");
 
   assert.match(html, /<label[^>]+for="shopSearch"[^>]*>\s*Search products\s*<\/label>/);
   assert.match(html, /id="shopSearchClear"/);
   assert.match(html, /id="shopClearAll"/);
-  assert.match(html, /<option value="featured">Recommended<\/option>/);
+  assert.match(html, /<option value="featured">Featured<\/option>/);
   assert.match(html, /Browse by job/);
 });
 
