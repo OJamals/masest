@@ -4,6 +4,9 @@
  * the nav is built: import('js/account-nav.js').then(m => m.initAccountNav({ nav, root })). */
 import { esc } from './util.js';
 const firstName = (n) => String(n || '').trim().split(/\s+/)[0] || 'Account';
+// Lazy: only staff ever need this module's toggle/banner, and it's a tiny
+// file — importing it eagerly for every signed-out visitor isn't worth it.
+const staffSurfaceModule = () => import('./staff-surface.js?v=20260909b');
 
 // Cheap logged-in check: Supabase persists its session under sb-<ref>-auth-token in localStorage.
 // Lets anonymous visitors skip loading the Supabase SDK entirely (lighter marketing pages).
@@ -121,6 +124,10 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
   // the page's authenticated API state during token restoration.
   let logout, api, data = null;
   let authResolved = true;
+  // Set in the signed-in branch below; read afterward by the cart-icon and
+  // dataset.accountKind assignments, which both need to reflect the buyer
+  // preview override rather than the raw fetched account.
+  let effectiveIsStaff = false;
   if (resolveSession || hasSession()) {
     try {
       const m = await import(authModule);
@@ -150,7 +157,19 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
     mount.innerHTML = `<a class="nav-signin" href="${root}account.html">Finish setup</a>`;
   } else {
     const label = data.profile?.full_name || data.company?.name || data.email || 'Account';
-    const isStaff = data.can_admin === true;
+    // Ground truth vs. the buyer-preview override: realIsStaff decides whether the
+    // toggle itself shows up (only a genuine staff account gets to flip it);
+    // isStaff decides what the chrome renders, so a staff member mid-preview sees
+    // exactly what a signed-in buyer would.
+    const realIsStaff = data.can_admin === true;
+    let previewing = false;
+    let staffSurface = null;
+    if (realIsStaff) {
+      staffSurface = await staffSurfaceModule();
+      previewing = staffSurface.isPreviewingAsBuyer();
+    }
+    const isStaff = realIsStaff && !previewing;
+    effectiveIsStaff = isStaff;
     const accountMenu = isStaff ? STAFF_MENU : MENU;
     const items = accountMenu.map(([i, l, h, attr = '']) => {
       const isNotifications = l === 'Notifications';
@@ -160,6 +179,13 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
     }).join('');
     const accountItems = (isStaff ? STAFF_ACCOUNT_MENU : ACCOUNT_MENU)
       .map(([i, l, h]) => `<a href="${root}${h}"><i class="ph ${i}" aria-hidden="true"></i>${esc(l)}</a>`).join('');
+    // SQ-12: staff could not QA the buyer storefront without a second browser
+    // profile. This toggle flips the client-only preview flag and reloads —
+    // real staff only, gated on realIsStaff so a previewing buyer view never
+    // grows its own copy of the control.
+    const previewToggle = realIsStaff
+      ? `<div class="acct-menu-section"><button type="button" class="acct-preview-toggle"><i class="ph ${previewing ? 'ph-eye-slash' : 'ph-eye'}" aria-hidden="true"></i>${previewing ? 'Exit buyer preview' : 'Preview as buyer'}</button></div>`
+      : '';
     // Admin console now leads the staff list above, so the old separate row
     // above Sign out is gone.
     mount.innerHTML = `<details class="acct-dd">
@@ -167,15 +193,24 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
       <div class="acct-dd-menu">
         <div class="acct-menu-section"><span class="acct-menu-label">${isStaff ? 'Staff' : 'Main'}</span>${items}</div>
         <div class="acct-menu-section"><span class="acct-menu-label">Account</span>${accountItems}</div>
+        ${previewToggle}
         <div class="acct-menu-section"><button type="button" class="acct-signout"><i class="ph ph-sign-out" aria-hidden="true"></i>Sign out</button></div>
       </div>
     </details>`;
+    if (realIsStaff) {
+      mount.querySelector('.acct-preview-toggle').addEventListener('click', () => {
+        staffSurface.setPreviewAsBuyer(!previewing);
+        location.reload();
+      });
+    }
+    if (previewing) staffSurface.mountPreviewBanner(root);
   }
 
   // Staff are running the store, not shopping it. Hidden rather than removed so a
-  // re-render on auth change (sign out) can put it straight back.
+  // re-render on auth change (sign out) can put it straight back. Reads
+  // effectiveIsStaff (not the raw account) so a buyer preview shows the cart icon.
   const cart = actions.querySelector('.nav-cart');
-  if (cart) cart.hidden = data?.can_admin === true;
+  if (cart) cart.hidden = effectiveIsStaff;
 
   const burger = actions.querySelector('.nav-burger');
   if (prev) prev.replaceWith(mount);
@@ -184,7 +219,8 @@ async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20
   // Publish the resolved account kind so buyer controls can swap to staff work
   // without re-fetching account state in every feature module. This is UI state,
   // not an authorization boundary; APIs still enforce their own capabilities.
-  const accountKind = data?.can_admin === true ? 'staff' : data ? 'customer' : 'guest';
+  // effectiveIsStaff already folds in the buyer-preview override.
+  const accountKind = effectiveIsStaff ? 'staff' : data ? 'customer' : 'guest';
   document.documentElement.dataset.accountKind = accountKind;
   document.dispatchEvent(new CustomEvent('masest:account-role', { detail: { accountKind } }));
 

@@ -17,11 +17,58 @@
  */
 import { esc } from './util.js';
 
+/* SQ-12: nobody on the team could QA the buyer storefront without a second
+ * browser profile, because every staff-gated surface (this file's own
+ * replaceBuyerSurface, commerce-ui.js's buy controls) reads "is this account
+ * staff" straight off the fetched account. This flag is a session-scoped,
+ * client-only override of that read — sessionStorage rather than
+ * localStorage so a preview never leaks into a new tab or persists past the
+ * browser session, and Session rather than a URL param so it survives
+ * following links around the site. It never touches the server: /api/* calls
+ * are unaffected, so a staff member previewing as a buyer still can't place
+ * an order the account layer would reject for a real reason. */
+const PREVIEW_KEY = 'masest:preview-as-buyer';
+
+export function isPreviewingAsBuyer() {
+  try { return sessionStorage.getItem(PREVIEW_KEY) === '1'; }
+  catch { return false; }
+}
+
+export function setPreviewAsBuyer(on) {
+  try {
+    if (on) sessionStorage.setItem(PREVIEW_KEY, '1');
+    else sessionStorage.removeItem(PREVIEW_KEY);
+  } catch { /* private-browsing storage denial: preview just won't persist */ }
+}
+
 /* The one definition of "staff" on the client. /api/account/me computes can_admin
  * from the staff email allowlist or an explicit is_staff + staff_role profile; the
- * client must not re-derive it from broader fields like the company role. */
+ * client must not re-derive it from broader fields like the company role. During
+ * a buyer preview this reads as false everywhere it's consulted (account-nav's
+ * chrome, checkout/dashboard's page takeover) without re-fetching the account —
+ * it stays true for anything that actually needs the ground truth (none of
+ * these call sites are authorization checks; the APIs enforce their own). */
 export function isStaffAccount(account) {
-  return account?.can_admin === true;
+  return account?.can_admin === true && !isPreviewingAsBuyer();
+}
+
+/* Small fixed indicator so a staff member mid-preview doesn't lose track of
+ * why the page looks like a buyer's. Mounted once per page by whichever
+ * module first notices the flag (account-nav.js, on every page). */
+export function mountPreviewBanner(root = '') {
+  if (!isPreviewingAsBuyer() || document.getElementById('staff-preview-banner')) return;
+  injectStyle();
+  const bar = document.createElement('div');
+  bar.id = 'staff-preview-banner';
+  bar.className = 'staff-preview-banner';
+  bar.innerHTML = `<i class="ph ph-eye" aria-hidden="true"></i>
+    <span>Previewing the storefront as a buyer.</span>
+    <button type="button" class="staff-preview-exit">Exit preview</button>`;
+  bar.querySelector('.staff-preview-exit').addEventListener('click', () => {
+    setPreviewAsBuyer(false);
+    location.reload();
+  });
+  document.body.prepend(bar);
 }
 
 function injectStyle() {
@@ -37,7 +84,13 @@ function injectStyle() {
   .staff-surface .eyebrow { margin: 0 0 var(--s2,8px); }
   .staff-surface h2 { margin: 0 0 var(--s3,12px); }
   .staff-surface p { margin: 0 0 var(--s5,20px); }
-  .staff-surface-actions { display: flex; flex-wrap: wrap; gap: var(--s3,12px); }`;
+  .staff-surface-actions { display: flex; flex-wrap: wrap; gap: var(--s3,12px); }
+  .staff-preview-banner { position: sticky; top: 0; z-index: 500; display: flex; align-items: center;
+    justify-content: center; gap: var(--s3,12px); min-height: 40px; padding: var(--s2,8px) var(--s4,16px);
+    background: var(--ink, #12181d); color: var(--on-accent, #fff); font-size: var(--fs-small, .9rem); font-weight: 700; }
+  .staff-preview-exit { min-height: 32px; padding: 0 var(--s3,12px); border: 1px solid rgba(255,255,255,.4);
+    border-radius: var(--r-pill, 999px); background: transparent; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
+  .staff-preview-exit:hover, .staff-preview-exit:focus-visible { background: rgba(255,255,255,.14); outline: none; }`;
   document.head.appendChild(s);
 }
 
