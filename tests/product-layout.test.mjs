@@ -21,10 +21,14 @@ function htmlText(value) {
     .replace(/>/g, "&gt;");
 }
 
-test("catalog cards derive compact proof and fit cues from catalog data", () => {
+// SQ-13: FITS and RESULTS moved off the grid card (they were the tallest, most
+// height-variable blocks a row had to align across) onto the detail page, so
+// this now exercises catalogDecisionHTML directly rather than through
+// catalogCard. The data-shaping behaviour under test is unchanged.
+test("catalog decision cues derive compact proof and fit cues from catalog data", () => {
   for (const id of CATALOG_ORDER) {
-    const html = catalogCard(id);
     const source = PRODUCT_CATALOG_COPY[id];
+    const html = catalogDecisionHTML(id, source);
     const renderedFits = [...html.matchAll(/<li class="shop-card-fit">([^<]+)<\/li>/g)]
       .map((match) => match[1]);
 
@@ -40,6 +44,24 @@ test("catalog cards derive compact proof and fit cues from catalog data", () => 
       ),
       `${id} should route proof review to its detail page`,
     );
+  }
+});
+
+// SQ-13: the grid card is now exactly one <a> (whole-card link) plus the
+// existing quick-add button — no decision block, no overlay badge, no
+// description sentence. Card height and per-row baseline alignment are
+// covered by the Playwright layout test below; this is the static-markup
+// contract.
+test("catalog cards render a single navigable link and no decision block", () => {
+  for (const id of CATALOG_ORDER) {
+    const html = catalogCard(id);
+    const anchorCount = (html.match(/<a\b/g) || []).length;
+    assert.equal(anchorCount, 1, `${id}: exactly one <a> per card`);
+    assert.doesNotMatch(html, /shop-card-decision/, `${id}: FITS/RESULTS live on the detail page now`);
+    assert.doesNotMatch(html, /hmis-badge/, `${id}: overlay badge dropped`);
+    assert.doesNotMatch(html, /shop-card-replaces/, `${id}: description sentence dropped`);
+    assert.match(html, /<article class="shop-card"/);
+    assert.match(html, /class="shop-card-link"/);
   }
 });
 
@@ -148,20 +170,16 @@ test("catalog decision cues omit missing rows without empty chrome", () => {
 });
 
 test("catalog decision cues preserve existing buyable and quote-first actions", () => {
-  for (const [id, actionMarker, expectsDecision] of [
-    ["hcr", 'data-commerce-action="hcr"', true],
-    ["crs", "shop-card-quote", false],
+  // SQ-13: neither buyable nor quote-first cards carry the decision block
+  // (FITS/RESULTS) any more — it lives on the detail page for every SKU now,
+  // so there is nothing left to order the commerce action against.
+  for (const [id, actionMarker] of [
+    ["hcr", 'data-commerce-action="hcr"'],
+    ["crs", "shop-card-quote"],
   ]) {
     const html = catalogCard(id);
     assert.ok(html.includes(actionMarker), `${id} should retain its existing commerce action`);
-    if (expectsDecision) {
-      assert.ok(
-        html.indexOf(actionMarker) < html.indexOf("shop-card-decision"),
-        `${id} commerce action should remain before supporting decision cues`,
-      );
-    } else {
-      assert.doesNotMatch(html, /shop-card-decision/, `${id} has no supported proof-detail route`);
-    }
+    assert.doesNotMatch(html, /shop-card-decision/, `${id} has no on-card decision block`);
   }
 
   assert.match(

@@ -3591,7 +3591,29 @@ fully clickable cards) ---- */
   z-index: 4;
   display: block;
 }
-.shop-card-quick-commerce .commerce-buy { display: block; }
+/* The size choice sits to the left of the add button, sharing its
+   [data-commerce-buy] wrapper so a change picks up the button's existing
+   volume-sync handler for free. */
+.shop-card-quick-commerce .commerce-buy {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.shop-card-quick-commerce .commerce-vol {
+  min-height: 36px;
+  max-width: 132px;
+  padding: 0 var(--s5) 0 var(--s2);
+  border-radius: var(--r-pill);
+  background-color: rgba(255, 255, 255, .86);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  font-size: var(--fs-caption);
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(9, 46, 52, .12);
+}
+@media (pointer: coarse) {
+  .shop-card-quick-commerce .commerce-vol { min-height: 44px; }
+}
 .shop-card-quick-add {
   position: relative;
   display: inline-grid;
@@ -3633,31 +3655,24 @@ fully clickable cards) ---- */
   border-color: transparent;
   cursor: wait;
 }
+/* Was a hover-only tooltip (opacity 0 until :hover/:focus-visible) — invisible
+   on touch, so a phone buyer saw an unlabeled circle over the product photo.
+   The label is now part of the resting state; it sits above the button,
+   clear of the size select beside it, instead of popping out sideways. */
 .shop-card-quick-add-copy {
   position: absolute;
-  top: 50%;
-  right: calc(100% + 8px);
+  bottom: calc(100% + 8px);
+  right: 0;
   width: max-content;
-  max-width: 180px;
-  padding: var(--s2) var(--s3);
+  max-width: 140px;
+  padding: var(--s1) var(--s3);
   border-radius: var(--r-pill);
-  background: rgba(7, 20, 23, .92);
+  background: rgba(7, 20, 23, .88);
   color:var(--on-accent);
   font-size: var(--fs-caption);
   font-weight: 850;
-  line-height: 1;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(5px, -50%);
-  transition: transform .14s var(--ease-out), opacity .14s var(--ease-out);
-  visibility: hidden;
+  line-height: 1.2;
   white-space: nowrap;
-}
-.shop-card-quick-add:hover .shop-card-quick-add-copy,
-.shop-card-quick-add:focus-visible .shop-card-quick-add-copy {
-  opacity: 1;
-  transform: translate(0, -50%);
-  visibility: visible;
 }
 .shop-card-media img { width: 100%; height: 100%; object-fit: contain; padding: var(--s4); }
 .shop-card-media > i { font-size: 3rem; color: var(--accent); }
@@ -3694,8 +3709,6 @@ fully clickable cards) ---- */
   overflow-wrap: anywhere;
   word-break: normal;
 }
-.shop-card-media .hmis-badge { position: absolute; top: 10px; right: 10px; }
-
 .shop-card-body {
   display: flex;
   flex-direction: column;
@@ -3703,11 +3716,29 @@ fully clickable cards) ---- */
   padding: var(--s4);
   flex: 1;
 }
-.shop-card-type { font-size: var(--fs-caption); font-weight: 700; letter-spacing: .02em; text-transform: none; color: var(--muted); }
-.shop-card-name { font-size: var(--fs-body-lg); font-weight: 800; line-height: 1.2; }
-/* Keep copy packed with the title; the card's flexible slack lands after the CTA
-   (inside the body) so quote-only cards don't open a hole mid-content. */
-.shop-card-replaces { font-size: var(--fs-small); color: var(--muted); }
+/* Clamped so every card in a row breaks at the same point regardless of how its
+   copy wraps — the strict grid this card now follows (image / eyebrow / title /
+   price / one action) only holds if no block can grow past its own line budget. */
+.shop-card-type {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: none;
+  color: var(--muted);
+}
+.shop-card-name {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--fs-body-lg);
+  font-weight: 800;
+  line-height: 1.2;
+}
 .shop-card-cta {
   display: inline-flex;
   align-items: center;
@@ -5020,7 +5051,7 @@ body .page-hero .product-shot {
   grid-template-columns: minmax(0, 1fr);
   gap: var(--s3);
   margin: auto var(--s4) var(--s4);
-  padding-top: var(--s4);
+  padding-top: var(--s3);
   border-top: 1px solid var(--line-soft);
 }
 
@@ -5638,7 +5669,10 @@ body .page-hero .product-shot {
 }
 
 .shop-card-media {
-  min-height: 210px;
+  /* No min-height: the base rule's aspect-ratio: 4/3 already sizes this from the
+     card's own width, and a fixed floor fought that on narrower tracks — a big
+     share of the card's height budget for a target that no longer holds a
+     description or FITS/RESULTS block underneath it. */
   background:
     linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(244, 249, 248, .92)),
     radial-gradient(circle at 50% 16%, rgba(0, 130, 135, .10), transparent 42%);
@@ -5658,26 +5692,21 @@ body .page-hero .product-shot {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  min-height: 184px;
+  min-height: 116px;
   padding-bottom: var(--s4);
 }
 
 .shop-card-type {
-  min-height: 2.35em;
+  min-height: 1.3em;
   letter-spacing: .02em;
   line-height: 1.18;
   text-wrap: balance;
 }
 
 .shop-card-name {
+  min-height: 2.16em;
   line-height: 1.08;
   text-wrap: balance;
-}
-
-.shop-card-replaces {
-  min-height: 3.1em;
-  line-height: 1.55;
-  text-wrap: pretty;
 }
 
 .shop-card-cta {
@@ -5688,7 +5717,7 @@ body .page-hero .product-shot {
 .shop-card-price {
   grid-column: 1 / -1;
   margin: 0;
-  padding: var(--s4);
+  padding: var(--s3);
   border-top: 1px solid rgba(13, 48, 53, .09);
   border-radius: var(--r-input);
   background: rgba(255, 255, 255, .78);
@@ -5736,7 +5765,7 @@ body .page-hero .product-shot {
 .shop-card-savings[hidden] { display: none; }
 
 .shop-card-buybar {
-  margin: 0 var(--s5) var(--s5);
+  margin: 0 var(--s5) var(--s4);
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--s3);
@@ -7313,7 +7342,7 @@ button.viz-segment {
 }
 
 .shop-card {
-  padding: var(--s2);
+  padding: var(--s1);
   border-color: rgba(13, 48, 53, .08);
   border-radius: var(--r-lg);
   background: linear-gradient(180deg, rgba(255, 255, 255, .78), rgba(238, 247, 246, .72));
@@ -7339,7 +7368,6 @@ button.viz-segment {
 }
 
 .shop-card-media {
-  min-height: 230px;
   border-bottom-color: rgba(13, 48, 53, .07);
   background:
     radial-gradient(circle at 50% 18%, rgba(255, 255, 255, .95), rgba(235, 247, 246, .7) 58%, rgba(221, 237, 235, .82)),
@@ -7366,7 +7394,7 @@ button.viz-segment {
 }
 
 .shop-card-body {
-  padding: var(--s5);
+  padding: var(--s3) var(--s4);
 }
 
 .shop-card-cta {

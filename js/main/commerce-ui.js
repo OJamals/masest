@@ -360,11 +360,22 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on", market =
     const firstVariant = row.variants[0];
     const first = firstVariant.vsku;
     if (variant === "quick") {
+      // Grid card: the icon-only control used to read as a decorative badge — no
+      // persistent label, a hover-only tooltip a touch pointer never triggers. It
+      // stays a single-tap add for the default pack, but now carries a real,
+      // always-visible "Add to cart" label plus a size choice next to it. Select and
+      // button share this [data-commerce-buy] wrapper, so the existing delegated
+      // change handler below already retargets the button when the size changes —
+      // no extra wiring required.
       const packLabel = optLabel(firstVariant);
       const readyLabel = `Add ${displayName}, ${packLabel}, to cart`;
-      return `<span class="commerce-buy" data-commerce-buy="${htmlEscape(id)}">`
-        + `<button class="shop-card-quick-add" type="button" data-cart-add="${htmlEscape(first)}" data-cart-quick-add="${htmlEscape(id)}" data-cart-state="ready" data-cart-ready-label="${htmlEscape(readyLabel)}" data-cart-product-name="${htmlEscape(displayName)}" data-account-path="${htmlEscape(accountPath)}" aria-label="${htmlEscape(readyLabel)}" title="Quick add ${htmlEscape(packLabel)}">`
-        + `<span class="shop-card-quick-add-copy" aria-hidden="true">Quick add ${htmlEscape(packLabel)}</span>`
+      const sizePicker = row.variants.length > 1
+        ? `<select class="commerce-vol" aria-label="Volume for ${htmlEscape(displayName)}">${unitOpts}</select>`
+        : "";
+      return `<span class="commerce-buy shop-card-quick-buy" data-commerce-buy="${htmlEscape(id)}">`
+        + sizePicker
+        + `<button class="shop-card-quick-add" type="button" data-cart-add="${htmlEscape(first)}" data-cart-quick-add="${htmlEscape(id)}" data-cart-state="ready" data-cart-ready-label="${htmlEscape(readyLabel)}" data-cart-product-name="${htmlEscape(displayName)}" data-account-path="${htmlEscape(accountPath)}" aria-label="${htmlEscape(readyLabel)}" title="Add to cart">`
+        + `<span class="shop-card-quick-add-copy" aria-hidden="true">Add to cart</span>`
         + `<i class="ph ph-shopping-cart-simple" aria-hidden="true"></i>`
         + `<span class="sr-only" data-cart-status aria-live="polite"></span>`
         + `</button>`
@@ -451,10 +462,15 @@ function bulkPriceMarkup(id) {
   const note = bulkPriceNote(id);
   const perGallon = bulkPerGallonText(id);
   const savings = caseSavingsText(row, selected);
+  // A 1-gallon SKU's per-gallon price is the headline price restated — the
+  // catalogue shipped "$25.99" and "$25.99/gal" as two chips saying the same
+  // thing. Only show the chip when it adds information a whole-unit buyer
+  // doesn't already have.
+  const showPerGallon = perGallon && perGallon !== `${text}/gal`;
   return `<strong class="price-main">${htmlEscape(text)}</strong>`
     + `<span class="price-note">${htmlEscape(note)}</span>`
     + `<span class="shop-card-savings" aria-live="polite"${savings ? "" : " hidden"}>${htmlEscape(savings)}</span>`
-    + (perGallon ? `<span class="shop-card-bulk">${htmlEscape(perGallon)}</span>` : "");
+    + (showPerGallon ? `<span class="shop-card-bulk">${htmlEscape(perGallon)}</span>` : "");
 }
 
 function bulkPriceHTML(id) {
@@ -640,8 +656,6 @@ export function catalogCard(id, eager = false, context = null) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
   const displayName = context?.name || p.name;
   const detailHref = context?.href || `products/${id}`;
-  const summary = context?.summary || copy.summary || p.replaces;
-  const badge = `<span class="hmis-badge note">${copy.platform || `HMIS ${p.hmis || "0-0-0"}`}</span>`;
   const mediaInfo = context?.image
     ? { src: context.image, alt: `${displayName} marine product jug` }
     : commerceMediaFor(id);
@@ -659,25 +673,34 @@ export function catalogCard(id, eager = false, context = null) {
   const quickCommerce = quoteFirst
     ? ""
     : `<span class="shop-card-quick-commerce" data-commerce-action="${id}" data-commerce-size="quick"${context?.market ? ` data-commerce-market="${htmlEscape(context.market)}"` : ""} data-customer-chat-obstruction></span>`;
-  const decision = CATALOG_ORDER.includes(id) ? catalogDecisionHTML(id, copy, context) : "";
+  // Strict grid: image / eyebrow (1 line) / title (2 lines) / price / one action.
+  // FITS and RESULTS (catalogDecisionHTML) moved to the detail page — a card that
+  // stacks eleven blocks can't align across a row, and the buyer decides "is this
+  // worth a closer look" from the photo, name and price, not a case study. The
+  // overlay HMIS badge and the summary sentence are dropped for the same reason:
+  // the badge duplicated the eyebrow beneath it, and the sentence pushed every
+  // card to a different height depending on how it wrapped. Media and title share
+  // one link so the card has exactly one destination; the quick-add stays a
+  // sibling, never a descendant, so it can never end up as a <button> nested
+  // inside an <a> in any catalog-load state (see commerceActionHTML's "quick"
+  // fallback, which renders an <a> instead of a <button> when the catalog is
+  // unreachable).
   return `
     <article class="shop-card" data-id="${id}"${context?.market ? ` data-market="${htmlEscape(context.market)}"` : ""}>
       <div class="shop-card-core">
         <span class="shop-card-media-wrap">
-          <a class="shop-card-media" href="${htmlEscape(detailHref)}" aria-label="View ${htmlEscape(displayName)} details">${media}${badge}</a>
+          <span class="shop-card-media">${media}</span>
           ${quickCommerce}
         </span>
-        <a class="shop-card-link" href="${htmlEscape(detailHref)}" aria-label="See how ${htmlEscape(displayName)} works">
+        <a class="shop-card-link" href="${htmlEscape(detailHref)}" aria-label="View ${htmlEscape(displayName)} details">
         <span class="shop-card-body">
           <span class="shop-card-type">${type}</span>
           <b class="shop-card-name">${htmlEscape(displayName)}</b>
-          <span class="shop-card-replaces">${htmlEscape(summary)}</span>
-          <span class="shop-card-cta">See how it works <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
+          <span class="shop-card-cta">See details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
         </span>
         </a>
         <div class="shop-card-buybar">
           ${buybar}
-          ${decision}
         </div>
       </div>
     </article>`;
@@ -698,8 +721,12 @@ export function initCartButtons() {
     if (!select) return;
     const wrap = select.closest("[data-commerce-buy]");
     // Price slot lives in .shop-card-buybar on catalog cards and in
-    // .product-hero-buy on the static /products/<id> detail pages.
-    const buybar = select.closest(".shop-card-buybar, .product-hero-buy");
+    // .product-hero-buy on the static /products/<id> detail pages. The grid's
+    // quick-add size select lives in its own wrapper next to the media, outside
+    // .shop-card-buybar, so fall back to the price block living elsewhere in the
+    // same card.
+    const buybar = select.closest(".shop-card-buybar, .product-hero-buy")
+      || select.closest(".shop-card")?.querySelector(".shop-card-buybar");
     const button = wrap?.querySelector("[data-cart-add]");
     const quoteLink = wrap?.querySelector(".commerce-quote-swap");
     const selected = select.selectedOptions?.[0];
@@ -742,8 +769,12 @@ export function initCartButtons() {
       savings.hidden = !savings.textContent;
     }
     if (perGallon) {
-      perGallon.textContent = isQuote && !isCaseContact ? "" : bulkPerGallonText(wrap?.dataset.commerceBuy, variant);
-      perGallon.hidden = isQuote && !isCaseContact;
+      const perGallonText = isQuote && !isCaseContact ? "" : bulkPerGallonText(wrap?.dataset.commerceBuy, variant);
+      // Same rule as bulkPriceMarkup: a 1-gallon pack's per-gallon price restates
+      // the headline price, so drop the chip rather than say the same number twice.
+      const matchesHeadline = !isQuote && perGallonText === `${price.trim()}/gal`;
+      perGallon.textContent = matchesHeadline ? "" : perGallonText;
+      perGallon.hidden = (isQuote && !isCaseContact) || matchesHeadline;
     }
   });
 
@@ -1036,10 +1067,8 @@ export function initShop() {
       const id = card.dataset.id;
       const buybar = card.querySelector(".shop-card-buybar");
       if (!buybar) return false;
-      const copy = PRODUCT_CATALOG_COPY[id] || {};
       const priced = QUOTE_FIRST_IDS.includes(id) ? quoteActionHTML(id) : bulkPriceHTML(id);
-      const decision = CATALOG_ORDER.includes(id) ? catalogDecisionHTML(id, copy, null) : "";
-      buybar.innerHTML = `${priced}\n          ${decision}`;
+      buybar.innerHTML = priced;
     }
     refreshCommerceActions(grid);
     /* apply() compares against lastMarkup to decide whether to write; the DOM
