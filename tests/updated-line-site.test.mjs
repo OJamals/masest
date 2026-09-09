@@ -101,7 +101,7 @@ test("program requests persist a useful CRM next step and readable field labels"
   assert.doesNotMatch(emails[0].html, /<td[^>]*>program_services<\/td>/);
 });
 
-test("marine page promotes one bounded sportfisher field record from canonical proof data", () => {
+test("marine proof remains canonical while the duplicate page card stays removed", () => {
   const cards = json("data/content/proof.json").proof_cards;
   const marine = json("data/industry-applications.json").industries.find(({ slug }) => slug === "marine");
   const page = read("industries/marine.html");
@@ -121,8 +121,10 @@ test("marine page promotes one bounded sportfisher field record from canonical p
   assert.equal(existsSync(new URL(`../${card.image}`, import.meta.url)), true);
   assert.equal(existsSync(new URL(`../${card.image_after}`, import.meta.url)), true);
   assert.equal(marine.featured_proof_slug, card.slug);
-  assert.match(page, /Sportfisher raw-water intake descaling/);
+  assert.doesNotMatch(page, /Sportfisher raw-water intake descaling|data-featured-proof=/);
+  assert.match(page, /img\/before-after\/marine-intake-before-202609\.webp/);
+  assert.match(page, /img\/before-after\/marine-intake-after-202609\.webp/);
   assert.match(page, /href="\.\.\/products\/hcr-t16\?market=marine"/);
-  assert.match(page, /href="\.\.\/proof#sportfisher-raw-water-intake"/);
+  assert.doesNotMatch(page, /href="\.\.\/proof#sportfisher-raw-water-intake"/);
   assert.doesNotMatch(page, PRIVATE_ACCOUNT_COPY);
 });

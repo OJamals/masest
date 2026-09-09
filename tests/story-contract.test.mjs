@@ -34,7 +34,8 @@ test("one persistent comparator carries each true pair and active product", () =
   assert.match(story, /media\.masest\.co\/site\/img\/products\/crhd-food-beverage-studio\.webp/);
   assert.match(story, /Commercial-kitchen grease/);
   assert.match(story, /VertKleen CRHD/);
-  assert.match(story, /After frame digitally reconstructed from source photo\./);
+  assert.doesNotMatch(story, /AI[- ]generated|digitally reconstructed|synthetic (?:image|photo|visual|imagery)/i);
+  assert.doesNotMatch(story, /story-object__method/);
   assert.match(story, /story-object__label--before[^>]*>Before</);
   assert.match(story, /story-object__label--after[^>]*>After</);
   assert.equal((story.match(/data-before-src="https:\/\/media\.masest\.co\/site\/img\/proof\/story\//g) || []).length, 6);

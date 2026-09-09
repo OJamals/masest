@@ -211,6 +211,30 @@ test("every navigation stylesheet link uses the shared current cache-buster", ()
   assert.ok(linkedPages > 90, "cache-buster guard must cover the public navigation stylesheet graph");
 });
 
+test("every public main script link uses the shared current cache-buster", () => {
+  const release = read("tools/static-release.mjs");
+  const mainVersion = release.match(/MAIN_VERSION\s*=\s*"([0-9a-z]+)"/i)?.[1];
+  assert.ok(mainVersion, "static release config must define MAIN_VERSION");
+
+  const pages = ["", "blog/", "comparisons/", "industries/", "products/", "services/"]
+    .flatMap((directory) => readdirSync(new URL(directory, root))
+      .filter((name) => name.endsWith(".html"))
+      .map((name) => `${directory}${name}`))
+    .sort();
+  let linkedPages = 0;
+
+  for (const page of pages) {
+    const links = [...read(page).matchAll(/src="(?:\.\.\/)?js\/main\.js\?v=([^"']+)"/g)];
+    if (!links.length) continue;
+    linkedPages += 1;
+    for (const link of links) {
+      assert.equal(link[1], mainVersion, `${page} must use current main.js cache-buster`);
+    }
+  }
+
+  assert.ok(linkedPages > 90, "cache-buster guard must cover the public main script graph");
+});
+
 test("architecture doc captures current app boundaries and target structure", () => {
   assert.equal(existsSync(new URL("docs/ARCHITECTURE.md", root)), true);
   const doc = read("docs/ARCHITECTURE.md");

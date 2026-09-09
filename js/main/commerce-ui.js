@@ -1,9 +1,9 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260908d";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260909b";
 import { smoothPref } from "./engagement.js";
-import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260908d";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260908d";
+import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260909b";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260909b";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -27,8 +27,8 @@ export function productCard(id, heroCard = false, eager = false) {
     <h3>${p.name}</h3>
       <p>${catalog.summary}</p>
       <div class="prod-actions">
-        <a class="btn btn-ink btn-sm" href="products/${id}">See how it works</a>
         <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button"></span>
+        <a class="btn btn-ink btn-sm" href="products/${id}">Product details</a>
       </div>
   </div>`;
 }

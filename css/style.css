@@ -8284,6 +8284,25 @@ body.products-page .conversion-proof .proof-pill em {
   aspect-ratio: 8 / 5;
 }
 
+.ind-gallery > [data-before-after] {
+  grid-column: 1 / -1;
+  scroll-margin-top: 120px;
+}
+
+.ind-gallery > [data-before-after] .ba {
+  border: 0;
+  border-radius: 0;
+}
+
+.ind-gallery > [data-before-after] .ba-tag {
+  top: 72px;
+  bottom: auto;
+}
+
+.ind-gallery > [data-before-after]:hover img {
+  transform: none;
+}
+
 .ind-shot figcaption {
   padding: 12px 14px;
   border-top: 1px solid var(--line-soft);

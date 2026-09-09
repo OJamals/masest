@@ -147,7 +147,7 @@ test('industry redirects reject unsafe or duplicate current routes', () => {
   );
 });
 
-test('each industry route has one captioned image gallery containing every accepted generated image', () => {
+test('each industry route has one image gallery containing every accepted generated image', () => {
   assert.equal(industries.length, 26);
   const renderedTaskImages = new Set();
   const renderedSupplementalImages = new Set();
@@ -192,11 +192,69 @@ test('each industry route has one captioned image gallery containing every accep
       supplementalSampleSlugs.has(industry.slug) ? [`${industry.slug}.webp`] : [],
       `${industry.slug}: exact-route supplemental image`,
     );
+    const generatedFigures = [...gallery[1].matchAll(
+      /<figure class="ind-shot ind-shot-wide" data-evidence-kind="generated"[^>]*>([\s\S]*?)<\/figure>/g,
+    )].map((match) => match[1]);
+    const comparisonAssets = {
+      education: [
+        '/img/before-after/education-stairs-before-202609.webp',
+        '/img/before-after/education-stairs-after-202609.webp',
+      ],
+      'restaurants-commercial-kitchens': [
+        '/img/before-after/restaurant-concrete-floor-before-202609.webp',
+        '/img/before-after/restaurant-concrete-floor-after-202609.webp',
+      ],
+      'breweries-distilleries-wineries': [
+        '/img/before-after/brewery-tank-before-202609.webp',
+        '/img/before-after/brewery-tank-after-202609.webp',
+      ],
+      'hotels-property-management': [
+        '/img/before-after/property-pillar-before-202609.webp',
+        '/img/before-after/property-pillar-after-202609.webp',
+      ],
+      marine: [
+        '/img/before-after/marine-intake-before-202609.webp',
+        '/img/before-after/marine-intake-after-202609.webp',
+      ],
+    };
+    const expectedComparisons = comparisonAssets[industry.slug] ? 1 : 0;
+    assert.equal(generatedFigures.length, taskImages.length + sampleImages.length + expectedComparisons);
+    for (const figure of generatedFigures) {
+      assert.doesNotMatch(figure, /<figcaption>|ind-media-kind/);
+    }
     assert.equal(
-      (gallery[1].match(/<figure class="ind-shot(?: ind-shot-wide)?"[^>]*>/g) || []).length,
-      (gallery[1].match(/<figcaption>/g) || []).length,
-      `${industry.slug}: every gallery image has a caption`,
+      (gallery[1].match(/data-ba/g) || []).length,
+      expectedComparisons,
+      `${industry.slug}: source-grounded comparison count`,
     );
+    if (comparisonAssets[industry.slug]) {
+      assert.match(gallery[1], /<figure[^>]+id="before-after-comparison"[^>]+data-before-after>/);
+      for (const path of comparisonAssets[industry.slug]) {
+        assert.match(gallery[1], new RegExp(`\\.\\.${path.replaceAll('.', '\\.')}`));
+      }
+      assert.match(gallery[1], /<span class="ba-tag ba-tag-before">Before<\/span>/);
+      assert.match(gallery[1], /<span class="ba-tag ba-tag-after">After<\/span>/);
+      for (const path of comparisonAssets[industry.slug]) {
+        const asset = siteImageByPath.get(path);
+        assert.ok(asset, `${industry.slug}: missing ${path}`);
+        assert.deepEqual({ width: asset.width, height: asset.height }, { width: 1200, height: 750 });
+      }
+    }
+    if (industry.slug === 'education') {
+      assert.match(gallery[1], /class="ba-range"[^>]+aria-label="Drag to compare campus stairs before and after cleaning"/);
+    }
+    if (industry.slug === 'restaurants-commercial-kitchens') {
+      assert.match(gallery[1], /class="ba-range"[^>]+aria-label="Drag to compare restaurant concrete before and after cleaning"/);
+    }
+    if (industry.slug === 'breweries-distilleries-wineries') {
+      assert.match(gallery[1], /class="ba-range"[^>]+aria-label="Drag to compare brewery tank before and after cleaning"/);
+    }
+    if (industry.slug === 'hotels-property-management') {
+      assert.match(gallery[1], /class="ba-range"[^>]+aria-label="Drag to compare painted property pillar before and after cleaning"/);
+    }
+    if (industry.slug === 'marine') {
+      assert.match(gallery[1], /class="ba-range"[^>]+aria-label="Drag to compare marine intake grate before and after cleaning"/);
+    }
 
     for (const image of taskImages) {
       renderedTaskImages.add(image);
@@ -223,7 +281,7 @@ test('each industry route has one captioned image gallery containing every accep
   const taskFiles = siteImages
     .filter((asset) => asset.public_url.startsWith('/img/industries/tasks/'))
     .map((asset) => asset.filename);
-  assert.equal(renderedTaskImages.size, 75);
+  assert.equal(renderedTaskImages.size, 74);
   assert.deepEqual([...renderedTaskImages].sort(), taskFiles.sort(), 'no orphan task images');
   assert.deepEqual(
     [...new Set([...catalogSampleImages, ...renderedSupplementalImages])].sort(),
@@ -292,7 +350,7 @@ test('gallery media fails closed between generated scenes, field context, and qu
     const gallery = html.match(
       /<section class="section section-slim ind-gallery-sec" aria-label="[^"]+ image gallery">([\s\S]*?)<\/section>/,
     )?.[1] || '';
-    const figures = [...gallery.matchAll(/<figure class="ind-shot(?: ind-shot-wide)?" data-evidence-kind="([^"]+)">/g)]
+    const figures = [...gallery.matchAll(/<figure class="ind-shot(?: ind-shot-wide)?" data-evidence-kind="([^"]+)"[^>]*>/g)]
       .map((match) => match[1]);
     const expectedFigures = (gallery.match(/<figure class="ind-shot(?: ind-shot-wide)?"/g) || []).length;
 
@@ -300,9 +358,14 @@ test('gallery media fails closed between generated scenes, field context, and qu
     assert.ok(figures.includes('generated'), `${industry.slug}: generated scenes identified`);
     assert.equal(
       (gallery.match(/<span class="ind-media-kind">Cleaning setup<\/span>/g) || []).length,
-      figures.filter((kind) => kind === 'generated').length,
-      `${industry.slug}: generated cleaning scenes need a visible label`,
+      0,
+      `${industry.slug}: generated scenes must not expose visible production details`,
     );
+    for (const match of gallery.matchAll(
+      /<figure class="ind-shot ind-shot-wide" data-evidence-kind="generated"[^>]*>([\s\S]*?)<\/figure>/g,
+    )) {
+      assert.doesNotMatch(match[1], /<figcaption>|ind-media-kind/);
+    }
     assert.doesNotMatch(gallery, /Generated task visualization/);
     assert.equal(
       figures.includes('field-proof'),
@@ -554,8 +617,15 @@ test('marine route presents one job-first product set with final product packsho
     assert.match(card, new RegExp(`src="\\.\\.\\/${approved.image.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
     assert.match(card, new RegExp(`alt="${`${approved.name} marine product jug`.replaceAll('&', '&amp;').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
     assert.doesNotMatch(card, new RegExp(approved.artwork_source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.equal((card.match(/class="btn /g) || []).length, 1, `${approved.name}: one product CTA, no document CTA`);
-    assert.match(card, />See sizes &amp; pricing</);
+    assert.equal((card.match(/class="btn /g) || []).length, 1, `${approved.name}: one secondary product-details CTA`);
+    assert.match(card, new RegExp(`data-commerce-action="${approved.base_product}"`));
+    assert.match(card, /data-commerce-size="button"/);
+    assert.match(card, /data-commerce-market="marine"/);
+    assert.ok(
+      card.indexOf("data-commerce-action=") < card.indexOf("Product details"),
+      `${approved.name}: direct purchase must precede product details`,
+    );
+    assert.doesNotMatch(card, /See sizes &amp; pricing/);
     assert.match(card, /data-marine-jobs="[^"]+"/);
     assert.match(card, new RegExp(`href="\\.\\.\\/products\\/${approved.base_product}\\?market=marine"`));
     const escapedName = approved.name.replaceAll('&', '&amp;');
@@ -566,6 +636,9 @@ test('marine route presents one job-first product set with final product packsho
 test('marine field-image descriptions match the visible task and surface', () => {
   const html = read('industries/marine.html');
 
+  assert.equal((html.match(/data-before-after/g) || []).length, 1);
+  assert.doesNotMatch(html, /data-featured-proof=/);
+  assert.doesNotMatch(html, /img\/industries\/tasks\/marine-01\.webp/);
   assert.match(html, /Technician washing the hull of a large center-console vessel on a service pad/);
   assert.match(html, /Technician cleaning the stern and outboard area of a large center-console vessel/);
   assert.match(html, /Water beading on the cleaned white hull surface after washing/);
@@ -869,7 +942,7 @@ test('P2 industries publish conversion-led, registry-driven controlled-trial bri
   );
   assert.doesNotMatch(
     `${marineBrief}\n${marineGallery}`,
-    /Yellow Fin|43[- ]foot|customer|client|endorse|before.?after|\$\d|\b\d+%|food[- ]safe|food[- ]contact|antimicrobial|disinfect|saniti[sz]|kills?|non[- ]toxic|non[- ]corrosive|environmentally safe|eco[- ]friendly|EPA[- ]registered|Coast Guard approved|regulatory approval|legal discharge/i,
+    /Yellow Fin|43[- ]foot|customer|client|endorse|\$\d|\b\d+%|food[- ]safe|food[- ]contact|antimicrobial|disinfect|saniti[sz]|kills?|non[- ]toxic|non[- ]corrosive|environmentally safe|eco[- ]friendly|EPA[- ]registered|Coast Guard approved|regulatory approval|legal discharge/i,
   );
 });
 

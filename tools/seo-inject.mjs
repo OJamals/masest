@@ -37,7 +37,7 @@ import {
   documentType,
 } from "./public-document-policy.mjs";
 import { organizationJsonLd } from "./company-identity.mjs";
-import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
+import { COMPONENT_VERSION, MAIN_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const CATALOG_SEED = JSON.parse(readFileSync(new URL("../data/catalog.seed.json", import.meta.url), "utf8"));
 const GENERATED_PRODUCT_FILES = new Set(
@@ -609,6 +609,7 @@ async function processPage(file, meta, isPrivate = false) {
   let html = await readFile(file, "utf8");
   const before = html;
   html = html.replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`);
+  html = html.replace(/(js\/main\.js)\?v=[^"']+/g, `$1?v=${MAIN_VERSION}`);
   html = html.replace(
     /css\/components\.css(?:\?v=[^"']+)?/g,
     `css/components.css?v=${COMPONENT_VERSION}`,
@@ -638,6 +639,7 @@ async function processReleaseOnlyPage(file) {
   const before = await readFile(file, "utf8");
   const html = before
     .replace(/css\/style\.css\?v=[^"']+/g, `css/style.css?v=${STYLE_VERSION}`)
+    .replace(/(js\/main\.js)\?v=[^"']+/g, `$1?v=${MAIN_VERSION}`)
     .replace(
       /css\/components\.css(?:\?v=[^"']+)?/g,
       `css/components.css?v=${COMPONENT_VERSION}`,
@@ -941,7 +943,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   </section>
   ${contentPageMount(`products/${id}`)}
 </main>
-<script type="module" src="../js/main.js?v=20260908d"></script>
+<script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
 <script type="module" src="../js/reviews.js?v=20260711w"></script>
 <script src="../js/track.js" defer></script>
 </body>
@@ -1177,7 +1179,7 @@ ${jsonLd(serviceCategorySchema(category, items))}
     </div>
   </section>
 </main>
-<script type="module" src="../js/main.js?v=20260908d"></script>
+<script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

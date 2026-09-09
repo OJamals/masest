@@ -44,11 +44,15 @@ test("global navigation groups proof and industries as use cases", () => {
   assert.doesNotMatch(navBlock, /Field Results/);
 });
 
-test("product cards use one detail action", () => {
+test("industry product cards lead with direct purchase before product details", () => {
   const cardBlock = commerceUi.match(/function productCard[\s\S]*?const commerceState/);
 
   assert.ok(cardBlock, "expected productCard block");
-  assert.match(cardBlock[0], /See how it works/);
+  assert.match(cardBlock[0], /Product details/);
+  assert.ok(
+    cardBlock[0].indexOf('data-commerce-action="${id}"') < cardBlock[0].indexOf('Product details'),
+    "direct purchase should precede the secondary product-details link",
+  );
   assert.doesNotMatch(cardBlock[0], /contact\?product/);
   assert.doesNotMatch(cardBlock[0], /Request a Quote/);
 });

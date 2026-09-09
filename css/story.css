@@ -575,13 +575,6 @@
   white-space: nowrap;
 }
 
-.story-object__method {
-  margin-top: 3px;
-  color: var(--story-muted);
-  font-size: .52rem;
-  line-height: 1.25;
-}
-
 .story-object__product {
   display: flex;
   min-width: 0;
@@ -1174,10 +1167,6 @@
   .story-object__identity b,
   .story-object__product b {
     font-size: .64rem;
-  }
-
-  .story-object__method {
-    font-size: .48rem;
   }
 
   .story-object__product img {

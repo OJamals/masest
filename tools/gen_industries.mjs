@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { proofCardHtml } from "../js/proof-records.js";
 import { organizationJsonLd } from "./company-identity.mjs";
-import { COMPONENT_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
+import { COMPONENT_VERSION, MAIN_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(HERE, "..", "industries");
@@ -84,7 +84,7 @@ const TASK_GALLERY = {
     ["Tethered cleaning drone treating algae on an inaccessible steep residential roof", "Steep-roof treatment from soak to clean"],
   ],
   education: [
-    ["Cleaned campus stair and masonry walkway during controlled dry-down", "Campus stair wash completed for dry-down"],
+    ["Technician cleaning a commercial campus glass facade with a hand brush", "", "education-source-glass-202609.webp"],
     ["School hydronic heat exchanger connected to a contained recirculation cleaning cart", "Hydronic heat exchanger on a closed-loop clean"],
     ["Walk-behind auto-scrubber recovering wet grime and scuffs from an empty school gym floor", "School gym floor scrub and recovery", "schools-universities-01.webp"],
     ["Connected low-pressure rinse cleaning an isolated school air-handler coil over recovery", "School air-handler coil cleaning", "schools-universities-02.webp"],
@@ -135,8 +135,7 @@ const TASK_GALLERY = {
     ["Manufacturer-approved reusable filter elements shown at wet soak, gentle rinse, and clean air-dry stages", "Reusable industrial filter cleaning sequence"],
   ],
   marine: [
-    ["Boat hull and waterline being washed on a contained boatyard service pad", "Hull and waterline wash on a contained pad"],
-    ["Marine technician removing oily residue from a yacht bilge with absorbent recovery", "Bilge degreasing in progress"],
+    ["Marine technician removing oily residue from a yacht bilge with absorbent recovery", "Bilge degreasing in progress", "marine-02.webp"],
     ["Treated oxidation and waterline film being rinsed from an aluminum workboat on a contained pad", "Aluminum workboat after the cleaner had time to work", "marine-marinas-boatyards-01.webp"],
     ["Outboard service components moving from oily residue to a clean dry finish", "Marine service parts from soak to clean", "marine-marinas-boatyards-02.webp"],
   ],
@@ -183,6 +182,44 @@ const TASK_GALLERY = {
     ["Connected surface cleaner moving from wet pallet grime to a clean loading-dock lane", "Loading-dock cleaning with recovery"],
     ["Grease and grime being rinsed from a protected electric forklift in a recovery wash bay", "Forklift maintenance-bay cleaning"],
   ],
+};
+
+const BEFORE_AFTER_GALLERY = {
+  education: {
+    before: "/img/before-after/education-stairs-before-202609.webp",
+    after: "/img/before-after/education-stairs-after-202609.webp",
+    beforeAlt: "Campus concrete stairs before cleaning with moss, algae, and grime",
+    afterAlt: "Same campus concrete stairs after cleaning with the buildup removed",
+    rangeLabel: "Drag to compare campus stairs before and after cleaning",
+  },
+  "restaurants-commercial-kitchens": {
+    before: "/img/before-after/restaurant-concrete-floor-before-202609.webp",
+    after: "/img/before-after/restaurant-concrete-floor-after-202609.webp",
+    beforeAlt: "Restaurant concrete floor before cleaning with tracked grease, grime, and dark spots",
+    afterAlt: "Same restaurant concrete floor after cleaning with tracked buildup removed",
+    rangeLabel: "Drag to compare restaurant concrete before and after cleaning",
+  },
+  "breweries-distilleries-wineries": {
+    before: "/img/before-after/brewery-tank-before-202609.webp",
+    after: "/img/before-after/brewery-tank-after-202609.webp",
+    beforeAlt: "Stainless brewery tank interior before cleaning with dark residue and runoff streaks",
+    afterAlt: "Same stainless brewery tank interior after cleaning with the residue removed",
+    rangeLabel: "Drag to compare brewery tank before and after cleaning",
+  },
+  "hotels-property-management": {
+    before: "/img/before-after/property-pillar-before-202609.webp",
+    after: "/img/before-after/property-pillar-after-202609.webp",
+    beforeAlt: "Painted property pillar before cleaning with algae and mildew staining at the base",
+    afterAlt: "Same painted property pillar after cleaning with the staining removed",
+    rangeLabel: "Drag to compare painted property pillar before and after cleaning",
+  },
+  marine: {
+    before: "/img/before-after/marine-intake-before-202609.webp",
+    after: "/img/before-after/marine-intake-after-202609.webp",
+    beforeAlt: "Perforated marine intake grate before cleaning with heavy biological buildup",
+    afterAlt: "Same perforated marine intake grate after cleaning with the openings cleared",
+    rangeLabel: "Drag to compare marine intake grate before and after cleaning",
+  },
 };
 
 // Generated sample scenes normally belong to the root industry catalog.
@@ -394,7 +431,10 @@ function labelVariantCard(key) {
       ? `<p class="label-card-note"><strong>Start here for:</strong> ${htmlText(variant.jobFocus)}.</p>`
       : `<p class="label-card-note">See product details for directions, mixing, and surface guidance.</p>`;
   const productQuery = variant.jobs?.length ? "?market=marine" : "";
-  const productAction = `<a class="btn btn-primary" href="../products/${variant.productHref}${productQuery}">${variant.jobs?.length ? "See sizes &amp; pricing" : "See product details"}</a>`;
+  const productAction = variant.jobs?.length
+    ? `<span class="commerce-slot" data-commerce-action="${variant.productHref}" data-commerce-size="button" data-commerce-market="marine"></span>
+          <a class="btn btn-ink btn-sm" href="../products/${variant.productHref}${productQuery}">Product details</a>`
+    : `<a class="btn btn-primary" href="../products/${variant.productHref}${productQuery}">See product details</a>`;
   const imagePath = variant.image.includes("/") ? `../${variant.image}` : `../img/products/${variant.image}`;
   const imageAlt = variant.jobs?.length
     ? `${variant.name} marine product jug`
@@ -447,7 +487,7 @@ function industryLabelVariantsBlock(ind) {
       <div class="section-head">
         <span class="eyebrow">${marine ? "VertKleen marine line" : "Labels for your work"}</span>
         <h2 class="headline">${marine ? "Pick the right bottle for the job." : "Use the label made for this job."}</h2>
-        <p class="subhead">${marine ? "Eight marine products. Choose the job, compare good starting points, then see sizes and pricing." : "Choose the label for the job, then open the product page for details, pricing, and help."}</p>
+        <p class="subhead">${marine ? "Eight marine products. Choose the job, then buy an available size directly." : "Choose the label for the job, then open the product page for details, pricing, and help."}</p>
       </div>
 ${marineProductSelectorBlock(ind)}      <div class="prod-grid prod-grid-rec">
       ${cards}
@@ -494,6 +534,7 @@ function industryDetailBlock(ind) {
 }
 
 function featuredProofBlock(ind) {
+  if (ind.slug === "marine") return "";
   const application = INDUSTRY_APPLICATIONS_BY_SLUG.get(ind.slug);
   const proofSlug = application?.featured_proof_slug;
   if (!proofSlug) return "";
@@ -579,17 +620,34 @@ function imageGalleryBlock(ind) {
   if (!evidence) throw new Error(`${ind.slug}: missing field evidence registry`);
 
   const tasks = TASK_GALLERY[ind.slug];
-  const taskFigs = (tasks || []).map(([alt, caption, filename], index) => `
+  const taskFigs = (tasks || []).map(([alt, , filename], index) => `
         <figure class="ind-shot ind-shot-wide" data-evidence-kind="generated">
           <img src="../img/industries/tasks/${filename || `${ind.slug}-${String(index + 1).padStart(2, "0")}.webp`}" alt="${alt.replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="1200" height="750">
-          <figcaption><span class="ind-media-kind">Cleaning setup</span>${caption}</figcaption>
         </figure>`).join("");
+
+  const comparison = BEFORE_AFTER_GALLERY[ind.slug];
+  let comparisonFig = "";
+  if (comparison) {
+    const before = SITE_IMAGE_BY_PATH.get(comparison.before);
+    const after = SITE_IMAGE_BY_PATH.get(comparison.after);
+    if (!before || !after) throw new Error(`${ind.slug}: incomplete before/after image registry`);
+    comparisonFig = `
+        <figure class="ind-shot ind-shot-wide" data-evidence-kind="generated" id="before-after-comparison" data-before-after>
+          <div class="ba" data-ba>
+            <div class="ba-after"><img src="..${after.public_url}" alt="${htmlAttr(comparison.afterAlt)}" loading="lazy" decoding="async" width="${after.width}" height="${after.height}"></div>
+            <div class="ba-before"><img src="..${before.public_url}" alt="${htmlAttr(comparison.beforeAlt)}" loading="lazy" decoding="async" width="${before.width}" height="${before.height}"></div>
+            <input class="ba-range" name="${htmlAttr(ind.slug)}_comparison" type="range" min="0" max="100" value="50" aria-label="${htmlAttr(comparison.rangeLabel)}">
+            <span class="ba-handle" aria-hidden="true"></span>
+            <span class="ba-tag ba-tag-before">Before</span>
+            <span class="ba-tag ba-tag-after">After</span>
+          </div>
+        </figure>`;
+  }
 
   const sample = SAMPLE_GALLERY[ind.slug];
   const sampleFig = sample ? `
         <figure class="ind-shot ind-shot-wide" data-evidence-kind="generated">
           <img src="../img/industries/samples/${ind.slug}.webp" alt="${sample[0].replace(/"/g, "&quot;")}" loading="lazy" decoding="async" width="840" height="520">
-          <figcaption><span class="ind-media-kind">Cleaning setup</span>${sample[1]}</figcaption>
         </figure>` : "";
 
   const shots = FIELD_GALLERY_SLUGS.has(ind.slug)
@@ -619,7 +677,7 @@ function imageGalleryBlock(ind) {
           <figcaption><span class="ind-media-kind">${fieldLabel}</span>${alt}</figcaption>
         </figure>`;
   }).join("");
-  const figs = `${taskFigs}${sampleFig}${fieldFigs}`;
+  const figs = `${comparisonFig}${taskFigs}${sampleFig}${fieldFigs}`;
   if (!figs) return "";
 
   return `
@@ -706,7 +764,7 @@ ${recommendedProductsBlock(ind)}${industryLabelVariantsBlock(ind)}
 ${ctaBlock(ind)}
 </main>
 
-<script type="module" src="../js/main.js?v=20260908d"></script>
+<script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
 </body>
 </html>
 `;
