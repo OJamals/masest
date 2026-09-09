@@ -37,7 +37,9 @@ test("marine catalog derives eight cards from owner-approved metadata", () => {
     assert.ok(CATALOG_ORDER.includes(entry.id), `${entry.name}: reuse published base product`);
     assert.match(entry.sku, /^VK-/);
     assert.equal(entry.market, "marine");
-    assert.equal(entry.href, `products/${entry.id}?market=marine`);
+    // SQ-17: root-absolute — a relative "products/<id>" resolved to
+    // "/products/products/<id>" from anywhere but /products itself.
+    assert.equal(entry.href, `/products/${entry.id}?market=marine`);
     assert.match(entry.image, /^\/img\/products\/vertkleen-.+-marine-studio\.webp$/);
     assert.ok(entry.summary.length > 20);
   }
@@ -98,9 +100,13 @@ test("marine catalog cards use alias copy and route while keeping base commerce 
 
   assert.match(html, /data-id="descaler"/);
   assert.match(html, /data-market="marine"/);
-  assert.match(html, /href="products\/descaler\?market=marine"/);
+  assert.match(html, /href="\/products\/descaler\?market=marine"/);
   assert.match(html, />SeaVap Coil Kleener<\/b>/);
-  assert.match(html, /Marine HVAC coils, heat exchangers, and water-side scale/);
+  // SQ-13: the description sentence is dropped from the card — it was one of
+  // the two blocks (with FITS/RESULTS) that made every row's height depend on
+  // how its own copy happened to wrap. entry.summary itself is still real,
+  // owner-approved data (asserted elsewhere in this file); it just renders on
+  // the detail page rather than the card now.
   assert.match(html, /src="\/img\/products\/vertkleen-seavap-coil-kleener-v2-marine-studio\.webp"/);
   assert.match(html, /alt="SeaVap Coil Kleener marine product jug"/);
   assert.match(html, /data-commerce-action="descaler"/);

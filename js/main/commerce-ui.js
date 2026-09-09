@@ -370,7 +370,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on", market =
       const packLabel = optLabel(firstVariant);
       const readyLabel = `Add ${displayName}, ${packLabel}, to cart`;
       const sizePicker = row.variants.length > 1
-        ? `<select class="commerce-vol" aria-label="Volume for ${htmlEscape(displayName)}">${unitOpts}</select>`
+        ? `<select class="commerce-vol" name="volume" aria-label="Volume for ${htmlEscape(displayName)}">${unitOpts}</select>`
         : "";
       return `<span class="commerce-buy shop-card-quick-buy" data-commerce-buy="${htmlEscape(id)}">`
         + sizePicker

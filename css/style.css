@@ -3719,11 +3719,17 @@ fully clickable cards) ---- */
 /* Clamped so every card in a row breaks at the same point regardless of how its
    copy wraps — the strict grid this card now follows (image / eyebrow / title /
    price / one action) only holds if no block can grow past its own line budget. */
+/* A single-line clamp doesn't need the -webkit-box multi-line mechanism (that's
+   -webkit-line-clamp:2 below, on the title) — and using it here left a real
+   defect: the clamped-off second line box is still generated internally (only
+   hidden, not removed), so a generic sibling-gap measurement that reads the
+   text node's own line boxes finds the phantom line, not the visible one, and
+   reports a bogus negative gap to whatever sits below it. Plain ellipsis
+   truncation has no second box to find. */
 .shop-card-type {
-  display: -webkit-box;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: .02em;
