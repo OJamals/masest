@@ -180,6 +180,57 @@ white-alpha steps, ~5 teal-alpha steps and ~5 near-duplicate light grays).
 ≤ 6 `border-color`. Max surface depth 3 on every page. Measured on rendered DOM, not
 counted in source — source counts miss the literals, which are the actual problem.
 
+**That acceptance was wrong too, and is replaced. 2026-09-09.** "≤ 3 distinct box-shadow
+values" was set before looking at the declarations. Counting values treats four unrelated
+jobs as one, and collapsing them would destroy real distinctions:
+
+| job | declarations | distinct |
+|---|---:|---:|
+| elevation on a light surface | 68 tokenised + 43 literal | 40 |
+| focus / selection rings | 26 | 21 |
+| elevation on a **dark** surface | 14 | 12 |
+| inset bevel highlights | 5 | 5 |
+| translucent borders | 109 literal (of 473 total) | 65 |
+
+A ring is not a shadow with different numbers — it is a hard spread with no blur, and it
+has to stay legible exactly where a soft drop shadow disappears. A shadow cast on a dark
+surface cannot use the teal-tinted `--shadow-*` ramp, because a teal tint is invisible
+against near-black. Three values cannot serve all four jobs.
+
+**The real disease is the one the type, spacing and radius scales already had: a
+continuous ramp with no steps.** 27 accent borders are spelled with 17 different alpha
+values, 23 ink hairlines with 7, 16 on-dark borders with 13. Nobody chose those numbers.
+
+The steps are measured, not invented. Each family was split by whether the declaration
+sits in a resting rule or in a `:hover` / `:focus-visible` / selected rule — and the split
+is clean, which is what makes the scale semantic rather than arbitrary:
+
+| family | resting | emphasis | selected |
+|---|---|---|---|
+| accent border | .14–.32 (10) → **.22** | .18–.42 (14) → **.36** | .46–.62 (3) → **.52** |
+| ink hairline | .07–.09 (9) → **.08** · .10–.16 (14) → **.12** | none | none |
+| on-dark border | .10–.22 (12) → **.18** | .30–.55 (4) → **.42** | none |
+
+14 new tokens replace 143 literal declarations: seven `--line-*` steps, three `--ring-*`,
+three `--shadow-dark-*`, and `--highlight-top`. **Every one is used at least three times** —
+a token used once is a rename, not a token — so the genuine one-offs stay literal: the
+hazard-diamond colours, the data-visualisation series, the amber and mint rings, and the
+two dim inset highlights.
+
+Elevation literals snap onto the **existing** `--shadow-xs/sm/md/lg` by nearest blur
+radius (2 / 12 / 42 / 74), not by threshold buckets. Bucketing pushed a 24px blur onto the
+42px step — a visible thickening — when the 12px step is nearer. Same reasoning as the
+breakpoint canon. Two 1px rings keep their literals rather than being widened to
+`--ring-tight`'s 2px.
+
+Tooling: `tools/surface-token-migrate.mjs`. `rgba()` used for **backgrounds or text** is
+deliberately untouched — a translucent fill is a fifth job and needs its own pass.
+
+**Revised acceptance.** Zero literal `box-shadow` outside the token definitions, except
+declared one-offs. Zero translucent `border-color` literals in the accent / ink / on-dark
+families. Max surface depth 3 on every page. Rendered `border-radius` ≤ 6 including `50%`
+and `0`.
+
 ### SQ-05 — Fold 65 hard-coded hex colours into tokens; remove 67 `!important` · MEDIUM
 
 **Problem.** The token layer is good — the semantic status ramp and the `--rating-star`
