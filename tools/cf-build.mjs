@@ -10,6 +10,7 @@ import { dirname, extname, join } from 'node:path';
 import { canonicalPublicImageUrl, SITE_MEDIA_BASE, rewriteCmsImageReferences } from '../js/image-url.js';
 import { parseMarineCatalog } from '../js/main/marine-catalog.js';
 import { renderIndustryRedirects } from './build-industry-pages.mjs';
+import { COMPONENT_VERSION } from './static-release.mjs';
 import { validatePublicDocumentReview } from './public-document-policy.mjs';
 
 const OUT = 'dist';
@@ -41,10 +42,24 @@ const cmsMediaBase = configuredMediaBase || SITE_MEDIA_BASE;
 const rewritableExtensions = new Set(['.css', '.html', '.js', '.json', '.xml']);
 const LOCAL_SITE_IMAGE_PATTERN = /https?:\/\/(?:www\.)?masest\.co\/img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)|(?<![a-z0-9_./-])(?:(?:\.\.\/)+|\.\/|\/)?img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)/gi;
 const CRITICAL_FONT_PRELOAD = '<link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/satoshi/satoshi-01.woff2">';
+/* Phosphor is declared font-display: block, so every icon on the page is
+   invisible until it arrives -- and the browser cannot even discover it until
+   vendor/phosphor/style.css has been fetched and parsed, one hop behind the
+   render-blocking stylesheet chain. Satoshi already gets this treatment; the
+   icon font gates just as much of the first paint and did not.
+   The href must carry the same token as the @font-face src in
+   vendor/phosphor/style.css, or the preload misses and fetches a second copy. */
+const ICON_FONT_PRELOAD = `<link rel="preload" as="font" type="font/woff2" crossorigin href="/vendor/phosphor/Phosphor.woff2?v=${COMPONENT_VERSION}">`;
 
 function ensureCriticalFontPreload(html) {
-  if (/rel=["']preload["'][^>]+satoshi-01\.woff2/i.test(html)) return html;
-  return html.replace(/<head(\s[^>]*)?>/i, (head) => `${head}\n${CRITICAL_FONT_PRELOAD}`);
+  let next = html;
+  if (!/rel=["']preload["'][^>]+satoshi-01\.woff2/i.test(next)) {
+    next = next.replace(/<head(\s[^>]*)?>/i, (head) => `${head}\n${CRITICAL_FONT_PRELOAD}`);
+  }
+  if (!/rel=["']preload["'][^>]+Phosphor\.woff2/i.test(next)) {
+    next = next.replace(/<head(\s[^>]*)?>/i, (head) => `${head}\n${ICON_FONT_PRELOAD}`);
+  }
+  return next;
 }
 
 function unresolvedLocalImageReferences(content) {

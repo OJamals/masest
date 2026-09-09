@@ -1,7 +1,7 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
 import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260909b";
-import { smoothPref } from "./engagement.js";
+import { smoothPref } from "./engagement.js?v=20260909b";
 import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260909b";
 import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260909b";
 
@@ -851,6 +851,7 @@ export function initShop() {
     history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
   };
 
+  let lastMarkup = null;
   const apply = (options = {}) => {
     if (options?.updateUrl !== false) syncUrl();
     const ids = visibleIds();
@@ -858,11 +859,21 @@ export function initShop() {
     const collapsed = canCollapse && !state.expanded;
     const marineView = state.group === MARINE_CATALOG_GROUP.key;
     const marinePending = marineView && !state.marineLoaded;
-    grid.innerHTML = ids.map((id, index) => catalogCard(
+    /* apply() runs at least three times per page load -- once immediately, once
+       when the catalog resolves, once when the marine catalog does -- and it
+       used to assign grid.innerHTML every time. That discards and rebuilds
+       every card, so each <img> node is created afresh and refetched: measured
+       at 2-3 requests per product image on /products. The markup is frequently
+       identical between runs, so compare before writing. */
+    const markup = ids.map((id, index) => catalogCard(
       id,
       index < 2,
       marineView ? state.marineById.get(id) : null,
     )).join("");
+    if (markup !== lastMarkup) {
+      grid.innerHTML = markup;
+      lastMarkup = markup;
+    }
     grid.classList.toggle("is-collapsed", collapsed);
     if (moreButton) moreButton.hidden = !collapsed;
     if (moreCount) moreCount.textContent = String(Math.max(0, ids.length - 6));
@@ -1007,14 +1018,51 @@ export function initShop() {
   };
   window.addEventListener("popstate", restoreFromUrl);
 
+  /* Refresh only the parts of each card that depend on catalog data, leaving
+     the card element -- and crucially its <img> -- in place. A full apply()
+     here assigns grid.innerHTML, which destroys every image node while its
+     first fetch is still in flight and starts a second one. Falls back to a
+     full render whenever the visible set itself could have changed, since then
+     the cards really are different cards. */
+  const patchCatalogDependentParts = () => {
+    const marineView = state.group === MARINE_CATALOG_GROUP.key;
+    if (marineView) return false;
+    const cards = [...grid.querySelectorAll(".shop-card[data-id]")];
+    const rendered = cards.map((card) => card.dataset.id);
+    const expected = visibleIds();
+    if (rendered.length !== expected.length) return false;
+    if (rendered.some((id, i) => id !== expected[i])) return false;
+    for (const card of cards) {
+      const id = card.dataset.id;
+      const buybar = card.querySelector(".shop-card-buybar");
+      if (!buybar) return false;
+      const copy = PRODUCT_CATALOG_COPY[id] || {};
+      const priced = QUOTE_FIRST_IDS.includes(id) ? quoteActionHTML(id) : bulkPriceHTML(id);
+      const decision = CATALOG_ORDER.includes(id) ? catalogDecisionHTML(id, copy, null) : "";
+      buybar.innerHTML = `${priced}\n          ${decision}`;
+    }
+    refreshCommerceActions(grid);
+    /* apply() compares against lastMarkup to decide whether to write; the DOM
+       no longer matches it, so clear it rather than let a later no-op compare
+       skip a render that is genuinely needed. */
+    lastMarkup = null;
+    return true;
+  };
+
   syncChips();
   apply();
-  loadCommerceCatalog().then(apply);
+  loadCommerceCatalog().then(() => {
+    if (!patchCatalogDependentParts()) apply();
+  });
   loadMarineCatalog().then((entries) => {
     state.marineEntries = entries;
     state.marineById = new Map(entries.map((entry) => [entry.id, entry]));
     state.marineLoaded = true;
-    apply({ updateUrl: false });
+    /* Marine data only changes what is rendered while the marine group is the
+       active view. Re-rendering unconditionally rebuilt the whole grid for
+       every other view as well. The markup comparison in apply() would catch
+       it, but not running is cheaper than rendering to discover it is a no-op. */
+    if (state.group === MARINE_CATALOG_GROUP.key) apply({ updateUrl: false });
   });
 
   if (initialHashGroup) document.getElementById("catalog")?.scrollIntoView({ behavior: smoothPref(), block: "start" });

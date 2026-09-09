@@ -12,6 +12,9 @@ test("smoothPref is exported by engagement.js and imported by commerce-ui.js", a
 
   assert.match(engagement, /export function smoothPref\(/);
   if (/smoothPref\(/.test(commerce.replace(/import[^;]+;/g, ""))) {
-    assert.match(commerce, /import\s*\{[^}]*\bsmoothPref\b[^}]*\}\s*from\s*"\.\/engagement\.js"/);
+    // The cache-busting ?v= token is part of the specifier but not part of what
+    // this guards: the point is that smoothPref is imported rather than
+    // module-private. Accept the specifier with or without it.
+    assert.match(commerce, /import\s*\{[^}]*\bsmoothPref\b[^}]*\}\s*from\s*"\.\/engagement\.js(\?v=[^"]*)?"/);
   }
 });

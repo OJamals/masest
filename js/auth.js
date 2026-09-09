@@ -130,7 +130,22 @@ export async function logout() {
 }
 
 /* Current account snapshot (profile + company + approval status), or null if logged out. */
+/* Single-flight, not a cache. Two chrome-loaded features -- account-nav and
+   customer-chat -- each import this module and call me() independently during
+   boot, which made /api/account/me two concurrent requests on every page load.
+   Concurrent callers now share one in-flight promise. It is released as soon as
+   that promise settles, so a later call still re-fetches: callers after a
+   profile or company mutation must see fresh data, which a durable cache would
+   deny them. Mirrors loadCommerceCatalog()'s promise reuse in commerce-ui.js. */
+let inFlightMe = null;
+
 export async function me() {
+  if (inFlightMe) return inFlightMe;
+  inFlightMe = meUncached().finally(() => { inFlightMe = null; });
+  return inFlightMe;
+}
+
+async function meUncached() {
   const token = await getToken();
   if (!token) return null;
   try {
