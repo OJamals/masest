@@ -5709,10 +5709,14 @@ body .page-hero .product-shot {
 }
 
 .shop-card-type {
+  /* text-wrap: balance implies text-wrap-mode: wrap, which silently undid the
+     base rule's white-space: nowrap (both lower to the same underlying
+     property in current browsers) and let this "1 line" eyebrow wrap to two —
+     exactly the per-row misalignment this clamp exists to prevent. Balance
+     was never doing anything for single-line text anyway. */
   min-height: 1.3em;
   letter-spacing: .02em;
   line-height: 1.18;
-  text-wrap: balance;
 }
 
 .shop-card-name {
@@ -5777,7 +5781,7 @@ body .page-hero .product-shot {
 .shop-card-savings[hidden] { display: none; }
 
 .shop-card-buybar {
-  margin: 0 var(--s5) var(--s4);
+  margin: 0 var(--s5) var(--s3);
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--s3);
