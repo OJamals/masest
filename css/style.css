@@ -4724,8 +4724,14 @@ body.checkout-flow-page::before { display: none; }
   .checkout-steps b span { width: 22px; height: 22px; font-size: var(--fs-caption); }
 }
 
-/* Commerce refinement: keep catalog and product decisions in scan range. */
+/* Commerce refinement: keep catalog and product decisions in scan range.
+   SQ-15: the generic `section { padding: var(--space-section) 0 }` rhythm
+   (up to 116px top) is meant for section-to-section pacing further down the
+   page. This is the first thing under the nav — it doesn't need that much
+   clearance, and at 1,200px of hero before the first product it was most of
+   what pushed the grid below the opening screen. */
 body .product-catalog-hero {
+  padding-top: clamp(24px, 3vw, 42px);
   padding-bottom: clamp(24px, 3vw, 42px);
 }
 
@@ -4739,7 +4745,7 @@ body.products-page .catalog-price-note {
 }
 
 body .shop-sec {
-  padding-top: clamp(32px, 5vw, 58px);
+  padding-top: clamp(20px, 2.4vw, 32px);
 }
 
 body .page-hero .hero-grid {
@@ -5232,7 +5238,7 @@ body .page-hero .product-shot {
 }
 
 #catalog .section-head {
-  margin-bottom: var(--s7);
+  margin-bottom: var(--s5);
 }
 
 .catalog-buying-details {
@@ -7273,7 +7279,12 @@ button.viz-segment {
   position: relative;
   isolation: isolate;
   display: block;
-  min-height: clamp(420px, 46vw, 560px);
+  /* SQ-15: this was the single largest contributor to the hero's height — at
+     560px it set the row height outright (the copy column never got that
+     tall), which meant trimming the copy alone could not have compressed the
+     hero at all. Bottles are positioned as percentages of this box, so they
+     scale down with it. */
+  min-height: clamp(240px, 26vw, 340px);
   overflow: visible;
   border: 0;
   padding: 0;
