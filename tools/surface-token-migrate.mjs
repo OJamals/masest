@@ -43,8 +43,19 @@
  *
  * NOT changed here: rgba() used for backgrounds or text (a translucent fill is a
  * different job again), gradient stops, and anything already routed through a
- * var(). Elevation literals snap onto the EXISTING --shadow-xs/sm/md/lg by blur
- * radius; this migration adds no new light-surface elevation steps.
+ * var().
+ *
+ * ELEVATION IS DELIBERATELY NOT MIGRATED. The first version of this tool snapped
+ * elevation literals onto --shadow-xs/sm/md/lg by nearest blur radius. A visual
+ * diff against the un-migrated stylesheets rejected it at 2.5M changed pixels:
+ * a border alpha varies in one dimension and collapses onto a scale cleanly, but
+ * a shadow varies in four -- offset, blur, spread and colour -- and matching on
+ * blur alone discards the other three. `0 24px 70px -54px` became --shadow-lg's
+ * -28px spread, turning a tight tucked shadow into a broad one; a subtle teal
+ * `0 8px 30px rgba(14,124,134,.10)` became the heavy two-layer --shadow-md.
+ * Elevation drift is real, but fixing it is a design decision per component, not
+ * a mechanical snap. The --shadow-dark-* tokens stay defined and are used by
+ * hand where a dark surface needs them.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -143,8 +154,12 @@ const BORDER_STEPS = {
 /* Colours that are near-duplicates of the accent and should collapse onto it.
  * rgb(0,115,119) is a second teal that drifted in; it is not a separate brand. */
 const ACCENT_RGB = new Set(["14,124,134", "0,115,119"]);
-const INK_RGB = new Set(["13,48,53", "0,0,0", "12,28,33", "15,23,42"]);
+/* Pure black is deliberately NOT in here. --line-ink is teal-tinted
+ * rgba(13,48,53,...); pure black is neutral. They are different colours doing
+ * different jobs, and folding one into the other tints whatever it outlines. */
+const INK_RGB = new Set(["13,48,53", "12,28,33", "15,23,42"]);
 const WHITE_RGB = new Set(["255,255,255"]);
+const NEUTRAL_RGB = new Set(["0,0,0", "255,255,255"]);
 
 function parseRgba(str) {
   const m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)\s*[,/]?\s*([\d.]+%?)?\s*\)$/i.exec(str.trim());
@@ -154,9 +169,15 @@ function parseRgba(str) {
   return { rgb: `${+m[1]},${+m[2]},${+m[3]}`, a };
 }
 
-function borderTokenFor(colour) {
+function borderTokenFor(colour, prop = "") {
   const p = parseRgba(colour);
   if (!p) return null;
+  /* An outline drawn in pure black or pure white on photographic media is
+   * neutral on purpose -- that is the whole point of it. Routing it through a
+   * tinted line token, or nudging its alpha up a scale step, casts colour onto
+   * the edge of every image. interface-feel-polish pins these literals for
+   * exactly this reason. */
+  if (/^outline/i.test(prop) && NEUTRAL_RGB.has(p.rgb)) return null;
   if (p.a >= 0.98) return null;                 // opaque: --line and friends already cover it
   let steps = null;
   if (ACCENT_RGB.has(p.rgb)) steps = BORDER_STEPS.accent;
@@ -176,7 +197,7 @@ function ringTokenFor(value) {
   /* A 1px ring is a hairline outline, not a compact focus ring; widening it to
    * --ring-tight's 2px is a visible change. Only two of those exist, which is
    * below the bar for a token of their own, so they keep their literal. */
-  if (spread === 1) return null;
+  if (spread === 1) return "KEEP";
   if (spread === 2) return "--ring-tight";
   return p.a >= 0.24 ? "--ring" : "--ring-soft";
 }
@@ -199,7 +220,9 @@ function shadowTokenFor(value) {
   return nearestStep(isDark ? DARK_ELEVATION : ELEVATION, b);
 }
 
-const BORDER_PROP = /\b(border(?:-(?:top|right|bottom|left))?(?:-color)?|outline(?:-color)?)\s*:\s*([^;{}]+)/gi;
+/* Physical and logical border properties both appear in this codebase; matching
+ * only the physical ones left a border-block declaration behind on the first run. */
+const BORDER_PROP = /\b(border(?:-(?:top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end))?(?:-color)?|outline(?:-color)?)\s*:\s*([^;{}]+)/gi;
 const SHADOW_PROP = /\bbox-shadow\s*:\s*([^;{}]+)/gi;
 const RGBA_RE = /rgba?\([^()]*\)/gi;
 
@@ -211,21 +234,22 @@ export function migrate(source) {
 
     let next = line.replace(SHADOW_PROP, (whole, value) => {
       const ring = ringTokenFor(value);
+      /* "KEEP" means this IS a ring but has no token of its own -- a 1px hairline.
+       * It must not fall through to the elevation matcher, which would read its
+       * zero blur as a tiny drop shadow and replace a crisp outline with a wash. */
+      if (ring === "KEEP") return whole;
       if (ring) {
         changes.push({ kind: "ring", from: value.trim(), to: ring });
         return `box-shadow: var(${ring})`;
       }
-      const tok = shadowTokenFor(value);
-      if (!tok) return whole;
-      changes.push({ kind: "shadow", from: value.trim(), to: tok });
-      return `box-shadow: var(${tok})`;
+      return whole;
     });
 
     next = next.replace(BORDER_PROP, (whole, prop, value) => {
       if (value.includes("var(--")) return whole;
       let touched = false;
       const replaced = value.replace(RGBA_RE, (colour) => {
-        const tok = borderTokenFor(colour);
+        const tok = borderTokenFor(colour, prop);
         if (!tok) return colour;
         touched = true;
         changes.push({ kind: "border", from: colour, to: tok });

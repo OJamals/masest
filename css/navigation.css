@@ -144,7 +144,7 @@
     grid-template-columns: 1fr 1fr;
     gap: var(--s2);
     padding: var(--s2);
-    border: 1px solid rgba(15, 23, 42, .12);
+    border: 1px solid var(--line-ink);
     border-radius: var(--r-pill);
     background: rgba(255, 255, 255, .94);
     box-shadow: 0 18px 44px rgba(16, 74, 80, .20);
