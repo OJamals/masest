@@ -128,8 +128,17 @@ test("marine route exposes all eight substantiated products with final packshots
   await expect(page.locator('[data-industry-label-variants="marine"]')).toContainText("Pick the right bottle for the job.");
   await expect(page.locator('a', { hasText: "Open marine label PDF" })).toHaveCount(0);
   const antimicrobialCard = page.locator('[data-label-variant="marine-purgo"]');
-  await expect(antimicrobialCard.getByRole("link", { name: "See sizes & pricing" })).toHaveCount(1);
-  await expect(antimicrobialCard.getByRole("link")).toHaveCount(1);
+  await expect(
+    antimicrobialCard.getByRole("combobox", { name: "Volume for Marine Antimicrobial" }),
+  ).toHaveCount(1);
+  await expect(
+    antimicrobialCard.getByRole("button", {
+      name: /^Add Marine Antimicrobial, .+ to cart$/,
+    }),
+  ).toHaveCount(1);
+  await expect(
+    antimicrobialCard.getByRole("link", { name: "Product details" }),
+  ).toHaveCount(1);
   for (const name of [
     "Scale Buster",
     "SeaVap Coil Kleener",
