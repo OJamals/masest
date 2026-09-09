@@ -9,7 +9,8 @@ test('newsletter signup writes canonical local consent', () => {
   const source = read('functions/api/newsletter.js');
   assert.match(source, /from\s+['"]\.\.\/_lib\/marketing-subscribers\.js['"]/);
   assert.match(source, /setMarketingPreference\(/);
-  assert.match(source, /source: properties\.source \|\| 'footer_newsletter'/);
+  assert.match(source, /source: 'newsletter_signup'/);
+  assert.doesNotMatch(source, /source: properties\.source/, 'caller metadata cannot establish consent provenance');
   assert.doesNotMatch(source, /klaviyo/i);
 });
 

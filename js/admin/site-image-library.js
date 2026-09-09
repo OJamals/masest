@@ -1,4 +1,4 @@
-import { canonicalContentAssetUrl, canonicalPublicImageUrl } from "../image-url.js?v=20260908d";
+import { canonicalContentAssetUrl, canonicalPublicImageUrl } from "../image-url.js?v=20260909a";
 
 export const SITE_IMAGE_MANIFEST_URL = "/data/content/site-images.json";
 const MAX_UPLOAD_EDGE = 2560;

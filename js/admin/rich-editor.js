@@ -1,4 +1,4 @@
-import { escapeHtml, renderMarkdown } from "../md.js?v=20260908d";
+import { escapeHtml, renderMarkdown } from "../md.js?v=20260909a";
 
 function decodeEntities(value) {
   return String(value || "")

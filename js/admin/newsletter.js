@@ -4,15 +4,15 @@
 // primitives ($, api, state, message, admSkeleton, admEmpty, badge) are injected;
 // esc/delegate/confirmDialog come from util.js. Recipients management is a sibling
 // module (./recipients.js) mounted into its own container in the same panel.
-import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260908d';
+import { esc, delegate, confirmDialog, restoreFocusOnClose } from '../util.js?v=20260909a';
 import {
   createRichTextEditor,
   referencePickerTemplate,
   refreshRichTextEditor,
   richEditorTemplate,
-} from './rich-editor.js?v=20260908d';
-import { renderNewsletterBody } from '../newsletter-render.js?v=20260908d';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260908d';
+} from './rich-editor.js?v=20260909a';
+import { renderNewsletterBody } from '../newsletter-render.js?v=20260909a';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260909a';
 
 const SECTIONS = [
   ['compose', 'Compose'],
@@ -25,7 +25,7 @@ export function recipientSourceLabel(value) {
   const source = String(value || '').trim().toLowerCase();
   if (!source) return '—';
   if (source.endsWith('_migration')) return 'Imported contact';
-  if (source === 'footer_newsletter') return 'Website signup';
+  if (source === 'footer_newsletter' || source === 'newsletter_signup') return 'Website signup';
   const words = source.replaceAll('_', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
@@ -207,6 +207,13 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
         <label class="adm-content-check"><input type="checkbox" id="nlAutoSend" name="newsletter_auto_send"${auto ? ' checked' : ''}> Automatically email the latest blog post to subscribers on publish</label>
         <p id="nlSettingsStatus" class="adm-status" role="status" aria-live="polite"></p>
       </div>
+      <div class="adm-card">
+        <h2>EmailOctopus companion</h2>
+        <p>Send additional campaigns from EmailOctopus using synced website subscribers and explicit account opt-ins. Imported contacts and default-on registrations are excluded.</p>
+        <p>Campaigns composed here continue through Amazon SES. Create and send EmailOctopus campaigns in its dashboard.</p>
+        <p id="nlEmailOctopusStatus" class="adm-status" role="status">Loading sync status…</p>
+        <a class="btn btn-ghost btn-sm" href="https://emailoctopus.com" target="_blank" rel="noopener noreferrer">Open EmailOctopus</a>
+      </div>
     `;
   }
 
@@ -235,7 +242,18 @@ export function createNewsletterTab({ $, api, state, message, admSkeleton, admEm
       loadRecipients();
     } else {
       body.innerHTML = banner + settingsTemplate();
+      void loadEmailOctopusStatus();
     }
+  }
+
+  async function loadEmailOctopusStatus() {
+    const output = $('nlEmailOctopusStatus');
+    if (!output) return;
+    try {
+      const status = await api('/api/admin/emailoctopus');
+      if (!status.checked_at) output.textContent = 'Setup pending. Create the account and connect its subscriber list before sending.';
+      else output.textContent = `Synced: ${status.synced} · Pending: ${status.pending} · Needs attention: ${status.dead} · Provider opt-outs: ${status.blocked}. Connection last checked: ${new Date(status.checked_at).toLocaleString()}.`;
+    } catch { output.textContent = 'Sync status unavailable. Verify the connection before sending a campaign.'; }
   }
 
   function recipientsTemplate() {

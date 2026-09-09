@@ -15,6 +15,13 @@ use Cloudflare only while they continue a buyer-initiated request and contain no
 promotion. Add promotional content or broad prospecting and the category must
 move to Amazon SES.
 
+EmailOctopus is an optional companion for explicitly opted-in subscribers. It
+mirrors eligible contacts and returns signed unsubscribe, bounce, complaint, and
+deletion events into canonical MASEST preferences. Campaigns are authored and sent
+in EmailOctopus; its API does not provide campaign creation or sending. Existing
+MASEST compose, nurture, and transactional routing retain their current providers.
+See [EmailOctopus setup and operations](emailoctopus-provider.md).
+
 ## Canonical modules
 
 - `functions/_lib/email-policy.js`: category to stream/provider/preference.
@@ -25,6 +32,11 @@ move to Amazon SES.
   management, contact mirroring, provider result normalization, and
   single-recipient enforcement.
 - `functions/_lib/marketing-subscribers.js`: canonical consent/audience writes.
+- `functions/_lib/emailoctopus.js`: create-only contact enrollment and withdrawal.
+- `workers/marketing-email/src/emailoctopus.js`: independent companion recovery
+  schedule and signed webhook ingress.
+- `supabase/schema-emailoctopus.sql`: durable consent mirror, leases, erasure,
+  negative-event deduplication, and aggregate staff status.
 - `functions/_lib/newsletter-delivery.js`: durable recipient ledger, leases,
   retries, suppression checks, and reconciliation.
 - `workers/marketing-email/`: sole SES credential owner; Queue consumer,

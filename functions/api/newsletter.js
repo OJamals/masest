@@ -44,7 +44,7 @@ export async function onRequestPost({ request, env }) {
   const r = await setMarketingPreference(env, {
     email,
     enabled: true,
-    source: properties.source || 'footer_newsletter',
+    source: 'newsletter_signup',
     tags: [properties.industry, properties.document].filter(Boolean),
   });
   if (!r.ok) return json(503, { error: r.error, retryable: r.retryable });

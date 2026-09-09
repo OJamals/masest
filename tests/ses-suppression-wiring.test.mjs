@@ -11,7 +11,9 @@ test('marketing worker owns six-hour SES suppression reconciliation', () => {
   assert.match(worker, /import \{ syncSesSuppressions \} from ['"]\.\.\/\.\.\/\.\.\/functions\/_lib\/ses-email\.js['"]/);
   assert.match(worker, /export async function runMarketingSchedule/);
   assert.match(worker, /controller\?\.cron === '0 \*\/6 \* \* \*'[\s\S]+await syncSuppressions\(env, createClient\(env\)\)/);
-  assert.match(worker, /async scheduled\(controller, env\) \{[\s\S]+await runMarketingSchedule\(controller, env\)/);
+  assert.match(worker, /runSes = runMarketingSchedule/);
+  assert.match(worker, /runSes\(controller, env\)/);
+  assert.match(worker, /async scheduled\(controller, env\) \{[\s\S]+await runMarketingProviders\(controller, env\)/);
 });
 
 test('Pages fanout endpoints leave SES suppression sync to the worker', () => {
