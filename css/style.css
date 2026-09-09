@@ -47,6 +47,12 @@ one family.
   --line-strong: #c9ccd1;     /* stronger input border, matches .field input */
   --bg: #fafbfc;
   --surface: #ffffff;
+  /* Same value as --surface today, deliberately a separate token: this is the
+     colour of text, icons and borders painted ON a solid --accent or --ink
+     surface, not the colour of a surface itself. The two will diverge the first
+     time a button darkens or the page ground stops being white.
+     Contrast: 4.95:1 on --accent, 17.93:1 on --ink -- both pass AA. */
+  --on-accent: #ffffff;
   --surface-soft: #f7f9fa;
   --surface-2: var(--panel); /* alias: CRM/admin component layer */
   --panel: #f1f3f4;
@@ -222,7 +228,7 @@ a { color: inherit; text-decoration: none; }
 ul { list-style: none; }
 i.ph,
 i.ph-fill { line-height: 1; }
-::selection { background: var(--accent); color: #fff; }
+::selection { background: var(--accent); color:var(--on-accent); }
 
 /* Consistent,
 visible keyboard focus across the system */
@@ -323,13 +329,13 @@ one line) ---------- */
 .nav.over-dark .nav-logo { color: var(--ink-inverse); }
 .nav.over-dark .nav-links { color: var(--ink-inverse); }
 .nav.over-dark .nav-links a:hover,
-.nav.over-dark .nav-links a.active { color: #fff; }
+.nav.over-dark .nav-links a.active { color:var(--on-accent); }
 .nav.over-dark .nav-signin,
 .nav.over-dark .nav-account .nav-signin {
-  color: #fff;
+  color:var(--on-accent);
   border-color: rgba(255,255,255,.38);
 }
-.nav.over-dark .nav-cta { background: #fff; color: var(--ink); }
+.nav.over-dark .nav-cta { background:var(--surface); color: var(--ink); }
 .nav-actions {
   display: flex;
   align-items: center;
@@ -378,12 +384,12 @@ one line) ---------- */
   place-items: center;
   border-radius: var(--r-pill);
   background: var(--accent);
-  color: #fff;
+  color:var(--on-accent);
   font-size: var(--fs-caption);
   line-height: 1;
 }
 .cart-count[hidden] { display: none; }
-.nav.over-dark:not(.scrolled) .nav-cart { border-color: rgba(255,255,255,.42); background: rgba(255,255,255,.12); color: #fff; }
+.nav.over-dark:not(.scrolled) .nav-cart { border-color: rgba(255,255,255,.42); background: rgba(255,255,255,.12); color:var(--on-accent); }
 .nav.over-dark:not(.scrolled) .nav-account { color: rgba(255,255,255,.78); }
 .nav.over-dark .nav-cta:hover { background: #e8eaed; }
 .nav.over-dark .nav-burger span { background: var(--ink-inverse); }
@@ -410,7 +416,7 @@ gradient mark when the nav rides over a dark hero. */
 }
 .nav-logo .logo-mark span {
  position: relative; z-index: 1;
- color: #fff;
+ color:var(--on-accent);
 }
 .nav-links { display: flex; gap: var(--s7); font-size: var(--fs-body); color: var(--ink-soft); }
 .nav-links a { position: relative; padding: var(--s1) 0; }
@@ -425,7 +431,7 @@ gradient mark when the nav rides over a dark hero. */
 .nav-links a.active::after { transform: scaleX(1); }
 .nav-links a.active { font-weight: 700; }
 .nav-cta {
-  background: var(--ink); color: #fff; padding: var(--s3) var(--s5); border-radius: var(--r-pill);
+  background: var(--ink); color:var(--on-accent); padding: var(--s3) var(--s5); border-radius: var(--r-pill);
   font-size: var(--fs-small); font-weight: 700; box-shadow: var(--shadow-sm);
   transition: transform .3s var(--ease-out);
 }
@@ -445,7 +451,7 @@ one accent) ---------- */
 /* `scale` as its own property, not inside `transform` — otherwise the press would cancel
    the hover's translateY and the button would jump down as you click it. */
 .btn:active { scale: .96; }
-.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgba(10,91,98,.25), 0 8px 20px -8px rgba(14,124,134,.55); }
+.btn-primary { background: var(--accent); color:var(--on-accent); box-shadow: 0 1px 2px rgba(10,91,98,.25), 0 8px 20px -8px rgba(14,124,134,.55); }
 .btn-primary:hover { background: var(--accent-ink); box-shadow: 0 2px 4px rgba(10,91,98,.28), 0 14px 28px -10px rgba(14,124,134,.62); transform: translateY(-1px); }
 .btn-secondary { background: var(--accent-soft); color: var(--accent-ink); border: 1.5px solid rgba(14,124,134,.18); box-shadow: var(--shadow-xs); }
 .btn-secondary:hover { border-color: rgba(14,124,134,.4); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
@@ -465,13 +471,13 @@ one accent) ---------- */
 }
 .btn-ghost { background: var(--surface); color: var(--ink); border: 1.5px solid var(--line); box-shadow: var(--shadow-xs); }
 .btn-ghost:hover { border-color: var(--ink); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
-.btn-light { background: #fff; color: var(--ink); box-shadow: var(--shadow-sm); }
+.btn-light { background:var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
 .btn-light:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .btn-sm { padding: var(--s2) var(--s5); font-size: var(--fs-small); }
 
 /* On-dark variants */
-.on-dark .btn-ghost { background: rgba(255,255,255,.04); color: #fff; border-color: rgba(255,255,255,.3); box-shadow: none; }
-.on-dark .btn-ghost:hover { border-color: #fff; background: rgba(255,255,255,.1); }
+.on-dark .btn-ghost { background: rgba(255,255,255,.04); color:var(--on-accent); border-color: rgba(255,255,255,.3); box-shadow: none; }
+.on-dark .btn-ghost:hover { border-color:var(--on-accent); background: rgba(255,255,255,.1); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -499,7 +505,7 @@ section { padding: var(--space-section) 0; }
 at page end) */
 .block-dark {
   position: relative; overflow: hidden;
-  background: var(--ink); color: #fff;
+  background: var(--ink); color:var(--on-accent);
   background-image:
     radial-gradient(90% 130% at 12% 0%, rgba(14,124,134,.32) 0%, transparent 55%),
     radial-gradient(70% 120% at 100% 100%, rgba(14,124,134,.16) 0%, transparent 55%);
@@ -668,7 +674,7 @@ no dots) ---------- */
 .bento-cell.lg { grid-column: span 2; grid-row: span 1; }
 .bento-cell.tint { background: var(--accent-soft); border-color: transparent; }
 .bento-cell.ink {
-  background: var(--ink); color: #fff; border-color: transparent;
+  background: var(--ink); color:var(--on-accent); border-color: transparent;
   background-image: radial-gradient(130% 120% at 100% 0%, rgba(14,124,134,.4) 0%, transparent 50%);
   box-shadow: var(--shadow-md);
 }
@@ -952,7 +958,7 @@ no dots) ---------- */
   border: none;
   border-radius: 0;
   background: var(--ink);
-  color: #fff;
+  color:var(--on-accent);
 }
 .conversion-proof-head {
   padding: var(--s3) var(--s3);
@@ -961,7 +967,7 @@ no dots) ---------- */
   color: #7dd6dc;
 }
 .conversion-proof-head .headline {
-  color: #fff;
+  color:var(--on-accent);
   font-size: clamp(1.35rem, 2.1vw, 1.85rem);
 }
 .resource-disclosure {
@@ -1188,7 +1194,7 @@ no number circles) ---------- */
 .field textarea {
   width: 100%; padding: var(--s3) var(--s4); border-radius: var(--r-input);
   border: 1.5px solid #c9ccd1; font-family: var(--font); font-size: var(--fs-body);
-  background: #fff; color: var(--ink);
+  background:var(--surface); color: var(--ink);
 }
 .field input::placeholder,
 .field textarea::placeholder { color: var(--muted); }
@@ -1366,7 +1372,7 @@ figure.photo figcaption {
 /* Skip link */
 .skip-link {
   position: absolute; left: -9999px; top: 0; z-index: 100;
-  background: var(--ink); color: #fff; padding: var(--s3) var(--s5); border-radius: 0 0 10px 0;
+  background: var(--ink); color:var(--on-accent); padding: var(--s3) var(--s5); border-radius: 0 0 10px 0;
 }
 .skip-link:focus { left: 0; }
 
@@ -1407,9 +1413,9 @@ figure.photo figcaption {
 /* ---------- Footer (part of the single dark end-block) ---------- */
 footer { background: var(--ink); color: rgba(255,255,255,.74); padding: var(--s11) 0 var(--s8); font-size: var(--fs-small); }
 .foot-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.4fr; gap: var(--s8); margin-bottom: var(--s9); }
-.foot-title { color: #fff; font-size: var(--fs-caption); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: var(--s4); }
+.foot-title { color:var(--on-accent); font-size: var(--fs-caption); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: var(--s4); }
 .foot-grid a { display: block; padding: var(--s1) 0; color: var(--ink-inverse); }
-.foot-grid a:hover { color: #fff; }
+.foot-grid a:hover { color:var(--on-accent); }
 .foot-quote { display: inline-flex; margin-top: var(--s3); padding: var(--s3) var(--s5); color: var(--ink); }
 .foot-secondary { border-top: 1px solid rgba(255, 255, 255, .16); padding-top: var(--s4); }
 
@@ -1482,18 +1488,18 @@ footer { background: var(--ink); color: rgba(255,255,255,.74); padding: var(--s1
 }
 .foot-logo-link { display: inline-block; margin-bottom: var(--s4); }
 .foot-logo { width: 84px; height: auto; display: block; filter: drop-shadow(0 1px 3px rgba(0,0,0,.4)); }
-.foot-brand { font-weight: 900; color: #fff; font-size: var(--fs-body-lg); margin-bottom: var(--s3); }
+.foot-brand { font-weight: 900; color:var(--on-accent); font-size: var(--fs-body-lg); margin-bottom: var(--s3); }
 .foot-bottom { border-top: 1px solid rgba(255,255,255,.14); padding-top: var(--s6); display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--s3); font-size: var(--fs-caption); color: rgba(255,255,255,.75); }
 .foot-legal { display: inline-flex; gap: var(--s4); }
 .foot-legal a { display: inline-flex; align-items: center; min-height: 44px; color: rgba(255,255,255,.82); text-decoration: none; }
-.foot-legal a:hover { color: #fff; }
+.foot-legal a:hover { color:var(--on-accent); }
 
 /* Footer newsletter signup */
 .foot-news { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s7); flex-wrap: wrap; margin-bottom: var(--s8); padding-top: var(--s7); padding-bottom: var(--s1); border-top: 1px solid rgba(255,255,255,.16); }
 .foot-news-copy { max-width: 40ch; }
 .foot-news-copy p { margin-top: var(--s2); font-size: var(--fs-small); line-height: 1.6; color: rgba(255,255,255,.7); }
 .foot-news-form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); flex: 1; min-width: 280px; max-width: 460px; }
-.foot-news-form input[type=email] { flex: 1; min-width: 200px; padding: var(--s3) var(--s4); border-radius: var(--r-input); border: 1.5px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); color: #fff; font-family: var(--font); font-size: var(--fs-body); }
+.foot-news-form input[type=email] { flex: 1; min-width: 200px; padding: var(--s3) var(--s4); border-radius: var(--r-input); border: 1.5px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06); color:var(--on-accent); font-family: var(--font); font-size: var(--fs-body); }
 .foot-news-form input[type=email]::placeholder { color: rgba(255,255,255,.5); }
 .foot-news-form input[type=email]:focus-visible { outline: none; border-color: var(--accent); background: rgba(255,255,255,.1); box-shadow: 0 0 0 3px rgba(14,124,134,.3); }
 .foot-news-gotcha { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
@@ -1595,7 +1601,7 @@ so no-JS / hidden-tab renders stay visible */
   .bento-cell.lg { grid-column: span 1; }
   .nav-links {
     display: none; position: fixed; top: 66px; left: 0; right: 0;
-    background: #fff;
+    background:var(--surface);
     flex-direction: column; gap: 0;
     padding: var(--s3) var(--s7) var(--s5); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-md);
     z-index: 85;
@@ -1638,9 +1644,13 @@ so no-JS / hidden-tab renders stay visible */
 }
 
 @media (max-width: 720px) {
-  .nav.over-dark .nav-logo { color: var(--ink); }
-  .nav.over-dark .nav-cta { background: var(--ink); color: #fff; }
-  .nav.over-dark .nav-burger span { background: var(--ink); }
+  /* The logo and burger rules that used to sit here set --ink, while a later
+     block of the identical media query set them light. Same specificity, so
+     source order alone decided and these never applied. Over-dark means the nav
+     is on a dark hero, so the light values are correct; the dead pair is gone
+     rather than left to contradict its twin. The CTA rule below is not
+     duplicated and stays. */
+  .nav.over-dark .nav-cta { background: var(--ink); color: var(--on-accent); }
 }
 
 /* Site image polish for consistent rendered clarity across proof assets. */
@@ -1666,13 +1676,16 @@ so no-JS / hidden-tab renders stay visible */
 }
 
 @media (max-width: 720px) {
+  /* --ink-inverse, not #fff: the desktop rules for these same three parts
+     already use it, and the component was disagreeing with itself about its own
+     text colour. */
   .nav.over-dark .nav-logo,
 .nav.over-dark .nav-links a {
-    color: #fff;
+    color: var(--ink-inverse);
   }
 
   .nav.over-dark .nav-burger span {
-    background: #fff;
+    background: var(--ink-inverse);
   }
 }
 
@@ -1688,7 +1701,7 @@ so no-JS / hidden-tab renders stay visible */
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--r-card);
-  background: #fff;
+  background:var(--surface);
 }
 .proof-card figure {
   margin: 0;
@@ -2017,7 +2030,7 @@ scroll-snap gallery
   bottom: 0;
   left: 50%;
   width: 2px;
-  background: #fff;
+  background:var(--surface);
   transform: translateX(-1px);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .15);
 }
@@ -2031,7 +2044,7 @@ scroll-snap gallery
   height: 40px;
   display: grid;
   place-items: center;
-  background: #fff;
+  background:var(--surface);
   color: var(--ink);
   border-radius: var(--r-pill);
   font-size: var(--fs-body-lg);
@@ -2045,7 +2058,7 @@ scroll-snap gallery
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: #fff;
+  color:var(--on-accent);
   background: rgba(0, 0, 0, .55);
   padding: var(--s1) var(--s3);
   border-radius: var(--r-pill);
@@ -2197,7 +2210,7 @@ scroll-snap gallery
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: #fff;
+  color:var(--on-accent);
   background: rgba(22, 24, 29, .82);
   padding: 3px var(--s2);
   border-radius: var(--r-pill);
@@ -2317,7 +2330,7 @@ scroll-snap gallery
   z-index: 1;
   left: 12px;
   bottom: 12px;
-  color: #fff;
+  color:var(--on-accent);
   font-weight: 700;
   font-size: var(--fs-small);
   text-shadow: 0 1px 6px rgba(0, 0, 0, .5);
@@ -2607,7 +2620,7 @@ figure.photo img { cursor: zoom-in; }
 #lightbox .lb-cap { margin-top: var(--s3); max-width: 70ch; padding: 0 var(--s4); text-align: center; font-size: var(--fs-small); color: #cfd6e4; }
 #lightbox .lb-close {
   position: fixed; top: max(16px, env(safe-area-inset-top)); right: max(20px, env(safe-area-inset-right)); width: 40px; height: 40px;
-  border: 0; border-radius: 50%; background: rgba(255, 255, 255, .12); color: #fff;
+  border: 0; border-radius: 50%; background: rgba(255, 255, 255, .12); color:var(--on-accent);
   font-size: var(--fs-h4); line-height: 1; cursor: pointer;
 }
 #lightbox .lb-close:hover { background: rgba(255, 255, 255, .24); }
@@ -2691,14 +2704,14 @@ never inline text. */
 
 .block-dark .btn-primary,
 .on-dark .btn-primary {
-  background: #fff;
+  background:var(--surface);
   color: var(--ink);
   box-shadow: none;
   transition: transform .18s var(--ease-out, cubic-bezier(.22,1,.36,1));
 }
 .block-dark .btn-primary:hover,
 .on-dark .btn-primary:hover {
-  background: #fff;
+  background:var(--surface);
   color: var(--ink);
   transform: translateY(-2px);
   box-shadow: 0 10px 26px -10px rgba(14,124,134,.6), 0 0 0 1px rgba(255,255,255,.14);
@@ -2817,7 +2830,7 @@ line-height: 1.35;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--r-card);
-  background: #fff;
+  background:var(--surface);
 }
 
 .catalog-photo-large {
@@ -2857,7 +2870,7 @@ line-height: 1.35;
   padding: var(--s2) var(--s3);
   border-radius: var(--r-pill);
   background: rgba(22, 24, 29, .82);
-  color: #fff;
+  color:var(--on-accent);
   font-size: var(--fs-caption);
   font-weight: 800;
 }
@@ -2942,7 +2955,7 @@ grid-row: auto;
 min-height: 0;
 aspect-ratio: 4 / 3;
 overflow: hidden;
-background: #fff;
+background:var(--surface);
 }
 
 .catalog-photo img {
@@ -3020,7 +3033,7 @@ object-fit: contain;
   padding: var(--s2) var(--s3);
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
-  background: #fff;
+  background:var(--surface);
   color: var(--ink-soft);
   font-size: var(--fs-caption);
   font-weight: 700;
@@ -3192,7 +3205,10 @@ body.reveal-ready .matrix-disclosure.reveal {
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, -4px);
-  transition: opacity .18s var(--ease), transform .18s var(--ease);
+  /* --ease has never existed; with no fallback the whole declaration was
+     invalid, so this dropdown snapped open instead of fading. --ease-out is
+     the token the rest of the file uses. */
+  transition: opacity .18s var(--ease-out), transform .18s var(--ease-out);
 }
 
 .nav-group[open] .nav-menu,
@@ -3226,7 +3242,7 @@ body.reveal-ready .matrix-disclosure.reveal {
 .nav.over-dark .nav-menu a.active { color: var(--ink); }
 .nav.over-dark .nav-group summary { color: var(--ink-inverse); }
 .nav.over-dark .nav-group summary:hover,
-.nav.over-dark .nav-group summary.active { color: #fff; }
+.nav.over-dark .nav-group summary.active { color:var(--on-accent); }
 /* over-dark bg stays dark even when scrolled, so summary stays light (matches the <a> links).
    Only the mobile open menu is a light panel, so darken summary there. */
 .nav.over-dark .nav-links.open .nav-group summary { color: var(--ink); }
@@ -3456,7 +3472,7 @@ or quote flow structure. */
   font-weight: 800;
   cursor: pointer;
 }
-.shop-search-clear:hover { background: var(--accent); color: #fff; }
+.shop-search-clear:hover { background: var(--accent); color:var(--on-accent); }
 .shop-search-clear:focus-visible,
 .shop-clear-all:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .shop-search-clear[hidden],
@@ -3475,7 +3491,7 @@ or quote flow structure. */
   min-height: 44px;
 }
 .shop-chip:hover { border-color: var(--ink); color: var(--ink); }
-.shop-chip.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.shop-chip.active { background: var(--ink); border-color: var(--ink); color:var(--on-accent); }
 
 .shop-sort { display: flex; align-items: center; gap: var(--s3); }
 .shop-sort label { font-size: var(--fs-small); font-weight: 700; color: var(--muted); }
@@ -3606,7 +3622,7 @@ fully clickable cards) ---- */
 .shop-card-quick-add[data-cart-state="added"] {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color:var(--on-accent);
 }
 .shop-card-quick-add[data-cart-state="error"] {
   border-color: var(--danger);
@@ -3626,7 +3642,7 @@ fully clickable cards) ---- */
   padding: var(--s2) var(--s3);
   border-radius: var(--r-pill);
   background: rgba(7, 20, 23, .92);
-  color: #fff;
+  color:var(--on-accent);
   font-size: var(--fs-caption);
   font-weight: 850;
   line-height: 1;
@@ -3710,7 +3726,7 @@ fully clickable cards) ---- */
   padding: 0 var(--s3);
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
-  background: #fff;
+  background:var(--surface);
   color: var(--ink);
   font: inherit;
   font-size: var(--fs-caption);
@@ -4247,7 +4263,7 @@ body.checkout-flow-page::before { display: none; }
   font-size: var(--fs-caption);
 }
 .checkout-steps [aria-current="step"] { color: var(--ink); }
-.checkout-steps [aria-current="step"] > span { border-color: var(--accent); background: var(--accent); color: #fff; }
+.checkout-steps [aria-current="step"] > span { border-color: var(--accent); background: var(--accent); color:var(--on-accent); }
 .checkout-secure { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--fs-small); }
 .checkout-secure i { color: var(--ink-soft); font-size: 1rem; }
 .checkout-return { justify-self: end; color: var(--accent-ink); font-size: var(--fs-small); font-weight: 800; }
@@ -4448,7 +4464,7 @@ body.checkout-flow-page::before { display: none; }
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
+  background:var(--surface);
   box-shadow: 0 1px 3px rgba(21,23,28,.26);
   transition: transform .2s var(--ease-out);
 }
@@ -4554,7 +4570,7 @@ body.checkout-flow-page::before { display: none; }
   background: var(--surface);
   cursor: pointer;
 }
-.checkout-rate:hover { border-color: var(--accent-soft-line, rgba(14,124,134,.35)); }
+.checkout-rate:hover { border-color: rgba(14,124,134,.35); } /* --accent-soft-line was never defined; this fallback was always the live value */
 .checkout-rate:has(input:checked) { border-color: var(--accent); background: var(--accent-tint); box-shadow: 0 0 0 2px rgba(14,124,134,.1); }
 .checkout-rate:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .checkout-rate input { width: 17px; height: 17px; accent-color: var(--accent); }
@@ -4927,7 +4943,7 @@ body .page-hero .product-shot {
   padding: clamp(18px, 3vw, 28px);
   border: 1px solid var(--line);
   border-radius: var(--r-input);
-  background: #fff;
+  background:var(--surface);
 }
 
 .ind-specific .proof-callout p {
@@ -5079,14 +5095,14 @@ body .page-hero .product-shot {
   padding: 0 var(--s4);
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color:var(--on-accent);
 }
 
 .shop-card-add:hover,
 .shop-card-add:focus-visible {
   border-color: var(--accent-ink);
   background: var(--accent-ink);
-  color: #fff;
+  color:var(--on-accent);
 }
 
 .service-page-hero .hero-grid {
@@ -5572,7 +5588,7 @@ body .page-hero .product-shot {
 .shop-toolbar input,
 .shop-toolbar select {
   border-color: rgba(13, 48, 53, .12);
-  background-color: #fff;
+  background-color:var(--surface);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82);
 }
 
@@ -5750,7 +5766,7 @@ body .page-hero .product-shot {
 .shop-card-buybar .commerce-vol {
   padding-inline: var(--s3);
   border-color: rgba(13, 48, 53, .12);
-  background-color: #fff;
+  background-color:var(--surface);
 }
 
 .shop-card-buybar .shop-card-add {
@@ -6016,7 +6032,7 @@ body .page-hero .product-shot {
   border: 0;
   border-radius: var(--r-input);
   padding: var(--s3);
-  color: #fff;
+  color:var(--on-accent);
   font: inherit;
   text-align: left;
   overflow: hidden;
@@ -6297,7 +6313,7 @@ button.viz-segment {
 
 .service-search-field button:hover {
   background: var(--accent);
-  color: #fff;
+  color:var(--on-accent);
 }
 
 .service-search-field button:focus-visible {
@@ -6388,7 +6404,7 @@ button.viz-segment {
 .service-tab.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color:var(--on-accent);
 }
 
 .service-tab:focus-visible {
@@ -7318,7 +7334,7 @@ button.viz-segment {
   overflow: hidden;
   border: 1px solid rgba(13, 48, 53, .08);
   border-radius: var(--r-lg);
-  background: #fff;
+  background:var(--surface);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, .9);
 }
 
@@ -7345,7 +7361,7 @@ button.viz-segment {
 .shop-card .hmis-badge {
   border: 1px solid rgba(255, 255, 255, .5);
   background: rgba(7, 9, 11, .78);
-  color: #fff;
+  color:var(--on-accent);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2);
 }
 
@@ -7534,7 +7550,7 @@ body.products-page .conversion-proof .proof-pill em {
   margin: 0 0 clamp(20px, 3vw, 30px);
   border: 1px solid rgba(13, 48, 53, .11);
   border-radius: var(--r-card);
-  background: #fff;
+  background:var(--surface);
   box-shadow: 0 18px 46px rgba(4, 50, 54, .07);
 }
 
@@ -8427,12 +8443,12 @@ body:not(.products-page) #relatedWrap .shop-grid:has(.shop-card:only-child) {
 /* Product polish: keep white-background product photography on a white stage,
    and give generated product detail copy enough rhythm to read cleanly. */
 body.products-page .shop-card {
-  background: #fff;
+  background:var(--surface);
   box-shadow: 0 18px 48px rgba(9, 46, 52, .09);
 }
 
 body.products-page .shop-card-core {
-  background: #fff;
+  background:var(--surface);
 }
 
 body.products-page .shop-card-media,
@@ -8754,7 +8770,7 @@ body.product-detail-page main > section.product-static-section {
   padding: clamp(24px, 3vw, 34px);
   border: 1px solid rgba(13, 48, 53, .1);
   border-radius: var(--r-card);
-  background: #fff;
+  background:var(--surface);
   box-shadow: 0 18px 48px rgba(9, 46, 52, .07);
 }
 
@@ -9082,7 +9098,7 @@ body.product-detail-page main > section.product-static-section {
 .doc-chip:hover,
 .doc-chip:focus-visible {
   background: var(--accent);
-  color: #fff;
+  color:var(--on-accent);
   border-color: var(--accent);
 }
 .doc-chip:hover::before,
@@ -9164,7 +9180,7 @@ body.product-detail-page main > section.product-static-section {
 .product-static-panel .product-fit-list li.doc-file :is(a, button):hover,
 .product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible {
   background: var(--accent);
-  color: #fff;
+  color:var(--on-accent);
 }
 .product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible {
   outline: 2px solid var(--accent);
@@ -9185,11 +9201,11 @@ body.product-detail-page main > section.product-static-section {
   padding: 3px var(--s2);
   border-radius: var(--r-pill);
   background: var(--accent);
-  color: #fff;
+  color:var(--on-accent);
 }
 .product-static-panel .product-fit-list li.doc-file :is(a, button):hover .doc-pill,
 .product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible .doc-pill {
-  background: #fff;
+  background:var(--surface);
   color: var(--accent);
 }
 /* Request pill: muted outline (document not yet published as a download) */
@@ -9200,9 +9216,9 @@ body.product-detail-page main > section.product-static-section {
 }
 .product-static-panel .product-fit-list li.doc-file :is(a, button):hover .doc-pill-req,
 .product-static-panel .product-fit-list li.doc-file :is(a, button):focus-visible .doc-pill-req {
-  background: #fff;
+  background:var(--surface);
   color: var(--accent);
-  border-color: #fff;
+  border-color:var(--on-accent);
 }
 
 /* ---------- Industry applications + proof ---------- */
