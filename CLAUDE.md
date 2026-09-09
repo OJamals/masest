@@ -3,7 +3,11 @@
 ## Deploy
 
 masest.co on Cloudflare Pages (project `masest-commerce`); prod branch = `main`
-(push to `medicux/masest` → Verify workflow → Wrangler direct deploy). Cloudflare's
-legacy `OJamals/masest` Git source stays disabled. Live functions = `functions/api/*` only. Before every push:
+(push to `OJamals/masest` → Verify workflow → Wrangler direct deploy). The repo is
+public so Actions minutes stay free; `medicux/masest` was a private stand-in during
+an OJamals account outage and is now retired. Cloudflare Pages still has a GitHub
+source pointing at `OJamals/masest`, but with `production_deployments_enabled:false`
+and previews `none`, so it never builds — deploys come only from the Verify
+workflow's `wrangler pages deploy`. Live functions = `functions/api/*` only. Before every push:
 `git fetch && git rebase origin/main` (Codex races the branch). Run tests with
 `npm test`, not bare `node --test`.

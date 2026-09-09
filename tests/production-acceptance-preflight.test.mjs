@@ -33,7 +33,7 @@ const completeEnv = {
   QBO_INCOME_ACCOUNT_ID: "79",
   QBO_ENVIRONMENT: "production",
   GITHUB_DISPATCH_TOKEN: "github_dispatch_secret",
-  GITHUB_DISPATCH_REPO: "medicux/masest",
+  GITHUB_DISPATCH_REPO: "OJamals/masest",
 };
 
 test("redactValue reports presence without leaking secret values", () => {
@@ -462,7 +462,7 @@ test("buildPreflightReport accepts a Cloudflare QBO connect key bundle", () => {
           SHIPSTATION_WEBHOOK_TOKEN: { type: "secret_text" },
           GC_AUTOCOMPLETE_API_KEY: { type: "secret_text" },
           GITHUB_DISPATCH_TOKEN: { type: "secret_text" },
-          GITHUB_DISPATCH_REPO: { type: "plain_text", value: "medicux/masest" },
+          GITHUB_DISPATCH_REPO: { type: "plain_text", value: "OJamals/masest" },
           QBO_CONNECT_KEY: { type: "secret_text" },
         },
       },

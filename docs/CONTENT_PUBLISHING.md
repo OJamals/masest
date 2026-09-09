@@ -4,7 +4,7 @@ The admin CMS writes content to **Supabase** (`content_entries`). The public
 site does **not** read Supabase at runtime; it serves **static snapshots** from
 `data/content/*.json`.
 
-Production is built by `medicux/masest` in `.github/workflows/verify.yml`.
+Production is built by `OJamals/masest` in `.github/workflows/verify.yml`.
 Before the full verification gate, the workflow runs `npm run build:content`
 against Supabase. It then uploads the verified `dist/` directly to the existing
 Cloudflare Pages project `masest-commerce`.
@@ -14,7 +14,7 @@ Cloudflare Pages project `masest-commerce`.
 1. An owner publishes content in the admin CMS.
 2. The Pages Function writes the published entry to Supabase.
 3. For general content, the Function sends the `site-content-published`
-   repository event to `medicux/masest`; the `Verify` workflow refreshes all
+   repository event to `OJamals/masest`; the `Verify` workflow refreshes all
    published snapshots, verifies them, and deploys.
 4. For blog content, the Function sends `content-published`; the blog workflow
    commits the generated blog files, then dispatches `Verify`. Newsletter email
@@ -23,11 +23,11 @@ Cloudflare Pages project `masest-commerce`.
 Required Cloudflare Pages production secrets:
 
 - `GITHUB_DISPATCH_TOKEN`
-- `GITHUB_DISPATCH_REPO=medicux/masest`
+- `GITHUB_DISPATCH_REPO=OJamals/masest`
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Required `medicux/masest` Actions secrets are listed in
+Required `OJamals/masest` Actions secrets are listed in
 [`CLOUDFLARE_PAGES.md`](../CLOUDFLARE_PAGES.md#deployment-pipeline).
 
 ## Manual audited workflow
@@ -45,7 +45,7 @@ SUPABASE_URL='https://â€¦supabase.co' SUPABASE_PUBLISHABLE_KEY='sb_publishable_â
 # 2. Review the diff.
 git diff data/content/
 
-# 3. Publish: commit + push -> medicux Verify builds and deploys.
+# 3. Publish: commit + push -> OJamals Verify builds and deploys.
 git add data/content/ && git commit -m 'content: publish CMS updates' && git push
 ```
 

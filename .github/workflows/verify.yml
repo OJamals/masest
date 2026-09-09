@@ -59,7 +59,7 @@ jobs:
           echo "PG_BIN=$pg_bin" >> "$GITHUB_ENV"
 
       - name: Refresh production CMS snapshots
-        if: github.repository == 'medicux/masest' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.repository == 'OJamals/masest' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
@@ -72,14 +72,14 @@ jobs:
         run: npm run verify:core
 
       - name: Deploy production to Cloudflare Pages
-        if: github.repository == 'medicux/masest' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.repository == 'OJamals/masest' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler pages deploy dist --project-name=masest-commerce --branch=main --commit-hash="$GITHUB_SHA" --commit-dirty=false
 
       - name: Email newly published blog posts
-        if: github.repository == 'medicux/masest' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.blog_newsletter
+        if: github.repository == 'OJamals/masest' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.blog_newsletter
         env:
           BLOG_NEWSLETTER_SECRET: ${{ secrets.BLOG_NEWSLETTER_SECRET }}
         run: |

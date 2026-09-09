@@ -143,7 +143,7 @@ export function publicContentSnapshot(entries = []) {
 
 function githubDispatchConfig(env = {}) {
   const token = String(env.GITHUB_DISPATCH_TOKEN || "").trim();
-  const repo = String(env.GITHUB_DISPATCH_REPO || "medicux/masest").trim();
+  const repo = String(env.GITHUB_DISPATCH_REPO || "OJamals/masest").trim();
   return token && repo ? { token, repo } : null;
 }
 
@@ -175,7 +175,7 @@ async function triggerGithubRepositoryDispatch(env, eventType, clientPayload, fe
   }
 }
 
-// General CMS changes are exported from Supabase by the verified medicux/masest
+// General CMS changes are exported from Supabase by the verified OJamals/masest
 // production workflow before it uploads dist/ to the existing Pages project.
 export async function triggerContentPublishBuild(env = {}, entry = {}, fetchImpl = fetch) {
   return triggerGithubRepositoryDispatch(env, "site-content-published", {

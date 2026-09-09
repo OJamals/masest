@@ -6,7 +6,7 @@
 
 **Evidence path:** `audits/production-acceptance-2026-06-30/`
 
-**Tracking:** https://github.com/medicux/masest/issues
+**Tracking:** https://github.com/OJamals/masest/issues
 
 **Disposable QA identity:** `MASEST QA 2026-06-30`
 
@@ -68,7 +68,7 @@ Required env groups:
   `QBO_OAUTH_STATE_SECRET`, `QBO_SYNC_SECRET`, `QBO_ENVIRONMENT`.
   `QBO_INCOME_ACCOUNT_ID` is optional; sync auto-detects an Income account
   from the connected QuickBooks company when it is omitted.
-- CMS publish: `GITHUB_DISPATCH_TOKEN` + `GITHUB_DISPATCH_REPO=medicux/masest`
+- CMS publish: `GITHUB_DISPATCH_TOKEN` + `GITHUB_DISPATCH_REPO=OJamals/masest`
 
 The Supabase operator data source proves the local acceptance runner can read/write the production data store during the approved live pass. The live app runtime must still be verified through deployed app paths such as `/api/health`, dashboard/admin actions, and the provider flows in the checklist.
 

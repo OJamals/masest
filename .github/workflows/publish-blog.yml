@@ -86,4 +86,4 @@ jobs:
         if: steps.content_commit.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run verify.yml --repo medicux/masest --ref main -f blog_newsletter=true
+        run: gh workflow run verify.yml --repo OJamals/masest --ref main -f blog_newsletter=true

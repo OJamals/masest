@@ -5,7 +5,7 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 
-test("medicux main pushes verify before deploying the existing Pages project", () => {
+test("OJamals main pushes verify before deploying the existing Pages project", () => {
   const workflow = read(".github/workflows/verify.yml");
   const refreshStep = workflow.indexOf("- name: Refresh production CMS snapshots");
   const verifyStep = workflow.indexOf("run: npm run verify:core");
@@ -23,8 +23,8 @@ test("medicux main pushes verify before deploying the existing Pages project", (
   assert.doesNotMatch(workflow, /actions\/(?:upload|download)-artifact/);
   assert.match(
     workflow,
-    /if: github\.repository == 'medicux\/masest' && github\.ref == 'refs\/heads\/main' && github\.event_name != 'pull_request'/,
-    "only medicux/masest main push or workflow-dispatch runs may deploy production",
+    /if: github\.repository == 'OJamals\/masest' && github\.ref == 'refs\/heads\/main' && github\.event_name != 'pull_request'/,
+    "only OJamals/masest main push or workflow-dispatch runs may deploy production",
   );
   assert.match(workflow, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
@@ -41,13 +41,13 @@ test("medicux main pushes verify before deploying the existing Pages project", (
   assert.match(workflow, /blog_newsletter:\s+description:[^\n]+\s+required: false\s+type: boolean\s+default: false/);
   assert.match(
     workflow,
-    /if: github\.repository == 'medicux\/masest' && github\.ref == 'refs\/heads\/main' && github\.event_name == 'workflow_dispatch' && inputs\.blog_newsletter/,
+    /if: github\.repository == 'OJamals\/masest' && github\.ref == 'refs\/heads\/main' && github\.event_name == 'workflow_dispatch' && inputs\.blog_newsletter/,
   );
   assert.doesNotMatch(workflow.slice(verifyStep, deployStep), /run: npm run (?:build|build:content)/, "verified dist must not be rebuilt before deployment");
   assert.match(workflow, /BLOG_NEWSLETTER_SECRET: \$\{\{ secrets\.BLOG_NEWSLETTER_SECRET \}\}/);
 });
 
-test("automated content commits explicitly dispatch the verified medicux deployment", () => {
+test("automated content commits explicitly dispatch the verified OJamals deployment", () => {
   const workflow = read(".github/workflows/publish-blog.yml");
 
   assert.match(workflow, /permissions:\s+actions: write\s+contents: write/);
@@ -58,7 +58,7 @@ test("automated content commits explicitly dispatch the verified medicux deploym
   assert.doesNotMatch(workflow, /\[(?:skip ci|ci skip|no ci)\]/i);
   assert.match(workflow, /if: steps\.content_commit\.outputs\.changed == 'true'/);
   assert.match(workflow, /GH_TOKEN: \$\{\{ github\.token \}\}/);
-  assert.match(workflow, /gh workflow run verify\.yml --repo medicux\/masest --ref main -f blog_newsletter=true/);
+  assert.match(workflow, /gh workflow run verify\.yml --repo OJamals\/masest --ref main -f blog_newsletter=true/);
   assert.doesNotMatch(workflow, /sleep 75|Email new posts to the newsletter list/);
   assert.match(workflow, /SUPABASE_PUBLISHABLE_KEY: \$\{\{ secrets\.SUPABASE_PUBLISHABLE_KEY \}\}/);
   assert.doesNotMatch(workflow, /SUPABASE_SERVICE_ROLE_KEY/);

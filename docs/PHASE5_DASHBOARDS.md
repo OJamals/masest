@@ -89,7 +89,7 @@ New tables `messages`, `notifications`, `offers`, `page_views`; new columns
    to `masest-email-service`. Do not change the Proofpoint MX records for
    `masest.co`. Signed replies are verified against the exact chat message,
    customer, canonical thread, and order before entering Messages.
-6. Redeploy: push to `medicux/masest` `main`; the Verify workflow runs the full gate and uploads `dist/` to Cloudflare Pages.
+6. Redeploy: push to `OJamals/masest` `main`; the Verify workflow runs the full gate and uploads `dist/` to Cloudflare Pages.
    Verify env presence at `/api/health`.
 
 ## Security notes

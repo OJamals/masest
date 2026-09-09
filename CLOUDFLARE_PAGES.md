@@ -12,7 +12,7 @@ Cloudflare Pages project:
 
 ## Deployment pipeline
 
-`medicux/masest` is the canonical deployment repository. A push to `main` runs
+`OJamals/masest` is the canonical deployment repository. A push to `main` runs
 `.github/workflows/verify.yml`, refreshes published CMS snapshots from Supabase,
 runs the complete verification gate, and then uploads `dist/` directly to the
 existing `masest-commerce` project with Wrangler.
@@ -35,7 +35,7 @@ historical project metadata; its production and preview auto-deployments are
 disabled. Do not re-enable that source or recreate the Pages project: the
 existing project owns the production domains, bindings, and encrypted secrets.
 
-Required `medicux/masest` Actions secrets:
+Required `OJamals/masest` Actions secrets:
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
@@ -45,7 +45,7 @@ Required `medicux/masest` Actions secrets:
 - `NEWSLETTER_CRON_SECRET`
 
 CMS publication uses `GITHUB_DISPATCH_TOKEN` and
-`GITHUB_DISPATCH_REPO=medicux/masest` in the Pages production environment.
+`GITHUB_DISPATCH_REPO=OJamals/masest` in the Pages production environment.
 General content emits `site-content-published`; blog content emits
 `content-published`, which first commits generated blog files and then dispatches
 the same verified production workflow.

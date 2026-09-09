@@ -12,7 +12,7 @@ const entry = {
   title: "Water analysis",
 };
 
-test("publish hook dispatches general CMS changes to the medicux deployment workflow", async () => {
+test("publish hook dispatches general CMS changes to the OJamals deployment workflow", async () => {
   const calls = [];
   const result = await triggerContentPublishBuild(
     { GITHUB_DISPATCH_TOKEN: "tok" },
@@ -25,7 +25,7 @@ test("publish hook dispatches general CMS changes to the medicux deployment work
 
   assert.deepEqual(result, { ok: true, skipped: false, status: 204 });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "https://api.github.com/repos/medicux/masest/dispatches");
+  assert.equal(calls[0].url, "https://api.github.com/repos/OJamals/masest/dispatches");
   assert.equal(calls[0].options.method, "POST");
   assert.equal(calls[0].options.headers.authorization, "Bearer tok");
   assert.deepEqual(JSON.parse(calls[0].options.body), {
@@ -81,7 +81,7 @@ test("content publish API and editor surface static rebuild hook state", () => {
   assert.match(ui, /publishStatusKind/);
   assert.match(ui, /hook\?\.skipped\) return "warn"/);
   assert.match(env, /GITHUB_DISPATCH_TOKEN/);
-  assert.match(env, /GITHUB_DISPATCH_REPO=medicux\/masest/);
+  assert.match(env, /GITHUB_DISPATCH_REPO=OJamals\/masest/);
 });
 
 test("content archive delegates the static rebuild hook to the publication lifecycle", () => {
@@ -122,7 +122,7 @@ test("blog workflow dispatch: POSTs a content-published repository_dispatch when
   );
   assert.equal(res.ok, true);
   assert.equal(res.skipped, false);
-  assert.equal(captured.url, "https://api.github.com/repos/medicux/masest/dispatches");
+  assert.equal(captured.url, "https://api.github.com/repos/OJamals/masest/dispatches");
   assert.equal(captured.opts.method, "POST");
   assert.equal(captured.opts.headers.authorization, "Bearer tok");
   const body = JSON.parse(captured.opts.body);
