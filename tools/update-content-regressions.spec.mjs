@@ -112,6 +112,30 @@ test("proof records expose source scope before outcome copy", async ({ page }) =
 
 test("marine route exposes all eight substantiated products with final packshots", async ({ page }) => {
   const issues = captureRuntimeIssues(page);
+  await page.unroute("**/api/products");
+  await page.route("**/api/products", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      products: [{
+        sku: "purgo",
+        name: "VertKleen Purgo",
+        mode: "buy",
+        active: true,
+        product_variants: [{
+          vsku: "MAM-QT",
+          label: "1/4 gal (32 oz)",
+          gallons: 0.25,
+          price: 16.99,
+          currency: "usd",
+          active: true,
+          market: "marine",
+          marketing_name: "Marine Antimicrobial",
+          sort: 1,
+        }],
+      }],
+    }),
+  }));
   await page.goto(`${BASE_URL}/industries/marine.html`, { waitUntil: "networkidle" });
 
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
@@ -139,6 +163,12 @@ test("marine route exposes all eight substantiated products with final packshots
   await expect(
     antimicrobialCard.getByRole("link", { name: "Product details" }),
   ).toHaveCount(1);
+  const addButton = antimicrobialCard.getByRole("button", {
+    name: /^Add Marine Antimicrobial, .+ to cart$/,
+  });
+  await addButton.click();
+  await expect(addButton).toHaveText("Added");
+  await expect(page.locator("[data-cart-count]")).toHaveText("1");
   for (const name of [
     "Scale Buster",
     "SeaVap Coil Kleener",

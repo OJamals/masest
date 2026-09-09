@@ -6523,7 +6523,7 @@ button.viz-segment {
 }
 
 .service-card-details summary {
-  min-height: 44px;
+  min-height: 45px;
   padding-block: 11px;
   color: var(--accent-ink);
   font-size: .82rem;
