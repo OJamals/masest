@@ -49,14 +49,14 @@
   align-items: baseline;
   gap: var(--s2);
   color: #fff;
-  font-size: .76rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: .03em;
 }
 
 .story-skip span {
   color: var(--story-muted);
-  font-size: .7rem;
+  font-size: var(--fs-caption);
   font-weight: 500;
 }
 
@@ -119,7 +119,7 @@
 
 .story-actions__match small {
   color: var(--story-muted);
-  font-size: .63rem;
+  font-size: var(--fs-caption);
   font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -127,7 +127,7 @@
 
 .story-actions__match b {
   margin-top: var(--s1);
-  font-size: .78rem;
+  font-size: var(--fs-caption);
   letter-spacing: -.01em;
 }
 
@@ -139,7 +139,7 @@
   justify-content: center;
   border-radius: 999px;
   padding: var(--s2) var(--s4);
-  font-size: .76rem;
+  font-size: var(--fs-caption);
   font-weight: 800;
   line-height: 1;
   transition:
@@ -208,13 +208,13 @@
   align-items: center;
   gap: var(--s2);
   color: #7f898a;
-  font-size: .64rem;
+  font-size: var(--fs-caption);
   line-height: 1.25;
   transition: color .25s var(--ease-out);
 }
 
 .rail-btn b {
-  font-size: .58rem;
+  font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -634,7 +634,7 @@
   display: block;
   margin-bottom: var(--s5);
   color: var(--story-accent-strong);
-  font-size: .68rem;
+  font-size: var(--fs-caption);
   font-weight: 800;
   letter-spacing: .13em;
   text-transform: uppercase;
@@ -664,14 +664,14 @@
   border-top: 1px solid var(--story-line);
   padding-top: var(--s3);
   color: var(--story-muted);
-  font-size: .72rem;
+  font-size: var(--fs-caption);
   line-height: 1.48;
 }
 
 .story-job-note__label {
   display: block;
   color: var(--story-accent-strong);
-  font-size: .58rem;
+  font-size: var(--fs-caption);
   font-weight: 800;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -691,7 +691,7 @@
   gap: var(--s2);
   margin-top: var(--s2);
   color: #e8ffff;
-  font-size: .68rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   text-decoration: underline;
   text-decoration-color: rgba(156, 225, 220, .38);
@@ -761,7 +761,7 @@
   display: block;
   margin-bottom: var(--s2);
   color: var(--accent-ink);
-  font-size: .68rem;
+  font-size: var(--fs-caption);
   font-weight: 800;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -787,7 +787,7 @@
   border-top: 1px solid #d9dfe0;
   padding: var(--s3) var(--s2) var(--s3) var(--s7);
   color: #596164;
-  font-size: .78rem;
+  font-size: var(--fs-caption);
   line-height: 1.45;
   counter-increment: summary-step;
 }
@@ -798,7 +798,7 @@
   top: 11px;
   left: 0;
   color: var(--accent-ink);
-  font-size: .61rem;
+  font-size: var(--fs-caption);
   font-weight: 800;
 }
 
@@ -841,7 +841,7 @@
 
 .replacement-guide summary small {
   color: var(--muted);
-  font-size: .65rem;
+  font-size: var(--fs-caption);
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -891,7 +891,7 @@
 
 .replacement-ledger thead th {
   color: #657073;
-  font-size: .59rem;
+  font-size: var(--fs-caption);
   font-weight: 800;
   letter-spacing: .065em;
   line-height: 1.3;
@@ -913,14 +913,14 @@
 
 .replacement-ledger tbody th {
   color: #252b2d;
-  font-size: .77rem;
+  font-size: var(--fs-caption);
   line-height: 1.35;
 }
 
 .replacement-ledger td strong {
   display: block;
   color: #252b2d;
-  font-size: .76rem;
+  font-size: var(--fs-caption);
   line-height: 1.35;
 }
 
@@ -928,7 +928,7 @@
   display: block;
   margin-top: var(--s1);
   color: #697174;
-  font-size: .66rem;
+  font-size: var(--fs-caption);
   line-height: 1.45;
 }
 
@@ -946,7 +946,7 @@
   min-width: 55px;
   border-radius: 999px;
   padding: var(--s1) var(--s2);
-  font-size: .68rem;
+  font-size: var(--fs-caption);
   font-weight: 850;
   font-variant-numeric: tabular-nums;
   letter-spacing: .03em;
@@ -966,7 +966,7 @@
   max-width: 94ch;
   margin-top: var(--s4);
   color: #666f72;
-  font-size: .68rem;
+  font-size: var(--fs-caption);
   line-height: 1.55;
 }
 
@@ -1044,7 +1044,7 @@
     justify-content: center;
     border-bottom: 1px solid var(--story-line);
     color: #dce5e5;
-    font-size: .7rem;
+    font-size: var(--fs-caption);
   }
 
   .story-skip span {
@@ -1068,18 +1068,18 @@
   }
 
   .story-actions__match small {
-    font-size: .54rem;
+    font-size: var(--fs-caption);
   }
 
   .story-actions__match b {
-    font-size: .68rem;
+    font-size: var(--fs-caption);
   }
 
   .story-actions__shop,
   .story-actions__trial {
     min-height: 32px;
     padding: var(--s2) var(--s3);
-    font-size: .68rem;
+    font-size: var(--fs-caption);
   }
 
   .story-rail {
@@ -1227,7 +1227,7 @@
 
   .kicker {
     margin-bottom: var(--s3);
-    font-size: .62rem;
+    font-size: var(--fs-caption);
   }
 
   .story .act-h {
@@ -1239,7 +1239,7 @@
   .act-p {
     max-width: 44ch;
     margin-top: var(--s4);
-    font-size: .94rem;
+    font-size: var(--fs-body);
   }
 
   .story-job-note {
@@ -1329,7 +1329,7 @@
     padding: var(--s3) var(--s4);
     color: #fff;
     background: #172325;
-    font-size: .79rem;
+    font-size: var(--fs-caption);
   }
 
   .replacement-ledger td {
@@ -1354,18 +1354,18 @@
     display: block;
     margin-bottom: var(--s2);
     color: #778083;
-    font-size: .54rem;
+    font-size: var(--fs-caption);
     font-weight: 800;
     letter-spacing: .07em;
     text-transform: uppercase;
   }
 
   .replacement-ledger td strong {
-    font-size: .72rem;
+    font-size: var(--fs-caption);
   }
 
   .replacement-ledger td small {
-    font-size: .62rem;
+    font-size: var(--fs-caption);
   }
 
   .ledger-qualification {
@@ -1378,9 +1378,13 @@
     /* The wider mobile card is taller; keep scene copy below its sticky edge.
        This constant trails the card's real height, so it has to be re-tuned
        whenever the card's internal spacing changes — moving that padding onto
-       the spacing scale grew the card by about 10px. home-first-fold asserts
-       16px of clearance at 656px wide and is the guard on this number. */
-    padding-top: calc(48.8vw + 240px);
+       the spacing scale grew the card by about 10px, and putting the rest of
+       story.css on the type scale grew it a further 24px. The constant does not
+       track that growth one-for-one — roughly half of each added pixel is
+       absorbed before it reaches the copy — so tune it against the measurement,
+       not by arithmetic. home-first-fold asserts 16px of clearance at 656px
+       wide and is the guard on this number. */
+    padding-top: calc(48.8vw + 264px);
   }
 }
 
@@ -1430,7 +1434,7 @@
 
   .act-p {
     margin-top: var(--s4);
-    font-size: .96rem;
+    font-size: var(--fs-body);
   }
 
   .story-job-note {

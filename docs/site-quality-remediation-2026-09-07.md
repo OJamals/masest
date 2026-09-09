@@ -82,6 +82,26 @@ the root cause of "bloated but cramped".
 - No raw `font-size` value in the touched stylesheets outside `:root` and `clamp()` heads.
 - Full suite green; cache token bumped everywhere it is pinned.
 
+**Correction 2026-09-09 — the first pass missed the worst file.** `css/story.css` was not
+in the migration's file list, and the metric reported after that pass ("text under 13px:
+232/385 → 0") was measured on `/products`, which does not load it. The homepage does.
+story.css held **42 of 44 font-size literals under 13px, the smallest at 7.68px** — the
+whole original problem, still on the front door.
+
+32 of those 42 are now on the scale. **The 12 `.story-object__*` declarations are
+deliberately exempt**, and the exemption is recorded in `tools/type-scale-migrate.mjs`
+alongside the icon rule. Measured reason: at 13px every item in the before/after card's
+footer wraps to three lines at 390px wide, and the card grows until it covers the
+"Better chemistry." headline behind it. Raising those needs the card footer redesigned for
+larger type, not a mechanical snap — tracked as its own task, not silently dropped.
+
+The stage reservation needed retuning again as a result (`calc(48.8vw + 240px)` →
+`264px`). Note for whoever tunes it next: the constant does **not** track card growth
+one-for-one — roughly half of each added pixel is absorbed before it reaches the copy, so
+tune against the measurement rather than by arithmetic.
+
+---
+
 ### SQ-02 — Introduce a spacing scale · CRITICAL
 
 **Problem.** `:root` defines 55 custom properties; exactly one is spacing
@@ -126,6 +146,40 @@ shadow is reserved for the single element per screen that should lift.
 **Acceptance.** No component nests a bordered container inside a bordered container inside
 a bordered container. `--shadow-md` / `--shadow-lg` used ≤ 8 times each.
 
+**Measured 2026-09-09 — the worked example in this finding is wrong; the underlying
+problem is real and worse.** Rendered-DOM measurement across 10 pages at two viewports:
+
+| claim as written | measured |
+|---|---|
+| crhd shows "five stacked bordered pills" | crhd has no 5-item list. Its three `product-fit-list`s hold 4, 2 and 2 items. The "five" is HCR's two separate lists (3+2), misattributed. |
+| "three container levels" | **Four.** bordered card → `li.doc-file` (border only, transparent fill) → `a` (filled pill, no border) → `span.doc-pill` (filled badge). |
+| the outer `<section>` is bordered | It is not a surface at all — its background is byte-identical to `<body>`. |
+| "one line of text each" | Each row carries a label span plus a status badge: 51px box against 49px of text, i.e. two stacked lines. |
+
+Max surface depth by page: `/` 4 · `/products` 3 · `/products/crhd` 3 · `/products/hcr` 3 ·
+`/about`, `/services`, `/contact`, `/blog`, `/resources`, `/cart` all 2. Half the site is
+already at or under the target, so this is three components, not a site-wide rewrite:
+
+1. the scrollytelling replacement ledger inside `<details>` on `/` (depth 4),
+2. the product card on `/products` — three depth-3 patterns × 15 identical cards,
+3. the document-download row chain on the PDPs (`article > ul > li.doc-file > a > span.doc-pill`),
+   4 instances on crhd, 5 on hcr.
+
+The genuinely single-sentence list the finding meant to indict ("Made for jobs like these")
+is depth 1 and is fine.
+
+**The real shadow problem is not the token count.** `--shadow-md` is used 17 times in source
+(target ≤ 8, fails) and `--shadow-lg` 6 times (passes) — but **30 distinct `box-shadow`
+values actually paint** across those pages, because most shadows are bespoke `rgba()`
+literals that never route through either token. Capping token uses would not have caught
+that. Same shape in the other two axes: **17 distinct rendered `border-radius` values** and
+**35 distinct `border-color` values** (one dominant `--line` gray at 906 uses, then ~10
+white-alpha steps, ~5 teal-alpha steps and ~5 near-duplicate light grays).
+
+**Revised acceptance.** ≤ 3 distinct rendered `box-shadow` values, ≤ 4 `border-radius`,
+≤ 6 `border-color`. Max surface depth 3 on every page. Measured on rendered DOM, not
+counted in source — source counts miss the literals, which are the actual problem.
+
 ### SQ-05 — Fold 65 hard-coded hex colours into tokens; remove 67 `!important` · MEDIUM
 
 **Problem.** The token layer is good — the semantic status ramp and the `--rating-star`
@@ -139,6 +193,87 @@ the acceptance test for the split.
 
 **Acceptance.** Zero raw hex outside `:root` (existing site-audit-regressions test already
 bans raw status hex — extend it). `!important` count ≤ 10.
+
+**Measured 2026-09-09 — the stylesheet split is dropped from this finding.** The split was
+proposed to relieve a 253KB stylesheet. Over the wire that file is 38KB brotli, and the
+whole CSS layer is 63KB, so it is not what causes the 4.76s first paint in SQ-21 — the
+double fetch and the serialized render-blocking chain are. Splitting also does not relieve
+the specificity compounding the finding describes: four files loaded in the original order
+produce a byte-identical cascade. What it would buy is navigability, at the cost of 118
+HTML files, 5 generator tools and 13 source-contract tests. Deferred as a poor trade
+against Phase 2. The two real parts of SQ-05 — hexes and `!important` — stand unchanged.
+
+CSS coverage, 118 pages x 2 viewports, union (`page.coverage.startCSSCoverage`):
+
+| measure | value |
+|---|---|
+| style.css | 252,874 bytes raw · 38,444 brotli |
+| used by at least one page | 60.3% |
+| never rendered | 39.7% |
+| mean single page needs | 9.2% |
+| heaviest page (`/products`) needs | 17.2% |
+
+The 39.7% is **not** dead code, and must not be reported as such: the static server runs
+no backend, so JS-injected commerce markup and auth-gated admin surfaces never render.
+Cross-referencing every never-rendered class against all HTML, JS and JSON source (vendor
+bundles excluded — `stagger` matches inside `gsap.min.js`) puts genuinely dead CSS at
+**41 families, 11.2KB, 4.4%**. That is worth deleting as hygiene, not as performance.
+
+Two entries on the dead list are findings rather than cleanup:
+
+- **`.breadcrumb` is unused, but `BreadcrumbList` JSON-LD is emitted** by `tools/seo-inject.mjs`
+  and appears on product, pricing, services and comparison pages. Structured data claims a
+  hierarchy the page never shows a visitor. Either render the component or stop claiming it.
+- **`.nojs-logo` is unused** while `index.html` carries 8 `<noscript>` blocks, so the no-JS
+  path is likely already broken. Worth a look before deletion.
+
+---
+
+### SQ-05 addendum — what the audits actually found · 2026-09-09
+
+**Colour: 497 raw hex occurrences outside `:root`, not 65.** More important than the count
+is the shape — **318 of them sit inside `var(--token, #fallback)` calls, not bare
+literals**, which splits three ways:
+
+| kind | count | status |
+|---|---:|---|
+| fallback matches the real token | 134 | dead code, harmless |
+| fallback names a real token but a **wrong** value | 150 | dead today, a landmine the moment the token is ever unset |
+| fallback names a token that **is never defined anywhere** | 34 | **always live** — functionally a raw literal |
+
+The 34 reference `--paper`, `--white`, `--paper-soft`, `--brand-ink`, `--surface-muted`,
+none of which exist in any stylesheet. Those are the ones to fix first: they are not
+fallbacks, they are the actual painted value, wearing a token's name.
+
+One new token is justified: **`--on-accent: #ffffff`** — the colour of text and icons
+painted *onto* a solid `--accent`/`--ink` surface. 56 occurrences, currently invisible in
+the audit because its value happens to equal `--surface`; the job is different, and the
+two will diverge the first time anyone darkens a button. Contrast 4.95:1 on `--accent`,
+17.93:1 on `--ink` — both pass.
+
+The near-white tint tail turned out **not** to be one job spelled eleven ways: it resolves
+to five existing tokens (`--bg`, `--surface-soft`, `--accent-tint`, `--surface-2`/`--panel`,
+`--panel-cool`). No new token needed there. Two rules also contradict their own siblings —
+`style.css:319`/`384` hard-code white where `:1678`/`1682` use `var(--ink-inverse)` for the
+same selectors. One latent accessibility bug surfaced: a dead `#777777` fallback on blog
+muted text sits at **4.48:1**, a fail, fixed by collapsing it to `--muted` (5.88:1).
+
+**`!important`: 79, not 67** (one grep line held three declarations; one match was inside a
+comment). The reassuring part is the classification:
+
+| bucket | count |
+|---|---:|
+| no competitor at all — pure noise | 14 |
+| competitor loses on specificity or order anyway | 60 |
+| competitor would genuinely win — needs a paired fix | 5 |
+| fighting something outside the cascade (UA, inline JS, third-party) | **0** |
+
+**74 of 79 delete with zero rendering change.** Nothing is defending against Crisp, Stripe,
+Turnstile or a UA default — verified, not assumed. The 5 real ones share one shape: the
+loser already has equal-or-higher specificity but its sibling is *also* `!important`, so
+importance decides. Each is fixed by stripping the flag from the named sibling in the same
+change: `style.css:448`+`:1771`, `style.css:3353`+`:3347`, `story.css:1459`/`:1460`+
+`style.css:477`/`:480`, `customer-chat.css:137`+`:123`.
 
 ---
 
@@ -191,6 +326,28 @@ team can QA the buyer experience without a second browser profile.
 **Acceptance.** A signed-out visitor can add a product to cart from `/products` without
 leaving the page. A staff member can view the buyer storefront via the toggle.
 
+**Measured 2026-09-09, signed out, against the LIVE catalog API** (proxied from masest.co —
+a stub catalog has previously invented fake defects here). `accountKind` reported `guest`,
+so this is the real buyer surface:
+
+- **Quick-add already exists and already mounts on all 15 cards.** `commerceActionHTML`'s
+  `variant === "quick"` branch renders a `.shop-card-quick-add` button wired to
+  `data-cart-add`. This part of the fix is built. The audit never saw it because the staff
+  branch swaps it for "Manage catalog".
+- **But it is a 44×44 icon with no visible label.** The `.shop-card-quick-add-copy` span
+  reading "Quick add 1 gal" computes `opacity: 0; visibility: hidden` — it is revealed on
+  hover. **There is no hover on touch, so a phone buyer never sees the label at all.**
+  Rendered, it is a white circle on a pale teal image, reading as a decorative badge.
+  This is precisely the "difficulty to find where to add to cart" the owner reported, and
+  it survives the admin-account explanation.
+- **No size selector on the grid.** `.commerce-vol` count on `/products` is **0**. A buyer
+  can only quick-add the default 1 gal; any other size still costs a detail-page round
+  trip. This half of the finding is genuinely not built.
+
+**Revised fix.** Do not build quick-add — label it. Give the existing control a persistent
+visible label and buy-control affordance, and add the size select next to it. The staff
+"preview as buyer" toggle is unchanged and still needed.
+
 ### SQ-13 — Grid cards ~700px tall, nothing aligns across a row · HIGH
 
 **Problem.** Each card stacks eleven blocks: badge overlay, image, eyebrow, title,
@@ -221,6 +378,20 @@ affordance inside it.
 
 **Acceptance.** All cards in a row share identical element baselines. Card height ≤ 440px.
 One `<a>` per card. No interactive target under 32px.
+
+**Measured 2026-09-09, signed out, live catalog:**
+
+| claim | measured |
+|---|---|
+| card height 700–760px | **916–918px** — worse than the audit estimated, against a 440px target |
+| duplicate links per card | **3**, not 2: `.shop-card-media`, `.shop-card-link`, and the `.shop-card-cta` inside it — all to the same href |
+| sub-32px tap targets | **16**, confirmed |
+| "See details" inside the RESULTS sentence | confirmed — renders "…in place of conventional caustic **See details**" |
+| the `/gal` chip repeats the headline price | confirmed — `$25.99` headline, `$25.99/gal` chip, on the same card |
+
+Visually the dominant action on the card is the teal "See how it works →" at 165×34px,
+while the actual buy control is the unlabelled icon described in SQ-12. The card advertises
+reading, not buying.
 
 ### SQ-14 — "Recommended" sort has no discernible order · MEDIUM
 
@@ -282,6 +453,38 @@ compress the two 400KB+ proof webps.
 
 **Acceptance.** FCP under 1.5s on a warm cache. Zero duplicate resource URLs. One
 `/api/account/me` per page load.
+
+**Diagnosed 2026-09-09 — one headline cause is refuted and another is worse than reported.**
+
+- **`style.css` fetched twice: REFUTED.** Every HTML entry point, all five generators
+  (`seo-inject`, `build-blog`, `gen_industries`, `gen_comparisons`, `build-industry-pages`)
+  and the built `dist/products.html` emit the versioned URL consistently. No bare
+  reference, no `@import`, no JS-injected `<link>`, no `Link:` header exists. This was a
+  stale CDN edge entry or a mid-deploy version skew — the same rollout-window artifact
+  already recorded as a trap in this project's notes. **0% of the 4,760ms.**
+- **Duplicate JS modules: CONFIRMED.** `js/content-types.js:1` imports `"./image-url.js"`
+  unversioned while three other files import it versioned; `js/main/commerce-ui.js:4`
+  imports `"./engagement.js"` unversioned while `js/main.js:17` imports it versioned. Two
+  URLs means two fetches **and two module instances** in one page's graph.
+- **`/api/account/me` twice: CONFIRMED, but not render-blocking.** `js/auth.js:137` `me()`
+  has no caching; `js/account-nav.js:135` and `js/customer-chat.js:60` each import it and
+  call independently. Both are async and off the paint path — `js/checkout.js:303-307`
+  already documents avoiding this. Fix: memoise a single-flight promise, mirroring
+  `loadCommerceCatalog()` at `commerce-ui.js:273-276`. Worth ~5-10%, not the headline.
+- **Product images: 3-5×, not 2×.** `initShop()` calls `apply()` **three times
+  unconditionally** — immediately, after the catalog resolves or fails, and after the
+  marine catalog resolves — and `apply()` does `grid.innerHTML = …`, a full rebuild that
+  creates brand-new `<img>` nodes each time rather than patching `src`. ~25-30%.
+- **The actual paint blocker: the render-blocking chain.** `/products` serialises four
+  synchronous stylesheets, `/` five. `vendor/phosphor/style.css` uses `font-display: block`
+  and is **never preloaded** — only Satoshi gets a build-injected preload in
+  `tools/cf-build.mjs`. Because `main.js` is `type=module` and therefore deferred,
+  DOMContentLoaded fires without waiting on CSS, which is exactly how DCL lands at 497ms
+  while paint stays blocked past 4s. ~40-50%.
+
+**Order to land:** Phosphor preload first (smallest change, targets the chain that gates
+all paint), then the `apply()` triple-render, then the two import specifiers, then the
+`me()` memo.
 
 ---
 

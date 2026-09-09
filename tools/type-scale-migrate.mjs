@@ -15,6 +15,15 @@
  *   icons    — a font-size on an <i> is a glyph dimension, not type. Snapping
  *              those to a text scale changes icon geometry, so selectors whose
  *              subject is an icon keep their literal.
+ *   .story-object__*  — the homepage before/after card. Its footer packs three
+ *              metadata items and a product block into a fixed sticky card, and
+ *              at 13px every one of them wraps to three lines at 390px wide:
+ *              measured, the card grew until it covered the "Better chemistry."
+ *              headline behind it. Raising these needs the card footer
+ *              redesigned for the larger type, not a mechanical snap, so the
+ *              12 declarations are left at their literals and tracked as a
+ *              separate task. Everything else in story.css does migrate,
+ *              including the replacement ledger.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -31,15 +40,31 @@ const STEPS = [
   { name: "--fs-h1", px: 48, max: Infinity },
 ];
 
+/* story.css was missing from this list on the first pass, and it is the file
+ * with the worst offenders: 42 of its 44 font-size literals computed under
+ * 13px, the smallest at 7.68px. The metric reported after that pass ("0% of
+ * text under 13px") was measured on /products, which does not load story.css —
+ * the homepage does, so the front door still carried the whole original
+ * problem. admin-support.css and customer-chat.css are included for the same
+ * reason; between them they hold two literals, both already at or above body
+ * size. */
 const DEFAULT_FILES = [
   "css/style.css",
   "css/components.css",
   "css/blog.css",
   "css/navigation.css",
+  "css/story.css",
+  "css/admin-support.css",
+  "css/customer-chat.css",
 ];
 
 /* An icon rule sizes a glyph, not text. Match the subject of the last compound
  * selector: a bare `i`, or any class that reads as an icon. */
+/* Selectors whose layout cannot absorb the scale's 13px floor. See the header:
+ * these are exempted deliberately, with the breakage measured, not skipped for
+ * convenience. */
+const LAYOUT_LOCKED = /\.story-object__/;
+
 function isIconSelector(prelude) {
   return prelude.split(",").some((sel) => {
     const subject = sel.trim().split(/\s+|>/).filter(Boolean).pop() || "";
@@ -111,6 +136,8 @@ function migrate(source) {
           skipped.push({ prelude, raw, reason: "fluid or relative" });
         } else if (isIconSelector(prelude)) {
           skipped.push({ prelude, raw, reason: "icon glyph size" });
+        } else if (LAYOUT_LOCKED.test(prelude)) {
+          skipped.push({ prelude, raw, reason: "layout cannot absorb the 13px floor" });
         } else {
           const step = stepFor(px);
           buffer = buffer.replace(decl[3], `var(${step.name})`);
