@@ -805,10 +805,12 @@ function productPage(id, product, reviewsSnapshot) {
     .join("\n");
   // The hero asks for the purchase decision while the evidence for its strongest claim sits
   // a full screen below. This jumps to that block rather than off-site, so proof is reachable
-  // from the claim without spending the buyer's place on the page.
+  // from the claim without spending the buyer's place on the page. Rendered as a trailing
+  // child of .product-hero-facts (SQ-11: one chip row instead of three matching chips plus
+  // a plain link on its own line) — indentation matches its <span> siblings.
   const heroProof = proofRecords.length
     ? `
-        <a class="product-hero-proof" href="#records"><i class="ph ph-seal-check" aria-hidden="true"></i>See ${proofRecords.length} real job result${proofRecords.length === 1 ? "" : "s"}</a>`
+          <a class="product-hero-proof" href="#records"><i class="ph ph-seal-check" aria-hidden="true"></i>See ${proofRecords.length} real job result${proofRecords.length === 1 ? "" : "s"}</a>`
     : "";
   const docs = (product.docs || [])
     .flatMap((doc) => {
@@ -878,12 +880,12 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
     <div class="wrap hero-grid">
       <div class="hero-copy reveal">
         <span class="eyebrow">${text(eyebrow)}</span>
-        <h1 class="display">${text(product.name)}</h1>${marineAlias}
+        <h1 class="display">${text(product.name)}</h1>
         <div class="product-hero-facts" aria-label="Product highlights">
           <span><b>HMIS</b>${text(product.hmis || "0-0-0")}</span>
           <span><b>Replaces</b>${text(replacement)}</span>
-          <span><b>Available</b>${text(supply)}</span>
-        </div>${heroProof}${QUOTE_ONLY_IDS.has(id) ? "" : `
+          <span><b>Available</b>${text(supply)}</span>${heroProof}
+        </div>${marineAlias}${QUOTE_ONLY_IDS.has(id) ? "" : `
         <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
              incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
              the "Get a quote" CTA below (data-quote-fallback="off" keeps this empty

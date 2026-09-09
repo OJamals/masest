@@ -8604,7 +8604,14 @@ body.product-detail-page main > section.product-static-section {
   box-shadow: 0 0 0 3px rgba(14, 124, 134, .12), 0 18px 42px rgba(4, 50, 54, .12);
 }
 
-.product-detail-page .product-hero-facts span {
+/* SQ-11: HMIS / Replaces / Available / "See N real job results" used to be four
+   ragged shapes — three matching chips plus a plain underlined link sitting on
+   its own line below them. The proof link is now a DOM child of
+   .product-hero-facts (same flex-wrap row) and shares this exact chip geometry;
+   only its colour and weight stay distinct, which is enough to read as "the
+   one that links somewhere" without breaking the row's rhythm. */
+.product-detail-page .product-hero-facts span,
+.product-detail-page .product-hero-facts .product-hero-proof {
   display: inline-flex;
   min-height: 38px;
   align-items: center;
@@ -8626,24 +8633,22 @@ body.product-detail-page main > section.product-static-section {
   text-transform: uppercase;
 }
 
-/* Sits between the HMIS claim and the price so the evidence for the claim is one click from
-   the point the page asks for a purchase decision. Deliberately a text link, not a button —
-   it must not compete with Add to cart. */
+/* Sits in the trust-chip row so the evidence for the HMIS/Replaces claims is one
+   click from the point the page asks for a purchase decision. Deliberately kept
+   at the same visual weight as its sibling chips — not styled as a button — so
+   it still doesn't compete with Add to cart. */
 .product-detail-page .product-hero-proof {
-  display: inline-flex;
-  min-height: 38px;
-  align-items: center;
-  gap: var(--s2);
-  margin-top: var(--s3);
   color: var(--accent-ink);
-  font-size: var(--fs-small);
   font-weight: 800;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .product-detail-page .product-hero-proof i { font-size: 1.05rem; }
-.product-detail-page .product-hero-proof:hover { color: var(--accent); }
+.product-detail-page .product-hero-proof:hover {
+  color: var(--accent);
+  border-color: rgba(14, 124, 134, .4);
+}
 
 .product-detail-page .product-detail-hero .hero-copy > .subhead {
   margin-block: var(--s5) var(--s6);
