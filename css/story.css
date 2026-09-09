@@ -137,7 +137,7 @@
   min-height: 34px;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: var(--s2) var(--s4);
   font-size: var(--fs-caption);
   font-weight: 800;
@@ -264,7 +264,7 @@
   width: 100%;
   max-height: calc(100dvh - var(--story-nav-h) - 108px);
   border: 1px solid var(--story-line);
-  border-radius: 20px;
+  border-radius: var(--r-lg);
   background: #101719;
   box-shadow:
     0 18px 28px -22px rgba(0, 0, 0, .58),
@@ -349,7 +349,7 @@
   top: 12px;
   z-index: 7;
   border: 1px solid rgba(255, 255, 255, .2);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: var(--s1) var(--s2);
   color: #fff;
   background: rgba(7, 11, 12, .8);
@@ -412,7 +412,7 @@
   align-items: center;
   gap: var(--s2);
   border: 1px solid rgba(255, 255, 255, .22);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: var(--s2) var(--s3);
   color: #fff;
   background: rgba(8, 13, 15, .88);
@@ -461,7 +461,7 @@
   gap: var(--s2);
   min-height: 26px;
   border: 1px solid rgba(255, 255, 255, .17);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: var(--s1) var(--s3);
   color: rgba(255, 255, 255, .86);
   background: rgba(7, 11, 12, .86);
@@ -491,7 +491,7 @@
 
 .story-object__range::-webkit-slider-runnable-track {
   height: 2px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(255, 255, 255, .62);
   box-shadow: 0 1px 2px rgba(0, 0, 0, .44);
 }
@@ -511,7 +511,7 @@
 
 .story-object__range::-moz-range-track {
   height: 2px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(255, 255, 255, .62);
   box-shadow: 0 1px 2px rgba(0, 0, 0, .44);
 }
@@ -591,7 +591,7 @@
 .story-object__product img {
   width: 28px;
   height: 42px;
-  border-radius: 3px;
+  border-radius: var(--r-xs);
   object-fit: contain;
   object-position: center;
   box-shadow: 0 5px 15px rgba(0, 0, 0, .25);
@@ -944,7 +944,7 @@
   align-items: center;
   justify-content: center;
   min-width: 55px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: var(--s1) var(--s2);
   font-size: var(--fs-caption);
   font-weight: 850;
@@ -1110,7 +1110,7 @@
   .story-object__card {
     width: 100%;
     max-height: none;
-    border-radius: 15px;
+    border-radius: var(--r-card);
     box-shadow: 0 24px 54px -30px rgba(0, 0, 0, .72);
   }
 
@@ -1318,7 +1318,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     overflow: hidden;
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: var(--r-card);
     background: #fff;
     box-shadow: 0 9px 30px -25px rgba(16, 46, 51, .4);
   }
