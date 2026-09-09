@@ -47,5 +47,5 @@ test("visual CSS keeps mobile and direct-label behavior explicit", () => {
   assert.match(css, /\.viz-segment b[\s\S]*font-variant-numeric: tabular-nums/, "values should be directly visible");
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*\.viz-stack[\s\S]*flex-wrap: wrap/, "visuals should wrap on mobile");
   assert.match(css, /\.program-scope-table-wrap[\s\S]*overflow-x: auto/, "wide program matrix should stay usable on mobile");
-  assert.match(css, /@media \(max-width: 600px\)[\s\S]*\.program-scope-table[\s\S]*min-width: 0/, "program matrix should fit the mobile viewport instead of clipping columns");
+  assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.program-scope-table[\s\S]*min-width: 0/, "program matrix should fit the mobile viewport instead of clipping columns");
 });

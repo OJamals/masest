@@ -667,7 +667,7 @@ test("asset viewer contains the complete library inside a bounded 3-4 column win
   assert.match(css, /\.shared-image-library-layout\s*\{[^}]*grid-template-columns:/);
   assert.match(css, /\.shared-image-library-grid\s*\{[^}]*repeat\(4,/);
   assert.match(css, /\.shared-image-library-grid\s*\{[^}]*overflow-y:\s*auto/);
-  assert.match(css, /@media \(max-width: 900px\)[\s\S]*repeat\(3,/);
+  assert.match(css, /@media \(max-width: 960px\)[\s\S]*repeat\(3,/);
 });
 
 test("content editor exposes native asset upload controls", () => {

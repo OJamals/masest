@@ -51,7 +51,12 @@ test('checkout keeps address rationale and mobile escape/trust cues', () => {
   );
   assert.match(checkout, /class="checkout-secure"[^>]*>[\s\S]*Secure checkout/);
   assert.match(checkout, /class="checkout-return"[^>]*>Return to cart<\/a>/);
-  const mobile = css.slice(css.lastIndexOf('@media (max-width: 640px)'));
+  // Locate the block that actually declares .checkout-return rather than
+  // assuming it lives in the last 640px block — normalizing the breakpoints
+  // added more 640px blocks after it and the positional guess stopped holding.
+  const blockStart = css.lastIndexOf('@media (max-width: 640px)', css.indexOf('.checkout-return {', css.indexOf('.checkout-return:hover')));
+  assert.ok(blockStart > -1, '.checkout-return mobile rule should sit in a 640px block');
+  const mobile = css.slice(blockStart);
   assert.match(mobile, /\.checkout-return\s*\{[\s\S]*display:\s*inline-flex/);
   assert.match(mobile, /\.checkout-secure\s*\{[^}]*font-size:/);
 });

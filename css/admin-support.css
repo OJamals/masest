@@ -183,7 +183,7 @@
   .site-support__conversation-toolbar :is(a, button):hover { background: var(--paper-soft, #f5f7f8); }
 }
 
-@media (max-width: 1300px) {
+@media (max-width: 1400px) {
   .site-support__conversation-toolbar .site-support__optional-action { display: none; }
   .site-support__conversation-toolbar .site-support__properties-trigger span { display: none; }
 }

@@ -43,7 +43,7 @@ test("full comparison remains a semantic table and becomes complete stacked card
   assert.equal((guide.match(/<th scope="row"/g) || []).length, 4);
   assert.equal((guide.match(/data-label="Conventional"/g) || []).length, 4);
   assert.equal((guide.match(/data-label="VertKleen"/g) || []).length, 4);
-  assert.match(storyCss, /@media \(max-width: 760px\)[\s\S]*\.replacement-ledger tbody[\s\S]*display:\s*grid/s);
+  assert.match(storyCss, /@media \(max-width: 720px\)[\s\S]*\.replacement-ledger tbody[\s\S]*display:\s*grid/s);
   assert.match(storyCss, /\.replacement-ledger td\[data-label\]::before/);
   assert.doesNotMatch(storyCss, /\.replacement-ledger\s*\{[^}]*min-width:\s*7\d\dpx/s);
 });

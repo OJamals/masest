@@ -211,7 +211,7 @@ test("industries page routes buyers before the long industry list", () => {
 test("industry router stacks route cards on mobile", () => {
   const css = read("css/style.css");
 
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.industry-router \.route-grid/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*\.industry-router \.route-grid/);
   assert.match(css, /\.industry-router \.route-grid[\s\S]*grid-template-columns: 1fr/);
 });
 
@@ -310,8 +310,8 @@ test("resources page puts dense technical tables behind disclosure", () => {
   assert.doesNotMatch(summaryTag, /\sopen\b/, "technical disclosure should be closed by default");
   assert.match(resources, /Get labels, guides, and results/);
   assert.match(resources, /Request a current quote/);
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.resource-router \.route-grid/);
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.resources-reference-disclosure summary/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*\.resource-router \.route-grid/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*\.resources-reference-disclosure summary/);
   assert.match(css, /\.resources-reference-disclosure summary b[\s\S]*white-space: normal/);
   assert.match(css, /\.resource-router \.route-card strong[\s\S]*grid-column: 2/);
 });
@@ -340,7 +340,7 @@ test("about page routes buyers before service breadth", () => {
   assert.match(about, /See customer results/);
   assert.match(about, /Compare programs/);
   assert.doesNotMatch(about.slice(disclosureIndex, about.indexOf(">", disclosureIndex)), /\sopen\b/);
-  assert.match(css, /@media \(max-width: 700px\)[\s\S]*\.about-router \.route-grid/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*\.about-router \.route-grid/);
   assert.match(css, /\.about-services-disclosure summary b[\s\S]*white-space: normal/);
 });
 
@@ -436,7 +436,7 @@ test("scrolly vessel scene and persistent comparator keep condition labels reada
   assert.match(actTwo, /organic residue/);
   assert.match(actTwo, /reflective steel/);
   assert.match(storyCss, /\.story-object__range/);
-  assert.match(storyCss, /@media \(max-width: 760px\)[\s\S]*\.story-object__media/);
+  assert.match(storyCss, /@media \(max-width: 720px\)[\s\S]*\.story-object__media/);
 });
 
 test("scrolly story state remains available to responsive chrome", () => {

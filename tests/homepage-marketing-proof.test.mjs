@@ -44,6 +44,6 @@ test("homepage trust strip balances its four proof points", () => {
   );
   assert.match(
     storyCss,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.trust-strip \.trust-cols\s*{\s*grid-template-columns:\s*1fr 1fr/,
+    /@media \(max-width:\s*720px\)[\s\S]*?\.trust-strip \.trust-cols\s*{\s*grid-template-columns:\s*1fr 1fr/,
   );
 });

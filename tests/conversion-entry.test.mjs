@@ -19,7 +19,7 @@ test("mobile discovery opens directly on the catalog without redundant routing c
   );
   assert.match(
     css,
-    /@media \(max-width: 760px\)[\s\S]*\.shop-chips\s*\{[^}]*overflow-x:\s*auto[^}]*flex-wrap:\s*nowrap/,
+    /@media \(max-width: 720px\)[\s\S]*\.shop-chips\s*\{[^}]*overflow-x:\s*auto[^}]*flex-wrap:\s*nowrap/,
   );
   assert.match(products, />CIP pricing<\/a>/, "catalog facts should use the concise CIP pricing label");
   assert.doesNotMatch(products, />CIP food pricing<\/a>/i);
