@@ -184,7 +184,7 @@ test("simplified catalog card stays compact and actionable at 390px", async ({ p
 
   await expect(card.locator(".shop-card-decision")).toHaveCount(0);
   await expect(card.locator("a")).toHaveCount(1);
-  await expect(link).toHaveAttribute("href", "products/hcr");
+  await expect(link).toHaveAttribute("href", "/products/hcr");
   await expect(card.locator("[data-cart-quick-add]")).toBeVisible();
   await expect(card.locator(".shop-card-quick-add-copy")).toBeVisible();
   await expect(card.locator(".shop-card-quick-commerce .commerce-vol")).toBeVisible();

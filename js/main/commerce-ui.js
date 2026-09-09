@@ -17,7 +17,7 @@ export function productCard(id, heroCard = false, eager = false) {
   const mediaLoading = heroCard || eager ? "eager" : "lazy";
   const mediaPriority = heroCard || eager ? ' fetchpriority="high"' : "";
   const media = p.image
-    ? `<a class="prod-media" href="products/${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="${mediaLoading}"${mediaPriority} ${imageDimsAttr(p.image)}></a>`
+    ? `<a class="prod-media" href="/products/${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="${mediaLoading}"${mediaPriority} ${imageDimsAttr(p.image)}></a>`
     : "";
   return `
   <div class="prod-card${heroCard ? " hero-card" : ""} reveal">
@@ -28,7 +28,7 @@ export function productCard(id, heroCard = false, eager = false) {
       <p>${catalog.summary}</p>
       <div class="prod-actions">
         <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button"></span>
-        <a class="btn btn-ink btn-sm" href="products/${id}">Product details</a>
+        <a class="btn btn-ink btn-sm" href="/products/${id}">Product details</a>
       </div>
   </div>`;
 }
@@ -635,7 +635,7 @@ export function catalogDecisionHTML(id, copy, context = null) {
         </ul>
       </div>`
     : "";
-  const detailHref = context?.href || `products/${id}`;
+  const detailHref = context?.href || `/products/${id}`;
   const displayName = context?.name || PRODUCTS[id]?.name || id;
   const proofRow = proof
     ? `<p class="shop-card-decision-row shop-card-proof">
@@ -655,7 +655,7 @@ export function catalogCard(id, eager = false, context = null) {
   if (!p) return "";
   const copy = PRODUCT_CATALOG_COPY[id] || {};
   const displayName = context?.name || p.name;
-  const detailHref = context?.href || `products/${id}`;
+  const detailHref = context?.href || `/products/${id}`;
   const mediaInfo = context?.image
     ? { src: context.image, alt: `${displayName} marine product jug` }
     : commerceMediaFor(id);

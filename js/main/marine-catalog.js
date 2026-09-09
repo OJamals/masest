@@ -37,7 +37,7 @@ export function parseMarineCatalog(payload) {
       sku,
       summary,
       image: cmsImage ? rawImage : `/${imagePath}`,
-      href: `products/${id}?market=marine`,
+      href: `/products/${id}?market=marine`,
       market: "marine",
     });
   });

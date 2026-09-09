@@ -102,6 +102,9 @@ test("confirmed catalog products hydrate compact quick-add controls instead of q
         const card = page.locator(`.shop-card[data-id="${id}"]`);
         await card.locator(`[data-cart-quick-add="${id}"]`).waitFor();
         assert.equal(await card.locator(".shop-card-quote").count(), 0);
+        // confirmedProducts() fixtures a single 1-gal variant per SKU, so there's
+        // nothing to choose between — no select renders (SQ-12 only adds one
+        // when a product actually has more than one active pack size).
         assert.equal(await card.locator(".commerce-vol").count(), 0);
       }
       assert.equal(await page.locator('.shop-card[data-id="eg5050"]').count(), 0);
@@ -124,7 +127,9 @@ test("product catalog shows public list pricing and compact default-pack quick a
       const quickAdd = hcr.locator('[data-cart-quick-add="hcr"]');
       assert.equal(await quickAdd.getAttribute("data-cart-add"), "HCRCIP-1G");
       assert.match(await quickAdd.getAttribute("aria-label"), /1 gal/i);
-      assert.equal(await hcr.locator(".commerce-vol").count(), 0);
+      // SQ-12: hcr has 2 active unit sizes (1 gal, 2.5 gal), so the default-pack
+      // quick-add now carries a real size select alongside it.
+      assert.equal(await hcr.locator(".commerce-vol").count(), 1);
       await page.getByRole("link", { name: /Get product recommendation/i }).waitFor();
       await page.getByRole("link", { name: /Become a distributor/i }).waitFor();
 

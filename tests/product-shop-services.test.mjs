@@ -186,24 +186,29 @@ test("product cards expose price and compact quick add without a second control 
 
       assert.equal(first.price, "$30", "card should show API pricing");
       assert.equal(first.subprice, "1 gal", "card should show the selected pack size");
-      assert.equal(first.variantCount, 0, "card should keep size selection on the detail page");
+      // SQ-12: the grid had zero size selectors — "quick-add" only ever added the
+      // single default pack, and any other size cost a detail-page round trip. cr
+      // has two active unit sizes (1 gal, 2.5 gal) in the seed catalog, so the
+      // quick-add control now carries both as a real <select>.
+      assert.equal(first.variantCount, 2, "card should offer real size selection, not push it to the detail page");
       assert.equal(first.addSku, "CRCIP-1G");
       assert.match(first.addLabel, /Add VertKleen CIP CR, 1 gal, to cart/i);
-      assert.equal(first.href, "products/cr");
+      // SQ-17: root-absolute — a relative "products/cr" resolved to
+      // "/products/products/cr" from anywhere but /products itself.
+      assert.equal(first.href, "/products/cr");
 
       const cardStates = await page.locator(".shop-card").evaluateAll((cards) => cards.map((card) => ({
         id: card.dataset.id,
         price: card.querySelector(".price-main")?.textContent.trim() || "",
         buybar: !!card.querySelector(".shop-card-buybar"),
-        select: !!card.querySelector(".commerce-vol"),
         add: !!card.querySelector("[data-cart-quick-add]"),
         hasOneGal: /1 gal/i.test(card.querySelector("[data-cart-quick-add]")?.getAttribute("aria-label") || ""),
       })));
       assert.ok(cardStates.length > 0);
       assert.deepEqual(
-        cardStates.filter((card) => !card.price || !card.buybar || card.select || !card.add),
+        cardStates.filter((card) => !card.price || !card.buybar || !card.add),
         [],
-        "confirmed public product cards should expose price plus one overlay quick-add control"
+        "confirmed public product cards should expose price, a buybar, and one quick-add control (plus a size select when the SKU has more than one active pack)"
       );
       assert.deepEqual(
         cardStates.filter((card) => !card.hasOneGal).map((card) => card.id),
@@ -365,7 +370,11 @@ test("descaler card defaults price and quick add to the first live API variant",
       const quickAdd = descaler.locator('[data-cart-quick-add="descaler"]');
       assert.equal(await quickAdd.getAttribute("data-cart-add"), "DSC-1G");
       assert.match(await quickAdd.getAttribute("aria-label"), /1 gal/i);
-      assert.equal(await descaler.locator(".commerce-vol").count(), 0);
+      // SQ-12: descaler has two active unit sizes (1 gal, 2.5 gal), so the quick-add
+      // now carries a real size select (one <select>, both packs as its <option>s)
+      // defaulting to the first variant, rather than forcing every size but the
+      // default to a detail-page visit.
+      assert.equal(await descaler.locator(".commerce-vol").count(), 1);
     } finally {
       await browser.close();
     }

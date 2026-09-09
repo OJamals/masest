@@ -40,7 +40,7 @@ test("catalog decision cues derive compact proof and fit cues from catalog data"
     );
     assert.ok(
       html.includes(
-        `class="shop-card-proof-link" href="products/${id}" aria-label="See results for ${PRODUCTS[id].name}"`,
+        `class="shop-card-proof-link" href="/products/${id}" aria-label="See results for ${PRODUCTS[id].name}"`,
       ),
       `${id} should route proof review to its detail page`,
     );
@@ -268,7 +268,9 @@ test("products page exposes the eight marine aliases as a dedicated catalog view
         "Marine Wash & Wax",
         "Marine Antimicrobial",
       ]);
-      assert.ok(view.links.every((href) => /^products\/[a-z0-9-]+\?market=marine$/.test(href)));
+      // SQ-17: root-absolute now — a relative "products/<id>" resolved to
+      // "/products/products/<id>" from anywhere but /products itself.
+      assert.ok(view.links.every((href) => /^\/products\/[a-z0-9-]+\?market=marine$/.test(href)));
       assert.ok(view.images.every((src) => /^\/img\/products\/vertkleen-.+-marine-studio\.webp$/.test(src)), JSON.stringify(view.images));
       assert.ok(view.loadedImages.every(({ width }) => width > 0), JSON.stringify(view.loadedImages));
       assert.deepEqual(view.commerceIds, view.ids);
