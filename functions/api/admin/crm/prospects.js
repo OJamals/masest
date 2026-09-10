@@ -32,6 +32,11 @@ const CONTACT_SELECT = [
   'id', 'name', 'title', 'email', 'phone', 'linkedin', 'marketing_consent',
   'outreach_status', 'needs_verification', 'retention_review_at',
 ].join(',');
+const OUTREACH_SELECT = [
+  'id', 'contact_id', 'recipient_email', 'subject', 'body_text', 'compliance_basis',
+  'source_url', 'status', 'approved_at', 'sent_at', 'replied_at', 'opted_out_at',
+  'archived_at', 'created_at', 'updated_at',
+].join(',');
 
 function migrationResponse() {
   return json(200, { prospects: [], total: 0, has_more: false, needs_migration: true });
@@ -49,11 +54,14 @@ async function detail(sb, id) {
   }
   if (!organization) return { notFound: true };
 
-  const [contactResult, sourceResult] = await Promise.all([
+  const [contactResult, sourceResult, outreachResult] = await Promise.all([
     sb.from('prospect_contacts').select(CONTACT_SELECT)
       .eq('organization_id', id).is('deleted_at', null).order('name', { ascending: true }),
     sb.from('prospect_source_records').select('source_record_id', { count: 'exact', head: true })
       .eq('organization_id', id),
+    sb.from('prospect_outreach_drafts').select(OUTREACH_SELECT)
+      .eq('organization_id', id).neq('status', 'archived')
+      .order('created_at', { ascending: false }).limit(25),
   ]);
   if (contactResult.error) {
     if (isMissingProspectSchema(contactResult.error)) return { needsMigration: true };
@@ -62,6 +70,10 @@ async function detail(sb, id) {
   if (sourceResult.error) {
     if (isMissingProspectSchema(sourceResult.error)) return { needsMigration: true };
     throw sourceResult.error;
+  }
+  if (outreachResult.error) {
+    if (isMissingProspectSchema(outreachResult.error)) return { needsMigration: true };
+    throw outreachResult.error;
   }
 
   let linkedCompany = null;
@@ -78,6 +90,7 @@ async function detail(sb, id) {
       ...organization,
       contacts: contactResult.data || [],
       source_record_count: sourceResult.count || 0,
+      outreach_drafts: outreachResult.data || [],
       linked_company: linkedCompany,
     },
   };

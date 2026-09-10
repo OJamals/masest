@@ -24,6 +24,7 @@ test('CRM workspace owns one integrated Prospects view', () => {
 
 test('prospect UI makes consent and identity boundaries explicit', () => {
   assert.match(prospects, /No bulk marketing/i);
+  assert.match(prospects, /Manual one-to-one outreach/i);
   assert.match(prospects, /unreviewed/i);
   assert.match(prospects, /Prospect organizations are not customer accounts/i);
   assert.match(prospects, /data-prospect-open-company/);
@@ -38,6 +39,21 @@ test('prospect UI makes consent and identity boundaries explicit', () => {
   assert.match(prospects, /minlength="2"/);
   assert.match(prospects, /state\.staff\?\.capabilities\?\.includes\('prospect\.write'\)/);
   assert.match(prospects, /Workflow saved\./);
+});
+
+test('prospect detail owns manual personalized outreach workflow', () => {
+  assert.match(prospects, /data-prospect-outreach-form/);
+  assert.match(prospects, /\/api\/admin\/crm\/outreach-drafts/);
+  assert.match(prospects, /button\('approve'/);
+  assert.match(prospects, /button\('sent'/);
+  assert.match(prospects, /button\('replied'/);
+  assert.match(prospects, /button\('opted_out'/);
+  assert.match(prospects, /mailto:/);
+  assert.match(prospects, /1361 Grand Cayman Dr/);
+  assert.match(prospects, /If you'd rather not hear from me/i);
+  assert.match(prospects, /needs_verification/);
+  assert.match(prospects, /Future outreach blocked/);
+  assert.doesNotMatch(prospects, /sendEmail|queueMarketingEmail|klaviyo/i);
 });
 
 test('prospect channels are structured, actionable, and URL-safe', () => {

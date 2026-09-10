@@ -20,12 +20,20 @@ Use one isolated, staff-only Prospect domain:
 - `prospect_organizations` stores pre-account organization records.
 - `prospect_contacts` stores named people under Prospect Organizations.
 - `prospect_source_records` maps non-PII source IDs to imported records.
+- `prospect_outreach_drafts` stores bounded, one-to-one draft text, research evidence,
+  approval state, and manual outcome timestamps under the same Prospect Organization.
 
 All imported consent is `unknown`; outreach is `unreviewed`. No import or API path writes
 to Companies, Buyer accounts, account CRM contacts, support messages, marketing delivery, or newsletter
 recipients. A Prospect Organization may become customer context only through an explicit
 `linked_company_id`. The existing CRM workspace owns the Prospect UI so staff have one
 relationship workspace without creating a second admin application.
+
+Cloudflare Pages Functions own authenticated draft workflow and audit. They do not send
+Prospect email. An approved draft opens through `mailto:` in the operator's configured
+email client. This preserves Cloudflare Email Service for transactional messages and
+prevents Prospect outreach from becoming a hidden campaign system. Explicit opt-outs
+write back to the selected Prospect Contact or Organization and block future outreach.
 
 ## Consequences
 
@@ -34,5 +42,7 @@ relationship workspace without creating a second admin application.
 - Optional descriptive fields may improve on re-import; manually managed workflow,
   conversion, consent, and outreach state are never overwritten by the importer.
 - Retention-review dates and an owner-only erase endpoint provide PII lifecycle controls.
+- Draft history is capped in Prospect detail responses to bound database egress; archived
+  drafts stay durable without loading into the default view.
 - The additive schema can deploy before application code. Emergency rollback requires the
   explicit database-session confirmation in `supabase/rollback-crm-prospects.sql`.

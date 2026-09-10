@@ -12,6 +12,7 @@ begin
 end;
 $$;
 
+drop table if exists public.prospect_outreach_drafts;
 drop table if exists public.prospect_source_records;
 drop table if exists public.prospect_contacts;
 drop table if exists public.prospect_organizations;

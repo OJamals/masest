@@ -67,6 +67,8 @@ test('Prospects filters, opens context, and saves workflow through one CRM surfa
   await boot(page);
   const listCalls = [];
   const updates = [];
+  const outreachWrites = [];
+  const outreachDrafts = [];
   let stage = 'new';
   const organization = {
     id: '6fd360e3-2475-48c9-a8f1-f2e180f3f6f1',
@@ -82,6 +84,26 @@ test('Prospects filters, opens context, and saves workflow through one CRM surfa
     retention_review_at: '2027-09-02',
     contact_count: 1,
   };
+
+  await page.route('**/api/admin/crm/outreach-drafts**', async (route) => {
+    const request = route.request();
+    const body = request.postDataJSON();
+    outreachWrites.push({ method: request.method(), body });
+    if (request.method() === 'POST') {
+      const draft = {
+        id: '7c8feec6-3c73-46e6-b275-034a34e62f7c',
+        ...body,
+        status: 'draft',
+        created_at: '2026-09-09T12:00:00Z',
+        updated_at: '2026-09-09T12:00:00Z',
+      };
+      outreachDrafts.unshift(draft);
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ok: true, draft }) });
+    }
+    const draft = outreachDrafts.find((entry) => entry.id === body.id);
+    draft.status = body.action === 'approve' ? 'approved' : body.action;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, draft }) });
+  });
 
   await page.route('**/api/admin/crm/prospects**', async (route) => {
     const request = route.request();
@@ -102,7 +124,9 @@ test('Prospects filters, opens context, and saves workflow through one CRM surfa
             status: stage,
             general_email: 'info@example.test',
             phone: '313-555-0100',
+            website: 'https://example.test/providers',
             source_record_count: 2,
+            outreach_drafts: outreachDrafts,
             linked_company: { id: organization.linked_company_id, name: 'Acme customer account', status: 'approved' },
             contacts: [{
               id: '2153285c-f929-4189-a4f9-2afc3a5de58f',
@@ -148,6 +172,39 @@ test('Prospects filters, opens context, and saves workflow through one CRM surfa
   expect(updates[0]).toMatchObject({ id: organization.id, status: 'qualified', priority: 'unassigned' });
   await expect(page.locator('[data-prospect-update] select[name="status"]')).toHaveValue('qualified');
   await expect(page.locator('[data-prospect-update-status]')).toHaveText('Workflow saved.');
+
+  await page.locator('[data-prospect-outreach-form] textarea[name="compliance_basis"]').fill('Public provider page; procurement role is relevant to facility cleaning.');
+  await page.locator('[data-prospect-outreach-form]').getByRole('button', { name: 'Save draft' }).click();
+  await expect.poll(() => outreachWrites.length).toBe(1);
+  expect(outreachWrites[0]).toMatchObject({
+    method: 'POST',
+    body: {
+      organization_id: organization.id,
+      contact_id: null,
+      recipient_email: 'info@example.test',
+      source_url: 'https://example.test/providers',
+    },
+  });
+  await expect(page.locator('.crm-outreach-card')).toContainText('draft');
+
+  await page.locator('[data-outreach-action="approve"]').click();
+  await expect.poll(() => outreachWrites.length).toBe(2);
+  await expect(page.locator('.crm-outreach-card')).toContainText('approved');
+  await expect(page.locator('[data-outreach-open]')).toHaveAttribute('href', /^mailto:info%40example\.test\?subject=/);
+
+  await page.locator('[data-outreach-action="sent"]').click();
+  await expect.poll(() => outreachWrites.length).toBe(3);
+  await expect(page.locator('.crm-outreach-card')).toContainText('sent');
+
+  await page.locator('[data-outreach-action="replied"]').click();
+  await expect.poll(() => outreachWrites.length).toBe(4);
+  await expect(page.locator('.crm-outreach-card')).toContainText('replied');
+
+  await page.locator('[data-outreach-action="opted_out"]').click();
+  await page.locator('.confirm-dialog button[value="confirm"]').click();
+  await expect.poll(() => outreachWrites.length).toBe(5);
+  await expect(page.locator('.crm-outreach-card')).toContainText('opted out');
+  await expect(page.locator('.crm-outreach')).toContainText('Future outreach blocked.');
 });
 
 test('Prospect list stays inside a narrow mobile viewport', async ({ page }) => {

@@ -120,6 +120,33 @@ create table if not exists public.prospect_source_records (
   check ((record_type = 'Organization' and contact_id is null) or (record_type = 'Person' and contact_id is not null))
 );
 
+-- Human-reviewed, one-to-one outreach workspace. Delivery remains in the
+-- operator's email client; this table is not a delivery system.
+create table if not exists public.prospect_outreach_drafts (
+  id                        uuid primary key default gen_random_uuid(),
+  organization_id           uuid not null references public.prospect_organizations(id) on delete cascade,
+  contact_id                uuid references public.prospect_contacts(id) on delete set null,
+  recipient_email           text not null check (char_length(recipient_email) between 3 and 320),
+  subject                   text not null check (char_length(subject) between 1 and 180),
+  body_text                 text not null check (char_length(body_text) between 1 and 8000),
+  compliance_basis          text check (char_length(compliance_basis) <= 1000),
+  source_url                text check (char_length(source_url) <= 1000),
+  status                    text not null default 'draft'
+                              check (status in ('draft','approved','sent','replied','opted_out','archived')),
+  created_by                text not null check (char_length(created_by) between 1 and 200),
+  approved_by               text check (char_length(approved_by) between 1 and 200),
+  approved_at               timestamptz,
+  sent_at                   timestamptz,
+  replied_at                timestamptz,
+  opted_out_at              timestamptz,
+  archived_at               timestamptz,
+  retention_review_at       date not null default (current_date + 365),
+  created_at                timestamptz not null default now(),
+  updated_at                timestamptz not null default now(),
+  check (source_url is null or source_url ~ '^https://'),
+  check (status not in ('approved','sent','replied') or (approved_by is not null and approved_at is not null))
+);
+
 create index if not exists prospect_organizations_status_idx
   on public.prospect_organizations (status, priority, updated_at desc)
   where deleted_at is null;
@@ -138,20 +165,28 @@ create index if not exists prospect_contacts_email_idx
 create index if not exists prospect_contacts_retention_idx
   on public.prospect_contacts (retention_review_at)
   where deleted_at is null;
+create index if not exists prospect_outreach_drafts_organization_idx
+  on public.prospect_outreach_drafts (organization_id, created_at desc);
+create index if not exists prospect_outreach_drafts_status_idx
+  on public.prospect_outreach_drafts (status, updated_at desc)
+  where status <> 'archived';
 
 alter table public.prospect_import_batches enable row level security;
 alter table public.prospect_organizations enable row level security;
 alter table public.prospect_contacts enable row level security;
 alter table public.prospect_source_records enable row level security;
+alter table public.prospect_outreach_drafts enable row level security;
 
 revoke all on table public.prospect_import_batches from public, anon, authenticated;
 revoke all on table public.prospect_organizations from public, anon, authenticated;
 revoke all on table public.prospect_contacts from public, anon, authenticated;
 revoke all on table public.prospect_source_records from public, anon, authenticated;
+revoke all on table public.prospect_outreach_drafts from public, anon, authenticated;
 
 grant select, insert, update, delete on table public.prospect_import_batches to service_role;
 grant select, insert, update, delete on table public.prospect_organizations to service_role;
 grant select, insert, update, delete on table public.prospect_contacts to service_role;
 grant select, insert, update, delete on table public.prospect_source_records to service_role;
+grant select, insert, update, delete on table public.prospect_outreach_drafts to service_role;
 
 commit;

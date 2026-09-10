@@ -53,6 +53,7 @@ const prospects = [
     linked_company: { id: 'co-1', name: 'Acme HVAC and Water Systems', status: 'approved' },
     retention_review_at: '2027-09-02',
     source_record_count: 3,
+    outreach_drafts: [],
     contacts: [{
       id: '2153285c-f929-4189-a4f9-2afc3a5de58f',
       name: 'Jordan Lee',
@@ -79,6 +80,7 @@ const prospects = [
     linked_company: null,
     retention_review_at: '2027-09-02',
     source_record_count: 1,
+    outreach_drafts: [],
     contacts: [],
   },
 ];
@@ -137,6 +139,7 @@ let notificationPrefs = {
   notify_messages: true,
   marketing_sync: "synced",
 };
+let outreachDrafts = fixtures.prospects.flatMap((prospect) => prospect.outreach_drafts || []);
 export const supabase = { auth: {
   async getSession() { return { data: { session: okSession }, error: null }; },
   async signOut() {}, async signInWithPassword() { return { data: { session: okSession }, error: null }; },
@@ -183,6 +186,33 @@ export async function api(path, options = {}) {
   if (p.startsWith("/api/admin/content")) return { entries: [], types: [], total: 0, has_more: false };
   if (p.startsWith("/api/admin/traffic")) return { totals: {}, funnel: [], campaigns: [], days: [], recent: [] };
   if (p.startsWith("/api/admin/reports")) return { revenue: 0, tax: 0, orders: 0, paid_orders: 0, average_order_value: 0 };
+  if (p.startsWith("/api/admin/crm/outreach-drafts")) {
+    const method = String(options.method || "GET").toUpperCase();
+    if (method === "POST") {
+      const draft = {
+        id: crypto.randomUUID(),
+        ...(options.body || {}),
+        status: "draft",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      outreachDrafts.unshift(draft);
+      const prospect = fixtures.prospects.find((entry) => entry.id === draft.organization_id);
+      if (prospect) prospect.outreach_drafts = outreachDrafts.filter((entry) => entry.organization_id === prospect.id && entry.status !== "archived");
+      return { ok: true, draft };
+    }
+    if (method === "PATCH") {
+      const draft = outreachDrafts.find((entry) => entry.id === options.body?.id);
+      if (!draft) return { error: "not_found" };
+      const next = options.body.action === "approve" ? "approved" : options.body.action === "archive" ? "archived" : options.body.action;
+      draft.status = next;
+      draft.updated_at = new Date().toISOString();
+      const prospect = fixtures.prospects.find((entry) => entry.id === draft.organization_id);
+      if (prospect) prospect.outreach_drafts = outreachDrafts.filter((entry) => entry.organization_id === prospect.id && entry.status !== "archived");
+      return { ok: true, draft };
+    }
+    return { drafts: outreachDrafts };
+  }
   if (p.startsWith("/api/admin/crm/prospects")) {
     const method = String(options.method || "GET").toUpperCase();
     const id = requestUrl.searchParams.get("id") || options.body?.id;

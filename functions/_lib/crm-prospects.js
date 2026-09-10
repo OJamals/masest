@@ -70,7 +70,7 @@ export function prospectPatch(input, existing = {}, now = new Date()) {
 
 export function isMissingProspectSchema(error) {
   const text = [error?.message, error?.details, error?.hint].filter(Boolean).join(' ');
-  const prospectTable = /prospect_(?:import_batches|organizations|contacts|source_records)/i.test(text);
+  const prospectTable = /prospect_(?:import_batches|organizations|contacts|source_records|outreach_drafts)/i.test(text);
   const missing = ['42P01', 'PGRST205'].includes(String(error?.code || '').toUpperCase())
     || /does not exist|could not find the table|schema cache/i.test(text);
   return prospectTable && missing;

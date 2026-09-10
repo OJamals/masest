@@ -24,6 +24,8 @@ test('detail resolves contacts and linked Company context', () => {
   assert.match(src, /url\.searchParams\.get\('id'\)/);
   assert.match(src, /from\('prospect_contacts'\)[\s\S]*\.eq\('organization_id', id\)/);
   assert.match(src, /from\('companies'\)[\s\S]*linked_company_id/);
+  assert.match(src, /from\('prospect_outreach_drafts'\)[\s\S]*\.eq\('organization_id', id\)/);
+  assert.match(src, /prospect_outreach_drafts[\s\S]*\.limit\(25\)/);
 });
 
 test('secondary Prospect table misses return migration state', () => {
