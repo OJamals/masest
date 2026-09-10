@@ -112,6 +112,26 @@ one family.
   --shadow-md: 0 18px 42px -20px rgba(16,74,80,.28), 0 8px 18px -14px rgba(20,24,32,.16);
   --shadow-lg: 0 34px 74px -28px rgba(16,74,80,.34), 0 16px 30px -20px rgba(20,24,32,.18);
 
+  /* Cast shadows: single-layer, zero-spread, ink-tinted.
+     A SECOND elevation language, not more rungs on --shadow-*. Measured across
+     css/*.css there are 34 single-layer light-surface elevation literals, and
+     NONE of them can express itself as a --shadow-* token: all four of those are
+     two-layer and three use negative spread, so a strict four-dimensional match
+     (y +-2, blur +-4, spread +-4, alpha +-.03) fits 0 of 46 literals -- 38 fail on
+     layer count alone. That, not a gap in the ramp, is why the blur-nearest snap
+     in tools/surface-token-migrate.mjs had to be abandoned.
+     Steps are the centres of measured groups, each used at least three times.
+     Substitution cost, worst channel delta over white at the shadow's darkest
+     pixel: cast-sm 0.9 / 0.9 / 5.6, cast-md 6.0 / 2.3 / 2.5,
+     cast-lg 0.3 / 4.7 / 0.3 / 4.9 / 0.0. Tint unification is free (0.0-0.9); the
+     four values above 3 are alpha rounding (.06->.04, .08->.06, .05->.07,
+     .09->.07) and are the first thing to revert if any reads as visible.
+     NOT interchangeable with --shadow-*: these cast, those are layered material. */
+  --shadow-cast-sm: 0 1px 2px rgba(9, 46, 52, .04);
+  --shadow-cast-md: 0 9px 26px rgba(9, 46, 52, .06);
+  --shadow-cast-lg: 0 18px 48px rgba(9, 46, 52, .07);
+
+
   /* Radii */
   /* Radius steps. --r-xs exists for the 19 declarations that were spelled
      2-6px; folding those into --r-input (10px) would have been a five-fold
@@ -2390,6 +2410,8 @@ scroll-snap gallery
 }
 .tier-card.featured {
   border-color: var(--accent);
+  /* brand glow, not elevation: teal hue (max channel 134) must never be folded
+     into an ink cast/shadow token. Used once, so a token would be a rename. */
   box-shadow: 0 8px 30px rgba(14, 124, 134, .10);
 }
 .tier-badge {
@@ -3575,7 +3597,11 @@ fully clickable cards) ---- */
   color: var(--ink);
   transition: transform .2s var(--ease-out);
 }
-.shop-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: var(--shadow-md); }
+/* Only border-color survives here; the transform and box-shadow this rule used to
+   set are overridden by the later .shop-card:hover at equal specificity. Keeping
+   the rule and dropping the dead pair, because deleting it outright would remove
+   the accent border on hover. */
+.shop-card:hover { border-color: var(--accent); }
 .shop-card:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .shop-card-link { display: flex; flex: 1; min-width: 0; flex-direction: column; color: inherit; text-decoration: none; }
@@ -5336,7 +5362,7 @@ body .page-hero .product-shot {
   color: color-mix(in srgb, var(--muted) 78%, var(--ink));
   font-size: var(--fs-caption);
   font-weight: 800;
-  box-shadow: 0 10px 26px rgba(4, 50, 54, .05);
+  box-shadow: var(--shadow-cast-md);
 }
 
 .catalog-price-note i {
@@ -5457,7 +5483,7 @@ body .page-hero .product-shot {
   border: 1px solid var(--line-ink);
   border-radius: var(--r-card);
   background: var(--surface);
-  box-shadow: 0 18px 50px rgba(4, 50, 54, .07);
+  box-shadow: var(--shadow-cast-lg);
 }
 
 .segment-pricing-table {
@@ -5638,7 +5664,7 @@ body .page-hero .product-shot {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(247, 251, 250, .86)),
     radial-gradient(circle at 16% 0%, rgba(0, 130, 135, .08), transparent 42%);
-  box-shadow: 0 18px 50px rgba(4, 50, 54, .07);
+  box-shadow: var(--shadow-cast-lg);
 }
 
 .shop-toolbar input,
@@ -5680,11 +5706,6 @@ body .page-hero .product-shot {
     radial-gradient(circle at 18% 0%, rgba(0, 130, 135, .08), transparent 38%);
   box-shadow: 0 14px 38px rgba(4, 50, 54, .08);
   transition: transform .22s ease;
-}
-
-.shop-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 24px 58px rgba(4, 50, 54, .13);
 }
 
 .shop-card-link {
@@ -7017,7 +7038,7 @@ button.viz-segment {
   border: 1px solid var(--line);
   border-radius: var(--r-card);
   background: var(--surface);
-  box-shadow: 0 16px 44px rgba(4, 50, 54, .05);
+  box-shadow: var(--shadow-cast-lg);
 }
 
 .service-guide-card h3 {
@@ -7241,6 +7262,7 @@ button.viz-segment {
  border-color: var(--line-ink-soft);
  border-radius: 0;
  background: rgba(250, 251, 252, .86);
+ /* hairline, not a cast shadow: blur 0. Different job from --shadow-cast-*. */
  box-shadow: 0 1px 0 rgba(20, 24, 32, .02);
  backdrop-filter: blur(18px) saturate(1.12);
 }
@@ -7617,7 +7639,7 @@ body.products-page .conversion-proof .proof-pill em {
   border: 1px solid var(--line-ink);
   border-radius: var(--r-card);
   background:var(--surface);
-  box-shadow: 0 18px 46px rgba(4, 50, 54, .07);
+  box-shadow: var(--shadow-cast-lg);
 }
 
 .job-plans-media img {
@@ -7641,7 +7663,7 @@ body.products-page .conversion-proof .proof-pill em {
   border-radius: var(--r-card);
   padding: clamp(22px, 3vw, 30px);
   background: rgba(255, 255, 255, .9);
-  box-shadow: 0 18px 46px rgba(4, 50, 54, .07);
+  box-shadow: var(--shadow-cast-lg);
   transition: transform .2s ease;
 }
 
@@ -8510,7 +8532,16 @@ body:not(.products-page) #relatedWrap .shop-grid:has(.shop-card:only-child) {
    and give generated product detail copy enough rhythm to read cleanly. */
 body.products-page .shop-card {
   background:var(--surface);
-  box-shadow: 0 18px 48px rgba(9, 46, 52, .09);
+  box-shadow: var(--shadow-cast-lg);
+}
+
+/* Without this, hovering a card on /products lifts it 6px while its shadow stays
+   put, because `body.products-page .shop-card` (0,2,1) outranks `.shop-card:hover`
+   (0,2,0) on box-shadow while setting no transform — the card floats away from its
+   own shadow. Same value as the general hover so the page behaves like the rest of
+   the site. */
+body.products-page .shop-card:hover {
+  box-shadow: 0 34px 92px rgba(9, 46, 52, .16);
 }
 
 body.products-page .shop-card-core {
@@ -8808,7 +8839,7 @@ body.product-detail-page main > section.product-static-section {
   border: 1px solid var(--line-ink);
   border-radius: var(--r-card);
   background: var(--surface-soft);
-  box-shadow: 0 18px 48px rgba(9, 46, 52, .07);
+  box-shadow: var(--shadow-cast-lg);
 }
 
 .product-application-media img {
@@ -8842,7 +8873,7 @@ body.product-detail-page main > section.product-static-section {
   border: 1px solid var(--line-ink);
   border-radius: var(--r-card);
   background:var(--surface);
-  box-shadow: 0 18px 48px rgba(9, 46, 52, .07);
+  box-shadow: var(--shadow-cast-lg);
 }
 
 .product-comparison-panel {
@@ -8878,7 +8909,7 @@ body.product-detail-page main > section.product-static-section {
   border-radius: var(--r-card);
   background: rgba(255, 255, 255, .88);
   color: var(--ink);
-  box-shadow: 0 10px 28px rgba(9, 46, 52, .05);
+  box-shadow: var(--shadow-cast-md);
   transition: transform .2s ease;
 }
 

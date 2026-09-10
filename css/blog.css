@@ -94,9 +94,9 @@
 .blog-body tbody tr:last-child th,
 .blog-body tbody tr:last-child td { border-bottom: 0; }
 .blog-body .md-card,
-.md-card { display: flex; align-items: center; gap: var(--s4); margin: var(--s6) 0; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); color: inherit; text-decoration: none; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+.md-card { display: flex; align-items: center; gap: var(--s4); margin: var(--s6) 0; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-input); background: var(--surface); color: inherit; text-decoration: none; box-shadow: var(--shadow-cast-sm); }
 .blog-body .md-card:hover,
-.md-card:hover { border-color: var(--brand); box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+.md-card:hover { border-color: var(--brand); box-shadow: var(--shadow-cast-md); }
 .md-card img,
 .md-card-thumb { width: 84px; height: 64px; flex: 0 0 84px; border-radius: var(--r-input); object-fit: cover; background: linear-gradient(135deg, rgba(14,124,134,.16), rgba(15,23,42,.08)); }
 .md-card span { min-width: 0; display: grid; gap: 3px; }
@@ -111,6 +111,14 @@
 .blog-hmis-callout p { margin: 0; color: var(--ink-soft); }
 .blog-hmis-callout a { color: var(--accent-ink); font-weight: 700; }
 .blog-cta { margin-top: var(--s7); padding: var(--s7); border-radius: var(--r-card); background: var(--soft); }
+/* Author card. Sits between the body and related posts so the person behind the
+   article is visible, not only present in JSON-LD. Rendered by authorCard() in
+   tools/build-blog.mjs, and only for a byline that resolves to a real Person. */
+.blog-author { display: grid; gap: var(--s1); margin-top: var(--s7); padding: var(--s5); border: 1px solid var(--line); border-radius: var(--r-card); background: var(--soft); box-shadow: var(--shadow-cast-sm); }
+.blog-author-name { margin: 0; color: var(--ink); font-weight: 800; }
+.blog-author-name span { color: var(--ink-soft); font-weight: 600; }
+.blog-author-bio { margin: 0; color: var(--ink-soft); font-size: var(--fs-caption); }
+
 .blog-cta h2 { margin-top: 0; }
 
 @media (max-width: 640px) {
