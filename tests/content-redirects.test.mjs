@@ -184,3 +184,38 @@ test('every carried body renders, rather than shipping raw markdown', () => {
     assert.match(markup, /css\/blog\.css\?v=/, `${to}: prose body needs blog.css`);
   }
 });
+
+test('a canonical page carries at least the structured data of the page it retired', () => {
+  // The retired /blog/ twins emit BlogPosting + Organization. Making these pages canonical
+  // while emitting only WebPage would have made the page canonical and its schema poorer in
+  // the same change. Article, not BlogPosting: a product comparison on a /comparisons route
+  // is not a blog post.
+  for (const { to } of config.redirects) {
+    const markup = read(`${to.split('#')[0].slice(1)}.html`);
+    const blocks = [...markup.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+    assert.ok(blocks.length, `${to}: no JSON-LD at all`);
+    const graph = blocks.flatMap(([, json]) => JSON.parse(json)['@graph'] ?? []);
+    const article = graph.find((node) => node['@type'] === 'Article');
+    assert.ok(article, `${to}: canonical page must emit Article`);
+
+    assert.equal(article.url, `https://masest.co${to.split('#')[0]}`);
+    assert.equal(article.mainEntityOfPage, article.url);
+    assert.ok(article.author?.name, `${to}: Article needs an author entity`);
+    assert.equal(article.author['@type'], 'Organization',
+      `${to}: the originating posts are bylined "MASEST Team" — do not publish a company as a Person`);
+    assert.match(article.datePublished, /^\d{4}-\d{2}-\d{2}$/);
+    assert.match(article.dateModified, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(article.dateModified >= article.datePublished, `${to}: modified before published`);
+    assert.ok(
+      existsSync(new URL(article.image.replace('https://masest.co/', ''), root)),
+      `${to}: Article image ${article.image} does not resolve to a file`,
+    );
+
+    // Two rungs, not three. There is no /comparisons index, and the previous trail pointed
+    // positions 2 and 3 at the same leaf URL — a malformed trail Google may discard.
+    const crumbs = graph.find((node) => node['@type'] === 'BreadcrumbList');
+    assert.ok(crumbs, `${to}: no BreadcrumbList`);
+    const urls = crumbs.itemListElement.map((item) => item.item);
+    assert.equal(new Set(urls).size, urls.length, `${to}: breadcrumb repeats a URL`);
+  }
+});

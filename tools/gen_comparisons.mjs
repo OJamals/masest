@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderMarkdown } from "./_md.mjs";
+import { organizationJsonLd } from "./company-identity.mjs";
 import { BLOG_VERSION, COMPONENT_VERSION, MAIN_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -36,6 +37,8 @@ const html = (s) => String(s)
 const pages = [
   {
     slug: "vertkleen-hcr-vs-clr",
+    datePublished: "2026-07-09",
+    dateModified: "2026-09-10",
     body: `## The Brevard job turned a product comparison into a time comparison
 
 CLR remained on a rusted 20-year stainless-steel HVAC plate and drain for 36 hours without clearing the area.
@@ -155,6 +158,8 @@ The [full Brevard case study](/blog/hcr-brevard-hvac-rust-case-study) has the se
   },
   {
     slug: "hcr-vs-rydlyme",
+    datePublished: "2026-07-09",
+    dateModified: "2026-09-10",
     body: `## Both products descale. The buying decision is the complete shutdown.
 
 RYDLYME is a familiar biodegradable descaler. Its maker publishes capacity of two pounds of calcium carbonate per gallon and typical circulation of two to four hours.
@@ -233,6 +238,8 @@ Review [HCR](/products/hcr), [technical documents](/resources), and [descaling p
   },
   {
     slug: "cr-hd-vs-simple-green",
+    datePublished: "2026-07-09",
+    dateModified: "2026-09-10",
     body: `## Simple Green is familiar. CR HD is built for the harder shift.
 
 Simple Green Industrial is a broad cleaner and degreaser, and it earned that position honestly. Its published directions span full strength through 1:10.
@@ -369,6 +376,8 @@ Run it on your four worst recurring jobs, not on a demo panel. And run both prod
   },
   {
     slug: "lam3-vs-wet-forget",
+    datePublished: "2026-07-09",
+    dateModified: "2026-09-10",
     body: `## Choose by the finish schedule, not the bottle
 
 Wet & Forget and VertKleen LAM3 both use time instead of aggressive pressure, but they serve different operating needs.
@@ -443,6 +452,8 @@ Explore [LAM3](/products/lam3), the [low-pressure cleaning guide](/blog/how-to-r
   },
   {
     slug: "beer-line-cleaner-cost-comparison",
+    datePublished: "2026-07-09",
+    dateModified: "2026-09-10",
     body: `## The expensive cleaner is the one that keeps the line down
 
 Chemical price is a small part of a CIP cycle. Labor, water, circulation, rinsing, lost pours, and a repeat clean usually cost more than the concentrate.
@@ -541,26 +552,65 @@ const IMAGE_DIMENSIONS = {
   "../img/blog/comparisons/beer-line-cleaner-cost-comparison-split.webp": [1448, 1086],
 };
 
+const ORG = organizationJsonLd();
+
+/* These five pages are canonical for their topic as of 2026-09-10 (see the `pages` header),
+ * so the structured data has to carry the weight the retired /blog/ twins used to. Those
+ * emitted BlogPosting + Organization; emitting only WebPage here would have made the page
+ * canonical and its schema poorer at the same time.
+ *
+ * Article, not BlogPosting: these are product comparisons on a comparisons route, not blog
+ * posts, and Article is the honest parent type.
+ *
+ * `author` is the Organization, deliberately. build-blog.mjs treats a group byline as the
+ * Organization rather than publishing a company as a schema.org/Person, and the originating
+ * posts are all bylined "MASEST Team". Naming a person here would be inventing authorship.
+ * To byline these to a real person, add that Person entity the way AUTHORS does in
+ * build-blog.mjs -- but only once someone confirms they wrote them.
+ *
+ * The breadcrumb is two levels because there is no comparisons index page. It previously
+ * had three, with positions 2 and 3 pointing at the same leaf URL, which is a malformed
+ * trail Google is entitled to ignore. If a /comparisons index is ever built, restore the
+ * middle rung pointing at it.
+ */
 function schema(page) {
-  return {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        name: page.seoTitle,
-        url: `${BASE}/comparisons/${page.slug}`,
-        description: page.description
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: `${BASE}/` },
-          { "@type": "ListItem", position: 2, name: "Comparisons", item: `${BASE}/comparisons/${page.slug}` },
-          { "@type": "ListItem", position: 3, name: page.title, item: `${BASE}/comparisons/${page.slug}` }
-        ]
-      }
-    ]
-  };
+  const url = `${BASE}/comparisons/${page.slug}`;
+  const graph = [
+    {
+      "@type": "WebPage",
+      name: page.seoTitle,
+      url,
+      description: page.description
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${BASE}/` },
+        { "@type": "ListItem", position: 2, name: page.title, item: url }
+      ]
+    }
+  ];
+
+  // Only a page with a body is an Article. A 340-word spec sheet is a WebPage and saying
+  // otherwise would be the same overclaim the schema is meant to fix.
+  if (page.body) {
+    graph.push({
+      "@type": "Article",
+      headline: page.seoTitle,
+      description: page.description,
+      url,
+      mainEntityOfPage: url,
+      image: `${BASE}${page.image.replace(/^\.\./, "")}`,
+      author: ORG,
+      publisher: ORG,
+      datePublished: page.datePublished,
+      dateModified: page.dateModified,
+      about: [page.product, page.competitor],
+      wordCount: page.body.replace(/\[\[[^\]]*\]\]/g, " ").split(/\s+/).filter(Boolean).length
+    });
+  }
+
+  return { "@context": "https://schema.org", "@graph": graph };
 }
 
 function priceBinding({ vsku, tier }, field) {
