@@ -401,6 +401,21 @@ visible label and buy-control affordance, and add the size select next to it. Th
 
 ### SQ-13 — Grid cards ~700px tall, nothing aligns across a row · HIGH
 
+> **REVISED 2026-09-10 — height target moved from ≤440 to ~490. The `.shop-card-savings`
+> chip stays.**
+>
+> Cards measure **488px** (media 187 + body 130 + buybar 147), identical at 1440×900,
+> 1440×1200 and 1280×900. The chip's true vertical cost is **41.6px**, not the 49px
+> assumed — so removing it lands at **446.4px and still misses ≤440 by 6.4px**. The target
+> also predates the card: it was set before SQ-12 added the size select and the persistent
+> add-to-cart label.
+>
+> No card-height assertion exists anywhere in `tests/`. The chip is pinned three times in
+> `tests/product-case-savings.test.mjs` under *"case savings use linked account-effective
+> prices, never a hard-coded claim"* — a deliberate revenue feature wired to real pricing.
+> If height is revisited, the 49px lives in the 187px media block and 147px buybar. See `decisions-pending-2026-09-10.md` for the full measurement and reasoning.
+
+
 **Problem.** Each card stacks eleven blocks: badge overlay, image, eyebrow, title,
 description, price, savings chip, per-unit chip, FITS list, RESULTS paragraph, link.
 Eyebrows wrap to two lines on some SKUs and one on others; FITS wraps to one, two or three.
@@ -457,6 +472,23 @@ accordion, the filter bar, then the grid. Page total 6,422px for 15 SKUs. Compre
 hero to headline plus one line; get the first product row into the opening screen.
 
 ### SQ-16 — Product imagery inconsistently framed · MEDIUM
+
+> **REVISED 2026-09-10 — scope reduced to one image. Sub-claim 1 is misattributed.**
+>
+> **The homepage renders no product cards** (`shop-card` × 0, `shop-grid` × 0,
+> `data-commerce` × 0 in production HTML). The images described are the six *story*
+> product shots, and they already follow one framing rule: all 900×1200, subject height
+> **90.4–97.8%** (spread 7.3 points), subject width **78.0–80.3%** (spread 2.3 points).
+> There is no "small centred bottle" — the smallest subject fills 90.4% of frame.
+>
+> **One real defect:** `alumibrite-studio` has a **0.0% bottom gap** where its four
+> siblings sit on 3.1–4.7%. Re-export to a 3–5% bottom margin. Note the file is **R2-only**
+> — not in the repository — so this is a media operation, not a commit.
+>
+> **The shelf photo is left as-is by decision.** `product-line-2026-enhanced.webp` is
+> **1200×900**, not "1,300px wide", and has already had an enhancement pass. The
+> substantive complaint is device-pixel ratio, not source quality. See `decisions-pending-2026-09-10.md` for the full measurement and reasoning.
+
 
 Grid packshots are consistent and good. Homepage product cards are not: one is a label
 crop enlarged past its frame and cropped top and bottom, the next is a small centred
@@ -543,6 +575,23 @@ all paint), then the `apply()` triple-render, then the two import specifiers, th
 
 ### SQ-06 — Five pinned scenes, 3,679px, before the first product · CRITICAL
 
+> **REVISED 2026-09-10 — target withdrawn. Six scenes stay; the story is not capped at
+> ~2 screens.** The six-scene / 80–88vh contract was reaffirmed `23260bc8` on 2026-09-03,
+> four days after this review. Cutting to three would touch 14 files including six test
+> files and two blog posts that reuse the scene imagery.
+>
+> **"Distance to first product" is retired as a homepage KPI.** The story *is* the hero,
+> and the nav's first link is **Products**, which is where the catalogue comes from anyway
+> (no `shop-card` in the shipped homepage HTML — commerce hydrates via JS). Scroll depth
+> does not gate purchase. Judge the story on persuasion quality, not length.
+>
+> **Three of the four sub-claims below are measured stale:** no product-name clipping
+> (identity bottom 751 / product 755 against a card bottom of 773); the sticky bar carries
+> two links plus a context label in a **52px** strip, not "four competing actions in 40px";
+> the left column fills **76–94%**, not 60% — the apparent emptiness is the crossfade
+> showing two vertically-offset scenes at once. Do not re-raise on these grounds. See `decisions-pending-2026-09-10.md` for the full measurement and reasoning.
+
+
 The homepage is 11,427px — 15.7 screens. The scroll-scrubbed story occupies the first
 3,679px as six pinned scenes numbered 01–06; reaching the product line-up took 24 wheel
 notches. Scenes reuse one layout (eyebrow, two-line headline, paragraph, caption,
@@ -576,6 +625,24 @@ opaque, the observer adds a class that plays the entrance. Anything never observ
 already correct. Drop the global smooth scroll or scope it to the story's own controls.
 
 ### SQ-08 — Proof panels disclose that the imagery is reconstructed · OWNER DECISION
+
+> **RESOLVED 2026-09-10 — no change. The premise was wrong, and in the opposite direction
+> to what this finding assumed.**
+>
+> The after-frames are **retouched originals** — real photographs of the real result,
+> cropped and graded for presentation. Pixel evidence: in all six story scenes the BEFORE
+> and AFTER originals have **different dimensions** (separate photographs, independently
+> cropped; `cip-vessel` 1200×1600 vs 1600×1200 and `pool-cartridge` 686×1229 vs 1220×648
+> are shot 90° apart), and per-pair change is spread across 25–30 of 64 tiles — global
+> grading, not locally painted-in cleanliness.
+>
+> The disclosure this finding quotes ("After frame digitally reconstructed from source
+> photo") **overstated what was done** and was removed by `e933983b` on 2026-09-09. That
+> removal was a correction. "Photo proof" stays; the component is not relabelled.
+>
+> The enhancement filter `saturate(1.03) contrast(1.07) brightness(1.02)` applies to
+> `.photo img, .proof-card figure img` only — the story receives none of it. See `decisions-pending-2026-09-10.md` for the full measurement and reasoning.
+
 
 Each before/after card is labelled **"Photo proof"** and carries, in 9px grey type at the
 bottom edge, **"After frame digitally reconstructed from source photo."** A claim of
@@ -687,6 +754,29 @@ every card shares one edge.
 ## Phase 5 — Content
 
 ### SQ-22 — 60 images without a loading attribute · MEDIUM
+
+> **DO NOT IMPLEMENT — measured 2026-09-10. The correct number of images that should gain
+> `loading="lazy"` is ZERO.** This finding counts a deliberate and correct loading strategy
+> as a defect.
+>
+> 378 shipped `<img>`, 83 without a `loading` attribute. All 83 decompose:
+>
+> | group | n | why it has no `loading` |
+> |---|---|---|
+> | inside `<noscript>` | 12 | never fetched when JS runs; the attribute is inert |
+> | `fetchpriority="high"` | 68 | each page's designated LCP image — lazy-loading it is a **performance regression** |
+> | `checkout.html` logo | 1 | first image, above the fold |
+> | `index.html` #1, #2 | 2 | the story object's after-frame and product shot, in the same above-the-fold card |
+>
+> `index.html`'s "15", which this spec says to do first, is **12 noscript fallbacks plus
+> the 3 above-the-fold images of the opening comparison card**. None of them should be
+> lazy. Alt text and explicit `width`/`height` are already complete across all 378, so CLS
+> is handled, and 70 images already carry `fetchpriority`.
+>
+> The durable version of this finding is an invariant, not an edit: *every image without
+> `loading="lazy"` must be an LCP image, a `<noscript>` fallback, or the first image on its
+> page.* That holds today on all 83.
+
 
 Alt text and explicit dimensions are complete across all 199 images — genuinely rare, and
 it means CLS is already handled. But 60 images carry no `loading` attribute, so below-fold
