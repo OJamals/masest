@@ -173,6 +173,26 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     })[action] || 'Review order';
   }
 
+  /* SQ-19: an order card carried Lifecycle and Status side by side, and for a
+     cancelled order both read CANCELLED — one fact in two pill treatments.
+     They are not always the same fact, though: lifecycleFor() derives the stage
+     from status AND tracking_status, so an order is routinely "Unfulfilled"
+     while its status is "processing", and both are worth showing. The stage
+     collapses onto the status in the terminal states, so suppress the second
+     pill in exactly those cases.
+
+     Compare the rendered labels, not the keys: the keys `payment_pending` and
+     `pending_payment` differ while both pills read "payment pending" to a human,
+     which is the duplication this finding is actually about. */
+  function statusWords(value) {
+    return String(value || '').toLowerCase().split(/[^a-z]+/).filter(Boolean).sort().join(' ');
+  }
+
+  function restatesLifecycle(order = {}) {
+    const stage = statusWords(lifecycleFor(order).label);
+    return stage !== '' && stage === statusWords(order.status);
+  }
+
   function lifecycleSummary(order) {
     const lifecycle = lifecycleFor(order);
     return `<div class="admin-order-lifecycle"><span>Lifecycle</span><b>${statusBadge(lifecycle.stage, lifecycle.label)}</b><small class="muted">${esc(nextActionLabel(lifecycle.next_action))}</small></div>`;
@@ -809,7 +829,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
           <div><span>Items</span><ul class="admin-order-items">${items || '<li class="muted">No items</li>'}</ul></div>
           <div><span>Pay</span><b>${esc(order.payment_method || '')}${netAgingBadge(order)}</b></div>
           ${lifecycleSummary(order)}
-          <div><span>Status</span><b>${statusBadge(order.status, order.status.replaceAll('_', ' '))}</b></div>
+          ${restatesLifecycle(order) ? '' : `<div><span>Status</span><b>${statusBadge(order.status, order.status.replaceAll('_', ' '))}</b></div>`}
         </div>
         <div class="admin-order-primary">
           <button class="btn btn-ghost btn-sm" data-order-detail="${id}" type="button">Details</button>

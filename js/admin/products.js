@@ -80,7 +80,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         </div>
         <div class="product-admin-actions">
           <label class="product-active-toggle"><input type="checkbox" name="product_active" ${p.active !== false ? 'checked' : ''} data-field="active"> Active</label>
-          <button class="btn btn-primary btn-sm" data-save-product="${esc(p.sku)}" type="button">Save</button>
+          <button class="btn btn-primary btn-sm" data-save-product="${esc(p.sku)}" type="button" disabled title="Edit a field to enable">Save</button>
           <button class="btn btn-ghost btn-sm" data-remove-product="${esc(p.sku)}" type="button">Remove</button>
         </div>
       </div>
@@ -110,12 +110,57 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     </article>
   `).join('')}</div>`;
     restoreDirty(box, snap);
+    syncEditedFromDirty(box);
+  }
+
+  /* SQ-18: Save rendered as a filled primary button on every row at once, so the
+     eye met fifteen equal calls to action with no way to tell which row was
+     actually dirty. Each Save is now disabled until its own scope is edited.
+
+     This cannot ride on `data-dirty`: markDirty() in admin.js deliberately skips
+     checkboxes — and the Active toggle is one — while captureDirty() reads
+     `.value`, which is meaningless for a checkbox. So edit state is tracked
+     separately, per scope, and `data-dirty` keeps its restore-after-rebuild job. */
+  function saveScopeOf(el) {
+    return el.closest?.('[data-variant]') || el.closest?.('[data-product]') || null;
+  }
+
+  function syncSaveButton(scope) {
+    if (!scope) return;
+    const isVariant = scope.matches('[data-variant]');
+    const button = isVariant
+      ? scope.querySelector('[data-save-variant]')
+      : [...scope.querySelectorAll('[data-save-product]')].find((b) => saveScopeOf(b) === scope);
+    if (!button) return;
+    const edited = scope.dataset.edited === '1';
+    button.disabled = !edited;
+    button.title = edited ? '' : 'Edit a field to enable';
+  }
+
+  function markScopeEdited(target) {
+    const scope = saveScopeOf(target);
+    if (!scope) return;
+    scope.dataset.edited = '1';
+    syncSaveButton(scope);
+  }
+
+  /* Nothing clears edit state explicitly after a save: the list rebuilds, every
+     Save renders disabled again, and restoreDirty() re-marks only the controls
+     whose value still differs from the server's. A saved row therefore matches
+     and stays disabled, while a failed save keeps its edits and stays saveable. */
+
+  // A rebuild re-renders every Save disabled; restoreDirty() then puts the user's
+  // unsaved edits back. Re-derive edit state from those so their rows stay saveable.
+  function syncEditedFromDirty(box) {
+    box?.querySelectorAll?.('[data-dirty="1"]').forEach((el) => markScopeEdited(el));
   }
 
   // Row + media actions delegated once on the stable #admProducts container (#36).
   function wireProducts() {
     const box = $('admProducts');
     if (!box) return;
+    delegate(box, 'input', '[data-field], [data-vfield]', (event, el) => markScopeEdited(el));
+    delegate(box, 'change', '[data-field], [data-vfield]', (event, el) => markScopeEdited(el));
     delegate(box, 'click', '[data-save-product]', (event, button) => saveProductRow(button.dataset.saveProduct));
     delegate(box, 'click', '[data-remove-product]', (event, button) => removeProduct(button.dataset.removeProduct));
     delegate(box, 'click', '[data-save-variant]', (event, button) => saveVariantRow(button.dataset.saveVariant));
@@ -218,7 +263,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       <label>Width in <input class="adm-input" name="variant_shipping_width_in" type="number" min="0.01" step="0.01" value="${esc(v.shipping_width_in ?? '')}" data-vfield="shipping_width_in" aria-label="Package width inches"></label>
       <label>Height in <input class="adm-input" name="variant_shipping_height_in" type="number" min="0.01" step="0.01" value="${esc(v.shipping_height_in ?? '')}" data-vfield="shipping_height_in" aria-label="Package height inches"></label>
       <label class="variant-active"><input type="checkbox" name="variant_active" ${v.active !== false ? 'checked' : ''} ${v.requires_quote ? 'disabled' : ''} data-vfield="active"> ${v.requires_quote ? 'Quote only' : 'Active'}</label>
-      <button class="btn btn-primary btn-sm" data-save-variant="${esc(v.vsku)}" type="button">Save</button>
+      <button class="btn btn-primary btn-sm" data-save-variant="${esc(v.vsku)}" type="button" disabled title="Edit a field to enable">Save</button>
       <button class="btn btn-ghost btn-sm" data-remove-variant="${esc(v.vsku)}" type="button">Remove</button>
       <input type="hidden" name="variant_product_sku" value="${esc(v.product_sku || product.sku)}" data-vfield="product_sku">
       <input type="hidden" name="variant_sku" value="${esc(v.vsku)}" data-vfield="vsku">
