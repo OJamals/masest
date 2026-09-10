@@ -32,6 +32,116 @@ const REQUIRED = ["title", "category", "date", "excerpt", "body"];
 const ORG = organizationJsonLd();
 
 const text = (s) => escapeHtml(s);
+
+/* SERP titles.
+ *
+ * post.title is the reader-facing H1 and is never changed here. Google truncates
+ * around 60 RENDERED characters and " | MASEST VertKleen" spends 19, leaving 41.
+ *
+ * Why this map lives in the generator and not in data/content/blog.json: on a
+ * production deploy the "Refresh production CMS snapshots" step in verify.yml
+ * overwrites data/content/*.json from Supabase before the build runs, so a
+ * seo_title added to the repo's blog.json would pass every local test and then
+ * silently vanish at deploy time. A CMS-authored post.seo_title still wins when
+ * one exists, so populating the field in Supabase later needs no flag day.
+ *
+ * Resolution order: post.seo_title (CMS) -> SEO_TITLES[slug] (here) -> post.title.
+ * Enforced by tests/head-title-length.test.mjs, which counts entities as ONE
+ * character because "&amp;" renders as "&".
+ */
+/* Author entities.
+ *
+ * The CMS supplies a byline STRING (post.author). The entity behind that string --
+ * job title, expertise, employer -- is structural, so it lives here, the same split
+ * as SEO_TITLES: content in Supabase, structure in the generator.
+ *
+ * Two things this fixes. A byline that names a group is not a Person, and emitting
+ * one as schema.org/Person is simply wrong: 34 of 35 posts are bylined "MASEST Team"
+ * and were being published as a human being. Those now resolve to Organization.
+ * And a bare Person with nothing but a name carries no E-E-A-T signal at all, which
+ * is what SQ-24 was actually asking for.
+ *
+ * To byline a post to a person, set post.author to that person's key below IN THE
+ * CMS -- editing data/content/blog.json does nothing, because a production deploy
+ * overwrites it from Supabase.
+ */
+const ORGANIZATION = { "@type": "Organization", name: "MASEST Consulting LLC" };
+
+const AUTHORS = {
+  Matthew: {
+    "@type": "Person",
+    name: "Matthew",
+    jobTitle: "Founder",
+    description:
+      "Chemical engineer with years of experience in industrial chemicals and cleaning agents.",
+    worksFor: ORGANIZATION,
+    knowsAbout: [
+      "Industrial cleaning chemistry",
+      "Descaling and scale control",
+      "Industrial degreasing",
+      "Water treatment",
+    ],
+  },
+};
+
+// A byline naming the company or a group is the Organization, not a Person.
+const GROUP_BYLINES = new Set(["MASEST", "MASEST Team"]);
+
+function authorEntity(byline) {
+  if (!byline || GROUP_BYLINES.has(byline)) return ORGANIZATION;
+  return AUTHORS[byline] || { "@type": "Person", name: byline };
+}
+
+/* Visible counterpart to the Person schema. A structured-data author nobody can see
+   is a claim to a crawler and nothing to a reader, so this renders only for a byline
+   that resolves to a real Person entity -- a group byline gets no card. */
+function authorCard(byline) {
+  const entity = authorEntity(byline);
+  if (entity["@type"] !== "Person" || !AUTHORS[byline]) return "";
+  return `<aside class="blog-author">
+      <p class="blog-author-name">${text(entity.name)}<span> · ${text(entity.jobTitle)}</span></p>
+      <p class="blog-author-bio">${text(entity.description)}</p>
+    </aside>`;
+}
+
+
+const SEO_TITLES = {
+  "beer-line-cleaner-cost-comparison": "Beer line cleaner cost per CIP cycle",
+  "car-dealership-cleaning-checklist": "Car dealership cleaning checklist",
+  "commercial-drain-odor-control-guide": "Remove commercial drain odors",
+  "commercial-gym-cleaning-checklist": "Commercial gym cleaning checklist",
+  "commercial-kitchen-degreasing-guide": "Commercial kitchen degreasing guide",
+  "construction-equipment-concrete-residue-cleaning": "Clearing concrete residue on site",
+  "cooling-tower-cleaning-water-management-plan": "Cooling-tower cleaning program",
+  "cr-hd-vs-simple-green": "CR HD vs Simple Green",
+  "cr-hd-walmart-distribution-center-case-study": "Why 3 Walmart DCs switched to CR HD",
+  "data-center-cooling-maintenance-cleaning": "Data-center cooling scale removal",
+  "descaler-fire-pump-walmart-case-study": "Descaler on a Walmart DC fire pump",
+  "descaling-without-acid": "Remove scale without mineral acid",
+  "drone-building-cleaning-guide": "Drone building & façade cleaning plan",
+  "food-plant-cleaning-cip-sanitation-release": "Food-plant CIP cleaning stages",
+  "golf-course-equipment-grounds-hardscape-cleaning": "Golf-course equipment & hardscape care",
+  "hcr-brevard-hvac-rust-case-study": "HCR vs 20-year HVAC rust: case study",
+  "hcr-vs-rydlyme": "VertKleen HCR vs RYDLYME",
+  "hotel-property-turnover-facility-cleaning": "Hotel turnover cleaning plan",
+  "how-to-clean-oxidized-aluminum-boat": "How to clean an oxidized aluminum boat",
+  "how-to-descale-heat-exchanger": "How to descale a heat exchanger",
+  "how-to-remove-moss-algae-without-pressure-washing": "Remove moss and algae, no pressure wash",
+  "hvac-condensate-drain-line-cleaning-guide": "HVAC condensate drain-line cleaning",
+  "industrial-cleaning-trial-scope-isolate-contain-release": "How to trial a safer industrial cleaner",
+  "lam3-vs-wet-forget": "LAM3 vs Wet & Forget: finished areas",
+  "low-foam-degreaser-parts-washers-floor-scrubbers": "Low-foam degreaser for parts washers",
+  "military-government-maintenance-procurement": "Government fleet cleaning orders",
+  "neutral-ph-industrial-degreaser-guide": "Neutral-pH industrial degreaser guide",
+  "oil-gas-equipment-degreasing-maintenance": "Oil and gas equipment degreasing",
+  "school-university-facility-cleaning-plan": "Campus facility cleaning plan",
+  "solar-panel-cleaning-low-residue-maintenance": "Low-residue solar panel cleaning",
+  "vertkleen-hcr-vs-clr": "VertKleen HCR vs CLR PRO MAX",
+  "vertkleen-launch": "Which VertKleen product fits your job?",
+  "warehouse-floor-degreasing-guide": "Warehouse floor degreasing guide",
+  "watersafe60-water-treatment-guide": "WaterSafe60 water-treatment guide",
+};
+
 const attr = (s) => escapeHtml(s);
 
 // Serialize JSON-LD for embedding in an HTML <script> block. Escapes "<" so a
@@ -159,7 +269,7 @@ function articleSchema(post, heroUrl = "") {
     headline: post.title,
     description: post.excerpt,
     datePublished: post.date,
-    author: { "@type": post.author ? "Person" : "Organization", name: post.author || "MASEST" },
+    author: authorEntity(post.author),
     image: heroUrl ? `${BASE}${heroUrl}` : `${BASE}/img/og-card.png`,
     mainEntityOfPage: `${BASE}/blog/${post.slug}`,
     publisher: ORG,
@@ -187,7 +297,7 @@ function postPage(post, all) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${text(post.title)} | MASEST VertKleen</title>
+<title>${text(post.seo_title || SEO_TITLES[post.slug] || post.title)} | MASEST VertKleen</title>
 <meta name="description" content="${attr(post.excerpt)}">
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="../img/favicon-enhanced.png?v=20260617c">
@@ -233,6 +343,7 @@ function postPage(post, all) {
     ${heroImg}
     ${tableOfContents(headings)}
     <div class="blog-body">${bodyHtml}</div>
+    ${authorCard(post.author)}
     ${relatedHtml}
     <aside class="blog-hmis-callout">
       <strong>HMIS 0-0-0</strong>

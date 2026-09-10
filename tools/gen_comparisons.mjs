@@ -18,7 +18,7 @@ const pages = [
   {
     slug: "vertkleen-hcr-vs-clr",
     title: "VertKleen HCR vs CLR",
-    seoTitle: "VertKleen HCR vs CLR: Industrial Descaling",
+    seoTitle: "HCR vs CLR: Industrial Descaling",
     description: "Compare VertKleen HCR with CLR for rust, mineral scale, circulation cleaning, crew time, rinsing, and total job cost.",
     eyebrow: "Descaler comparison",
     h1: "VertKleen HCR vs CLR: which fits your descaling job?",
@@ -68,7 +68,7 @@ const pages = [
   {
     slug: "cr-hd-vs-simple-green",
     title: "CR HD vs Simple Green",
-    seoTitle: "CR HD vs Simple Green: Heavy Degreaser Comparison",
+    seoTitle: "CR HD vs Simple Green: Degreasers",
     description: "Compare VertKleen CR HD with Simple Green for heavy grease, repeat passes, rinsing, crew time, and total cleaning cost.",
     eyebrow: "Degreaser comparison",
     h1: "VertKleen CR HD vs Simple Green on heavy grease.",
@@ -120,7 +120,7 @@ const pages = [
   {
     slug: "beer-line-cleaner-cost-comparison",
     title: "Beer line cleaner cost comparison",
-    seoTitle: "VertKleen Brewery CIP: Full-Cycle Cost Guide",
+    seoTitle: "Brewery CIP: Full-Cycle Cost Guide",
     description: "Compare a complete VertKleen CR and HCR brewery CIP cycle with beer-line cleaner pricing, labor, water, rinsing, and downtime.",
     eyebrow: "Brewery CIP comparison",
     h1: "Clean brewery organics first. Remove beer stone second.",

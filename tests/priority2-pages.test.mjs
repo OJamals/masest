@@ -44,20 +44,25 @@ const tab4IndustryPages = [
   "agriculture",
 ];
 
+/* The title column on both tables below is the page's SERP <title>, which since
+   2026-09-10 is a purpose-written SEO title, not the reader-facing H1: comparison
+   landing pages take it from seoTitle in tools/gen_comparisons.mjs, comparison blog
+   posts from SEO_TITLES in tools/build-blog.mjs. The H1 copy is unchanged. Length is
+   capped at 60 rendered characters by tests/head-title-length.test.mjs. */
 const comparisonPages = [
-  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "VertKleen HCR vs CLR: Industrial Descaling", "HCR-25G", "CLR PRO MAX", "A real HCR job shows heavy rust and mineral scale"],
+  ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "HCR vs CLR: Industrial Descaling", "HCR-25G", "CLR PRO MAX", "A real HCR job shows heavy rust and mineral scale"],
   ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "HCR-25G", "$34.00-$48.60/gal", "A real HVAC job shows HCR releasing heavy rust and scale"],
-  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Heavy Degreaser Comparison", "CRHD-25G", "$13.20-$36.80/gal", "set up a fair side-by-side test"],
+  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Degreasers", "CRHD-25G", "$13.20-$36.80/gal", "set up a fair side-by-side test"],
   ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "LAM3-25G", "$34.00/gal", "Before-and-after photos show CR and LAM3"],
-  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "VertKleen Brewery CIP: Full-Cycle Cost Guide", "CRCIP-25G", "$38.85/gal", "Brewlando Brewing field and lab results"],
+  ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "Brewery CIP: Full-Cycle Cost Guide", "CRCIP-25G", "$38.85/gal", "Brewlando Brewing field and lab results"],
 ];
 
 const comparisonBlogPosts = [
-  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR PRO MAX for industrial descaling", "HCR-25G", "two-to-three-hour use window", "280 times less corrosion"],
-  ["blog/hcr-vs-rydlyme.html", "VertKleen HCR vs RYDLYME: compare the complete descaling job", "HCR-25G", "2–4 hours", "280 times less corrosion"],
-  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green for heavy industrial degreasing", "CRHD-25G", "full strength through 1:10", "DC-8851"],
-  ["blog/lam3-vs-wet-forget.html", "VertKleen LAM3 vs Wet & Forget: compare the finished area", "LAM3-25G", "dilute concentrate 1:5", "improvement after two weeks"],
-  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost: what a full CIP cycle really costs", "CRCIP-25G", "caustic alkaline cleaner at 2–3%", "seven Florida breweries"],
+  ["blog/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR PRO MAX", "HCR-25G", "two-to-three-hour use window", "280 times less corrosion"],
+  ["blog/hcr-vs-rydlyme.html", "VertKleen HCR vs RYDLYME", "HCR-25G", "2–4 hours", "280 times less corrosion"],
+  ["blog/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CRHD-25G", "full strength through 1:10", "DC-8851"],
+  ["blog/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget: finished areas", "LAM3-25G", "dilute concentrate 1:5", "improvement after two weeks"],
+  ["blog/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost per CIP cycle", "CRCIP-25G", "caustic alkaline cleaner at 2–3%", "seven Florida breweries"],
 ];
 
 const industryLabelPages = [
