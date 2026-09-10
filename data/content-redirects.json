@@ -1,0 +1,44 @@
+{
+  "_comment": [
+    "Repo-owned 301 map for retired content URLs. Emitted into dist/_redirects by",
+    "tools/cf-build.mjs alongside the industries redirects.",
+    "",
+    "Unlike the industries redirects, the `from` paths here DO still resolve to a static",
+    "file in dist/. That is deliberate and it works: Cloudflare Pages applies _redirects",
+    "'regardless of whether or not an asset matches the incoming request'",
+    "(https://developers.cloudflare.com/pages/configuration/redirects/). Verified live on",
+    "/industries/schools-universities -> 301 -> /industries/education.",
+    "",
+    "Blog bodies are Supabase-authoritative (see tools/publish-blog-ci.mjs), so a blog post",
+    "cannot be retired by deleting it from the repo. Redirecting it is the only durable",
+    "mechanism, and the five comparison slugs below are additionally pinned against removal",
+    "by PROTECTED_COMPARISON_SLUGS in that same file."
+  ],
+  "redirects": [
+    {
+      "from": "/blog/beer-line-cleaner-cost-comparison",
+      "to": "/comparisons/beer-line-cleaner-cost-comparison",
+      "reason": "duplicate-comparison canonical consolidation, ruled 2026-09-10"
+    },
+    {
+      "from": "/blog/cr-hd-vs-simple-green",
+      "to": "/comparisons/cr-hd-vs-simple-green",
+      "reason": "duplicate-comparison canonical consolidation, ruled 2026-09-10"
+    },
+    {
+      "from": "/blog/hcr-vs-rydlyme",
+      "to": "/comparisons/hcr-vs-rydlyme",
+      "reason": "duplicate-comparison canonical consolidation, ruled 2026-09-10"
+    },
+    {
+      "from": "/blog/lam3-vs-wet-forget",
+      "to": "/comparisons/lam3-vs-wet-forget",
+      "reason": "duplicate-comparison canonical consolidation, ruled 2026-09-10"
+    },
+    {
+      "from": "/blog/vertkleen-hcr-vs-clr",
+      "to": "/comparisons/vertkleen-hcr-vs-clr",
+      "reason": "duplicate-comparison canonical consolidation, ruled 2026-09-10"
+    }
+  ]
+}

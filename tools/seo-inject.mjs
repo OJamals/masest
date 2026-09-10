@@ -66,7 +66,18 @@ const SITE_IMAGE_DIMENSIONS = new Map(
   JSON.parse(readFileSync(new URL("../data/content/site-images.json", import.meta.url), "utf8")).assets
     .map((asset) => [asset.public_url, { width: asset.width, height: asset.height, alt: asset.alt }]),
 );
-const BLOG_POST_SLUGS = (BLOG_SNAPSHOT[BLOG_DELIVERY.key] || []).map((post) => post.slug).filter(Boolean);
+// A URL that 301s must not appear in the sitemap — Search Console reports a redirecting
+// sitemap URL as an error, and it asks the crawler to keep re-fetching a page that only
+// forwards. The post itself stays in the CMS and its page keeps generating; the redirect
+// map in data/content-redirects.json is the single switch that retires the URL.
+const REDIRECTED_PATHS = new Set(
+  JSON.parse(readFileSync(new URL("../data/content-redirects.json", import.meta.url), "utf8"))
+    .redirects.map(({ from }) => from),
+);
+const BLOG_POST_SLUGS = (BLOG_SNAPSHOT[BLOG_DELIVERY.key] || [])
+  .map((post) => post.slug)
+  .filter(Boolean)
+  .filter((slug) => !REDIRECTED_PATHS.has(`/blog/${slug}`));
 const DOCUMENT_REVIEW = JSON.parse(readFileSync(new URL("../data/public-document-review.json", import.meta.url), "utf8"));
 const DOCUMENTS = new Map(DOCUMENT_REVIEW.documents.map((document) => [document.path, document]));
 const AUTHORITY_RECORDS = DOCUMENT_REVIEW.documents.flatMap((document) => document.authority_records || []);

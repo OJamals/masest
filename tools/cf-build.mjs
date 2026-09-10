@@ -10,6 +10,7 @@ import { dirname, extname, join } from 'node:path';
 import { canonicalPublicImageUrl, SITE_MEDIA_BASE, rewriteCmsImageReferences } from '../js/image-url.js';
 import { parseMarineCatalog } from '../js/main/marine-catalog.js';
 import { renderIndustryRedirects } from './build-industry-pages.mjs';
+import { renderContentRedirects } from './content-redirects.mjs';
 import { COMPONENT_VERSION } from './static-release.mjs';
 import { validatePublicDocumentReview } from './public-document-policy.mjs';
 
@@ -139,6 +140,17 @@ writeFileSync(
   `${rewriteCmsImageReferences(JSON.stringify(publicMarineCatalog, null, 2), siteImagePaths, cmsMediaBase)}\n`,
 );
 n++;
-writeFileSync(join(OUT, '_redirects'), renderIndustryRedirects(industryApplications));
+// Two independent redirect sources, concatenated. Industries retire a slug by deleting its
+// page; content redirects retire a URL whose page still exists, because blog bodies are
+// Supabase-authoritative. Cloudflare applies _redirects whether or not an asset matches, so
+// both work. Targets are resolved against dist/ so a redirect can never point at a 404.
+const contentRedirects = renderContentRedirects(
+  JSON.parse(readFileSync('data/content-redirects.json', 'utf8')),
+  { exists: (pathname) => existsSync(join(OUT, `${pathname.slice(1)}.html`)) },
+);
+writeFileSync(
+  join(OUT, '_redirects'),
+  renderIndustryRedirects(industryApplications) + contentRedirects,
+);
 
 console.log(`cf-build: copied ${n} static files to ${OUT}/; CMS media linked in ${rewritten}`);

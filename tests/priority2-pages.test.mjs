@@ -243,7 +243,14 @@ test("comparison SEO pages are also generated as mechanism-first blog posts", ()
     assert.equal(exists(path), true, `${path} should be generated`);
 
     const html = read(path);
-    assert.match(sitemap, new RegExp(`https://masest\\.co/blog/${slug}`), `${slug} blog URL should be in sitemap`);
+    // The blog twin still generates and still carries its pricing bindings and CTAs — a
+    // reader arriving on an old link is not dropped. But its URL is deliberately OUT of the
+    // sitemap: ruled 2026-09-10, /comparisons/<slug> is canonical for these five topics and
+    // /blog/<slug> 301s to it (data/content-redirects.json). A sitemap must not advertise a
+    // URL that redirects. This assertion previously read the other way, encoding the earlier
+    // arrangement where both URLs shipped as competing 200s; see tests/content-redirects.test.mjs.
+    assert.doesNotMatch(sitemap, new RegExp(`<loc>https://masest\\.co/blog/${slug}</loc>`), `${slug} blog URL should not be in sitemap — it redirects`);
+    assert.match(sitemap, new RegExp(`<loc>https://masest\\.co/comparisons/${slug}</loc>`), `${slug} canonical comparison URL should be in sitemap`);
     assert.match(html, new RegExp(`<title>${title.replace(/&/g, "&amp;")} \\| MASEST VertKleen</title>`));
     assert.match(html, new RegExp(`data-price-vsku="${vkMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`), `${title} blog post should bind VertKleen pricing`);
     assert.match(html, new RegExp(marketMath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${title} blog post should show current competitor context`);

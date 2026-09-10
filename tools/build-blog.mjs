@@ -21,6 +21,25 @@ const SITE_IMAGE_DIMENSIONS = new Map(
   JSON.parse(readFileSync(join(ROOT, "data/content/site-images.json"), "utf8")).assets
     .map((asset) => [asset.public_url, { width: asset.width, height: asset.height }]),
 );
+/**
+ * Posts whose URL has been retired in favour of a canonical page elsewhere
+ * (data/content-redirects.json). The post keeps existing — it is CMS-owned and pinned by
+ * PROTECTED_COMPARISON_SLUGS — and its page keeps generating, but every link the site
+ * renders to it should address the canonical URL directly rather than travel through the
+ * 301. Redirect hops cost a round trip and leak a little link equity at each one.
+ *
+ * The post page's own canonical/og:url are deliberately NOT rewritten: once the redirect
+ * ships, Cloudflare answers /blog/<slug> with a 301 and that HTML is never served, so a
+ * cross-canonical there would be dead markup. The 301 is the stronger signal anyway.
+ */
+const REDIRECTED_POST_URLS = new Map(
+  JSON.parse(readFileSync(join(ROOT, "data/content-redirects.json"), "utf8"))
+    .redirects
+    .filter(({ from }) => from.startsWith("/blog/"))
+    .map(({ from, to }) => [from.slice("/blog/".length), to]),
+);
+const publicPostPath = (slug) => REDIRECTED_POST_URLS.get(slug) || `/blog/${slug}`;
+
 const CATEGORIES = new Set(["marketing", "technical", "news"]);
 const CATEGORY_LABELS = {
   marketing: "Product news",
@@ -288,7 +307,7 @@ function postPage(post, all) {
   const related = relatedPosts(post, all);
   const relatedHtml = related.length
     ? `<aside class="blog-related"><h2>Related reading</h2><ul>${related
-        .map((r) => `<li><a href="../blog/${attr(r.slug)}"><span class="blog-related-cat">${text(categoryLabel(r.category))}</span> ${text(r.title)}</a></li>`)
+        .map((r) => `<li><a href="..${attr(publicPostPath(r.slug))}"><span class="blog-related-cat">${text(categoryLabel(r.category))}</span> ${text(r.title)}</a></li>`)
         .join("")}</ul></aside>`
     : "";
   const ogImage = hero ? `${BASE}${hero.url}` : `${BASE}/img/og-card.png`;
@@ -376,7 +395,7 @@ function postCard(post) {
     : `<div class="blog-card-img blog-card-img--fallback" aria-hidden="true"></div>`;
   const tags = (post.tags || []).map((t) => attr(t)).join(" ");
   return `<article class="blog-card" data-slug="${attr(post.slug)}" data-category="${attr(post.category)}" data-tags="${tags}">
-    <a class="blog-card-link" href="/blog/${attr(post.slug)}">
+    <a class="blog-card-link" href="${attr(publicPostPath(post.slug))}">
       ${thumb}
       <span class="blog-card-cat">${text(categoryLabel(post.category))}</span>
       <h2 class="blog-card-title">${text(post.title)}</h2>
@@ -504,10 +523,13 @@ function xmlEscape(s) {
     .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
+// <guid> stays on the original /blog/ permalink even for a retired post: it is an
+// identifier, and changing it would re-deliver the item to every existing subscriber as
+// though it were new. <link> moves to the canonical URL so a click skips the 301.
 function feedXml(posts) {
   const items = posts.map((p) => `    <item>
       <title>${xmlEscape(p.title)}</title>
-      <link>${BASE}/blog/${p.slug}</link>
+      <link>${BASE}${publicPostPath(p.slug)}</link>
       <guid isPermaLink="true">${BASE}/blog/${p.slug}</guid>
       <pubDate>${new Date(`${p.date}T00:00:00Z`).toUTCString()}</pubDate>
       <category>${xmlEscape(p.category)}</category>
@@ -533,7 +555,9 @@ function mergeSitemap(posts, outDir) {
   const latestPostDate = posts.reduce((latest, post) => post.date > latest ? post.date : latest, "");
   const entries = [
     { url: `${BASE}/blog`, lastmod: latestPostDate, changefreq: "weekly", priority: "0.7" },
-    ...posts.map((p) => ({ url: `${BASE}/blog/${p.slug}`, lastmod: p.date, changefreq: "monthly", priority: "0.6" })),
+    ...posts
+      .filter((p) => !REDIRECTED_POST_URLS.has(p.slug))
+      .map((p) => ({ url: `${BASE}/blog/${p.slug}`, lastmod: p.date, changefreq: "monthly", priority: "0.6" })),
   ];
   const missing = entries.filter(({ url }) => !original.includes(`<loc>${url}</loc>`));
   if (!missing.length) return 0;
