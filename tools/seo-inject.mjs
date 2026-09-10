@@ -946,7 +946,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   ${contentPageMount(`products/${id}`)}
 </main>
 <script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
-<script type="module" src="../js/reviews.js?v=20260711w"></script>
+<script type="module" src="../js/reviews.js?v=20260910a"></script>
 <script src="../js/track.js" defer></script>
 </body>
 </html>

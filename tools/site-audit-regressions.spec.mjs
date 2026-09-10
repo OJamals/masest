@@ -456,7 +456,7 @@ test("mobile service-category guide reaches decision content without redundant h
   expect(layout.bodyWidth).toBeLessThanOrEqual(layout.viewportWidth);
   expect(layout.decisionTop).toBeLessThanOrEqual(790);
   await expect.poll(() => configResponses).toContainEqual({
-    url: `${BASE_URL}/js/config.js?v=20260711b`,
+    url: `${BASE_URL}/js/config.js?v=20260910a`,
     status: 200,
   });
   await expect(page.getByRole("link", { name: "Request water analysis" })).toHaveAttribute("href", /contact\?type=services/);

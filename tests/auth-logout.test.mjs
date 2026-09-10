@@ -32,7 +32,7 @@ async function withAuthClient(client, run) {
       'const createClient = () => globalThis.__MASEST_TEST_AUTH_CLIENT__;',
     )
     .replace(
-      "import { fetchBlobWithAuth } from './auth-blob.js?v=20260804c';",
+      "import { fetchBlobWithAuth } from './auth-blob.js?v=20260910a';",
       'const fetchBlobWithAuth = async () => { throw new Error(\'unused_test_stub\'); };',
     );
 

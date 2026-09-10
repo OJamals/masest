@@ -6652,6 +6652,10 @@ button.viz-segment {
 
 .service-card-details summary {
   min-height: 45px;
+  /* 11px, not --s3's 12px: origin/main tuned this pair (min-height 45px +
+     11px padding) in its touch-target QA pass, which postdates the spacing
+     scale. Snapping it back to the scale would undo that tuning, so this stays
+     off the scale deliberately. */
   padding-block: 11px;
   color: var(--accent-ink);
   font-size: var(--fs-caption);
