@@ -1606,8 +1606,7 @@ so no-JS / hidden-tab renders stay visible */
   .nav.over-dark .nav-burger span { background: var(--ink); }
 }
 
-/* Site image polish. Source photos remain documentary; this layer improves
-   rendered clarity and makes mixed proof assets feel like one evidence set. */
+/* Site image polish for consistent rendered clarity across proof assets. */
 .photo img,
 .proof-card figure img {
   filter: saturate(1.03) contrast(1.07) brightness(1.02);
