@@ -606,6 +606,41 @@ space correctly so nothing shifts, but the section whose entire job is showing e
 shows none. Trace the case-record image path; collapse the card to text when a case has no
 image rather than rendering an empty frame.
 
+### Phase 3 addendum — what measurement found · 2026-09-09
+
+Corrections to the four findings above, each verified against **production** as well as the
+branch. Full evidence in `docs/handoff-design-system-2026-09-09.md`.
+
+| claim as written | measured |
+|---|---|
+| SQ-06 "five pinned scenes, 3,679px" | **six scenes, 4,030px** (6 × `84vh`) |
+| SQ-06 "media card clips the product name in every scene" | **no clipping.** identity 751 / product 755 / card bottom 773 |
+| SQ-06 "sticky sub-bar carries four competing actions in a 40px strip" | **two links + a context label in 52px.** `.story-skip` is not sticky; the 01–06 rail is a separate gutter |
+| SQ-06 "left column runs out of content around 60% height" | **fills 76–94%.** The gap is the crossfade showing two vertically-offset scenes at once |
+| SQ-07 "sections below sit at roughly 15% opacity" | **not reproducible.** 11 scenarios — 9 anchors, back-nav restore, reload at depth — zero ghosted elements on screen |
+| SQ-07 "`scrollTo(0, 8000)` left `scrollY` at 2420" | **drift is −12 to −44px**, and 0 at 2,000 and 4,000 |
+| SQ-09 "four consecutive sections" | **three.** The fourth is the two cards *inside* the second |
+| SQ-09 "recovers ~3 screens" | **673px (0.75 screens)** for the merge |
+| SQ-10 "cards render with empty image wells" | **all 13 homepage images render in production** once scrolled into view |
+
+Two of the prescriptions are also unsafe as written:
+
+- **SQ-06's fix is blocked by two source contracts.** `tests/story-contract.test.mjs`
+  pins each act to 80–88vh and the total to 480–520vh — a floor of 4.8 screens against a
+  target of ~2 — and six scenes are pinned by that file plus
+  `tests/story-six-comparisons.test.mjs`, over owner-approved imagery. The bound was
+  reaffirmed 2026-09-03, four days before this review. **Owner ruling required.**
+- **SQ-09's fix would delete evidence and fail a test.** Keeping only "the two replacement
+  cards plus the product grid" drops the water-systems route and the 280× corrosion claim,
+  which exist only in the discarded section — and `homepage-marketing-proof.test.mjs`
+  asserts that claim sits beside its evidence link. The merge shipped with three cards.
+
+SQ-10's symptom has a specific cause worth recording: `tools/test-media-isolation.mjs`
+substitutes a 1×1 transparent PNG for every managed R2/Supabase image unless
+`MASEST_LIVE_MEDIA=1`, and `cf-build` never publishes `img/` at all — it rewrites those
+references to `media.masest.co/site`. A source-tree server therefore shows 179 broken
+images that are all fine in production.
+
 ---
 
 ## Phase 4 — Operations

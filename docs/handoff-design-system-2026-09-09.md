@@ -12,9 +12,9 @@ session needs in order to take over.
 |---|---|
 | Worktree | `/Users/omar/Claude/Projects/MASEST-design-system` |
 | Branch | `design-system-phase1` |
-| Position | **21 commits ahead of `origin/main`, 0 behind — rebased 2026-09-09** |
+| Position | **24 commits ahead of `origin/main`, 2 behind as of 2026-09-09 22:23Z** — Codex pushed `f658424e` + `a2cd169a` (admin/CRM only, no front-door overlap) |
 | Tree | clean |
-| Tests | `2947/2947` pass on HEAD `f68b3c04` |
+| Tests | `2948/2948` pass on HEAD (Phase 3 adds one pinning test) |
 | Cache token | `20260910a`, unified across every versioned asset. Never deployed. |
 | Recovery point | `backup/design-system-pre-rebase` = the pre-rebase tip |
 | Pushed? | **No.** Nothing has been pushed. |
@@ -150,11 +150,119 @@ Two entries on that dead list are findings rather than cleanup:
 
 ---
 
-## Not started
+## Phase 3 — front door, done 2026-09-09
 
-**Phase 3 — front door:** SQ-06 (five pinned scenes, 3,679px before the first product),
-SQ-07 (reveal-on-jump invisibility), SQ-09 (redundant sections), SQ-10 (empty case-study
-images).
+Two of the four findings did not survive measurement. Both were checked against
+production, not just the source tree, because both failure modes are ones a local server
+manufactures on its own.
+
+| finding | result |
+|---|---|
+| SQ-06 story cost | **partly delivered, core ask blocked.** First product moved 8,428 → 7,210px (−1,218px, −14.5%). The prescribed fix is not implementable — see below |
+| SQ-07 reveal-on-jump | **stale.** Does not reproduce in 11 scenarios |
+| SQ-09 redundant sections | **done.** Two sections merged into one; −673px |
+| SQ-10 empty case images | **stale.** Symptom is manufactured by the QA harness |
+
+### SQ-09 — what shipped
+
+"Different messes need different cleaners" (806px) and "Start with the cleaner you want
+to replace" (706px) were two taxonomies of one decision — one sorted by soil, one by the
+incumbent chemical — and the catalog subhead below restated the second. They are now a
+single "Find the cleaner that replaces yours" block: 1,512px → 839px.
+
+**The spec's prescribed merge was wrong and would have failed an existing test.** It says
+to keep "the two replacement cards plus the product grid", but the two cards cover only
+descale and degrease. The water-systems route (WaterSafe60/Purgo → `/programs`) and the
+280× corrosion claim existed *only* in the section it discards — and
+`homepage-marketing-proof.test.mjs` asserts that claim sits next to its evidence link. The
+merged block carries three cards, so every route and the proof survive.
+
+`.grid-2` and `.cat-card` became dead with the second section and were removed; their link
+affordance was carried onto `.why-col .link`, which had been unstyled. `.why-col.reveal`
+is kept because `site-audit-regressions.spec.mjs` pins it on mobile. A new test pins the
+merge so the pair cannot grow back.
+
+### SQ-06 — the core ask is blocked by two source contracts
+
+Measured: the story is **4,030px / 4.5 screens, six scenes at `84vh`** — not the spec's
+"five pinned scenes, 3,679px".
+
+The spec asks to cut to three scenes and cap the story at ~2 screens. Both halves are
+forbidden by tests that encode deliberate decisions:
+
+- `tests/story-contract.test.mjs:126-129` pins each act to **80–88vh and the total to
+  480–520vh**. The floor is 4.8 screens — the spec's target is ~2.2× below what the
+  contract permits. Current 504vh sits mid-band; the whole in-contract headroom is 24vh
+  (216px), 2.5% of the distance to the first product, and spending it means retuning an
+  animation covered by a frame-budget test. Not worth it.
+- Six scenes are pinned twice — `story-contract.test.mjs` (six named scenes, plus
+  `doesNotMatch(/data-act="7"/)`) and `story-six-comparisons.test.mjs` (six R2-backed
+  pairs, six rail buttons) — over owner-approved before/after imagery.
+
+The 80–88vh bound was reaffirmed on **2026-09-03**, four days before the spec was written,
+so it is current intent and not a stale leftover. **Scene count and story length are an
+owner ruling**, the same class of call as the card-height chip.
+
+Three of SQ-06's four sub-claims are also stale:
+- *"the media card clips the product name in every scene"* — it does not. Identity bottom
+  751px, product bottom 755px, card bottom 773px. Verified across all six scenes.
+- *"the sticky sub-bar carries four competing actions in a 40px strip"* — it carries two
+  links plus a context label in a 52px strip. `.story-skip` is not sticky; it sits at page
+  top and scrolls away. The 01–06 rail is a separate left gutter.
+- *"the left column runs out of content around 60% height"* — it fills 76–94%. The
+  emptiness that reads in a screenshot is the crossfade: consecutive scenes are vertically
+  offset, so during a transition two scenes' copy sits on screen with a gap between them.
+
+What was delivered instead, since it serves the same goal and no contract binds it: the
+buyable grid now leads its section, ahead of the product-line photo. Nothing was removed.
+
+### SQ-07 — does not reproduce
+
+Tested with motion **enabled** (reduced motion short-circuits reveal entirely and would
+hide the bug), on production and on this branch: nine in-page anchors, back-button scroll
+restoration from 8,600px, and reload at 9,200px. **Zero ghosted elements in the viewport in
+any of them.** Elements below the fold sit at opacity 0, which is reveal-on-scroll working.
+
+The architecture the spec asks for is already there: `initReveal()` guards the hidden state
+behind `body.reveal-ready`, which JS adds. With `js/main.js` blocked, 23 reveal elements
+render at full opacity — visible *is* the resting state, and anything never observed is
+already correct.
+
+The one measurable residue is far smaller than described. The spec reports
+`scrollTo(0, 8000)` landing at 2420 — swallowed by 5,580px. Measured drift after a settle
+delay is **−12 to −44px** across targets of 2,000–10,000, and 0px at 2,000 and 4,000. A
+single cold-load sample did read 7,376; that is lazy-image layout settling, not the pin
+eating the scroll. `scroll-behavior: smooth` is confirmed inline on `<html>`.
+
+### SQ-10 — the symptom is manufactured by the harness
+
+`tools/test-media-isolation.mjs` replaces every managed R2 and Supabase image with a **1×1
+transparent PNG** in test and QA browsers unless `MASEST_LIVE_MEDIA=1` (and not CI). Every
+managed image therefore renders as an empty bordered box — exactly the reported symptom,
+on every card, by design.
+
+On production, with each image scrolled into view, **all 13 homepage images render**,
+including both cards the spec names. Judging them at `networkidle` without scrolling also
+reports 6 of 13 broken, because `loading="lazy"` images below the fold never fetch —
+another way to manufacture this finding. Neither is a site defect.
+
+**Do not conclude an image is broken from a source-tree server.** `cf-build` puts
+`/^img\//` in `DENY` and rewrites every reference to `media.masest.co/site`, so the raw
+source tree 404s 179 image paths that are all fine in production. Apply the same rewrite in
+any local QA browser and it matches what ships — one Playwright route is enough:
+
+```js
+await context.route("**/img/**", async (route) => {
+  const { pathname, search } = new URL(route.request().url());
+  const live = await fetch(`https://media.masest.co/site${pathname}${search}`);
+  await route.fulfill({ status: live.status, contentType: live.headers.get("content-type"),
+                        body: Buffer.from(await live.arrayBuffer()) });
+});
+```
+
+---
+
+## Not started
 
 **Phase 4 — operations:** SQ-18, SQ-19, SQ-20 (admin console density).
 
@@ -206,12 +314,23 @@ Weight: 2.1MB added; `marine-intake` alone is 375KB + 339KB.
 **Verification loop that works**
 1. `git stash push -- css/`, `node tools/visual-css-guard.mjs baseline`, `git stash pop`,
    `capture`, `diff`. Isolates your change. Self-serves on :4179.
-2. Use `reducedMotion: 'reduce'` or `.reveal` sections screenshot blank.
+2. Use `reducedMotion: 'reduce'` or `.reveal` sections screenshot blank. **But never judge
+   reveal behaviour under it** — `initReveal()` returns early on reduced motion and marks
+   everything visible, so any reveal bug is invisible in exactly that mode.
 3. **Measure delta magnitude, not changed-pixel count.** 663k changed pixels sounds alarming
    and was 0.3% of area at a median delta of 5/255 — imperceptible. Counting pixels alone
    would have sent someone chasing a non-problem.
 4. For commerce UI, **proxy `/api/*` to `https://masest.co`** and answer `/api/account/me`
    locally as `{account:null}`. A stub catalog has invented fake defects here before.
+5. **Images need the same treatment, and two separate things fake a broken one.**
+   (a) `cf-build` never publishes `img/` — it rewrites every reference to
+   `media.masest.co/site`, so a source-tree server 404s 179 paths that ship fine.
+   (b) `tools/test-media-isolation.mjs` swaps every managed image for a 1×1 transparent
+   PNG unless `MASEST_LIVE_MEDIA=1`. Either one renders an empty bordered box. Route
+   `**/img/**` to `media.masest.co/site` in the QA browser (snippet under SQ-10 below) so
+   local matches production. **And scroll lazy images into view before judging them** — at `networkidle`
+   alone, 6 of 13 homepage images report `naturalWidth === 0` and every one of them is
+   fine.
 
 **Known detector false positives** — do not chase these:
 - visually-hidden `<thead>` (`clip: rect(0 0 0 0)` in a 1px box) legitimately holds wider
@@ -248,12 +367,19 @@ with it and preserve the original intent — do not weaken a test to make it pas
 
 ## Suggested next steps, in order
 
-1. **Phase 3 — front door.** SQ-06 (five pinned scenes, 3,679px before the first
-   product), SQ-07 (reveal-on-jump invisibility), SQ-09 (redundant sections), SQ-10 (empty
-   case-study images). This is the next unstarted phase and the branch is clean for it.
-2. **Decide the card-height question** — trim the 49px savings chip to reach SQ-13's ≤440,
-   or revise the target with the reason recorded. It is 488px today.
-3. **Consider pushing before starting.** 21 commits of verified work sit unpushed, and
-   `origin/main` moved three commits during the last session. The longer it waits, the
-   more the next rebase costs. Push requires `git fetch && git rebase origin/main` first —
-   Codex races this branch — and a fresh cache token if `20260910a` has shipped by then.
+1. **Get two owner rulings.** Both are business calls, not engineering ones, and both now
+   block finished work:
+   - **Story length and scene count (SQ-06).** Three scenes at ~2 screens needs
+     `story-contract.test.mjs` and `story-six-comparisons.test.mjs` rewritten and
+     owner-approved before/after imagery deleted. If the answer is "leave the story
+     alone", revise SQ-06's target and record why.
+   - **Card height (SQ-13).** Trim the 49px savings chip to reach ≤440, or revise the
+     target. It is 488px today.
+2. **Phase 4 — operations.** SQ-18, SQ-19, SQ-20. Next unstarted phase; the branch is
+   clean for it.
+3. **Push.** Verified work is piling up unpushed and `origin/main` keeps moving — it took
+   two more commits (`f658424e`, `a2cd169a`, admin/CRM only) during this session. Push
+   requires `git fetch && git rebase origin/main` first — Codex races this branch — and a
+   fresh cache token if `20260910a` has shipped by then. **Expect a token conflict:**
+   `origin/main` re-tokenised `js/admin.js` from `20260909a` to `20260909b` after this
+   branch unified everything on `20260910a`. Resolve every such hunk to `20260910a`.
