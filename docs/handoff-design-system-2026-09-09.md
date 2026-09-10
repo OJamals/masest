@@ -12,11 +12,11 @@ session needs in order to take over.
 |---|---|
 | Worktree | `/Users/omar/Claude/Projects/MASEST-design-system` |
 | Branch | `design-system-phase1` |
-| Position | **24 commits ahead of `origin/main`, 2 behind as of 2026-09-09 22:23Z** — Codex pushed `f658424e` + `a2cd169a` (admin/CRM only, no front-door overlap) |
+| Position | **26 commits ahead of `origin/main`, 0 behind** — rebased onto `a2cd169a` on 2026-09-10 |
 | Tree | clean |
-| Tests | `2948/2948` pass on HEAD (Phase 3 adds one pinning test) |
+| Tests | `2964/2964` pass on HEAD (Phase 3 + Phase 4 add 7 pinning tests) |
 | Cache token | `20260910a`, unified across every versioned asset. Never deployed. |
-| Recovery point | `backup/design-system-pre-rebase` = the pre-rebase tip |
+| Recovery points | `backup/design-system-pre-phase4` (pre-2026-09-10 rebase), `backup/design-system-pre-rebase` (older) |
 | Pushed? | **No.** Nothing has been pushed. |
 
 **Do not touch `/Users/omar/Claude/Projects/MASEST`.** That is the primary checkout, Codex
@@ -262,9 +262,106 @@ await context.route("**/img/**", async (route) => {
 
 ---
 
-## Not started
+## Phase 4 — operations, partly done 2026-09-10
 
-**Phase 4 — operations:** SQ-18, SQ-19, SQ-20 (admin console density).
+Rebased onto `origin/main` first this time, because Phase 4 edits the same admin files
+Codex had just touched. See the rebase note below — it cost a full redo.
+
+| finding | result |
+|---|---|
+| SQ-18 Save density | **done.** Visible Save buttons armed at rest: 15 → 0 |
+| SQ-18 blank thumbnails | **stale.** All 15 render |
+| SQ-18 row density | **not done.** Real: 222px rows, 4,009px panel |
+| SQ-19 duplicate status | **done.** Second pill suppressed only where it restates the lifecycle |
+| SQ-19 money format | **not done.** Real, but `money()` is shared with exports |
+| SQ-20 sidebar clipping | **stale.** Already `position: sticky` + `overflow-y: auto` |
+| SQ-20 KPI alignment | **not done.** Real, and it is the 4th column, not the 3rd |
+
+### What shipped
+
+**SQ-18 — Save no longer shouts on every row.** Each product and variant Save renders
+`disabled` and arms only when its own scope is edited. Measured: 15 of 15 armed at rest
+→ 0; editing one product's name arms only that product; toggling `Active` on another arms
+only that one; a variant edit arms that variant and not its parent.
+
+That last part is why this could not ride on `data-dirty`: `markDirty()` in `js/admin.js`
+deliberately excludes checkboxes — and `Active` is a checkbox — while `captureDirty()`
+stores `.value`, which is meaningless for one. Edit state is therefore tracked separately
+as `data-edited`, and `data-dirty` keeps its restore-after-rebuild job untouched. Nothing
+clears the flag explicitly after a save: the list rebuilds every Save disabled, and
+`restoreDirty()` re-arms only rows whose values still differ from the server's, so a saved
+row settles and a failed save stays saveable.
+
+**SQ-19 — one fact, one pill.** The card showed Lifecycle and Status side by side. They are
+*not* generally the same fact: `lifecycleFor()` derives its stage from status **and**
+`tracking_status`, so a `processing` order is legitimately "Unfulfilled" and both belong on
+screen. The stage collapses onto the status only in the terminal states. The second pill is
+now suppressed exactly there, by comparing the **rendered labels** rather than the keys —
+`payment_pending` and `pending_payment` are different keys that both read "payment pending".
+Verified by driving the real module across seven states: `cancelled`, `refunded`, `cart`,
+`fulfilled`, `payment_pending` suppress; `processing` and `paid` keep both.
+
+### Stale, with measurements
+
+**SQ-18's "thumbnails are blank for every product" — all 15 render.** This is the third
+instance of the trap in SQ-10's note, and it caught me too: my own harness re-prefixed
+`/site` onto image URLs that were *already* absolute R2 URLs, producing `/site/site/…` and
+404ing every one. The DB stores absolute `media.masest.co` URLs — check `hostname` before
+rewriting. The finding also cannot have come from the repo's own stub, which ships exactly
+one product with `image_url: ""`, so it can neither show fifteen rows nor say anything
+about thumbnails.
+
+**SQ-20's sidebar already scrolls.** `.adm-sidebar` computes `position: sticky`,
+`top: 75px`, `overflow-y: auto`, `max-height: 801px` — essentially the prescribed fix.
+Content is 894px against an 799px box, so lower items are reached by scrolling the sidebar,
+which is the intended behaviour rather than the reported clipping.
+
+### Still open, with numbers
+
+- **SQ-18 row density.** 15 products × 222px = a 4,009px panel, and each row leaves a
+  ~600px horizontal void between the product name and the Active/Save/Remove cluster.
+  The spec wants a table with a 48px thumbnail; thumbnails are already 54px, so this is a
+  row-layout job, not an image job.
+- **SQ-19 money format.** Confirmed `USD 1,840.00`. Deliberately not changed: `money()` in
+  `js/util.js` is shared by admin *and* buyer surfaces and by export paths, and the finding
+  itself says to keep the ISO code for exports. It needs a display-only formatter, not an
+  edit to the shared helper.
+- **SQ-20 KPI alignment.** The dead column is the **4th**, not the 3rd: `.adm-grid` is
+  `280.5px × 4`, row 1 fills all four, row 2 only the first three. KPI values already carry
+  `tabular-nums`, but their right edges land at 443/463 and 750/728 — the labels wrap and
+  push them, so the fix is a fixed value column, not a numeric font change.
+
+---
+
+## The second rebase — and the mistake that cost it
+
+Rebasing 24 commits onto `origin/main` conflicted in **31 files**, all of them the same
+`?v=` cache token (main moved `js/admin.js` to `20260909b`; this branch is unified on
+`20260910a`).
+
+**The mistake: `git status --short | head -20` showed only `admin.html` as conflicted,
+because the `js/admin/*` entries sorted below the cut.** Resolving that one file and then
+running `git add -A` staged 31 files that still contained `<<<<<<<` markers, and the rebase
+committed them. The suite caught it — 32 admin failures, all
+`SyntaxError: Unexpected token '<<'` — but the branch had to be reset to
+`backup/design-system-pre-phase4` and the rebase redone.
+
+**Use `git diff --name-only --diff-filter=U` — never a truncated `git status`.** And clear
+`.git/rr-cache` after a bad resolution, or rerere replays it.
+
+Redone properly, 45 of the 47 conflict hunks were token-only. The two that were not:
+- `js/admin/crm-prospects.js` — main *added* `confirmDialog` to an import. Resolved to
+  main's side plus the token, so Codex's outreach work survives.
+- `tests/auth-cache-release.test.mjs` — resolved to this branch's side, which unifies
+  `RELEASE` and `CHAT_RELEASE` onto the branch token as well.
+
+`js/main/marine-catalog.js` auto-merged to main's `20260909b` without conflicting; it and
+its test were moved to `20260910a` by hand to keep the one-grep invariant. **680 asset
+references, all on `20260910a`.**
+
+---
+
+## Not started
 
 **Phase 5 — content:** SQ-22, SQ-23, SQ-24, SQ-25 (prose, AI-sounding copy).
 
@@ -375,11 +472,15 @@ with it and preserve the original intent — do not weaken a test to make it pas
      alone", revise SQ-06's target and record why.
    - **Card height (SQ-13).** Trim the 49px savings chip to reach ≤440, or revise the
      target. It is 488px today.
-2. **Phase 4 — operations.** SQ-18, SQ-19, SQ-20. Next unstarted phase; the branch is
-   clean for it.
-3. **Push.** Verified work is piling up unpushed and `origin/main` keeps moving — it took
-   two more commits (`f658424e`, `a2cd169a`, admin/CRM only) during this session. Push
+2. **Push — this is now the most valuable thing on the list.** 26 commits of verified work
+   sit unpushed, `origin/main` moved twice more during the last session, and the 2026-09-10
+   rebase already cost a full redo. Every day of delay makes the next one worse. Push
    requires `git fetch && git rebase origin/main` first — Codex races this branch — and a
-   fresh cache token if `20260910a` has shipped by then. **Expect a token conflict:**
-   `origin/main` re-tokenised `js/admin.js` from `20260909a` to `20260909b` after this
-   branch unified everything on `20260910a`. Resolve every such hunk to `20260910a`.
+   fresh cache token if `20260910a` has shipped by then. Expect the conflicts to be almost
+   entirely `?v=` tokens; resolve every one to the branch's unified token, and read the
+   rebase note above before starting.
+3. **Finish Phase 4.** Three measured items remain, all listed with numbers under "Still
+   open": SQ-18 row density (222px rows, 4,009px panel, ~600px void per row), SQ-19 money
+   format (needs a display-only formatter, not an edit to the shared `money()`), and SQ-20
+   KPI alignment (fixed value column; the dead column is the 4th).
+4. **Phase 5 — content.** SQ-22 … SQ-25. Untouched.
