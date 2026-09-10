@@ -80,6 +80,12 @@ test('send sites keep orders mandatory and use marketing preference for offers',
   assert.match(read('supabase/migrate-ses-marketing-2026-09-03.sql'), /marketing_email_enabled is not false/);
 });
 
+test('account registration discloses default marketing enrollment and settings opt-out', () => {
+  const html = read('account.html');
+  assert.match(html, /includes occasional VertKleen product news and offers/i);
+  assert.match(html, /unsubscribe anytime in Email settings/i);
+});
+
 test('dashboard exposes immutable transactional + optional marketing settings', () => {
   const html = read('dashboard.html');
   assert.match(html, /transactionalEmailRequired/);
