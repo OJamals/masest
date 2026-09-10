@@ -4270,8 +4270,16 @@ fully clickable cards) ---- */
 }
 
 @media (max-width: 820px) {
+  /* minmax(0, 1fr), not 1fr. A bare `1fr` is `minmax(auto, 1fr)`, and that `auto` floor is
+     the track's min-content -- so the track refuses to shrink below the widest item's
+     min-content and the panel renders wider than the container's content box. On a 320px
+     viewport that put .cart-panel at 305px inside a 256px box, pushing 17px of the cart
+     line, summary and totals past the right edge. `body { overflow-x: clip }` meant there
+     was no sideways scroll to reveal it: the content was simply cut off and unreachable.
+     The desktop rule (:3950) and the empty-cart rule (:3954) both already spell it
+     minmax(0, ...); this collapse was the one that did not. */
   .cart-shell,
-  .confirmation-grid { grid-template-columns: 1fr; }
+  .confirmation-grid { grid-template-columns: minmax(0, 1fr); }
   .confirmation-grid .route-card:last-child { grid-column: auto; }
   .cart-summary { position: static; }
   .cart-line { grid-template-columns: 1fr; }

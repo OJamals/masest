@@ -326,3 +326,51 @@ test("cart renders untrusted SKU text without creating injected markup", async (
     }
   });
 });
+
+test("a 320px cart does not push its own content past the right edge", async () => {
+  // Regression for a bug that could not be seen by scrolling. `.cart-shell` collapses to a
+  // single column under 820px, and that collapse spelled the track `1fr` -- which means
+  // `minmax(auto, 1fr)`, whose `auto` floor is the track's min-content. The track therefore
+  // refused to shrink below the widest item, so on a 320px viewport .cart-panel rendered
+  // 305px wide inside a 256px content box and 17px of the cart line, summary and totals sat
+  // past the right edge. `body { overflow-x: clip }` suppressed the sideways scrollbar, so
+  // the content was not scrolled-off, it was cut off. The desktop rule and the empty-cart
+  // rule already spelled it minmax(0, ...).
+  //
+  // 320px is the iPhone SE viewport. Measured, not asserted from the stylesheet: pinning the
+  // CSS text would pass just as happily if some later rule reintroduced the floor.
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage();
+    try {
+      await page.setViewportSize({ width: 320, height: 568 });
+      await routeProducts(page);
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+      await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ "HCRCIP-1G": 1 })));
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.locator(".cart-line").first().waitFor();
+
+      const box = await page.evaluate(() => {
+        const vw = document.documentElement.clientWidth;
+        const over = [...document.querySelectorAll(".cart-shell, .cart-panel, .cart-summary, .cart-line")]
+          .map((el) => ({
+            cls: String(el.className).split(" ")[0],
+            right: Math.round(el.getBoundingClientRect().right),
+          }))
+          .filter((el) => el.right > vw + 1);
+        return { vw, bodyWidth: document.body.scrollWidth, over };
+      });
+
+      assert.deepEqual(
+        box.over, [],
+        `cart content extends past a ${box.vw}px viewport: ${JSON.stringify(box.over)}`,
+      );
+      assert.ok(
+        box.bodyWidth <= box.vw + 1,
+        `body is ${box.bodyWidth}px wide in a ${box.vw}px viewport`,
+      );
+    } finally {
+      await browser.close();
+    }
+  });
+});
