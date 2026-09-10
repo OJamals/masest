@@ -4,6 +4,11 @@ Companion to `docs/site-quality-remediation-2026-09-07.md`, which is the spec an
 all 25 findings with their evidence. Read that first; this file is only what a fresh
 session needs in order to take over.
 
+> **Phases 1–4 are complete. What is left is five decisions and Phase 5.**
+> Both are written up in **`docs/decisions-pending-2026-09-10.md`** — start there. It
+> carries the blocked items with the contracts that block them, and Phase 5 re-measured
+> against the current tree.
+
 ---
 
 ## Where the work is
@@ -12,7 +17,7 @@ session needs in order to take over.
 |---|---|
 | Worktree | `/Users/omar/Claude/Projects/MASEST-design-system` |
 | Branch | `design-system-phase1` |
-| Position | **28 commits ahead of `origin/main`, 0 behind** — rebased onto `a2cd169a` on 2026-09-10 |
+| Position | **29 commits ahead of `origin/main`, 0 behind** — rebased onto `a2cd169a` on 2026-09-10 |
 | Tree | clean |
 | Tests | `2966/2966` pass on HEAD |
 | Cache token | `20260910a`, unified across every versioned asset. Never deployed. |
