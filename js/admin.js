@@ -1,6 +1,6 @@
 /* MASEST staff admin console. */
 import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260910a';
-import { esc, safeUrl, money, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260910a';
+import { esc, safeUrl, moneyDisplay, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260910a';
 import { editKey } from './admin/edits.js?v=20260910a';
 import { createFeatureLoader } from './admin/feature-loader.js?v=20260910a';
 import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260910a';
@@ -499,11 +499,11 @@ function renderOpsSummary(stats = {}) {
  // with no honest filter still routes to its workspace rather than dead-ending.
  const groups = [
  ['Commerce', [
- ['30d revenue', money(commerce.revenue_30d || 0, 'usd'), { tab: 'finance' }],
+ ['30d revenue', moneyDisplay(commerce.revenue_30d || 0, 'usd'), { tab: 'finance' }],
  ['Orders (7d)', fmtInt(stats.commerce?.orders_7d ?? stats.orders?.total), { tab: 'orders' }],
- ['AOV', money(commerce.average_order_value || 0, 'usd'), { tab: 'finance' }],
+ ['AOV', moneyDisplay(commerce.average_order_value || 0, 'usd'), { tab: 'finance' }],
  ['Fulfillment queue', fmtInt(commerce.fulfillment_queue), { tab: 'orders', control: 'ordFilter', value: 'needs_fulfillment' }],
- ['NET exposure', money(commerce.net_exposure || 0, 'usd'), { tab: 'orders', control: 'ordFilter', value: 'net_open' }],
+ ['NET exposure', moneyDisplay(commerce.net_exposure || 0, 'usd'), { tab: 'orders', control: 'ordFilter', value: 'net_open' }],
  ]],
  ['CRM', [
  ['Unread messages', fmtInt(crm.unread_messages), { tab: 'overview', support: true }],
@@ -591,7 +591,7 @@ function wireReports() {
     try {
       const r = await api('/api/admin/reports' + (range() ? '?' + range() : ''));
       $('repResult').dataset.state = 'ok';
-      $('repResult').textContent = `Revenue ${money(r.revenue)} · Tax ${money(r.tax)} · ${r.paid_orders}/${r.orders} paid · AOV ${money(r.average_order_value)}`;
+      $('repResult').textContent = `Revenue ${moneyDisplay(r.revenue)} · Tax ${moneyDisplay(r.tax)} · ${r.paid_orders}/${r.orders} paid · AOV ${moneyDisplay(r.average_order_value)}`;
     } catch { message('repResult', 'Could not run the report. Retry.', 'err'); }
   });
   $('repOrdersCsv').addEventListener('click', () =>

@@ -88,8 +88,22 @@
 .adm-report-card { min-height: 100%; box-shadow: var(--shadow-xs); }
 .adm-report-card h2 { display: flex; align-items: center; gap: 8px; }
 .adm-report-card h2 i { color: var(--accent); font-size: 1.1rem; }
-.adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 5px 0; }
-.adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: right; font-variant-numeric: tabular-nums; }
+/* SQ-20: a flex row with justify-content:space-between only pins the value flush
+   right when the row has exactly two children. Route rows carry a third child
+   (the trailing arrow icon), so space-between splits the leftover width into two
+   equal gaps around the value instead — and since that leftover width depends on
+   how far the label itself wraps, every row's value landed at a different x.
+   A grid with a fixed-width value column pins the value's right edge to a
+   constant offset from the card edge, independent of the label or the icon. The
+   value column is sized for the widest content each row family actually shows:
+   report-card rows carry money (moneyDisplay's longest realistic "$NN,NNN.NN")
+   plus a reserved arrow-icon column so every route row lands on the same edge
+   whether or not the arrow is visible; setup-gap/traffic rows only ever show a
+   short count and never carry the icon, so they get a narrower value column and
+   keep the label width the "Setup gaps" card height budget depends on. */
+.adm-report-card .dash-row { display: grid; grid-template-columns: minmax(0, 1fr) 104px 18px; align-items: baseline; column-gap: 14px; padding: 5px 0; }
+.adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { display: grid; grid-template-columns: minmax(0, 1fr) 48px; align-items: baseline; column-gap: 14px; padding: 5px 0; }
+.adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Overview numbers are entry points into the work they count, not readouts. */
 .adm-report-card a.dash-row-route { margin: 0 -8px; padding: 5px 8px; border-radius: var(--r-input); color: inherit; text-decoration: none; }
 .adm-report-card a.dash-row-route:hover,
@@ -308,14 +322,23 @@
   .gbtn { width: 40px; min-width: 40px; min-height: 40px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; background: none; cursor: pointer; font-size: .78rem; padding: 0; line-height: 1.2; color: var(--ink-soft); transition: transform .15s var(--ease-out), background-color .15s var(--ease-out), color .15s var(--ease-out); }
   .gbtn:hover { color: var(--accent); }
   .gbtn:active { transform: scale(.96); }
-  .product-admin-list { display: grid; gap: 14px; }
-  .product-admin-card { display: grid; gap: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: clamp(14px, 2vw, 18px); box-shadow: var(--shadow-xs); content-visibility: auto; contain-intrinsic-size: auto 176px; }
-  .product-admin-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; }
-  .product-admin-media { display: grid; gap: 8px; align-content: start; width: 132px; }
-  .product-admin-title { min-width: 0; }
-  .product-admin-title h3 { margin: 4px 0 0; font-size: 1rem; line-height: 1.25; overflow-wrap: anywhere; }
-  .product-admin-sku { display: inline-flex; border-radius: 999px; background: var(--panel); color: var(--ink-soft); padding: 3px 8px; font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-  .product-admin-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
+  .product-admin-list { display: grid; gap: 8px; }
+  .product-admin-card { display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px 14px; box-shadow: var(--shadow-xs); content-visibility: auto; contain-intrinsic-size: auto 96px; }
+  /* SQ-18/SQ-13: grid, not flex — every row shares the same fixed column widths
+     (thumb / name+sku / price / actions), so controls align down the column instead
+     of each row's name length deciding where price/active/save/remove land. The
+     price track is a measured fixed width — live "Pricing workspace" text measures
+     ~118px at this font/weight, 136px leaves headroom — and must stay fixed, not
+     auto, or per-row text width re-introduces the raggedness this replaces. Any
+     slack lands in the name column (1fr, truncates) instead of trailing off the row. */
+  .product-admin-row { display: grid; grid-template-columns: 54px minmax(0, 1fr) 136px auto; align-items: center; gap: 8px 14px; }
+  .product-admin-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .product-admin-id h3 { margin: 0; min-width: 0; flex: 1 1 auto; font-size: .92rem; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .product-admin-sku { display: inline-flex; flex: 0 0 auto; border-radius: 999px; background: var(--panel); color: var(--ink-soft); padding: 3px 8px; font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .product-admin-price { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); font-size: .85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .product-admin-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .product-admin-media { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 2px 0 12px; }
+  .product-admin-media .product-cms-image { width: auto; flex: 0 0 auto; }
   .product-admin-editor { min-width: 0; }
   .product-admin-editor:not([open]) > :not(summary) { display: none !important; }
   .product-admin-editor > summary { width: fit-content; cursor: pointer; color: var(--accent-ink); font-size: .82rem; font-weight: 800; }
@@ -754,11 +777,15 @@
     .adm-track-controls .adm-input,
     .adm-track-controls .adm-select,
     .adm-track-controls .btn { flex-basis: 100%; width: 100%; }
-    .product-admin-head { grid-template-columns: 1fr; }
-    .product-admin-media { width: 100%; grid-template-columns: auto minmax(0, 1fr); align-items: center; }
-    .product-admin-media .product-gallery,
-    .product-admin-media .product-cms-image { grid-column: 1 / -1; }
-    .product-admin-actions { justify-content: flex-start; }
+    /* Narrow viewports can't fit thumb+name+price+actions on one line — a fixed
+       136px price track left ~70px for the name at 390px (verified: truncated to
+       "Ver…"). Drop to two columns (thumb, name) and stack price then actions on
+       their own full-width rows below, instead of a no-op flex property under the
+       (now grid) row. */
+    .product-admin-row { grid-template-columns: 54px minmax(0, 1fr); grid-template-rows: auto auto auto; row-gap: 6px; }
+    .product-admin-id { grid-column: 2; grid-row: 1; }
+    .product-admin-price,
+    .product-admin-actions { grid-column: 1 / -1; }
     .product-admin-fields,
     .variant-row { grid-template-columns: 1fr; }
     .product-admin-fields .wide { grid-column: auto; }
@@ -785,7 +812,7 @@
     .adm-price-scope-options .btn { flex: 1 1 120px; }
     .adm-section-head { align-items: start; flex-direction: column; gap: 5px; }
     .adm-panel-header { align-items: flex-start; flex-direction: column; }
-    .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { align-items: flex-start; flex-direction: column; }
+    .adm-report-card .dash-row, .adm-card[data-setup-followups] .dash-row, .adm-traffic-report .dash-row { display: flex; align-items: flex-start; flex-direction: column; }
     .adm-report-card .dash-row b, .adm-card[data-setup-followups] .dash-row b, .adm-traffic-report .dash-row b { text-align: left; }
     .adm-report-card .dash-row-route {
       display: grid;

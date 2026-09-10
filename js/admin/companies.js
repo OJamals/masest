@@ -3,7 +3,7 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, money, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260910a';
+import { esc, confirmDialog, delegate, detailDialog, moneyDisplay, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260910a';
 import { captureDirty, restoreDirty } from './edits.js?v=20260910a';
 import { ORDER_STATUSES } from './orders.js?v=20260910a';
 
@@ -64,11 +64,11 @@ function viewAsHtml(s) {
   const members = (s.members || []).map((m) =>
     `<li>${esc(m.full_name || m.email || m.id)}${m.email ? ` · ${esc(m.email)}` : ''} <span class="muted">(${esc(m.role || 'member')})</span></li>`).join('') || '<li class="muted">No members</li>';
   const orders = (s.orders || []).map((o) =>
-    `<tr><td>${esc(date(o.created_at))}</td><td>${esc(o.status)}</td><td>${esc(o.tracking_status || '')}</td><td style="text-align:right">${esc(money(o.total, o.currency))}</td></tr>`).join('')
+    `<tr><td>${esc(date(o.created_at))}</td><td>${esc(o.status)}</td><td>${esc(o.tracking_status || '')}</td><td style="text-align:right">${esc(moneyDisplay(o.total, o.currency))}</td></tr>`).join('')
     || '<tr><td colspan="4" class="muted">No orders</td></tr>';
   const subs = (s.subscriptions || []).map((x) => `${esc(x.tier || 'program')} (${esc(x.status)})`).join(', ') || 'None';
   const credit = s.credit
-    ? (s.credit.unlimited ? 'Unlimited NET' : `${esc(money(s.credit.credit_available))} available of ${esc(money(s.credit.credit_limit))}`)
+    ? (s.credit.unlimited ? 'Unlimited NET' : `${esc(moneyDisplay(s.credit.credit_available))} available of ${esc(moneyDisplay(s.credit.credit_limit))}`)
     : '—';
   return `<p class="badge badge-warning">Read-only support view — no changes are made as the customer.</p>
     <h3 style="margin:8px 0 4px">${esc(c.name || 'Company')}</h3>
@@ -389,13 +389,13 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     const entries = (storeCredit.entries || []).map((entry) => `
       <div class="dash-row">
         <span><b>${esc(String(entry.kind || 'adjustment').replaceAll('_', ' '))}</b><small class="muted">${esc(entry.reason || '')} · ${esc(date(entry.created_at))}</small></span>
-        <b>${esc(money((Number(entry.amount_minor) || 0) / 100, entry.currency || currency))}</b>
+        <b>${esc(moneyDisplay((Number(entry.amount_minor) || 0) / 100, entry.currency || currency))}</b>
       </div>`).join('') || '<p class="muted">No account-credit activity yet.</p>';
     return `<section class="company-store-credit" data-company-store-credit>
       <div class="adm-panel-header"><h3>Account credit</h3><span class="badge badge-warning">Separate from NET terms</span></div>
-      <div class="dash-row"><span>Ledger balance</span><b>${esc(money((Number(storeCredit.balance_minor) || 0) / 100, currency))}</b></div>
-      <div class="dash-row"><span>Reserved in checkout</span><b>${esc(money((Number(storeCredit.reserved_minor) || 0) / 100, currency))}</b></div>
-      <div class="dash-row"><span>Available</span><b>${esc(money((Number(storeCredit.available_minor) || 0) / 100, currency))}</b></div>
+      <div class="dash-row"><span>Ledger balance</span><b>${esc(moneyDisplay((Number(storeCredit.balance_minor) || 0) / 100, currency))}</b></div>
+      <div class="dash-row"><span>Reserved in checkout</span><b>${esc(moneyDisplay((Number(storeCredit.reserved_minor) || 0) / 100, currency))}</b></div>
+      <div class="dash-row"><span>Available</span><b>${esc(moneyDisplay((Number(storeCredit.available_minor) || 0) / 100, currency))}</b></div>
       <div class="adm-form-grid company-store-credit-form" data-capability-scope="company.credit">
         <label>Adjustment
           <select class="adm-select" name="store_credit_direction" data-store-credit-direction>
@@ -443,7 +443,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
       }
       const verb = direction === 'remove' ? 'remove' : 'add';
       if (!(await confirmDialog(
-        `${verb === 'add' ? 'Add' : 'Remove'} ${money(Number(rawAmount), 'usd')} ${verb === 'add' ? 'to' : 'from'} ${company.name || 'this Company'} account credit?`,
+        `${verb === 'add' ? 'Add' : 'Remove'} ${moneyDisplay(Number(rawAmount), 'usd')} ${verb === 'add' ? 'to' : 'from'} ${company.name || 'this Company'} account credit?`,
         { confirmText: 'Apply adjustment', danger: direction === 'remove' },
       ))) return;
       button.disabled = true;
@@ -473,7 +473,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (!orders.length) return '<div class="company-orders-mini"><h3>Orders</h3><p class="muted">No orders yet.</p></div>';
     const rows = orders.slice(0, 20).map((o) => `
       <div class="dash-row">
-        <span>${esc(String(o.id).slice(0, 8))} &middot; ${esc(date(o.created_at))} &middot; ${esc(money(o.total, o.currency))}</span>
+        <span>${esc(String(o.id).slice(0, 8))} &middot; ${esc(date(o.created_at))} &middot; ${esc(moneyDisplay(o.total, o.currency))}</span>
         <span>
           <select class="adm-select adm-select-sm" name="order_status" data-mo-status="${esc(o.id)}" data-capability="order.write">
             ${ORDER_STATUSES.filter((s) => s !== 'refunded' || o.status === 'refunded')
@@ -1136,7 +1136,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     return `<div class="account-detail-section">
       <div class="adm-panel-header"><h3>${esc(company.name || 'Business')}</h3>${statusBadge(company.status)}</div>
       <div class="dash-row"><span>Terms</span><b>NET-${esc(company.net_terms_days || 0)}</b></div>
-      <div class="dash-row"><span>Credit</span><b>${esc(money(company.credit_limit || 0))}</b></div>
+      <div class="dash-row"><span>Credit</span><b>${esc(moneyDisplay(company.credit_limit || 0))}</b></div>
       <div class="dash-row"><span>Tier</span><b>${esc(company.price_tier || 'retail')}</b></div>
       <div class="dash-row"><span>Addresses</span><b>${esc((consoleData.addresses || []).length)}</b></div>
       <div class="dash-row"><span>Orders</span><b>${esc((consoleData.orders || []).length)}</b></div>

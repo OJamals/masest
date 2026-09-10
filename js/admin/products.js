@@ -2,7 +2,7 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate, money, rowMatchesQuery } from '../util.js?v=20260910a';
+import { esc, safeUrl, confirmDialog, delegate, moneyDisplay, rowMatchesQuery } from '../util.js?v=20260910a';
 import { captureDirty, restoreDirty } from './edits.js?v=20260910a';
 import { PRODUCTS } from '../main/catalog-data.js?v=20260910a';
 import { openImageLibraryPicker } from './image-library-picker.js?v=20260910a';
@@ -70,14 +70,13 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     }
     box.innerHTML = `<div class="product-admin-list">${products.map((p) => `
     <article class="product-admin-card" data-product="${esc(p.sku)}" data-capability-scope="product.write">
-      <div class="product-admin-head">
-        <div class="product-admin-media">
-          ${productMedia(p)}
-        </div>
-        <div class="product-admin-title">
+      <div class="product-admin-row">
+        ${productThumb(p)}
+        <div class="product-admin-id">
           <span class="product-admin-sku">${esc(p.sku)}</span>
           <h3>${esc(p.name || p.sku)}</h3>
         </div>
+        <span class="product-admin-price">${p.price == null ? 'Pricing workspace' : esc(moneyDisplay(p.price, p.currency || 'usd'))}</span>
         <div class="product-admin-actions">
           <label class="product-active-toggle"><input type="checkbox" name="product_active" ${p.active !== false ? 'checked' : ''} data-field="active"> Active</label>
           <button class="btn btn-primary btn-sm" data-save-product="${esc(p.sku)}" type="button" disabled title="Edit a field to enable">Save</button>
@@ -86,10 +85,13 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       </div>
       <details class="product-admin-editor"${q && products.length === 1 ? ' open' : ''}>
         <summary>Edit product details</summary>
+        <div class="product-admin-media">
+          ${productMediaExtra(p)}
+        </div>
         <div class="product-admin-fields">
         <label>Name <input class="adm-input" name="product_name" autocomplete="off" value="${esc(p.name)}" data-field="name"></label>
         <label>Mode <select class="adm-select" name="product_mode" data-field="mode"><option value="buy" ${p.mode === 'buy' ? 'selected' : ''}>Buy</option><option value="quote" ${p.mode === 'quote' ? 'selected' : ''}>Quote</option></select></label>
-        <label>Price <output class="adm-managed-price" aria-label="Pricing-workspace-managed product price">${p.price == null ? 'Pricing workspace' : esc(money(p.price, p.currency || 'usd'))}</output></label>
+        <label>Price <output class="adm-managed-price" aria-label="Pricing-workspace-managed product price">${p.price == null ? 'Pricing workspace' : esc(moneyDisplay(p.price, p.currency || 'usd'))}</output></label>
         <label>Stock <input class="adm-input" name="product_stock" type="number" min="0" step="1" value="${esc(p.stock ?? '')}" data-field="stock"></label>
         <label>HMIS <input class="adm-input" name="product_hmis" autocomplete="off" value="${esc(p.hmis || '')}" data-field="hmis" placeholder="H-F-R e.g. 2-0-1…"></label>
         <label>Group key <input class="adm-input" name="product_group_key" autocomplete="off" value="${esc(p.group_key || '')}" data-field="group_key" placeholder="Groups related SKUs…"></label>
@@ -224,10 +226,17 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     }
   }
 
-  function productMedia(product) {
-    const primary = product.image_url
+  // SQ-18: the collapsed row shows only the thumbnail (verified 54px, renders fine —
+  // this does not touch that). The CMS picker buttons + gallery grid used to stack
+  // vertically under it, which was most of the 222px row height; they now live in
+  // productMediaExtra(), rendered inside the details editor instead of the row.
+  function productThumb(product) {
+    return product.image_url
       ? `<img class="product-photo" src="${esc(safeUrl(product.image_url))}" alt="${esc(product.photo_alt || product.name || '')}" width="1200" height="1200" loading="lazy" decoding="async">`
       : '<span class="product-photo product-photo-empty">No photo</span>';
+  }
+
+  function productMediaExtra(product) {
     const gallery = Array.isArray(product.gallery) && product.gallery.length
       ? `<div class="product-gallery">${product.gallery.map((url, index) => `
         <span class="product-gallery-item">
@@ -241,7 +250,6 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
         </span>`).join('')}</div>`
       : '';
     return `
-      ${primary}
       ${gallery}
       <button class="btn btn-secondary btn-sm product-cms-image" type="button" data-product-asset="primary">Choose primary</button>
       <button class="btn btn-ghost btn-sm product-cms-image" type="button" data-product-asset="gallery">Add gallery image</button>
@@ -256,7 +264,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
       <p class="variant-meta"><span class="badge">${esc(v.market || 'industrial')}</span> <span class="badge">${esc(v.package_kind || 'unit')}</span>${v.activation_blocker ? ' <span class="badge" data-s="pending">awaiting parcel profile</span>' : ''}</p>
       <label>Label <input class="adm-input" name="variant_label" autocomplete="off" value="${esc(v.label || '')}" data-vfield="label" aria-label="Variant label"></label>
       <label>Gallons <input class="adm-input" name="variant_gallons" type="number" min="0" step="0.01" value="${esc(v.gallons ?? '')}" data-vfield="gallons" aria-label="Gallons"></label>
-      <label>Price <output class="adm-managed-price" aria-label="Pricing-workspace-managed variant price">${v.price == null ? 'Pricing workspace' : esc(money(v.price, v.currency || product.currency || 'usd'))}</output></label>
+      <label>Price <output class="adm-managed-price" aria-label="Pricing-workspace-managed variant price">${v.price == null ? 'Pricing workspace' : esc(moneyDisplay(v.price, v.currency || product.currency || 'usd'))}</output></label>
       <label>Stock <input class="adm-input" name="variant_stock" type="number" min="0" step="1" value="${esc(v.stock ?? '')}" data-vfield="stock" aria-label="Variant stock"></label>
       <label>Ship lb <input class="adm-input" name="variant_shipping_weight_lb" type="number" min="0.001" step="0.001" value="${esc(v.shipping_weight_lb ?? '')}" data-vfield="shipping_weight_lb" aria-label="Shipping weight pounds"></label>
       <label>Length in <input class="adm-input" name="variant_shipping_length_in" type="number" min="0.01" step="0.01" value="${esc(v.shipping_length_in ?? '')}" data-vfield="shipping_length_in" aria-label="Package length inches"></label>

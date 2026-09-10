@@ -1,9 +1,12 @@
 // Admin orders tab (#36 per-tab split). Order list with status/tracking/QBO/refund
 // controls and NET-aging badges. Shared primitives ($, api, state, message,
 // admSkeleton, admEmpty) and the admin-local statusBadge / admListPager helpers are
-// injected; esc/money/dateTime/confirmDialog come from util.js and the dirty-edit
+// injected; esc/moneyDisplay/dateTime/confirmDialog come from util.js and the dirty-edit
 // helpers from edits.js. The order-status list and refund-blocking set live here.
-import { esc, money, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260910a';
+// Money on this screen is always display-only (moneyDisplay renders "$1,840.00" for
+// USD, falling back to money()'s "EUR 99.99" ISO form for anything else) — nothing in
+// this file feeds a CSV/export/email/PDF, those go through server-rendered paths.
+import { esc, moneyDisplay, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260910a';
 import { captureDirty, restoreDirty } from './edits.js?v=20260910a';
 import { createSavedViews } from './saved-views.js?v=20260910a';
 
@@ -619,7 +622,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
             const exponent = Number.isSafeInteger(Number(rate.currency_exponent)) ? Number(rate.currency_exponent) : 2;
             const amount = Number(rate.amount_minor) / (10 ** exponent);
             const etaText = rate.delivery_days != null ? ` · ${rate.delivery_days} day(s)` : '';
-            const label = `${rate.carrier_name || rate.carrier_code} · ${rate.service_type || rate.service_code} · ${money(amount, rate.currency)}${etaText}`;
+            const label = `${rate.carrier_name || rate.carrier_code} · ${rate.service_type || rate.service_code} · ${moneyDisplay(amount, rate.currency)}${etaText}`;
             return `<option value="${esc(rate.provider_rate_id)}" ${rate.selected ? 'selected' : ''}>${esc(label)}</option>`;
           }).join('')}
         </select></label>
@@ -685,7 +688,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     root.innerHTML = `<div data-order-shipment-control><label>Live rate <select class="adm-select" name="live_rate" data-shipstation-rate="${esc(orderId)}" data-order-shipment-id="${esc(response.order_shipment_id || '')}" data-shipment-id="${esc(response.shipment_id || '')}" data-revision="${esc(response.revision ?? '')}">
       ${rates.map((rate) => {
         const eta = rate.delivery_days != null ? ` · ${rate.delivery_days} day(s)` : '';
-        const label = `${rate.carrier_name || rate.carrier_code} · ${rate.service_type || rate.service_code} · ${money(rate.amount, rate.currency)}${eta}`;
+        const label = `${rate.carrier_name || rate.carrier_code} · ${rate.service_type || rate.service_code} · ${moneyDisplay(rate.amount, rate.currency)}${eta}`;
         return `<option value="${esc(rate.rate_id)}">${esc(label)}</option>`;
       }).join('')}
     </select></label>
@@ -804,7 +807,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         <input class="adm-input admin-input-md" name="refund_amount" data-refund-amount="${id}" data-capability="order.refund" type="number" min="0" step="0.01" placeholder="Amount (blank = full)…" aria-label="Partial refund amount for order ${id} (leave blank to refund the full balance)">
         <button class="btn btn-ghost btn-sm" data-refund-order="${id}" data-capability="order.refund" type="button">Refund</button>
         ${refundLineControls(order, id)}
-        ${Number(order.refunded_amount) > 0 ? `<span class="muted admin-inline-note">refunded ${esc(money(order.refunded_amount, order.currency))}</span>` : ''}` : '';
+        ${Number(order.refunded_amount) > 0 ? `<span class="muted admin-inline-note">refunded ${esc(moneyDisplay(order.refunded_amount, order.currency))}</span>` : ''}` : '';
       // Acceptance is the "a human owns this" marker the queue sorts on; cancellation
       // reverses label + payment + stock + books in one confirmed pass.
       const openStatus = ['paid', 'net_open', 'pending_payment'].includes(order.status);
@@ -823,7 +826,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
             <span class="admin-kicker"><label class="admin-select-all"><input type="checkbox" class="ord-check" name="selected_order" value="${id}" data-capability="order.write" aria-label="Select order ${reference}"></label> ${reference} · ${esc(date(order.created_at))}</span>
             <h3>${esc(order.companies?.name || order.company_name || order.company_id || 'Guest')}</h3>
           </div>
-          <b>${esc(money(order.total ?? order.subtotal, order.currency))}</b>
+          <b>${esc(moneyDisplay(order.total ?? order.subtotal, order.currency))}</b>
         </div>
         <div class="admin-order-meta">
           <div><span>Items</span><ul class="admin-order-items">${items || '<li class="muted">No items</li>'}</ul></div>
@@ -918,8 +921,8 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     const items = (order.order_items || []).map((i) => `<tr>
       <td>${esc(i.name || i.sku)}${i.backordered ? ' <span class="badge badge-warning">backordered</span>' : ''}</td>
       <td style="text-align:center">${esc(i.qty)}</td>
-      <td style="text-align:right">${esc(money(i.unit_price, order.currency))}</td>
-      <td style="text-align:right">${esc(money(i.line_total, order.currency))}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No items</td></tr>';
+      <td style="text-align:right">${esc(moneyDisplay(i.unit_price, order.currency))}</td>
+      <td style="text-align:right">${esc(moneyDisplay(i.line_total, order.currency))}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No items</td></tr>';
     const events = (timeline || []).map((e) =>
       `<li><b>${esc(e.action)}</b> — ${esc(date(e.created_at))}${e.actor_email ? ` by ${esc(e.actor_email)}` : ''}${auditDetail(e)}</li>`).join('')
       || '<li class="muted">No staff actions recorded</li>';
@@ -935,10 +938,10 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     const adjustments = orderAdjustmentEvidence(providerLinks);
     const adjustmentLines = [
       adjustments.promotionDiscountMinor
-        ? `<b>Promotion${adjustments.promotionCode ? ` ${esc(adjustments.promotionCode)}` : ''}</b> −${esc(money(adjustments.promotionDiscountMinor / 100, order.currency))}`
+        ? `<b>Promotion${adjustments.promotionCode ? ` ${esc(adjustments.promotionCode)}` : ''}</b> −${esc(moneyDisplay(adjustments.promotionDiscountMinor / 100, order.currency))}`
         : '',
       adjustments.storeCreditMinor
-        ? `<b>Account credit</b> −${esc(money(adjustments.storeCreditMinor / 100, order.currency))}`
+        ? `<b>Account credit</b> −${esc(moneyDisplay(adjustments.storeCreditMinor / 100, order.currency))}`
         : '',
     ].filter(Boolean);
     const adjustmentSummary = adjustmentLines.length
@@ -965,7 +968,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
             }).join('; ') || 'no persisted packages';
           const selectedRate = (shipment.order_shipment_rates || []).find((rate) => rate.selected && !rate.invalidated_at);
           const selectedSummary = selectedRate
-            ? ` · selected ${esc(selectedRate.carrier_name || selectedRate.carrier_code || '')} ${esc(selectedRate.service_type || selectedRate.service_code || '')} ${esc(money(Number(selectedRate.amount_minor) / (10 ** Number(selectedRate.currency_exponent || 0)), selectedRate.currency))}`
+            ? ` · selected ${esc(selectedRate.carrier_name || selectedRate.carrier_code || '')} ${esc(selectedRate.service_type || selectedRate.service_code || '')} ${esc(moneyDisplay(Number(selectedRate.amount_minor) / (10 ** Number(selectedRate.currency_exponent || 0)), selectedRate.currency))}`
             : '';
           const allocationSummary = (shipment.item_allocations || [])
             .map((item) => `${item.sku} × ${item.quantity}`).join(', ') || 'no item allocation';
@@ -991,9 +994,9 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     const pendingPostageLabel = pendingPostage < 0 ? 'pending carrier credit' : 'pending carrier charge';
     const financialLedger = financialEntries.length
       ? `<h4 style="margin:16px 0 4px">Financial evidence</h4>
-        <p class="muted" style="margin:0 0 4px">Realized postage ${esc(money(realizedPostage, order.currency))}${pendingPostage ? ` · ${pendingPostageLabel} ${esc(money(pendingPostage, order.currency))}` : ''}</p>
+        <p class="muted" style="margin:0 0 4px">Realized postage ${esc(moneyDisplay(realizedPostage, order.currency))}${pendingPostage ? ` · ${pendingPostageLabel} ${esc(moneyDisplay(pendingPostage, order.currency))}` : ''}</p>
         <ul style="margin:0;padding-left:18px">${financialEntries.map((entry) =>
-          `<li><b>${esc(entry.source)}</b> ${esc(entry.entry_type.replaceAll('_', ' '))} — ${esc(money(entry.amount, entry.currency))} · ${esc(entry.recognition_state)} · <code>${esc(entry.provider_object_id)}</code>${entry.reason ? ` — ${esc(entry.reason)}` : ''}</li>`).join('')}</ul>`
+          `<li><b>${esc(entry.source)}</b> ${esc(entry.entry_type.replaceAll('_', ' '))} — ${esc(moneyDisplay(entry.amount, entry.currency))} · ${esc(entry.recognition_state)} · <code>${esc(entry.provider_object_id)}</code>${entry.reason ? ` — ${esc(entry.reason)}` : ''}</li>`).join('')}</ul>`
       : '<h4 style="margin:16px 0 4px">Financial evidence</h4><p class="muted" style="margin:0">No provider cost entries.</p>';
     const cancellationReview = order.cancellation_review;
     const cancellationRecovery = cancellationReview
@@ -1007,7 +1010,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       <p class="muted" style="margin:0 0 12px">${esc(order.companies?.name || order.company_id || 'Guest')} · ${esc(order.customer_email || '')} · ${esc(lifecycle.label)} · ${esc(order.status)} · ${esc(order.payment_method || '')}</p>
       ${order.purchase_order_number ? `<p style="margin:0 0 12px"><b>Purchase order:</b> ${esc(order.purchase_order_number)}</p>` : ''}
       <table class="adm" style="width:100%"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Line</th></tr></thead><tbody>${items}</tbody></table>
-      <p style="margin:12px 0 0"><b>Total</b> ${esc(money(order.total ?? order.subtotal, order.currency))}${Number(order.tax) ? ` (tax ${esc(money(order.tax, order.currency))})` : ''}${Number(order.refunded_amount) > 0 ? ` · refunded ${esc(money(order.refunded_amount, order.currency))}` : ''}</p>
+      <p style="margin:12px 0 0"><b>Total</b> ${esc(moneyDisplay(order.total ?? order.subtotal, order.currency))}${Number(order.tax) ? ` (tax ${esc(moneyDisplay(order.tax, order.currency))})` : ''}${Number(order.refunded_amount) > 0 ? ` · refunded ${esc(moneyDisplay(order.refunded_amount, order.currency))}` : ''}</p>
       ${adjustmentSummary}
       <h4 style="margin:16px 0 4px">Ship to</h4><p style="margin:0">${shipLines}</p>
       ${shipHistory}
@@ -1210,7 +1213,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
         ? `Void ${labels.length} outbound label(s): ${labels.map((label) => label.label_id).join(', ')}.`
         : `No label will be voided (${(plan.label?.reason || 'none').replace(/_/g, ' ')}).`);
       lines.push(plan.refund.will_refund
-        ? `Refund ${money(plan.refund.amount, plan.refund.currency)} to the original payment method.`
+        ? `Refund ${moneyDisplay(plan.refund.amount, plan.refund.currency)} to the original payment method.`
         : `No Stripe refund (${(plan.refund.reason || 'none').replace(/_/g, ' ')}).`);
       lines.push(plan.restock.will_restock
         ? `Return ${plan.restock.lines.reduce((sum, line) => sum + line.qty, 0)} unit(s) to stock: ${plan.restock.lines.map((line) => `${line.sku} ×${line.qty}`).join(', ')}.`
@@ -1762,7 +1765,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       const prompt = lines.length
         ? `Refund ${lines.map((line) => `${line.sku} ×${line.qty}`).join(', ')} at sold prices via Stripe?`
         : amount
-        ? `Refund ${money(amount)} to this order via Stripe?`
+        ? `Refund ${moneyDisplay(amount)} to this order via Stripe?`
         : 'Refund the full remaining balance via Stripe?';
       if (!(await confirmDialog(prompt, { confirmText: 'Refund', danger: true }))) return;
       const identity = reversalRequestIdentity('refund', id, { amount: amount ?? null, lines });
@@ -1780,7 +1783,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
           },
         });
         reversalRequestIds.delete(identity.key);
-        message('ordStatus', `Refund of ${money(Number(res.amount), res.command?.currency || 'usd')} queued. Track provider, stock, and accounting steps on the timeline.`, 'ok');
+        message('ordStatus', `Refund of ${moneyDisplay(Number(res.amount), res.command?.currency || 'usd')} queued. Track provider, stock, and accounting steps on the timeline.`, 'ok');
         await refreshOrder(id);
       } catch (err) {
         message('ordStatus', err.data?.error || 'Refund queue uncertain. Retry uses the same request identity.', 'err');

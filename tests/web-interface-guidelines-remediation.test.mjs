@@ -183,14 +183,28 @@ test("audited dynamic icons, images, and drag state remain accessible", () => {
   assert.match(read("css/components.css"), /\.pipe-card\.is-dragging\s*\{[^}]*user-select:\s*none/s);
 });
 
+/* The formatter these assertions track was renamed, not removed. SQ-19 split it in
+   two: money() is the export/ISO form ("USD 1,840.00") that emails, CSVs and server
+   paths still pin, and moneyDisplay() is the screen form ("$1,840.00") that falls
+   back to money() for any non-USD currency. Admin console copy now uses the display
+   form. The original intent is unchanged and still enforced below: currency copy goes
+   through a shared formatter, never a hand-rolled `${x.toFixed(2)}`. */
 test("audited admin currency copy uses the canonical formatter", () => {
   const orders = read("js/admin/orders.js");
   const products = read("js/admin/products.js");
-  assert.doesNotMatch(orders, /\$\$\{(?:amount|Number\([^)]*\))\.toFixed\(2\)\}/);
-  assert.match(orders, /money\(amount/);
-  assert.match(products, /import \{[^}]*\bmoney\b[^}]*\} from '\.\.\/util\.js/);
-  assert.match(products, /money\(p\.price/);
-  assert.match(products, /money\(v\.price/);
+  const util = read("js/util.js");
+
+  // the display formatter must delegate to the ISO one rather than reimplement it
+  assert.match(util, /export const money = /);
+  assert.match(util, /export const moneyDisplay = [\s\S]*?return money\(n, code\)/);
+
+  for (const [name, source] of [["orders", orders], ["products", products]]) {
+    assert.doesNotMatch(source, /\$\$\{(?:amount|Number\([^)]*\))\.toFixed\(2\)\}/, `${name} must not hand-roll currency`);
+    assert.match(source, /import \{[^}]*\bmoneyDisplay\b[^}]*\} from '\.\.\/util\.js/, `${name} must import the shared formatter`);
+  }
+  assert.match(orders, /moneyDisplay\(amount/);
+  assert.match(products, /moneyDisplay\(p\.price/);
+  assert.match(products, /moneyDisplay\(v\.price/);
 });
 
 test("audited navigation and live regions avoid forced synchronous layout", () => {

@@ -37,6 +37,17 @@ export function closeReservedTab(tab) {
 
 export const money = (n, c = 'USD') => `${String(c || 'USD').toUpperCase()} ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// Two formatters, two audiences. money() is the export/ISO form — server functions,
+// emails, CSVs, and 8+ test files pin its literal "USD " prefix, so it stays exactly
+// as-is. moneyDisplay() is screen-only: in a single-currency (USD) store, "$1,840.00"
+// is shorter and scans faster than "USD 1,840.00" (SQ-19). Any other currency falls
+// back to money()'s ISO form rather than mislabel it with a bare "$".
+export const moneyDisplay = (n, c = 'USD') => {
+  const code = String(c || 'USD').toUpperCase();
+  if (code !== 'USD') return money(n, code);
+  return `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 // Full-row substring search, memoized by object identity. Admin search inputs
 // already lowercase q; API refreshes replace row objects and naturally expire cache entries.
 const rowSearchCache = new WeakMap();

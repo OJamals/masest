@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { esc, money, fmtDate, fmtDT, dateTime, rowMatchesQuery } from "../js/util.js";
+import { esc, money, moneyDisplay, fmtDate, fmtDT, dateTime, rowMatchesQuery } from "../js/util.js";
 
 test("esc escapes HTML-significant characters", () => {
   assert.equal(esc(`<a href="x">&'`), "&lt;a href=&quot;x&quot;&gt;&amp;&#39;");
@@ -14,6 +14,21 @@ test("money formats currency uppercase with 2 decimals and thousands separators"
   assert.equal(money(10, "usd"), "USD 10.00");
   assert.equal(money(null), "USD 0.00");
   assert.equal(money(5, "eur"), "EUR 5.00");
+});
+
+test("moneyDisplay renders USD with a bare $ and 2 decimals, never touching money()'s ISO form", () => {
+  assert.equal(moneyDisplay(1840), "$1,840.00");
+  assert.equal(moneyDisplay(1840, "usd"), "$1,840.00");
+  assert.equal(moneyDisplay(10.4), "$10.40");
+  assert.equal(moneyDisplay(null), "$0.00");
+  // money() itself is untouched — still the ISO form pinned by exports/emails/tests.
+  assert.equal(money(1840, "usd"), "USD 1,840.00");
+});
+
+test("moneyDisplay falls back to the ISO form for any non-USD currency, never mislabeling with $", () => {
+  assert.equal(moneyDisplay(5, "eur"), "EUR 5.00");
+  assert.equal(moneyDisplay(5, "EUR"), "EUR 5.00");
+  assert.equal(moneyDisplay(5, "cad"), "CAD 5.00");
 });
 
 test("rowMatchesQuery preserves full nested-row substring behavior", () => {
