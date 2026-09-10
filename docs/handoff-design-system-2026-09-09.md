@@ -12,9 +12,11 @@ session needs in order to take over.
 |---|---|
 | Worktree | `/Users/omar/Claude/Projects/MASEST-design-system` |
 | Branch | `design-system-phase1` |
-| Position | **20 commits ahead of `origin/main`, 3 behind** |
+| Position | **21 commits ahead of `origin/main`, 0 behind — rebased 2026-09-09** |
 | Tree | clean |
-| Tests | `2946/2946` pass on HEAD `679b0bd4` |
+| Tests | `2947/2947` pass on HEAD `f68b3c04` |
+| Cache token | `20260910a`, unified across every versioned asset. Never deployed. |
+| Recovery point | `backup/design-system-pre-rebase` = the pre-rebase tip |
 | Pushed? | **No.** Nothing has been pushed. |
 
 **Do not touch `/Users/omar/Claude/Projects/MASEST`.** That is the primary checkout, Codex
@@ -22,68 +24,42 @@ edits it live, and it carries ~112 uncommitted files.
 
 ---
 
-## Read this before you rebase — the rebase is not mechanical
+## The rebase is done — what it cost, so you don't undo it
 
-`origin/main` moved three commits while this branch was being built, and they are not
-unrelated changes:
+Rebased onto `origin/main` (`c716b90a`) on 2026-09-09. 21 commits replayed, 20 kept,
+six conflicts. Recorded here because several resolutions were judgement calls that a
+future rebase or revert could quietly reverse.
 
-```
-c716b90a fix: stabilize purchase and touch-target QA
-48ad18fd test: align marine commerce regression with direct purchase
-e933983b feat: refresh industry visuals and direct purchase paths
-```
+| conflict | resolution and why |
+|---|---|
+| `style.css` touch-target padding | took **main's** `min-height: 45px` / `padding-block: 11px`. Their touch-target QA postdates the spacing scale. |
+| `js/main/chrome.js` module tokens | took main's; everything was re-tokened afterwards anyway. |
+| `37372c14` (previous session's token unification) | **skipped.** It re-tokenised onto `20260909b`, the exact collision described below. Its type/spacing work on `admin-support.css` was preserved by resolving that file to this branch's side. |
+| `.quote-form-footer` block | took **main's**. This branch would have added a duplicate of a block main already has. |
+| `css/admin-support.css` ×2 | took **this branch's** — restores the tokenization the skipped commit carried. |
+| `js/main/commerce-ui.js` | took **main's** renamed "Product details" link, then applied SQ-17's root-absolute fix to *their* line. Taking this branch's side would have added a second link instead of fixing theirs. |
 
-**157 files changed on their side, and 139 of those files are also changed on this
-branch.** Three specific hazards:
+**The cache token was the real hazard, and it was worse than forecast.** `origin/main` now
+spends `20260909b` as a new `MAIN_VERSION` constant. Everything is therefore unified on
+**`20260910a`**, which has never been deployed.
 
-### 1. SQ-12 was solved twice, independently
+Unified, not bumped per module, deliberately: `auth.js` alone is imported under three
+different release constants, and changing it rewrites an import URL inside `main.js`,
+which changes `main.js`, which changes every page loading it. Two attempts at tracing that
+cascade gave wrong answers. Unification costs one redundant download per unchanged module
+and yields a state verifiable in one grep — the better trade when the failure mode is a
+stale module in a user's browser.
 
-This branch fixed the grid card's buy control (the label was `opacity: 0` until `:hover`,
-so it was invisible on touch) by deleting the hiding declarations outright.
-`origin/main` fixed the same defect by setting `opacity: 1; visibility: visible` on the
-same selector. Both also added a size `<select>` to the grid card.
+**One migration exemption was added.** Main's touch-target pass set `11px` padding;
+re-running the spacing migration would snap it to `--s3`'s `12px` and undo the tuning. It
+is exempted with the reason recorded in `css/style.css`. If you re-run
+`tools/spacing-scale-migrate.mjs`, it will report 1 mapping — that is the exemption, leave
+it.
 
-The outcomes agree; the text conflicts. **Do not blindly take either side.** Diff the two
-implementations, pick one deliberately, and verify the result renders a persistent visible
-label and a working size select for a signed-out buyer.
-
-### 2. The cache token is contested
-
-This branch unified every asset onto `20260909b`. `origin/main` now has a *different*
-shape:
-
-```
-this branch          origin/main
-STYLE_VERSION      20260909b     20260909a
-COMPONENT_VERSION  20260909b     20260830g
-NAVIGATION_VERSION 20260909b     20260822b
-BLOG_VERSION       20260909b     (unchanged)
-MAIN_VERSION       (absent)      20260909b   <- new constant they added
-```
-
-`20260909b` is now spent on main as `MAIN_VERSION`. **Pick a fresh token — `20260910a` or
-later — rather than assuming `20260909b` is still free.** A rebase merges an identical
-cache-token line with no conflict, so a spent token silently no-ops the bust and returning
-browsers keep stale modules. This has already cost this project a release once.
-
-When you bump, bump together: every HTML file, the generator tools
-(`seo-inject`, `build-blog`, `build-industry-pages`, `gen_industries`, `gen_comparisons`),
-`tools/static-release.mjs`, `vendor/phosphor/style.css`'s woff2 query, and the release
-constants pinned in `tests/auth-cache-release.test.mjs`.
-
-### 3. They touched the same generators
-
-`tools/gen_industries.mjs`, `tools/seo-inject.mjs`, `tools/build-blog.mjs`,
-`tools/gen_comparisons.mjs`, plus `tests/ui-structure.test.mjs`,
-`tests/marine-catalog.test.mjs`, `tests/industry-pages.test.mjs`. Phase 2 edited the
-generators too (deliberately — so regenerated pages keep the fixes). Expect real conflicts
-there, not just token noise.
-
-**Suggested approach:** `git fetch && git rebase origin/main`, resolve the HTML conflicts
-by confirming they are token-only (a script that diffs non-token lines is worth writing),
-and hand-resolve the generators and `commerce-ui.js`.
-
----
+**SQ-12 was solved twice and the merge was verified in a browser,** not from source:
+signed out against the live catalog, `/products` renders a visible "Add to cart" label,
+15 size selects, 15 add buttons, one anchor per card, zero relative product hrefs, no page
+errors.
 
 ## What was done
 
@@ -272,11 +248,12 @@ with it and preserve the original intent — do not weaken a test to make it pas
 
 ## Suggested next steps, in order
 
-1. **Rebase onto `origin/main`** and resolve the three hazards above. This is the gate on
-   everything else — the branch is 20 commits of unpushed work sitting behind a moving main.
-2. **Pick a fresh cache token** (`20260910a` or later) and bump it everywhere together.
-3. **Full `npm test` plus a visual diff** after the rebase. Expect breakage: main changed
-   157 files including the generators and several tests this branch also edited.
-4. **Decide the card-height question** — trim the savings chip to reach ≤440, or revise the
-   target with the reason recorded.
-5. **Then Phase 3** (front door), which is the next unstarted phase.
+1. **Phase 3 — front door.** SQ-06 (five pinned scenes, 3,679px before the first
+   product), SQ-07 (reveal-on-jump invisibility), SQ-09 (redundant sections), SQ-10 (empty
+   case-study images). This is the next unstarted phase and the branch is clean for it.
+2. **Decide the card-height question** — trim the 49px savings chip to reach SQ-13's ≤440,
+   or revise the target with the reason recorded. It is 488px today.
+3. **Consider pushing before starting.** 21 commits of verified work sit unpushed, and
+   `origin/main` moved three commits during the last session. The longer it waits, the
+   more the next rebase costs. Push requires `git fetch && git rebase origin/main` first —
+   Codex races this branch — and a fresh cache token if `20260910a` has shipped by then.
