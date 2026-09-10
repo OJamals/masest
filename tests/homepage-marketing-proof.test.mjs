@@ -7,10 +7,11 @@ const storyCss = readFileSync(new URL("../css/story.css", import.meta.url), "utf
 
 test("homepage puts real-job proof before product education and catalog browsing", () => {
   const proof = home.indexOf('<section class="proof-section');
-  const education = home.indexOf("Different messes need different cleaners.");
+  const education = home.indexOf("Find the cleaner that replaces yours.");
   const catalog = home.indexOf("The VertKleen line, by the job it replaces.");
 
   assert.ok(proof > 0, "expected proof section");
+  assert.ok(education > 0, "expected the cleaner-matching block");
   assert.ok(proof < education, "real-job proof should precede product education");
   assert.ok(proof < catalog, "real-job proof should precede catalog browsing");
 });
@@ -33,7 +34,24 @@ test("homepage retains owner-confirmed global reach in the trust strip", () => {
 test("homepage does not repeat the story's matching and trial process below the fold", () => {
   assert.doesNotMatch(home, /Protect equipment without punishing the crew\./);
   assert.doesNotMatch(home, /A simple path to a better cleaner\./);
-  assert.equal((home.match(/Start with the cleaner you want to replace\./g) || []).length, 1);
+  assert.equal((home.match(/Find the cleaner that replaces yours\./g) || []).length, 1);
+});
+
+/* SQ-09: the homepage used to argue "pick the product that matches your soil"
+   in two consecutive blocks before the catalog — one sorted by soil type, one
+   by the incumbent chemical — then restate it in the catalog subhead. They are
+   now a single block. This pins the merge: one matching block, carrying all
+   three replacement routes, so the pair cannot quietly grow back. */
+test("homepage states the cleaner-matching argument once, covering all three routes", () => {
+  assert.doesNotMatch(home, /Different messes need different cleaners\./);
+  assert.doesNotMatch(home, /Start with the cleaner you want to replace\./);
+
+  const matcher = home.match(/<h2 class="headline">Find the cleaner that replaces yours\.<\/h2>[\s\S]*?<\/section>/)?.[0];
+  assert.ok(matcher, "expected a single cleaner-matching section");
+  assert.equal((matcher.match(/class="why-col reveal"/g) || []).length, 3);
+  for (const route of ['href="products#cat-descale"', 'href="products#cat-degrease"', 'href="programs"']) {
+    assert.ok(matcher.includes(route), `matching block should keep the ${route} route`);
+  }
 });
 
 test("homepage trust strip balances its four proof points", () => {

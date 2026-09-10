@@ -712,29 +712,6 @@ no dots) ---------- */
 .bento-cell p { color: var(--muted); font-size: var(--fs-body); }
 .bento-cell .big-fig { font-size: var(--fs-h1); font-weight: 900; letter-spacing: -.04em; line-height: 1; margin-bottom: var(--s3); color: var(--accent-ink); }
 
-/* ---------- Category split ---------- */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s6); }
-.cat-card {
-  border-radius: var(--r-lg); padding: var(--s12) var(--s8) var(--s8); position: relative; overflow: hidden;
-  min-height: 300px; display: flex; flex-direction: column; justify-content: flex-end;
-  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-xs);
-  transition: transform .45s var(--ease-out);
-}
-.cat-card::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
-  background: radial-gradient(80% 70% at 85% 0%, var(--accent-tint), transparent 60%);
-  transition: opacity .45s var(--ease-out);
-}
-.cat-card:hover { border-color: var(--accent); transform: translateY(-4px); box-shadow: var(--shadow-md); }
-.cat-card:hover::after { opacity: 1; }
-.cat-card > * { position: relative; z-index: 1; }
-.cat-card h3 { font-size: var(--fs-h3); margin-bottom: var(--s3); }
-.cat-card p { color: var(--muted); margin-bottom: var(--s5); max-width: 420px; }
-.cat-card .link { font-weight: 700; color: var(--accent-ink); display: inline-flex; align-items: center; gap: var(--s2); }
-.cat-card .link::after { content: "\2192"; transition: transform .35s var(--ease-out); }
-.cat-card:hover .link::after { transform: translateX(4px); }
-.cat-card i.cat-ico { font-size: 2.2rem; color: var(--accent); position: absolute; top: 40px; left: 40px; z-index: 1; }
-
 /* ---------- Products: featured asymmetric ---------- */
 .feat-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: var(--s6); align-items: stretch; }
 .feat-side { display: grid; gap: var(--s6); min-width: 0; }
@@ -1557,6 +1534,16 @@ tile icon + text (borderless) */
 .why-col h3 { font-size: var(--fs-body-lg); margin-bottom: var(--s2); }
 .why-col p { color: var(--muted); font-size: var(--fs-body); }
 .why-col .tag { display: block; margin-top: var(--s4); font-size: var(--fs-caption); font-weight: 700; color: var(--accent-ink); }
+/* Carried over from the retired .cat-card block: these cards are now the only
+   place the homepage offers a "pick your replacement" route, so the link still
+   has to read as an action rather than as body copy. A card may carry two. */
+.why-col .link {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  margin-top: var(--s4); font-weight: 700; color: var(--accent-ink);
+}
+.why-col .link::after { content: "\2192"; transition: transform .35s var(--ease-out); }
+.why-col .link:hover::after { transform: translateX(4px); }
+.why-col .link + .link { display: flex; margin-top: var(--s2); }
 
 /* Comparison helper note under the homepage table */
 .cmp-note { margin-top: var(--s4); font-size: var(--fs-small); color: var(--muted); max-width: 70ch; line-height: 1.6; }
