@@ -12,9 +12,9 @@ session needs in order to take over.
 |---|---|
 | Worktree | `/Users/omar/Claude/Projects/MASEST-design-system` |
 | Branch | `design-system-phase1` |
-| Position | **26 commits ahead of `origin/main`, 0 behind** — rebased onto `a2cd169a` on 2026-09-10 |
+| Position | **28 commits ahead of `origin/main`, 0 behind** — rebased onto `a2cd169a` on 2026-09-10 |
 | Tree | clean |
-| Tests | `2964/2964` pass on HEAD (Phase 3 + Phase 4 add 7 pinning tests) |
+| Tests | `2966/2966` pass on HEAD |
 | Cache token | `20260910a`, unified across every versioned asset. Never deployed. |
 | Recovery points | `backup/design-system-pre-phase4` (pre-2026-09-10 rebase), `backup/design-system-pre-rebase` (older) |
 | Pushed? | **No.** Nothing has been pushed. |
@@ -262,7 +262,7 @@ await context.route("**/img/**", async (route) => {
 
 ---
 
-## Phase 4 — operations, partly done 2026-09-10
+## Phase 4 — operations, done 2026-09-10
 
 Rebased onto `origin/main` first this time, because Phase 4 edits the same admin files
 Codex had just touched. See the rebase note below — it cost a full redo.
@@ -271,11 +271,12 @@ Codex had just touched. See the rebase note below — it cost a full redo.
 |---|---|
 | SQ-18 Save density | **done.** Visible Save buttons armed at rest: 15 → 0 |
 | SQ-18 blank thumbnails | **stale.** All 15 render |
-| SQ-18 row density | **not done.** Real: 222px rows, 4,009px panel |
+| SQ-18 row density | **done.** 222px → 102px rows; panel 4,009px → 2,175px |
 | SQ-19 duplicate status | **done.** Second pill suppressed only where it restates the lifecycle |
-| SQ-19 money format | **not done.** Real, but `money()` is shared with exports |
+| SQ-19 money format | **done**, console-wide. New display-only `moneyDisplay()`; `money()` untouched |
 | SQ-20 sidebar clipping | **stale.** Already `position: sticky` + `overflow-y: auto` |
-| SQ-20 KPI alignment | **not done.** Real, and it is the 4th column, not the 3rd |
+| SQ-20 KPI alignment | **done.** Value right edges 443/463/750/728 → one x per column |
+| SQ-20 dead column | **stale — and my earlier correction of it was also wrong.** There is no dead column |
 
 ### What shipped
 
@@ -316,20 +317,52 @@ about thumbnails.
 Content is 894px against an 799px box, so lower items are reached by scrolling the sidebar,
 which is the intended behaviour rather than the reported clipping.
 
-### Still open, with numbers
+### Finished 2026-09-10, second pass
 
-- **SQ-18 row density.** 15 products × 222px = a 4,009px panel, and each row leaves a
-  ~600px horizontal void between the product name and the Active/Save/Remove cluster.
-  The spec wants a table with a 48px thumbnail; thumbnails are already 54px, so this is a
-  row-layout job, not an image job.
-- **SQ-19 money format.** Confirmed `USD 1,840.00`. Deliberately not changed: `money()` in
-  `js/util.js` is shared by admin *and* buyer surfaces and by export paths, and the finding
-  itself says to keep the ISO code for exports. It needs a display-only formatter, not an
-  edit to the shared helper.
-- **SQ-20 KPI alignment.** The dead column is the **4th**, not the 3rd: `.adm-grid` is
-  `280.5px × 4`, row 1 fills all four, row 2 only the first three. KPI values already carry
-  `tabular-nums`, but their right edges land at 443/463 and 750/728 — the labels wrap and
-  push them, so the fix is a fixed value column, not a numeric font change.
+**SQ-18 row density — 222px → 102px, panel 4,009px → 2,175px.** The media controls
+("Choose primary" / "Add gallery image" / the gallery grid) moved into the existing
+"Edit product details" disclosure; that vertical stack was most of the row height, not the
+thumbnail. The row is now a fixed-track grid — `54px` thumb / name (`1fr`, truncates) /
+`136px` price / actions.
+
+**The first attempt at this was wrong in an instructive way.** It left-packed the row with
+nothing flex-growing, which did close the ~600px void — but gave every row a different
+action x: Save's left edge spread 116px across 15 rows, Active 117px, price 116px, plus
+407px of trailing dead space. That is precisely the defect SQ-13/SQ-18 exist to fix. It
+measured well (row height, void closed) and looked wrong; only the screenshot caught it.
+Fixed tracks get both: all three spreads are now 0 and trailing space is 0. The price track
+must be **fixed, not `auto`** — its text varies per row ("Pricing workspace" vs a number),
+and an auto track re-introduces the raggedness.
+
+**SQ-20 KPI alignment — one right edge per column.** The cause was not the labels: it was
+`.dash-row` being `flex` + `justify-content: space-between`, where route rows carry a third
+child (the trailing arrow), so leftover width split into two gaps *around* the value rather
+than pinning it right, and the leftover shifted with each label's wrap. Now a grid with a
+fixed value column plus a reserved icon column, so route and non-route rows share an edge.
+Setup-gaps and traffic rows needed a narrower value column of their own — the shared width
+pushed that card past the 120px height `tests/admin-panel-spacing.test.mjs` pins.
+
+**There is no dead column, and the correction I published earlier was also wrong.** This
+handoff previously said "the dead column is the 4th, not the 3rd". Both readings came from
+`#admStats`, which is `class="adm-grid"`, **hidden**, and empty — a decoy that a
+`[class*='grid']` selector finds first. The real KPI grid is `.adm-report-grid`: 3 columns
+holding 6 cards (5 groups + the always-rendered "Setup gaps" card), so both rows fill
+completely, and `.adm-wrap`'s `max-width: 1400px` caps it at every viewport. Left alone.
+
+**SQ-19 money format — finished console-wide.** `money()` is untouched and still the
+export/ISO form. A display-only `moneyDisplay()` renders `$1,840.00` for USD and delegates
+to `money()` for any other currency, so nothing is mislabeled. Every client-rendered money
+value in the admin console now uses it: orders (cards, detail dialog, ledger, refund
+prompts, carrier rates), products, companies, and the overview KPIs — 31 call sites.
+
+Converting only the order cards, which is what the finding literally scopes, would have
+left one console showing `$250.00` on a card and `USD 250.00` in that same order's detail
+dialog. A mixed convention inside one workflow is the same defect SQ-19 itself is about.
+
+The currency contract test (`web-interface-guidelines-remediation.test.mjs`) tracks the
+rename rather than being weakened: it still forbids hand-rolled `${x.toFixed(2)}`, still
+requires a shared formatter, and now also pins that `moneyDisplay` delegates to `money()`
+rather than reimplementing the ISO form.
 
 ---
 
@@ -479,8 +512,6 @@ with it and preserve the original intent — do not weaken a test to make it pas
    fresh cache token if `20260910a` has shipped by then. Expect the conflicts to be almost
    entirely `?v=` tokens; resolve every one to the branch's unified token, and read the
    rebase note above before starting.
-3. **Finish Phase 4.** Three measured items remain, all listed with numbers under "Still
-   open": SQ-18 row density (222px rows, 4,009px panel, ~600px void per row), SQ-19 money
-   format (needs a display-only formatter, not an edit to the shared `money()`), and SQ-20
-   KPI alignment (fixed value column; the dead column is the 4th).
-4. **Phase 5 — content.** SQ-22 … SQ-25. Untouched.
+3. **Phase 5 — content.** SQ-22 … SQ-25. The only phase still untouched. Given the record
+   so far — 7 of the findings checked in phases 3 and 4 turned out stale or misattributed —
+   measure each claim before implementing it.
