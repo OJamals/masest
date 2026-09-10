@@ -60,3 +60,48 @@ test("industry select covers every generated industry page", () => {
     assert.ok(contact.includes(`<option>${sector}</option>`), `industry option: ${sector}`);
   }
 });
+
+test("the quote form's consent block ships with the rules that lay it out", async () => {
+  // This exists because the failure it guards was silent in every other check.
+  //
+  // f346586f ("introduce a type scale") rewrote a region of style.css wholesale and dropped
+  // .quote-form-footer, .quote-marketing-option and .quote-form-footnotes. The markup kept
+  // shipping. The suite stayed green -- no test asserted a gap, and a source-contract test
+  // reads what a rule says, never whether a rule exists. Rebasing then replayed that
+  // wholesale rewrite over main's copy of the file without raising a conflict, so the rules
+  // main had added were removed a second time, again silently.
+  //
+  // What the reader actually got: the marketing-consent label sat 4px above the submit
+  // button instead of 20px -- a consent control crowded against the button that acts on it.
+  //
+  // The general rule this encodes: a class that ships in markup must have a rule somewhere.
+  // Scoped here to the consent block, which is the part with legal weight.
+  const styles = await Promise.all(
+    ["style.css", "components.css"].map((f) => readFile(new URL(`../css/${f}`, import.meta.url), "utf8")),
+  );
+  const css = styles.join("\n");
+
+  const footer = contact.slice(contact.indexOf('class="quote-form-footer"'));
+  const block = footer.slice(0, footer.indexOf("</form>"));
+  assert.ok(block.includes("quote-marketing-option"), "consent label should still be in the footer");
+
+  const classes = [...block.matchAll(/class="([^"]+)"/g)]
+    .flatMap(([, list]) => list.split(/\s+/))
+    .filter(Boolean);
+  assert.ok(classes.length >= 4, "expected the footer to carry several classes");
+
+  for (const cls of new Set(classes)) {
+    assert.match(
+      css,
+      new RegExp(`\\.${cls.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s,:{.\\[]`),
+      `.${cls} ships in contact.html but has no rule in css/ — the markup is unstyled`,
+    );
+  }
+
+  // The layout itself, not just the presence of a selector: a grid with real separation
+  // between the consent control and the button.
+  assert.match(css, /\.quote-form-footer\s*\{[^}]*display:\s*grid/,
+    "the footer must lay its children out, or they collapse against each other");
+  assert.match(css, /\.quote-form-footer\s*\{[^}]*gap:\s*var\(--s[5-9]\)/,
+    "consent control and submit button need a real gap between them");
+});

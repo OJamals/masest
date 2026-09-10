@@ -1227,6 +1227,26 @@ no number circles) ---------- */
   outline: none; border-color: var(--accent); box-shadow: var(--ring-soft);
 }
 .form-note { font-size: var(--fs-caption); color: var(--muted); margin-top: var(--s4); }
+
+/* Quote-form footer. These rules existed on main and were dropped by the type-scale
+   migration (f346586f), which rewrote this region of the file wholesale. Nothing caught
+   it: the markup still ships in contact.html, no test asserts a gap, and a rebase replays
+   a wholesale rewrite over main's version without ever raising a conflict. The visible
+   result was the marketing-consent label sitting 4px above the submit button instead of
+   20px -- a consent control crowded against the button that acts on it.
+
+   Restored onto the token scale rather than at the original literals, and smaller than the
+   original: the button's min-width now comes from .u-cta-wide, which the branch added. */
+.quote-form-footer { display: grid; gap: var(--s5); margin-top: var(--s6); }
+.quote-form-footer .form-note { margin: 0; }
+.quote-form-footer .btn { justify-self: start; max-width: 100%; }
+.quote-marketing-option { display: flex; align-items: flex-start; gap: var(--s2); cursor: pointer; }
+.quote-marketing-option input { flex: 0 0 auto; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.quote-form-footnotes { display: grid; gap: var(--s2); }
+.quote-form-footnotes .form-note { font-size: var(--fs-micro); }
+@media (max-width: 560px) {
+  .quote-form-footer .btn { width: 100%; }
+}
 .field-err { display: block; margin-top: var(--s2); font-size: var(--fs-caption); font-weight: 700; color: var(--danger); }
 .field [aria-invalid="true"] { border-color: var(--danger); }
 .form-success { display: none; text-align: center; padding: var(--s8) var(--s5); }

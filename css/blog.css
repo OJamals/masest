@@ -131,3 +131,10 @@
   .blog-body th,
   .blog-body td { padding: var(--s3) var(--s3); }
 }
+
+/* Long-form prose ported into the comparison template (tools/gen_comparisons.mjs).
+   .blog-post constrains a post to 760px for a ~87-character measure; the comparison
+   template's .wrap is 1180px, which rendered the same 1,200-word body at ~140 characters
+   per line -- roughly double the 45-75ch that body text is comfortable at. The body is
+   the same prose in both places, so it gets the same measure. */
+.comparison-body { max-width: 760px; }
