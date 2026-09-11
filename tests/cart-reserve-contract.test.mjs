@@ -91,3 +91,98 @@ test("skeleton bars are sized so they wrap like words", () => {
   const height = bar[1].match(/height:\s*([\d.]+)em/);
   assert.ok(height && Number(height[1]) < 1, ".cart-sk height must stay below 1em");
 });
+
+/* The summary half of the reserve.
+ *
+ * Reserving the lines left one shift: #cartEstimate and the ZIP-estimate form un-hiding
+ * together once prices arrived, which moved .cart-path-primary - the block holding
+ * Continue to checkout - down +347px on iPad Mini and +477px on iPhone SE at ~1.47s, and
+ * was all of the page's remaining 0.1271 / 0.0808 in the field.
+ */
+
+// Everything above the module script. The module renders the same totals from the
+// catalog, so searching the whole file would match either copy and prove nothing.
+const reserveScript = cartHtml.slice(0, cartHtml.indexOf('<script type="module">'));
+
+test("the reserve rebuilds the totals with the rows the module renders", () => {
+  // Measured per-element delta on hydration is 0px at five viewports and four cart
+  // shapes - but only because the reserved rows are the real ones. Drop a row here, or
+  // change a constant cell in the module without changing it here, and the reserve is
+  // a different height than the thing it reserves for.
+  for (const row of ["<dt>Shipping</dt>", "<dt>Tax</dt>", "Estimated subtotal"]) {
+    assert.ok(reserveScript.includes(row), `the reserve must lay out the ${row} row`);
+  }
+  assert.ok(
+    reserveScript.includes("Calculated next") && reserveScript.includes("Calculated at checkout"),
+    "both constant cells must be reserved with their real text, not a bar",
+  );
+  assert.ok(
+    reserveScript.includes("Final product pricing and discounts are confirmed at checkout"),
+    "the note under the totals is part of the reserved height",
+  );
+  assert.ok(
+    reserveScript.includes('class="cart-total-count"'),
+    "the item count is a block-level line inside the total row and must be reserved",
+  );
+});
+
+test("the reserve prints no figure and no verdict it has not earned", () => {
+  // tests/cart-page.test.mjs pins that "Pending review" must not appear before the
+  // catalog answers: a cart is not under review until something says so. The subtotal
+  // is also the only cell here that needs prices, so a bar is both the honest and the
+  // only available filler.
+  assert.ok(
+    !reserveScript.includes("Pending review"),
+    "the reserve must not decide a cart needs review before the catalog has answered",
+  );
+  assert.match(
+    reserveScript,
+    /<dd>&#8203;<span class="cart-sk cart-sk-md"><\/span><\/dd>/,
+    "the subtotal cell must be a bar behind a zero-width space, which holds the "
+      + "line-height:1 line box at the height the real figure sets",
+  );
+});
+
+test("the reserve and the cart page agree on the estimable record", () => {
+  // Same drift hazard as the storage key above, one level up: the reserve replays a
+  // verdict the page wrote, and a rename on either side would leave the form reserving
+  // nothing while every other assertion still passed.
+  const written = cartHtml.match(/localStorage\.setItem\("(masest_cart_estimable[^"]*)"/);
+  assert.ok(written, "cart.html no longer records an estimable verdict for the reserve");
+  assert.ok(
+    reserveScript.includes(`localStorage.getItem("${written[1]}")`),
+    `the reserve must read the same record the page writes ("${written[1]}")`,
+  );
+});
+
+test("the form reserve replays a matching verdict rather than guessing one", () => {
+  // The form is offered only when every line is a priced, buyable variant. Reserving it
+  // on anything weaker - a truthy record, a stale sku set - would un-hide it for carts
+  // that will not get it and turn a removed shift into an added one.
+  assert.match(
+    reserveScript,
+    /hint\.estimable === true/,
+    "only an explicit true may un-hide the form; a truthy or missing record must not",
+  );
+  assert.match(
+    reserveScript,
+    /hint\.skus\.length === skus\.length/,
+    "a recorded set of a different size cannot describe this cart",
+  );
+  assert.match(
+    reserveScript,
+    /if \(sorted\[s\] !== recorded\[s\]\) same = false/,
+    "the recorded sku set must match the cart being reserved, order-independently",
+  );
+});
+
+test("the reserve counts quantities the way the cart module does", () => {
+  // items() normalises with Math.floor and drops anything <= 0; the reserve used to
+  // clamp at 9999, so a cart above that reserved a narrower count string than it
+  // rendered. The line set and the item count both come from this one rule.
+  assert.ok(
+    !/Math\.min\(9999/.test(reserveScript),
+    "the reserve must not clamp quantities the real render does not clamp",
+  );
+  assert.match(reserveScript, /qtys\[sku\] = Math\.floor\(qty\)/);
+});

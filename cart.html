@@ -121,9 +121,15 @@
          the first paint rather than a frame behind it. Skeleton rows use the live
          .cart-line markup so every height rule applies unchanged - measured line heights
          run 132px (iPad Mini) to 241px (iPhone SE) and differ by 19px within a single
-         viewport when a product name wraps, so no fixed px reserve could be right. The
-         summary needs no skeleton: it is real static markup that was merely hidden, and
-         #cartEstimate stays hidden until a real subtotal exists, so nothing fake shows. -->
+         viewport when a product name wraps, so no fixed px reserve could be right.
+
+         The summary is reserved in three parts. Its outer markup is real and was merely
+         hidden, so un-hiding it is exact. #cartEstimate is rebuilt here from the storage
+         the module will read anyway, because its shape never depended on the catalog -
+         three rows, two constant cells and an item count - and only the subtotal figure
+         waits for prices. The ZIP-estimate form is the one piece that cannot be derived
+         at all, so its visibility is replayed from a verdict the page recorded on a
+         previous view and only when the sku set still matches. -->
     <script>
       (function () {
         try {
@@ -131,7 +137,16 @@
           var raw = localStorage.getItem("masest_cart");
           var cart = raw ? JSON.parse(raw) : null;
           if (!cart || typeof cart !== "object") return;
-          var skus = Object.keys(cart).filter(function (sku) { return Number(cart[sku]) > 0; });
+          // Mirrors normalizeCartQty in js/cart-shape.js, so the reserved line set and
+          // item count are exactly the ones items() will report. Clamping here instead
+          // would make the reserve disagree with the real render on the extremes.
+          var qtys = {};
+          var skus = Object.keys(cart).filter(function (sku) {
+            var qty = Number(cart[sku]);
+            if (!isFinite(qty) || qty <= 0) return false;
+            qtys[sku] = Math.floor(qty);
+            return qtys[sku] > 0;
+          });
           if (!skus.length) return;
           var lines = document.getElementById("cartLines");
           if (!lines) return;
@@ -143,7 +158,7 @@
             // nothing identifying a line until the catalog resolves, because before then
             // there is no way to know the SKU is even purchasable. The reserve needs the
             // geometry, not the content, so every text slot is a bar.
-            var qty = String(Math.max(1, Math.min(9999, Math.floor(Number(cart[sku]) || 1))));
+            var qty = String(qtys[sku]);
             return '<article class="cart-line cart-line-skeleton" aria-hidden="true">'
               + '<div class="cart-line-product"><figure class="cart-line-media"></figure><div>'
               // .eyebrow is inline-flex, so unlike the h2 and p below it has no
@@ -158,6 +173,58 @@
               + '<button type="button" class="btn btn-ghost" disabled tabindex="-1">Remove</button>'
               + '</article>';
           }).join("");
+          // The totals are the other half of the reserve. #cartEstimate ships hidden and
+          // un-hides only inside updateSubtotal(), which needs the catalog, so that reveal
+          // moved .cart-path-primary — the block holding Continue to checkout — down by
+          // +347px on iPad Mini and +477px on iPhone SE at ~1.47s. With the lines reserved
+          // it was the whole of what remained: 0.1271 / 0.0808 in the field.
+          //
+          // Its shape does not depend on the catalog. There are always three rows; the
+          // Shipping cell always reads "Calculated next" on first render, because a rate
+          // only exists once the buyer asks for one; the Tax cell is a constant; and the
+          // item count is the sum of the quantities already in storage. Only the subtotal
+          // figure needs prices, so only that cell is a bar — and tests/cart-page.test.mjs
+          // pins that no review verdict may appear before the catalog answers, so a bar
+          // is also the only honest thing to put there.
+          var estimate = document.getElementById("cartEstimate");
+          if (estimate) {
+            var units = 0;
+            for (var i = 0; i < skus.length; i++) units += qtys[skus[i]];
+            estimate.setAttribute("aria-busy", "true");
+            estimate.innerHTML = '<dl>'
+              + '<div><dt>Shipping</dt><dd>Calculated next</dd></div>'
+              + '<div><dt>Tax</dt><dd>Calculated at checkout</dd></div>'
+              + '<div class="cart-total-row"><dt>Estimated subtotal <span class="cart-total-count">'
+              + units + ' ' + (units === 1 ? 'item' : 'items') + '</span></dt>'
+              // .cart-total-row dd is line-height:1, so the zero-width space holds the
+              // line box at the height the real figure sets it to and the bar rides
+              // inside it rather than driving it taller.
+              + '<dd>&#8203;<span class="cart-sk cart-sk-md"></span></dd></div>'
+              + '</dl>'
+              + '<p>Final product pricing and discounts are confirmed at checkout.</p>';
+            estimate.hidden = false;
+          }
+          // The ZIP-estimate form is the last block that moves, and it is the one thing
+          // here that genuinely cannot be derived from masest_cart: it is offered only
+          // when every line is a priced, buyable variant, and storage holds quantities,
+          // not prices. So the cart page records that verdict against the exact sku set
+          // it was reached for, and the reserve replays it — never guesses it. A set that
+          // does not match, a verdict of false, or no record at all reserves nothing and
+          // leaves today's single reveal in place, so this can only remove shift, never
+          // add it. Worst case is the first cart view in a browser.
+          var hint = JSON.parse(localStorage.getItem("masest_cart_estimable_v1") || "null");
+          var form = document.getElementById("shipEstimateForm");
+          if (form && hint && hint.estimable === true && Array.isArray(hint.skus)
+            && hint.skus.length === skus.length) {
+            // Compared element-wise on two sorted copies rather than as a joined string:
+            // a separator would have to be a character no sku can contain, and nothing
+            // in the storage path validates that.
+            var sorted = skus.slice().sort();
+            var recorded = hint.skus.slice().sort();
+            var same = true;
+            for (var s = 0; s < sorted.length; s++) if (sorted[s] !== recorded[s]) same = false;
+            if (same) form.hidden = false;
+          }
           if (summary) summary.hidden = false;
           if (active) active.hidden = false;
         } catch (err) {
@@ -407,6 +474,16 @@
     if (shipEstimateForm) {
       shipEstimateForm.hidden = !canEstimate;
     }
+    // Record the verdict for the pre-paint reserve in cart.html, keyed to the sku set it
+    // was reached for so a changed cart falls back to reserving nothing rather than to a
+    // stale answer. Presentation only: the form's real visibility is still decided here,
+    // from the catalog, on every render.
+    try {
+      localStorage.setItem("masest_cart_estimable_v1", JSON.stringify({
+        skus: cartItems.map((item) => item.sku).sort(),
+        estimable: canEstimate,
+      }));
+    } catch (err) { /* storage disabled: the reserve simply finds no record. */ }
     const subtotalText = canEstimate
       ? priceMoney(subtotal, [...currencies][0])
       : "Pending review";
@@ -414,6 +491,7 @@
     const shippingCell = shipEstimate
       ? `<dd>${esc(priceMoney(shipEstimate.amount_minor / 100, shipEstimate.currency))} <span class="cart-ship-estimated">est.</span></dd>`
       : "<dd>Calculated next</dd>";
+    estimate.removeAttribute("aria-busy");
     estimate.innerHTML = `
       <dl>
         <div><dt>Shipping</dt>${shippingCell}</div>
