@@ -46,14 +46,21 @@
   <main id="main" class="service-catalog-page">
     <section class="hero services-hero product-catalog-hero">
       <div class="container services-hero-grid">
-        <div class="services-hero-copy hero-anim">
+        <!-- hero-anim sits on the children, never on this wrapper, and never on the h1.
+             heroRise starts at opacity:0, and Chromium records a text node's paint once
+             — an element whose first paint is transparent is dropped from LCP candidacy
+             for good. With the animation on the wrapper the h1 (32,370px2, by far the
+             largest paint here) never entered the candidate list at all and LCP fell
+             through to a 2,160px2 badge: 704ms of pure FCP->LCP gap. See
+             docs/handoff-2026-09-11.md. -->
+        <div class="services-hero-copy">
       <h1 class="display">Test the switch before you roll it out.</h1>
-      <p class="subhead">See how VertKleen performs on your buildup, surface, and cleaning method. Compare the finish, labor, water, and total job cost before making a bigger change.</p>
-          <div class="hero-actions">
+      <p class="subhead hero-anim">See how VertKleen performs on your buildup, surface, and cleaning method. Compare the finish, labor, water, and total job cost before making a bigger change.</p>
+          <div class="hero-actions hero-anim">
             <a class="btn btn-primary" href="#serviceCatalog">Browse service pricing</a>
             <a class="btn btn-secondary" href="contact?type=services">Plan a test or service</a>
           </div>
-          <div class="service-hero-badges" aria-label="Service catalog facts">
+          <div class="service-hero-badges hero-anim" aria-label="Service catalog facts">
             <span><b data-service-count>35</b> services</span>
             <span><b data-package-count>4</b> service packages</span>
             <span><b data-category-count>8</b> categories</span>

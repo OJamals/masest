@@ -1135,16 +1135,22 @@ ${jsonLd(serviceCategorySchema(category, items))}
 <main id="main">
   <section class="hero service-guide-hero">
     <div class="container service-guide-hero-grid">
-      <div class="service-guide-hero-copy hero-anim">
-        <a class="service-guide-back" href="../services">Services <span aria-hidden="true">/</span> ${text(category.title)}</a>
-        <span class="eyebrow">Technical service guide</span>
+      <!-- hero-anim goes on the children, never on this wrapper, and never on the h1.
+           heroRise starts at opacity:0, and Chromium records a text node's paint once,
+           so an element whose first paint is transparent is dropped from LCP candidacy
+           permanently. With the animation on the wrapper the h1 never entered the
+           candidate list and LCP fell through to the back link: ~628ms of FCP->LCP gap
+           on every generated guide. Keep the wrapper bare. -->
+      <div class="service-guide-hero-copy">
+        <a class="service-guide-back hero-anim" href="../services">Services <span aria-hidden="true">/</span> ${text(category.title)}</a>
+        <span class="eyebrow hero-anim">Technical service guide</span>
         <h1 class="display">${text(category.title)}</h1>
-        <p class="subhead">${text(category.description)}</p>
-        <div class="service-guide-hero-facts" aria-label="Category facts">
+        <p class="subhead hero-anim">${text(category.description)}</p>
+        <div class="service-guide-hero-facts hero-anim" aria-label="Category facts">
           <span><b>${items.length}</b>${category.key === "Service Packages" ? "packages" : "services"}</span>
           <span><b>Quote first</b>Scope confirmed before work</span>
         </div>
-        <div class="hero-actions">
+        <div class="hero-actions hero-anim">
           <a class="btn btn-primary" href="../contact?type=services&amp;message=${requestNote}">Request ${text(category.title.toLocaleLowerCase())}</a>
           <a class="btn btn-secondary" href="../services#service-${attr(category.key.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""))}">See catalog pricing</a>
         </div>
