@@ -1,10 +1,10 @@
-import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260910b';
-import { catalogImageDimensions } from './main/catalog-data.js?v=20260910b';
+import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260911c';
+import { catalogImageDimensions } from './main/catalog-data.js?v=20260911c';
 import {
   createShippingRequestCoordinator,
   fetchShippingJson,
   shippingRequestSnapshot,
-} from './shipping-request.js?v=20260910b';
+} from './shipping-request.js?v=20260911c';
 
 const money = (amount, currency = 'usd') => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: String(currency).toUpperCase(),
@@ -279,9 +279,9 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260910b'),
-    import('./auth.js?v=20260910b'),
-    import('./staff-surface.js?v=20260910b'),
+    import('./address-autocomplete.js?v=20260911c'),
+    import('./auth.js?v=20260911c'),
+    import('./staff-surface.js?v=20260911c'),
   ]);
   const { acceptedQuoteContext, checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;
@@ -544,6 +544,36 @@ async function boot() {
     const selected = state.quote.rates[state.selectedRate];
     showStatus(`Address verified. ${shippingServiceSummary(selected)} selected. Continue to secure payment.`, 'ok');
     renderTotals();
+    revealRates();
+  }
+
+  // Revealing the rate list grows the page by roughly 860px, which pushed #checkoutPay
+  // off-screen on every device measured -- iPhone SE through a 1440px laptop -- at the
+  // exact moment it became clickable. The status line said "Continue to secure payment"
+  // while the button it named was below the fold with nothing bringing it into view.
+  //
+  // Deliberately NOT solved by reserving the rate box: that parks ~860px of empty space
+  // above the fold before the buyer has asked for rates, pushes the address form itself
+  // down, and leaves the button just as unreachable. The post-rates CLS of 0.07-0.20 is
+  // accepted as the cost of a reveal the buyer asked for, rather than hidden behind a
+  // reserve that makes the page worse to use.
+  //
+  // renderRates() has a single caller -- the rate-fetch success path -- and selecting a
+  // different rate only mutates state, so this runs once per fetch and never steals focus
+  // while the buyer is comparing options.
+  function revealRates() {
+    if (!ratesBox || ratesBox.hidden) return;
+    const motionOk = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try {
+      ratesBox.scrollIntoView({ behavior: motionOk ? 'smooth' : 'auto', block: 'start' });
+    } catch {
+      ratesBox.scrollIntoView();
+    }
+    // Focus the chosen rate, not the pay button: the buyer's next decision is which
+    // service to use, and it puts a screen reader at the top of the new content rather
+    // than past it.
+    const chosen = rateOptions?.querySelector('input[name="shippingRate"]:checked');
+    if (chosen) chosen.focus({ preventScroll: true });
   }
 
   function renderSavedSelect(prefix, type) {
