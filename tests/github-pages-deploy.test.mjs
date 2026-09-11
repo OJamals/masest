@@ -9,7 +9,7 @@ test("OJamals main pushes verify before deploying the existing Pages project", (
   const workflow = read(".github/workflows/verify.yml");
   const refreshStep = workflow.indexOf("- name: Refresh production CMS snapshots");
   const verifyStep = workflow.indexOf("run: npm run verify:core");
-  const performanceJob = workflow.indexOf("  story_performance:");
+  const performanceJob = workflow.indexOf("  web_vitals:");
   const deployJob = workflow.indexOf("  deploy:");
   const deployStep = workflow.indexOf("- name: Deploy production to Cloudflare Pages");
   const newsletterStep = workflow.indexOf("- name: Email newly published blog posts");
@@ -19,7 +19,7 @@ test("OJamals main pushes verify before deploying the existing Pages project", (
   assert.ok(performanceJob > verifyStep, "story performance must remain an isolated job");
   assert.equal(deployJob, -1, "production deploy must reuse the verified job workspace");
   assert.ok(deployStep > verifyStep && deployStep < performanceJob, "the verified dist must deploy only after core verification");
-  assert.match(workflow, /verify:\s+needs: \[story_performance\]/);
+  assert.match(workflow, /verify:\s+needs: \[web_vitals\]/);
   assert.doesNotMatch(workflow, /actions\/(?:upload|download)-artifact/);
   assert.match(
     workflow,

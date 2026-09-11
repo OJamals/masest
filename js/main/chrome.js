@@ -167,10 +167,11 @@ export function renderChrome({
   skip.href = "#main";
   if (!skip.textContent.trim()) skip.textContent = "Skip to content";
   const nav = document.createElement("header");
-  // Start in the dark-glass treatment when this page opens on the dark story,
-  // so the first paint matches the backdrop (no white-bar flash before onScroll).
-  const story = document.getElementById("story");
-  nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
+  // Start in the dark-glass treatment when the page opts in, so the first paint matches a
+  // dark backdrop instead of flashing a white bar before onScroll. This used to key off the
+  // homepage story element as well; that scrollybook is gone and the homepage now opens on a
+  // light hero, so data-nav is the only switch.
+  nav.className = document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
       <a class="nav-logo" href="${homeHref}" aria-label="MASEST home"><img class="logo-image logo-ink" src="/img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="/img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
@@ -183,10 +184,9 @@ export function renderChrome({
           <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
         </div>
     </div>`;
-  // If the page ships a static nav-height reserve (#nav-reserve, e.g. the story
-  // homepage where a late-injected nav would shove the full-viewport #story down
-  // ~59px = ~0.16 CLS), swap it for the real nav atomically: same box, same
-  // height, so nothing reflows. Other pages just prepend as before.
+  // Every page ships a static nav-height reserve (#nav-reserve): a late-injected nav would
+  // otherwise shove the whole document down ~59px, which measured 0.041 CLS per page.
+  // Swap it for the real nav atomically -- same box, same height, so nothing reflows.
   const navReserve = document.getElementById("nav-reserve");
   if (navReserve) navReserve.replaceWith(nav);
   else document.body.prepend(nav);
@@ -330,7 +330,7 @@ export function renderChrome({
   const applyScroll = () => {
     scrollRAF = 0;
     nav.classList.toggle("scrolled", window.scrollY > 8);
-    nav.classList.toggle("over-dark", useDarkNav || (story && story.getBoundingClientRect().bottom > 66));
+    nav.classList.toggle("over-dark", useDarkNav);
     if (!navLinks.classList.contains("open")) closeNavGroups();
   };
   const onScroll = () => { if (!scrollRAF) scrollRAF = requestAnimationFrame(applyScroll); };

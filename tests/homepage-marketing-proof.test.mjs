@@ -3,7 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-const storyCss = readFileSync(new URL("../css/story.css", import.meta.url), "utf8");
+// The trust strip, replacement guide and HMIS ledger moved here when css/story.css
+// went with the homepage scrollybook; they were never story state.
+const storyCss = readFileSync(new URL("../css/components.css", import.meta.url), "utf8");
 
 test("homepage puts real-job proof before product education and catalog browsing", () => {
   const proof = home.indexOf('<section class="proof-section');

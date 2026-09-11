@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   verify:
-    needs: [story_performance]
+    needs: [web_vitals]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -92,7 +92,7 @@ jobs:
             -H "content-type: application/json" \
             -d '{"action":"sweep"}'
 
-  story_performance:
+  web_vitals:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -109,5 +109,5 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Verify story performance
+      - name: Verify homepage Core Web Vitals
         run: npm run qa:ui-critical:performance

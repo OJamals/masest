@@ -72,10 +72,10 @@ test("static product hero exposes buying context before long copy", () => {
 test("animated homepage copy keeps stable accessible names", () => {
   const home = read("index.html");
 
-  assert.match(home, /<section class="act"[^>]*aria-labelledby="storyAct1Title">/);
+  assert.match(home, /<section class="hero-split">/);
   // The accessible name is the h1's text content, so assert on that rather than on raw
   // markup — inline typographic spans (e.g. .no-break) must not count as a copy change.
-  const headline = home.match(/<h1 class="act-h" id="storyAct1Title"[^>]*>([\s\S]*?)<\/h1>/)?.[1];
+  const headline = home.match(/<h1 class="display" id="homeHeroTitle"[^>]*>([\s\S]*?)<\/h1>/)?.[1];
   assert.equal(
     String(headline).replace(/<[^>]+>/g, "").replace(/&rsquo;/g, "’"),
     "Industrial strength. Better chemistry.",

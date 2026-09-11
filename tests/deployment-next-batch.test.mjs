@@ -16,11 +16,11 @@ test('pushes and pull requests run the complete verification gate', () => {
   assert.doesNotMatch(workflow, /cache:\s*npm/, 'setup-node cache requires a lockfile');
   assert.match(workflow, /playwright install --with-deps chromium/);
   assert.match(workflow, /run: npm run verify:core/);
-  assert.match(workflow, /story_performance:[\s\S]+run: npm run qa:ui-critical:performance/);
-  assert.match(workflow, /verify:\s+needs: \[story_performance\]/);
+  assert.match(workflow, /web_vitals:[\s\S]+run: npm run qa:ui-critical:performance/);
+  assert.match(workflow, /verify:\s+needs: \[web_vitals\]/);
   const verifyStep = workflow.indexOf('run: npm run verify:core');
   const deployStep = workflow.indexOf('- name: Deploy production to Cloudflare Pages');
-  const performanceJob = workflow.indexOf('  story_performance:');
+  const performanceJob = workflow.indexOf('  web_vitals:');
   assert.ok(verifyStep >= 0 && deployStep > verifyStep && deployStep < performanceJob,
     'the performance-gated verify workspace must deploy only after the full core gate');
   assert.doesNotMatch(workflow.slice(verifyStep, deployStep), /run: npm run (?:build|build:content)/,

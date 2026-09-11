@@ -5,48 +5,14 @@ import test from 'node:test';
 const rootFile = (path, encoding) => readFileSync(new URL(`../${path}`, import.meta.url), encoding);
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Carries a version query: the R2 object was re-encoded in place and is served
-// cache-control: immutable, so only a new URL reaches browsers that already have it.
-const KITCHEN_BEFORE = 'https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp?v=20260911a';
-const KITCHEN_AFTER = 'https://media.masest.co/site/img/proof/story/kitchen-grease-after-aligned-202609.webp';
-// The story's product chip renders into a 28x42 box, so it uses a 180x240 variant
-// rather than the 900x1200 packshot the industry pages show at full size.
-const CRHD_PACKSHOT = 'https://media.masest.co/site/img/products/crhd-food-beverage-studio-chip.webp';
-
-test('homepage prioritizes the initial field frame while preserving later scene assets', () => {
+test('the homepage ships no oversized above-the-fold imagery', () => {
   const html = rootFile('index.html', 'utf8');
-  const storyImage = (src) => html.match(new RegExp(`<img[^>]+src="${escapeRegex(src)}"[^>]*>`))?.[0] || '';
-  const before = storyImage(KITCHEN_BEFORE);
-  const after = storyImage(KITCHEN_AFTER);
-  const product = storyImage(CRHD_PACKSHOT);
-
-  assert.match(before, /fetchpriority="high"/);
-  for (const [name, image] of [['before', before], ['after', after], ['product', product]]) {
-    assert.ok(image, `${name} story asset should remain in the persistent visual object`);
-    assert.match(image, /decoding="async"/);
-    assert.match(image, /width="\d+" height="\d+"/);
-  }
-  assert.doesNotMatch(after, /loading="eager"|fetchpriority="high"/);
-  assert.doesNotMatch(product, /loading="eager"|fetchpriority="high"/);
-  assert.equal((html.match(/data-before-src="https:\/\/media\.masest\.co\/site\/img\/proof\/story\//g) || []).length, 6);
-  assert.equal((html.match(/data-after-src="https:\/\/media\.masest\.co\/site\/img\/proof\/story\//g) || []).length, 6);
+  // The homepage used to open with a 1200x1017 / 177KB photograph rendered into a 367x179
+  // box -- the single biggest contributor to a 3.8s mobile LCP. The hero is text now, so the
+  // contract is simply that no story media came back with it.
+  assert.doesNotMatch(html, /img\/proof\/story\//, 'story media should not return to the homepage');
+  assert.doesNotMatch(html, /data-before-src|data-after-src|data-product-src/);
   assert.doesNotMatch(html, /supabase\.co\/storage\/v1\/object/i);
-});
-
-test('story controller swaps one persistent pair and preloads only the next scene', () => {
-  const story = rootFile('js/story.js', 'utf8');
-  assert.match(story, /var states = acts\.map/);
-  assert.match(story, /config: sceneConfig\(act\)/);
-  assert.match(story, /function activateState\(/);
-  assert.match(story, /story\.dataset\.activeScene = st\.config\.id/);
-  assert.match(story, /function activateSceneMedia\(/);
-  assert.match(story, /Promise\.all\(\[/);
-  assert.match(story, /function preloadNextScene\(/);
-  assert.match(story, /var next = states\[st\.index \+ 1\]/);
-  assert.match(story, /requestIdleCallback\(preload, \{ timeout: 1200 \}\)/);
-  assert.match(story, /function renderStaticStory\(/);
-  assert.doesNotMatch(story, /data-reel-src|loadStoryImage|loadReelSlide|loadAllStoryImages/);
-  assert.doesNotMatch(story, /supabase\.co\/storage\/v1\/object/i);
 });
 
 test('the shared PNG favicon is delivery-sized', () => {
