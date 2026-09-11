@@ -456,7 +456,7 @@ test("mobile service-category guide reaches decision content without redundant h
   expect(layout.bodyWidth).toBeLessThanOrEqual(layout.viewportWidth);
   expect(layout.decisionTop).toBeLessThanOrEqual(790);
   await expect.poll(() => configResponses).toContainEqual({
-    url: `${BASE_URL}/js/config.js?v=20260911d`,
+    url: `${BASE_URL}/js/config.js?v=20260911e`,
     status: 200,
   });
   await expect(page.getByRole("link", { name: "Request water analysis" })).toHaveAttribute("href", /contact\?type=services/);
@@ -1244,6 +1244,115 @@ test("comparison pages keep price tables inside their cards on tablet", async ({
         expect(table.right, `${pagePath} table right`).toBeLessThanOrEqual(panel.right);
         expect(table.scrollDelta, `${pagePath} table internal overflow`).toBeLessThanOrEqual(2);
       }
+    }
+  }
+});
+
+/* Thumb targets on the revenue path.
+ *
+ * Measured rather than grepped, deliberately. css/style.css already carried
+ * `.nav-cart { min-width: 44px }` twice and the button still rendered 42px wide: one copy
+ * was cancelled by `min-width: 0` in css/navigation.css, and the rule that actually sized
+ * the button lived in a <style> element js/account-nav.js injects at runtime, which lands
+ * after every linked sheet. A string assertion against a stylesheet would have passed the
+ * whole time. What a thumb gets is a rendered box, so that is what this reads.
+ *
+ * 44px is the Apple HIG / Material figure, well above WCAG 2.5.8's 24px floor. Measured
+ * before this gate existed, at 412px: the cart button 42x44, the billing toggle 285x26,
+ * "Residential delivery" 372x40, "Return to cart" 105x32, the Cart breadcrumb 57x25,
+ * "Need an invoice or quote?" 160x40, "Talk with our team" 117x16, and the cart's product
+ * link 195x22.
+ */
+const TAP_MIN = 44;
+
+// Two of these must not grow their layout box. .cart-line-product-link sits in a row whose
+// height cart.html reserves before first paint from a skeleton that renders no link, so
+// padding there would make every real line taller than the box reserved for it. The
+// invoice link is inline inside a sentence, where padding opens up the line box around it.
+// Both use an absolutely positioned ::after, so the pressable box and the layout box differ
+// and only the pressable one is the target.
+const HIT_BOXES = (selector) => {
+  const boxes = [];
+  for (const el of document.querySelectorAll(selector)) {
+    const rect = el.getBoundingClientRect();
+    // A control behind a closed disclosure or a hidden panel has no box to measure. It
+    // is not a target right now, and counting it as 0x0 would fail for the wrong reason.
+    if (!rect.width || !rect.height) continue;
+    let { width, height } = rect;
+    const after = getComputedStyle(el, "::after");
+    if (after.content !== "none" && after.position === "absolute") {
+      const top = parseFloat(after.top) || 0;
+      const bottom = parseFloat(after.bottom) || 0;
+      const left = parseFloat(after.left) || 0;
+      const right = parseFloat(after.right) || 0;
+      if (top < 0 || bottom < 0) height = rect.height - top - bottom;
+      if (left < 0 || right < 0) width = rect.width - left - right;
+    }
+    boxes.push({ width: Math.round(width), height: Math.round(height), text: (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 32) });
+  }
+  return boxes;
+};
+
+const PRICED_CATALOG = {
+  products: [{
+    sku: "cr",
+    name: "VertKleen CIP CR",
+    active: true,
+    mode: "buy",
+    image_url: "img/favicon-enhanced.png",
+    photo_alt: "VertKleen CIP CR jug",
+    product_variants: [
+      { vsku: "CRCIP-1G", label: "1 gal", gallons: 1, price: 25.99, currency: "usd", active: true, package_kind: "unit", sort: 1 },
+    ],
+  }],
+};
+
+test("revenue-path controls offer a full thumb target on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 915 });
+  await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
+  // The cart's product-name link only renders once a line resolves to a real product, so
+  // without a catalog the control under test is simply absent and the gate proves nothing.
+  await page.route("**/api/products*", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(PRICED_CATALOG),
+  }));
+
+  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.setItem("masest_cart", JSON.stringify({ "CRCIP-1G": 2 })));
+
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+  await page.locator(".cart-line:not(.cart-line-skeleton)").first().waitFor();
+  for (const [label, selector] of [
+    ["cart button", ".nav-cart"],
+    ["cart line product link", ".cart-line-product-link"],
+  ]) {
+    const boxes = await page.evaluate(HIT_BOXES, selector);
+    expect(boxes.length, `${label} (${selector}) rendered no measurable box, so this gate measured nothing`).toBeGreaterThan(0);
+    for (const box of boxes) {
+      expect(box.width, `${label} width: ${JSON.stringify(box)}`).toBeGreaterThanOrEqual(TAP_MIN);
+      expect(box.height, `${label} height: ${JSON.stringify(box)}`).toBeGreaterThanOrEqual(TAP_MIN);
+    }
+  }
+
+  await page.goto(`${BASE_URL}/checkout.html`, { waitUntil: "domcontentloaded" });
+  await page.locator(".checkout-switch-row").first().waitFor();
+  // The invoice link lives inside a closed disclosure, where it has no box at all - it
+  // would pass this gate by being unmeasurable.
+  await page.evaluate(() => document.querySelectorAll("details").forEach((node) => { node.open = true; }));
+  for (const [label, selector] of [
+    ["billing-same-as-shipping toggle", ".checkout-switch-row"],
+    ["residential delivery checkbox", ".checkout-residential"],
+    ["return to cart", ".checkout-return"],
+    ["cart breadcrumb step", ".checkout-steps a"],
+    ["invoice or quote disclosure", ".checkout-business-options summary"],
+    ["talk with our team", ".checkout-business-options p a"],
+  ]) {
+    const boxes = await page.evaluate(HIT_BOXES, selector);
+    expect(boxes.length, `${label} (${selector}) rendered no measurable box, so this gate measured nothing`).toBeGreaterThan(0);
+    for (const box of boxes) {
+      expect(box.width, `${label} width: ${JSON.stringify(box)}`).toBeGreaterThanOrEqual(TAP_MIN);
+      expect(box.height, `${label} height: ${JSON.stringify(box)}`).toBeGreaterThanOrEqual(TAP_MIN);
     }
   }
 });

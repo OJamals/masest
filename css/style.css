@@ -412,7 +412,11 @@ one line) ---------- */
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
-  min-height: 42px;
+  /* 44, not 42: this is the control that carries the buyer into the purchase path, on
+     every page of the site. js/account-nav.js injects the rule that actually sizes it
+     once scripts run - injected <style> lands after every linked sheet and wins - so
+     that file carries the same number. This is the no-JS fallback. */
+  min-height: 44px;
   padding: 0 var(--s3);
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
@@ -4137,10 +4141,21 @@ fully clickable cards) ---- */
 .cart-line h2,
 .cart-line h3 { margin: 3px 0 var(--s2); font-size: var(--fs-body-lg); }
 .cart-line-product-link {
+  position: relative;
   color: inherit;
   text-decoration: underline;
   text-decoration-color: transparent;
   text-underline-offset: 3px;
+}
+/* 195x22 on a phone. The row's height is reserved before first paint by the skeleton in
+   cart.html, which renders no link at all, so padding here would make every real line
+   taller than the box reserved for it and hand back the shift that reserve exists to
+   remove. An overlay grows the thumb target to 44px and changes no layout. It only ever
+   covers the SKU line above and the price below, neither of which is interactive. */
+.cart-line-product-link::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
 }
 .cart-line-product-link:hover { color: var(--accent-ink); text-decoration-color: currentColor; }
 .cart-line-product-link:focus-visible { outline: 3px solid var(--line-accent); outline-offset: 2px; }
@@ -4336,8 +4351,8 @@ fully clickable cards) ---- */
 @media (max-width: 560px) {
   .nav-actions { gap: var(--s2); }
   .nav-cart {
-    width: 42px;
-    min-height: 42px;
+    width: 44px;
+    min-height: 44px;
     justify-content: center;
     padding: 0;
   }
@@ -4393,11 +4408,24 @@ body.checkout-flow-page::before { display: none; }
   color: var(--ink);
   font-size: var(--fs-caption);
 }
+/* 57x25. The circles are laid out by align-items:center, so a taller anchor grows its
+   own hit box without moving them. */
+.checkout-steps a { min-height: 44px; }
 .checkout-steps [aria-current="step"] { color: var(--ink); }
 .checkout-steps [aria-current="step"] > span { border-color: var(--accent); background: var(--accent); color:var(--on-accent); }
 .checkout-secure { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--fs-small); }
 .checkout-secure i { color: var(--ink-soft); font-size: 1rem; }
-.checkout-return { justify-self: end; color: var(--accent-ink); font-size: var(--fs-small); font-weight: 800; }
+.checkout-return {
+  justify-self: end;
+  /* 105x32 measured. A deliberate back-step out of checkout deserves a full target;
+     centring inside the taller box leaves the text where it already sat. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent-ink);
+  font-size: var(--fs-small);
+  font-weight: 800;
+}
 .checkout-return:hover { color: var(--accent); }
 
 .checkout-main { min-height: calc(100vh - 112px); }
@@ -4516,7 +4544,10 @@ body.checkout-flow-page::before { display: none; }
   display: flex;
   align-items: center;
   gap: var(--s2);
-  min-height: 40px;
+  /* 372x40 measured. Both of these labels are the target - the 18px checkbox inside is
+     far below any of them - and "Residential delivery" changes what the carrier charges,
+     so a missed tap costs the buyer money. The checkbox stays 18px; the label grows. */
+  min-height: 44px;
   color: var(--ink-soft);
   font-size: var(--fs-small);
   font-weight: 600;
@@ -4577,7 +4608,10 @@ body.checkout-flow-page::before { display: none; }
   padding: var(--s5) 0;
   border-top: 1px solid var(--line);
 }
-.checkout-switch-row { display: inline-flex; align-items: center; gap: var(--s3); color: var(--ink-soft); font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
+/* 285x26. The label is the target - the checkbox inside it is visually hidden and the
+   46x26 pill is decorative - and it gates whether a billing address is collected at all.
+   The pill stays 26px; only the pressable box grows. */
+.checkout-switch-row { display: inline-flex; align-items: center; min-height: 44px; gap: var(--s3); color: var(--ink-soft); font-size: var(--fs-small); font-weight: 600; cursor: pointer; }
 .checkout-switch-row > input { position: absolute; opacity: 0; pointer-events: none; }
 .checkout-switch {
   position: relative;
@@ -4603,7 +4637,7 @@ body.checkout-flow-page::before { display: none; }
 .checkout-switch-row > input:checked + .checkout-switch::after { transform: translateX(20px); }
 .checkout-switch-row > input:focus-visible + .checkout-switch { outline: 3px solid var(--line-accent); outline-offset: 2px; }
 .checkout-business-options { position: relative; color: var(--accent-ink); font-size: var(--fs-caption); font-weight: 700; text-align: right; }
-.checkout-business-options summary { min-height: 40px; display: inline-flex; align-items: center; cursor: pointer; }
+.checkout-business-options summary { min-height: 44px; display: inline-flex; align-items: center; cursor: pointer; }
 .checkout-business-options p {
   position: absolute;
   z-index: 3;
@@ -4619,7 +4653,15 @@ body.checkout-flow-page::before { display: none; }
   font-weight: 500;
   text-align: left;
 }
-.checkout-business-options a { color: var(--accent-ink); font-weight: 800; }
+.checkout-business-options a { position: relative; color: var(--accent-ink); font-weight: 800; }
+/* 117x16: an inline link inside a sentence, so padding would open up the line box around
+   it. The panel's own 16px padding keeps this overlay inside the popover, clear of the
+   summary that opens it. */
+.checkout-business-options p a::after {
+  content: '';
+  position: absolute;
+  inset: -14px 0;
+}
 .checkout-billing { min-width: 0; margin: 0 0 var(--s6); padding: var(--s6) 0; border: 0; border-top: 1px solid var(--line); }
 .checkout-billing legend { padding-top: var(--s6); font-weight: 700; }
 .checkout-confirm { width: min(100%, 370px); min-height: 52px; justify-content: center; border-radius: var(--r-input); }
@@ -4776,7 +4818,7 @@ body.checkout-flow-page::before { display: none; }
     display: inline-flex;
     align-items: center;
     gap: var(--s2);
-    min-height: 32px;
+    min-height: 44px;
     font-size: var(--fs-caption);
   }
   .checkout-return::before {

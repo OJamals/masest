@@ -6,7 +6,7 @@ import { esc } from './util.js';
 const firstName = (n) => String(n || '').trim().split(/\s+/)[0] || 'Account';
 // Lazy: only staff ever need this module's toggle/banner, and it's a tiny
 // file — importing it eagerly for every signed-out visitor isn't worth it.
-const staffSurfaceModule = () => import('./staff-surface.js?v=20260911d');
+const staffSurfaceModule = () => import('./staff-surface.js?v=20260911e');
 
 // Cheap logged-in check: Supabase persists its session under sb-<ref>-auth-token in localStorage.
 // Lets anonymous visitors skip loading the Supabase SDK entirely (lighter marketing pages).
@@ -77,8 +77,11 @@ function injectStyle() {
   .acct-menu-count[hidden] { display:none; }
   .acct-dd-menu .acct-signout { border-top:1px solid var(--line,#e4e6e9); margin-top:var(--s2,8px); padding-top:var(--s3,12px); color:var(--status-danger-ink,#b42318); }
   .acct-dd-menu .acct-admin { color:var(--accent-ink,#0a5b62); }
-  /* Cart: transparent shopping-cart icon with a count bubble (replaces the "Cart" text pill) */
-  .nav-cart { position:relative; display:inline-grid; place-items:center; width:42px; height:42px; border-radius:50%; background:transparent; color:var(--ink,#15171c); padding:0; }
+  /* Cart: transparent shopping-cart icon with a count bubble (replaces the "Cart" text pill).
+     44, not 42: this style element is injected into <head> at runtime, so it lands after
+     every linked sheet and is what actually sizes the cart button. css/style.css carries
+     the same number as the no-JS fallback; changing only that one moves nothing. */
+  .nav-cart { position:relative; display:inline-grid; place-items:center; width:44px; height:44px; border-radius:50%; background:transparent; color:var(--ink,#15171c); padding:0; }
   .nav-cart[hidden] { display: none; }
   .nav-cart:hover { background:rgba(0,0,0,.06); }
   .nav.over-dark .nav-cart { color:#fff; }
@@ -95,7 +98,7 @@ function injectStyle() {
 export async function initAccountNav({
   nav,
   root = '',
-  authModule = './auth.js?v=20260911d',
+  authModule = './auth.js?v=20260911e',
   resolveSession = false,
 } = {}) {
   const actions = (nav || document).querySelector('.nav-actions');
@@ -112,7 +115,7 @@ export async function initAccountNav({
   }
 }
 
-async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20260911d', resolveSession = false) {
+async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20260911e', resolveSession = false) {
   // Replace whatever account control is present: the SSR placeholder (.nav-auth-placeholder,
   // rendered by chrome.js) on first render, or a previously-rendered control (.nav-account)
   // on a later auth-change re-render. Matching only one of these would leave the other behind,

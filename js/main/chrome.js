@@ -115,7 +115,7 @@ function wireDocumentDownloadCapture() {
 }
 
 export function renderChrome({
-  authModule = "/js/auth.js?v=20260911d",
+  authModule = "/js/auth.js?v=20260911e",
   resolveSession = false,
 } = {}) {
   initCmpTableLabels();
@@ -288,7 +288,7 @@ export function renderChrome({
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
-  import("/js/account-nav.js?v=20260911d").then((m) => (
+  import("/js/account-nav.js?v=20260911e").then((m) => (
     m.initAccountNav && m.initAccountNav({ nav, root, authModule, resolveSession })
   )).catch(() => {});
   const setMenuOpen = open => {
@@ -428,9 +428,9 @@ export function renderChrome({
     window.__masestIntegrations = true;
     window.MASEST = Object.assign(window.MASEST || {}, { chatRoot: root, authModule });
     const cfg = document.createElement("script");
-    cfg.src = `${root}js/config.js?v=20260911d`;
+    cfg.src = `${root}js/config.js?v=20260911e`;
     cfg.onload = () => {
-      ["integrations.js?v=20260911d", "customer-chat.js?v=20260911d"].forEach((src) => {
+      ["integrations.js?v=20260911e", "customer-chat.js?v=20260911e"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;

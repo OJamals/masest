@@ -4,8 +4,8 @@ import {
   parseRequestContext,
   requestContextNotes,
   requestContextVolume,
-} from "../request-context.js?v=20260911d";
-import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS } from "../quote-task-details.js?v=20260911d";
+} from "../request-context.js?v=20260911e";
+import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS } from "../quote-task-details.js?v=20260911e";
 
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {

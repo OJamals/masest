@@ -3,9 +3,9 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, moneyDisplay, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260911d';
-import { captureDirty, restoreDirty } from './edits.js?v=20260911d';
-import { ORDER_STATUSES } from './orders.js?v=20260911d';
+import { esc, confirmDialog, delegate, detailDialog, moneyDisplay, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260911e';
+import { captureDirty, restoreDirty } from './edits.js?v=20260911e';
+import { ORDER_STATUSES } from './orders.js?v=20260911e';
 
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
