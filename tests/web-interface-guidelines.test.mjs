@@ -155,3 +155,35 @@ test("progress copy uses the ellipsis character", () => {
     assert.doesNotMatch(read(path), /(?:Loading|Saving|Submitting|Starting|Checking|Adding|Preparing|Running|Opening|Uploading)\.\.\./, `${path} uses three periods in progress copy`);
   }
 });
+
+test("every shipped page states its h1 on the shared type scale", () => {
+  /* Ten pages shipped a bare <h1> and so rendered at the browser's 32px default while
+   * eleven others rendered 72-80px from .display — a 2.5x spread with cart, checkout and
+   * order-confirmed, the three highest-stakes pages on the site, sitting at the bottom of
+   * it. Nothing caught it because the markup was valid and every stylesheet was correct;
+   * the pages simply never asked for a size.
+   *
+   * .sr-only is exempt: checkout's real page heading is deliberately screen-reader-only
+   * (its visible h1 belongs to the empty-cart state), and a visually hidden heading has
+   * no size to be consistent about.
+   */
+  // Email templates must inline every style because mail clients strip stylesheets, and
+  // tools/og-card.html is a render target for social images, not a page anyone browses.
+  // Neither loads the site's CSS, so neither has a shared scale to be consistent with.
+  const shipped = htmlFiles.filter(
+    (file) => !file.startsWith("prototypes/") && !file.startsWith("tools/"),
+  );
+  const offenders = [];
+  for (const file of shipped) {
+    const html = read(file);
+    for (const tag of html.match(/<h1[^>]*>/g) || []) {
+      if (/class="[^"]*\b(display|headline|sr-only)\b/.test(tag)) continue;
+      offenders.push(`${file}: ${tag}`);
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `h1 with no type class — it will render at the browser default, not the site's scale:\n${offenders.join("\n")}`,
+  );
+});
