@@ -6,7 +6,7 @@ import { esc } from './util.js';
 const firstName = (n) => String(n || '').trim().split(/\s+/)[0] || 'Account';
 // Lazy: only staff ever need this module's toggle/banner, and it's a tiny
 // file — importing it eagerly for every signed-out visitor isn't worth it.
-const staffSurfaceModule = () => import('./staff-surface.js?v=20260910a');
+const staffSurfaceModule = () => import('./staff-surface.js?v=20260910b');
 
 // Cheap logged-in check: Supabase persists its session under sb-<ref>-auth-token in localStorage.
 // Lets anonymous visitors skip loading the Supabase SDK entirely (lighter marketing pages).
@@ -95,7 +95,7 @@ function injectStyle() {
 export async function initAccountNav({
   nav,
   root = '',
-  authModule = './auth.js?v=20260910a',
+  authModule = './auth.js?v=20260910b',
   resolveSession = false,
 } = {}) {
   const actions = (nav || document).querySelector('.nav-actions');
@@ -112,7 +112,7 @@ export async function initAccountNav({
   }
 }
 
-async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20260910a', resolveSession = false) {
+async function renderAccountNav(actions, root = '', authModule = './auth.js?v=20260910b', resolveSession = false) {
   // Replace whatever account control is present: the SSR placeholder (.nav-auth-placeholder,
   // rendered by chrome.js) on first render, or a previously-rendered control (.nav-account)
   // on a later auth-change re-render. Matching only one of these would leave the other behind,

@@ -9,9 +9,9 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260910a">
-<link rel="stylesheet" href="css/navigation.css?v=20260910a">
-<link rel="stylesheet" href="css/components.css?v=20260910a">
+<link rel="stylesheet" href="css/style.css?v=20260910b">
+<link rel="stylesheet" href="css/navigation.css?v=20260910b">
+<link rel="stylesheet" href="css/components.css?v=20260910b">
 <style>
   .dash-wrap { max-width: 920px; margin: 0 auto; }
   .dashboard-hero { min-height: 0; padding: 22px 0 20px; }
@@ -484,6 +484,11 @@
 </style>
 </head>
 <body class="site-soft-bg">
+<!-- Reserves the nav's 59px height. chrome.js injects the nav, so without this the
+     page paints once without it and again 59px lower: 0.041 CLS, attributed to
+     MAIN#main, on every page that lacked it. Height lives in css/style.css. -->
+<div id="nav-reserve" aria-hidden="true"></div>
+<noscript><style>#nav-reserve{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 
 <noscript>
@@ -782,8 +787,8 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/main.js?v=20260910a"></script>
+<script type="module" src="js/main.js?v=20260910b"></script>
 <script src="js/track.js" defer></script>
-<script type="module" src="js/dashboard.js?v=20260910a"></script>
+<script type="module" src="js/dashboard.js?v=20260910b"></script>
 </body>
 </html>

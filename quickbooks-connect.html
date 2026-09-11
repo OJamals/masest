@@ -10,9 +10,9 @@
 <meta property="og:title" content="QuickBooks Connect | MASEST VertKleen">
 <meta property="og:description" content="Instructions for authorized staff to connect or reconnect QuickBooks Online for MASEST accounting sync.">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
-<link rel="stylesheet" href="css/style.css?v=20260910a">
-<link rel="stylesheet" href="css/navigation.css?v=20260910a">
-<link rel="stylesheet" href="css/components.css?v=20260910a">
+<link rel="stylesheet" href="css/style.css?v=20260910b">
+<link rel="stylesheet" href="css/navigation.css?v=20260910b">
+<link rel="stylesheet" href="css/components.css?v=20260910b">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="canonical" href="https://masest.co/quickbooks-connect">
 <meta property="og:url" content="https://masest.co/quickbooks-connect">
@@ -20,6 +20,11 @@
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
+<!-- Reserves the nav's 59px height. chrome.js injects the nav, so without this the
+     page paints once without it and again 59px lower: 0.041 CLS, attributed to
+     MAIN#main, on every page that lacked it. Height lives in css/style.css. -->
+<div id="nav-reserve" aria-hidden="true"></div>
+<noscript><style>#nav-reserve{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 <noscript>
 <nav class="nojs-nav" aria-label="Site">
@@ -42,7 +47,7 @@
 <p>The QuickBooks connection must be configured before staff can connect it. Customers do not need this page to use their account.</p>
 </section>
 </main>
-<script type="module" src="js/main.js?v=20260910a"></script>
+<script type="module" src="js/main.js?v=20260910b"></script>
 <script src="js/track.js" defer></script>
 </body>
 </html>

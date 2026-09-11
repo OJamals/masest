@@ -8,10 +8,10 @@
 <meta name="description" content="MASEST VertKleen staff admin.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
-<link rel="stylesheet" href="vendor/phosphor/style.css?v=20260910a">
-<link rel="stylesheet" href="css/style.css?v=20260910a">
-<link rel="stylesheet" href="css/navigation.css?v=20260910a">
-<link rel="stylesheet" href="css/components.css?v=20260910a">
+<link rel="stylesheet" href="vendor/phosphor/style.css?v=20260910b">
+<link rel="stylesheet" href="css/style.css?v=20260910b">
+<link rel="stylesheet" href="css/navigation.css?v=20260910b">
+<link rel="stylesheet" href="css/components.css?v=20260910b">
 <style>
   /* The staff chrome bar is sticky at 59px, so anchor jumps and scrollIntoView
      (the #qbo deep link, for one) would otherwise land their target underneath
@@ -868,6 +868,11 @@
 </style>
 </head>
 <body class="site-soft-bg admin-page">
+<!-- Reserves the nav's 59px height. chrome.js injects the nav, so without this the
+     page paints once without it and again 59px lower: 0.041 CLS, attributed to
+     MAIN#main, on every page that lacked it. Height lives in css/style.css. -->
+<div id="nav-reserve" aria-hidden="true"></div>
+<noscript><style>#nav-reserve{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 <!-- Staff chrome is injected by js/admin/chrome.js from the admin entrypoint.
      This page deliberately does not load the storefront main bundle: no
@@ -1285,6 +1290,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260910a"></script>
+<script type="module" src="js/admin.js?v=20260910b"></script>
 </body>
 </html>

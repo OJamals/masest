@@ -1418,6 +1418,19 @@ figure.photo figcaption {
 .hmis-panel .panel-photo img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; }
 
 /* Skip link */
+/* The nav is injected by chrome.js, so without a placeholder the whole page paints once
+   without it and then again 59px lower — a layout shift attributed to MAIN#main, measured
+   at 0.041 CLS on every page that lacked this. index.html already shipped a reserve and
+   measures 0.0003; this generalises it to the other 116 pages.
+
+   Height is 59px because that is what .nav measures at every viewport from 320 to 1920 and
+   on every template (verified live, position:sticky at top 0). It lives here rather than in
+   an inline style so it also works on admin.html / dashboard.html, where
+   tests/logged-in-surface-polish.test.mjs forbids `style="`. index.html keeps its own inline
+   override, which wins, because its reserve must be dark to match the story backdrop behind
+   the nav rather than transparent. */
+#nav-reserve { height: 59px; }
+
 .skip-link {
   position: absolute; left: -9999px; top: 0; z-index: 100;
   background: var(--ink); color:var(--on-accent); padding: var(--s3) var(--s5); border-radius: 0 0 10px 0;

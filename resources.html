@@ -12,9 +12,9 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260910a">
-<link rel="stylesheet" href="css/navigation.css?v=20260910a">
-<link rel="stylesheet" href="css/components.css?v=20260910a">
+<link rel="stylesheet" href="css/style.css?v=20260910b">
+<link rel="stylesheet" href="css/navigation.css?v=20260910b">
+<link rel="stylesheet" href="css/components.css?v=20260910b">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/resources">
 <meta property="og:url" content="https://masest.co/resources">
@@ -24,6 +24,11 @@
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg resources-page">
+<!-- Reserves the nav's 59px height. chrome.js injects the nav, so without this the
+     page paints once without it and again 59px lower: 0.041 CLS, attributed to
+     MAIN#main, on every page that lacked it. Height lives in css/style.css. -->
+<div id="nav-reserve" aria-hidden="true"></div>
+<noscript><style>#nav-reserve{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 
 <noscript>
@@ -381,7 +386,7 @@
 </section>
 </main>
 
-<script type="module" src="js/main.js?v=20260910a"></script>
+<script type="module" src="js/main.js?v=20260910b"></script>
 <script src="js/track.js" defer></script>
 </body>
 </html>

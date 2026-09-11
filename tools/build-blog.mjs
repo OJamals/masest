@@ -338,6 +338,11 @@ function postPage(post, all) {
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg blog-post-page">
+<!-- Reserves the nav's 59px height. chrome.js injects the nav, so without this the
+     page paints once without it and again 59px lower: 0.041 CLS, attributed to
+     MAIN#main, on every page that lacked it. Height lives in css/style.css. -->
+<div id="nav-reserve" aria-hidden="true"></div>
+<noscript><style>#nav-reserve{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 <noscript>
 <nav class="nojs-nav" aria-label="Site">
@@ -455,6 +460,11 @@ function indexPage(posts) {
 <!-- /seo:auto -->
 </head>
 <body class="site-soft-bg blog-index-page">
+<!-- Reserves the nav's 59px height. chrome.js injects the nav, so without this the
+     page paints once without it and again 59px lower: 0.041 CLS, attributed to
+     MAIN#main, on every page that lacked it. Height lives in css/style.css. -->
+<div id="nav-reserve" aria-hidden="true"></div>
+<noscript><style>#nav-reserve{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 <noscript>
 <nav class="nojs-nav" aria-label="Site">
