@@ -729,3 +729,49 @@ test("Walmart CR HD case leads with the customer story and renders its decision 
     rmSync(out, { recursive: true, force: true });
   }
 });
+
+test("post bodies carry real newlines, not the two characters that look like one", () => {
+  // A repair guard for damage I caused and shipped.
+  //
+  // Backing a post body up with `psql \copy (select json_agg(...)) to file` writes COPY TEXT
+  // format, which ESCAPES BACKSLASHES. The JSON in that file therefore holds "\\n" where the
+  // body had a newline, JSON.parse turns that into a literal backslash followed by 'n', and
+  // writing it back stores two characters where a line break belonged. Eight posts went to
+  // production that way: markdown saw no paragraph or heading boundaries at all, so the
+  // renderer emitted the entire article as a single <h2> with visible "\n\n" in the text.
+  //
+  // Nothing else caught it. The word count barely moved, the claim-removal assertions still
+  // passed, every head/schema test passed, and the page returned 200. It was only visible to
+  // something that looked at the body's structure.
+  //
+  // To back a body up safely, read it over the wire (postgres-js/pg, or the REST API) rather
+  // than through psql's COPY escaping — or do the edit entirely in SQL with replace(), which
+  // never round-trips the text through a JSON file at all.
+  for (const post of SEED.blog_posts) {
+    assert.doesNotMatch(
+      post.body, /\\n/,
+      `${post.slug}: body contains a literal backslash-n, which markdown renders as text rather than a line break`,
+    );
+    assert.match(
+      post.body, /\n/,
+      `${post.slug}: body has no newline at all — markdown will render it as one undifferentiated block`,
+    );
+  }
+});
+
+test("every post renders as structured prose, not a single run-on heading", () => {
+  // The observable half of the guard above: if the newlines are gone, markdown produces one
+  // enormous heading and almost no paragraphs. Assert the shape of what actually ships.
+  for (const post of SEED.blog_posts) {
+    const headings = (post.body.match(/^## /gm) || []).length;
+    const blankLines = (post.body.match(/\n\s*\n/g) || []).length;
+    assert.ok(
+      blankLines >= 3,
+      `${post.slug}: only ${blankLines} paragraph breaks — the body is not split into prose`,
+    );
+    assert.ok(
+      headings >= 1,
+      `${post.slug}: no '## ' heading survived, which is what a newline collapse looks like`,
+    );
+  }
+});

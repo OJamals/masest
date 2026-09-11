@@ -497,8 +497,13 @@ one accent) ---------- */
 /* `scale` as its own property, not inside `transform` — otherwise the press would cancel
    the hover's translateY and the button would jump down as you click it. */
 .btn:active { scale: .96; }
-.btn-primary { background: var(--accent); color:var(--on-accent); box-shadow: 0 1px 2px rgba(10,91,98,.25), 0 8px 20px -8px rgba(14,124,134,.55); }
-.btn-primary:hover { background: var(--accent-ink); box-shadow: 0 2px 4px rgba(10,91,98,.28), 0 14px 28px -10px rgba(14,124,134,.62); transform: translateY(-1px); }
+/* No box-shadow here. This rule owns .btn-primary's background and colour -- nothing else
+   declares them, .btn itself does not -- but its box-shadow was overridden by the later
+   .btn-primary at equal specificity and never rendered anywhere. CSS cascades per property,
+   so only the shadow was dead; deleting the whole rule would strip the fill and text colour
+   from every primary CTA outside a dark band (20 of them across five pages alone). */
+.btn-primary { background: var(--accent); color:var(--on-accent); }
+.btn-primary:hover { background: var(--accent-ink); transform: translateY(-1px); }
 .btn-secondary { background: var(--accent-soft); color: var(--accent-ink); border: 1.5px solid var(--line-accent); box-shadow: var(--shadow-xs); }
 .btn-secondary:hover { border-color: var(--line-accent-hover); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
 .btn:disabled { cursor: not-allowed; opacity: .55; transform: none; box-shadow: none; filter: grayscale(.25); }
