@@ -41,17 +41,10 @@ const UNSUPPORTED = [
 ];
 
 // Blog posts still awaiting their CMS edit. Remove an entry once it is republished.
-const PENDING = new Set([
-  "blog/construction-equipment-concrete-residue-cleaning.html",
-  "blog/data-center-cooling-maintenance-cleaning.html",
-  "blog/golf-course-equipment-grounds-hardscape-cleaning.html",
-  "blog/hmis-000-explained.html",
-  "blog/hotel-property-turnover-facility-cleaning.html",
-  "blog/military-government-maintenance-procurement.html",
-  "blog/oil-gas-equipment-degreasing-maintenance.html",
-  "blog/school-university-facility-cleaning-plan.html",
-  "blog/solar-panel-cleaning-low-residue-maintenance.html",
-]);
+// Empty, so the guard is absolute: no shipped page may make either claim.
+// The nine blog sentences it used to hold were corrected in Supabase on 2026-09-10 and
+// republished; the ratchet's own staleness assertion is what flagged them as done.
+const PENDING = new Set([]);
 
 function pages(dir = ROOT.pathname, found = []) {
   for (const entry of readdirSync(dir)) {
