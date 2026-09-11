@@ -7709,7 +7709,7 @@ body.products-page .conversion-proof .proof-pill em {
   border-radius: var(--r-card);
   padding: clamp(22px, 3vw, 30px);
   background: rgba(255, 255, 255, .9);
-  box-shadow: var(--shadow-cast-lg);
+  box-shadow: var(--shadow-md);
   transition: transform .2s ease;
 }
 
@@ -7721,7 +7721,7 @@ body.products-page .conversion-proof .proof-pill em {
 .job-plan-card:focus-within {
   transform: translateY(-2px);
   border-color: var(--line-accent);
-  box-shadow: 0 24px 58px rgba(4, 50, 54, .1);
+  box-shadow: var(--shadow-lg);
 }
 
 .job-plan-card-kicker {
@@ -8955,7 +8955,7 @@ body.product-detail-page main > section.product-static-section {
   border-radius: var(--r-card);
   background: rgba(255, 255, 255, .88);
   color: var(--ink);
-  box-shadow: var(--shadow-cast-md);
+  box-shadow: var(--shadow-sm);
   transition: transform .2s ease;
 }
 
@@ -8986,7 +8986,7 @@ body.product-detail-page main > section.product-static-section {
 .product-comparison-link:focus-visible {
   transform: translateY(-2px);
   border-color: var(--line-accent-active);
-  box-shadow: 0 14px 32px rgba(9, 46, 52, .1);
+  box-shadow: var(--shadow-md);
 }
 
 .product-comparison-link:hover > i,
