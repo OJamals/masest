@@ -16,7 +16,7 @@ const STORY_SCENES = [
     rail: "01Strength",
     before: "/site/img/proof/story/kitchen-grease-before-aligned-202609.webp",
     after: "/site/img/proof/story/kitchen-grease-after-aligned-202609.webp",
-    product: "/site/img/products/crhd-food-beverage-studio.webp",
+    product: "/site/img/products/crhd-food-beverage-studio-chip.webp",
     shop: "products/crhd",
     trialProduct: "VertKleen%20CRHD",
     status: "Baked-on grease to exposed steel",
@@ -26,7 +26,7 @@ const STORY_SCENES = [
     rail: "02Outperform",
     before: "/site/img/proof/story/cip-vessel-before-aligned-202609.webp",
     after: "/site/img/proof/story/cip-vessel-after-aligned-202609.webp",
-    product: "/site/img/products/cip-cr-studio.webp",
+    product: "/site/img/products/cip-cr-studio-chip.webp",
     shop: "products/cr",
     trialProduct: "VertKleen%20CR",
     status: "Vessel residue removed",
@@ -36,7 +36,7 @@ const STORY_SCENES = [
     rail: "03HMIS 0-0-0",
     before: "/site/img/proof/story/labelle-fermenter-before-aligned-202609.webp",
     after: "/site/img/proof/story/labelle-fermenter-after-aligned-202609.webp",
-    product: "/site/img/products/cip-cr-studio.webp",
+    product: "/site/img/products/cip-cr-studio-chip.webp",
     shop: "products/cr",
     trialProduct: "VertKleen%20CR",
     status: "Fermenter ring removed",
@@ -46,7 +46,7 @@ const STORY_SCENES = [
     rail: "04Lower cost",
     before: "/site/img/proof/story/shower-track-before-aligned-202609.webp",
     after: "/site/img/proof/story/shower-track-after-aligned-202609.webp",
-    product: "/site/img/products/descaler-studio.webp",
+    product: "/site/img/products/descaler-studio-chip.webp",
     shop: "products/descaler",
     trialProduct: "VertKleen%20Descaler",
     status: "Calcium line removed",
@@ -56,7 +56,7 @@ const STORY_SCENES = [
     rail: "05Right formula",
     before: "/site/img/proof/story/airboat-panel-before-aligned-202609.webp",
     after: "/site/img/proof/story/airboat-panel-after-aligned-202609.webp",
-    product: "/site/img/products/alumibrite-studio.webp",
+    product: "/site/img/products/alumibrite-studio-chip.webp",
     shop: "products/alumibrite",
     trialProduct: "VertKleen%20AlumiBrite",
     status: "Aluminum finish restored",
@@ -66,7 +66,7 @@ const STORY_SCENES = [
     rail: "06Prove it",
     before: "/site/img/proof/story/pool-cartridge-before-aligned-202609.webp",
     after: "/site/img/proof/story/pool-cartridge-after-aligned-202609.webp",
-    product: "/site/img/products/cip-hcr-studio.webp",
+    product: "/site/img/products/cip-hcr-studio-chip.webp",
     shop: "products/hcr",
     trialProduct: "VertKleen%20HCR",
     status: "Filter pleats visibly cleaner",
@@ -134,6 +134,7 @@ test("story boots cleanly with one verified visual object and six scene renderer
         declaredHeight: Number(image.getAttribute("height")),
         host: new URL(image.currentSrc || image.src).hostname,
         source: new URL(image.currentSrc || image.src).pathname,
+        chip: Boolean(image.closest(".story-object__product")),
       })),
     };
   });
@@ -159,12 +160,19 @@ test("story boots cleanly with one verified visual object and six scene renderer
   expect(state.images.map((image) => image.source)).toEqual([
     "/site/img/proof/story/kitchen-grease-before-aligned-202609.webp",
     "/site/img/proof/story/kitchen-grease-after-aligned-202609.webp",
-    "/site/img/products/crhd-food-beverage-studio.webp",
+    "/site/img/products/crhd-food-beverage-studio-chip.webp",
   ]);
   for (const image of state.images) {
     expect(image.complete, JSON.stringify(state.images)).toBe(true);
-    expect(image.declaredWidth, JSON.stringify(state.images)).toBeGreaterThanOrEqual(671);
-    expect(image.declaredHeight, JSON.stringify(state.images)).toBeGreaterThanOrEqual(473);
+    if (image.chip) {
+      // The product chip renders into a 28x42 CSS box (19x29 on phones). It needs to cover
+      // dpr3 and no more -- a full-size packshot here cost 45KB against the LCP.
+      expect(image.declaredWidth, JSON.stringify(state.images)).toBeGreaterThanOrEqual(126);
+      expect(image.declaredWidth, JSON.stringify(state.images)).toBeLessThanOrEqual(400);
+    } else {
+      expect(image.declaredWidth, JSON.stringify(state.images)).toBeGreaterThanOrEqual(671);
+      expect(image.declaredHeight, JSON.stringify(state.images)).toBeGreaterThanOrEqual(473);
+    }
     expect(
       image.naturalWidth === 1 || image.naturalWidth === image.declaredWidth,
       JSON.stringify(state.images),

@@ -38,7 +38,8 @@ function pages(dir = ROOT.pathname, found = []) {
 
 /* Two homepage images are eager and carry no marker, on purpose.
  *
- * They are the story object's after-frame and the product packshot -- the other
+ * They are the story object's after-frame and the product chip (a 180x240 variant
+ * sized for its 28x42 box, not the 900x1200 packshot) -- the other
  * halves of the same above-the-fold comparison card as the LCP image. They are
  * deliberately NOT given loading="eager" or fetchpriority="high", because
  * tests/image-delivery.test.mjs:25-26 asserts exactly that: marking them would
@@ -52,7 +53,7 @@ function pages(dir = ROOT.pathname, found = []) {
  */
 const DEFERS_TO_LCP_DECISION = new Set([
   "https://media.masest.co/site/img/proof/story/kitchen-grease-after-aligned-202609.webp",
-  "https://media.masest.co/site/img/products/crhd-food-beverage-studio.webp",
+  "https://media.masest.co/site/img/products/crhd-food-beverage-studio-chip.webp",
 ]);
 
 function images(html) {

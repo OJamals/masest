@@ -561,19 +561,57 @@
     };
   }
 
+  // GSAP is a DESKTOP-ONLY dependency: initDesktopStory is the only function that touches
+  // it. index.html preloads it under media="(min-width: 761px)", so on a phone it is never
+  // fetched and this never runs; on a desktop the bytes are already in cache and appending
+  // the tags executes them almost immediately. ScrollTrigger registers itself against gsap,
+  // so the two must arrive in that order -- hence the chain rather than two parallel loads.
+  var scrollEngine = null;
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var element = document.createElement("script");
+      element.src = src;
+      element.async = false;
+      element.onload = resolve;
+      element.onerror = reject;
+      document.head.appendChild(element);
+    });
+  }
+
+  function loadScrollEngine() {
+    if (!scrollEngine) {
+      scrollEngine = loadScript("vendor/gsap/gsap.min.js").then(function () {
+        return loadScript("vendor/gsap/ScrollTrigger.min.js");
+      });
+    }
+    return scrollEngine;
+  }
+
   function startStoryMode() {
     teardownMode();
     teardownMode = function () {};
     compact = mediaQuery.matches;
     reduce = motionQuery.matches;
 
-    if (reduce || !window.gsap || !window.ScrollTrigger) {
+    if (reduce) {
       renderStaticStory();
       return;
     }
 
+    // Checked BEFORE the library, because the compact story needs no library. Previously a
+    // missing gsap dropped phones all the way to the static story even though nothing on
+    // that path would have used it.
     if (compact) {
       teardownMode = initCompactStory();
+      return;
+    }
+
+    if (!window.gsap || !window.ScrollTrigger) {
+      // Still loading: hold the pre-paint story-ready layout rather than rendering static
+      // and then re-pinning, which would be a large desktop layout shift. Only a real
+      // failure falls back, and then the full content is exposed.
+      loadScrollEngine().then(startStoryMode, renderStaticStory);
       return;
     }
 

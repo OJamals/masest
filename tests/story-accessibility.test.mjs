@@ -57,8 +57,14 @@ test("visible summary matches the six visual scenes", () => {
 });
 
 test("reduced-motion, missing-library, no-JS, and ordinary mobile expose complete content", () => {
-  assert.match(storyJs, /if \(reduce \|\| !window\.gsap \|\| !window\.ScrollTrigger\)/);
+  // Reduced motion still short-circuits to the static story. The library check now sits
+  // AFTER the compact check, because the compact story never used gsap -- a phone with no
+  // gsap used to fall all the way through to the static story for no reason. A genuine
+  // load failure still exposes the full static content.
+  assert.match(storyJs, /if \(reduce\)\s*\{\s*renderStaticStory\(\);/);
   assert.match(storyJs, /if \(compact\)\s*\{[\s\S]*initCompactStory\(\)/);
+  assert.match(storyJs, /if \(!window\.gsap \|\| !window\.ScrollTrigger\)/);
+  assert.match(storyJs, /loadScrollEngine\(\)\.then\(startStoryMode, renderStaticStory\)/);
   assert.match(storyJs, /IntersectionObserver/);
   assert.match(storyCss, /\.story:not\(\.story-ready\) \.act\s*\{[^}]*height:\s*auto/s);
   assert.match(storyCss, /\.story:not\(\.story-ready\) \[data-at\]\s*\{[^}]*opacity:\s*1/s);

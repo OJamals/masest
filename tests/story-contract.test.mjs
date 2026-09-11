@@ -31,7 +31,9 @@ test("one persistent comparator carries each true pair and active product", () =
   assert.match(story, /class="story-object__range" type="range" name="storyComparisonReveal" min="0" max="100" value="50"/);
   assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-before-aligned-202609\.webp/);
   assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-after-aligned-202609\.webp/);
-  assert.match(story, /media\.masest\.co\/site\/img\/products\/crhd-food-beverage-studio\.webp/);
+  // -chip: the product badge renders into a 28x42 box, so the story uses a 180x240
+  // variant rather than the 900x1200 packshot the industry pages show at full size.
+  assert.match(story, /media\.masest\.co\/site\/img\/products\/crhd-food-beverage-studio-chip\.webp/);
   assert.match(story, /Commercial-kitchen grease/);
   assert.match(story, /VertKleen CRHD/);
   assert.doesNotMatch(story, /AI[- ]generated|digitally reconstructed|synthetic (?:image|photo|visual|imagery)/i);

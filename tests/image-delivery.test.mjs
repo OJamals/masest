@@ -9,7 +9,9 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // cache-control: immutable, so only a new URL reaches browsers that already have it.
 const KITCHEN_BEFORE = 'https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp?v=20260911a';
 const KITCHEN_AFTER = 'https://media.masest.co/site/img/proof/story/kitchen-grease-after-aligned-202609.webp';
-const CRHD_PACKSHOT = 'https://media.masest.co/site/img/products/crhd-food-beverage-studio.webp';
+// The story's product chip renders into a 28x42 box, so it uses a 180x240 variant
+// rather than the 900x1200 packshot the industry pages show at full size.
+const CRHD_PACKSHOT = 'https://media.masest.co/site/img/products/crhd-food-beverage-studio-chip.webp';
 
 test('homepage prioritizes the initial field frame while preserving later scene assets', () => {
   const html = rootFile('index.html', 'utf8');
