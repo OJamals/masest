@@ -12,7 +12,8 @@
         "label": "Commercial-kitchen grease · VertKleen CRHD",
         "beforeAlt": "Commercial-kitchen surface before VertKleen CRHD cleaning",
         "afterAlt": "Same commercial-kitchen surface after VertKleen CRHD cleaning"
-      }
+      },
+      "proofAnchor": "commercial-kitchen-crhd"
     },
     {
       "id": "outperform",
@@ -25,7 +26,8 @@
         "label": "CIP vessel residue · VertKleen CR",
         "beforeAlt": "CIP vessel before VertKleen CR cleaning",
         "afterAlt": "Same CIP vessel after VertKleen CR cleaning"
-      }
+      },
+      "proofAnchor": "cip-vessel"
     },
     {
       "id": "hmis-000",
@@ -38,7 +40,8 @@
         "label": "LaBelle fermenter ring · VertKleen CR",
         "beforeAlt": "LaBelle fermenter wall ring before VertKleen CR cleaning",
         "afterAlt": "Same LaBelle fermenter after VertKleen CR cleaning"
-      }
+      },
+      "proofAnchor": "labelle-fermenter"
     },
     {
       "id": "whole-job-cost",
@@ -51,7 +54,8 @@
         "label": "Shower-track calcium · VertKleen Descaler",
         "beforeAlt": "Shower track before VertKleen Descaler cleaning",
         "afterAlt": "Same shower track after VertKleen Descaler cleaning"
-      }
+      },
+      "proofAnchor": "shower-track"
     },
     {
       "id": "right-formula",
@@ -64,7 +68,8 @@
         "label": "Airboat aluminum · VertKleen AlumiBrite",
         "beforeAlt": "Airboat aluminum panel before VertKleen AlumiBrite treatment",
         "afterAlt": "Same airboat aluminum panel after VertKleen AlumiBrite treatment"
-      }
+      },
+      "proofAnchor": "airboat-alumibrite"
     },
     {
       "id": "prove-it",
@@ -77,7 +82,8 @@
         "label": "Pool cartridge filter · VertKleen HCR",
         "beforeAlt": "Pool cartridge filter before VertKleen HCR cleaning",
         "afterAlt": "Same pool cartridge filter after VertKleen HCR cleaning"
-      }
+      },
+      "proofAnchor": "pool-cartridge"
     }
   ]
 }

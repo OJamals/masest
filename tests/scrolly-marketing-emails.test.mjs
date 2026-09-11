@@ -85,7 +85,10 @@ test('rendered SES templates are static, accessible, and unsubscribe-safe', () =
     assert.match(campaign.html, />Before<\/td>/);
     assert.match(campaign.html, />After<\/td>/);
     assert.match(campaign.html, /Open the aligned before-and-after/);
-    assert.match(campaign.html, /#story-scene-[1-6]/);
+    // Evidence now lands on the /proof card, not a homepage anchor: the story that hosted
+    // #story-scene-N is being retired, and mail already delivered has to keep working.
+    assert.match(campaign.html, /https:\/\/masest\.co\/proof#[a-z0-9-]+/);
+    assert.doesNotMatch(campaign.html, /#story-scene-/);
     assert.equal((campaign.html.match(/img\/proof\/story\//g) || []).length, 2);
     assert.doesNotMatch(campaign.html, /<script\b|type="range"|draggable/i);
     assert.doesNotMatch(campaign.html, /supabase/i);

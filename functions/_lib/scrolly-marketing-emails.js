@@ -21,7 +21,12 @@ const email = (sceneId, value) => {
       before: `${STORY_MEDIA}/${scene.proof.slug}-before-${STORY_EMAIL_IMAGE_SUFFIX}`,
       after: `${STORY_MEDIA}/${scene.proof.slug}-after-${STORY_EMAIL_IMAGE_SUFFIX}`,
     }),
-    evidenceUrl: `${SITE}/#${scene.anchor}`,
+    // Points at the /proof card, not a homepage anchor: the homepage story that once
+    // hosted #story-scene-N is being retired, and mail already delivered keeps working
+    // only if the destination outlives it. Two scenes map to proof cards that predate
+    // them under different slugs, so the anchor is recorded per scene rather than
+    // derived from proof.slug.
+    evidenceUrl: `${SITE}/proof#${scene.proofAnchor}`,
   });
 };
 

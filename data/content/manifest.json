@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-02T04:02:11.590Z",
+  "generated_at": "2026-09-11T10:41:05.197Z",
   "files": {
     "services.json": {
       "count": 0,
@@ -17,11 +17,11 @@
       "sha256": "31e97727aede770128842520a93813c5f2b0a78de74374ef3960b7778668b968"
     },
     "proof.json": {
-      "count": 16,
+      "count": 20,
       "counts": {
-        "proof_cards": 16
+        "proof_cards": 20
       },
-      "sha256": "ea2ac0025cd42e0d0285dd69e157930b8454a4be4263190ac43babb3b72ae545"
+      "sha256": "1a14c521c28c291b52459c21ca1fafb56458fb11e83c2a5ae1caa9ec24ae3aa5"
     },
     "resources.json": {
       "count": 0,

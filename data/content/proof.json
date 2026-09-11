@@ -66,6 +66,31 @@
       "seo": {}
     },
     {
+      "slug": "cip-vessel",
+      "title": "CIP vessel residue removal",
+      "kind": "food",
+      "chips": [
+        "VertKleen CR",
+        "CIP circuit",
+        "Aligned before and after"
+      ],
+      "image": "/img/proof/story/cip-vessel-before-aligned-202609.webp",
+      "result": "Same vessel geometry: CR removes the organic residue field and returns the interior to reflective steel. The before and after frames are photographed from one fixed camera position so the surface can be compared directly.",
+      "source": "Source: registered field comparison record",
+      "eyebrow": "Food & beverage · Result",
+      "image_h": 1017,
+      "image_w": 1200,
+      "image_alt": "CIP vessel before VertKleen CR cleaning",
+      "narrative": "This record covers one CIP vessel cleaned with VertKleen CR. Results vary with soil type and load, vessel material, dilution, temperature, circulation time, and rinse. Read the current label and SDS, confirm material compatibility, and follow the sanitation program in force at the site; a cleaner does not replace an approved sanitation step.",
+      "sort_order": 17,
+      "image_after": "/img/proof/story/cip-vessel-after-aligned-202609.webp",
+      "image_after_h": 1017,
+      "image_after_w": 1200,
+      "image_after_alt": "Same CIP vessel after VertKleen CR cleaning",
+      "publication_scope": "Published result summary",
+      "seo": {}
+    },
+    {
       "slug": "commercial-kitchen-crhd",
       "title": "Commercial-kitchen grease removal",
       "kind": "food",
@@ -187,6 +212,31 @@
       "seo": {}
     },
     {
+      "slug": "labelle-fermenter",
+      "title": "LaBelle fermenter ring removal",
+      "kind": "food",
+      "chips": [
+        "VertKleen CR",
+        "Fermenter interior",
+        "Aligned before and after"
+      ],
+      "image": "/img/proof/story/labelle-fermenter-before-aligned-202609.webp",
+      "result": "Geometry stays recognizable: the vessel curve and port remain fixed while the brown ring disappears. The pair is registered to the same camera position so the ring line can be compared directly.",
+      "source": "Source: registered field comparison record",
+      "eyebrow": "Food & beverage · Result",
+      "image_h": 1017,
+      "image_w": 1200,
+      "image_alt": "LaBelle fermenter wall ring before VertKleen CR cleaning",
+      "narrative": "This record covers one fermenter cleaned with VertKleen CR. Results vary with residue age and thickness, vessel material, dilution, temperature, contact time, and rinse. Read the current label and SDS, confirm material compatibility, and complete the required sanitation steps after cleaning.",
+      "sort_order": 18,
+      "image_after": "/img/proof/story/labelle-fermenter-after-aligned-202609.webp",
+      "image_after_h": 1017,
+      "image_after_w": 1200,
+      "image_after_alt": "Same LaBelle fermenter after VertKleen CR cleaning",
+      "publication_scope": "Published result summary",
+      "seo": {}
+    },
+    {
       "slug": "neatfreaks-hood-degrease",
       "title": "Restaurant hood and floor degreasing",
       "kind": "food",
@@ -206,6 +256,31 @@
       "image_after_h": 650,
       "image_after_w": 520,
       "image_after_alt": "Restaurant hood filter after VertKleen degreasing",
+      "publication_scope": "Published result summary",
+      "seo": {}
+    },
+    {
+      "slug": "pool-cartridge",
+      "title": "Pool cartridge filter descaling",
+      "kind": "facility",
+      "chips": [
+        "VertKleen HCR",
+        "Cartridge filter",
+        "Aligned before and after"
+      ],
+      "image": "/img/proof/story/pool-cartridge-before-aligned-202609.webp",
+      "result": "The cap, bands, and pleat pattern stay registered while HCR clears the dark mineral fouling. The pair is photographed from one fixed position so the pleat field can be compared directly.",
+      "source": "Source: registered field comparison record",
+      "eyebrow": "Facilities · Result",
+      "image_h": 1017,
+      "image_w": 1200,
+      "image_alt": "Pool cartridge filter before VertKleen HCR cleaning",
+      "narrative": "This record covers one pool cartridge filter cleaned with VertKleen HCR. Results vary with fouling type and age, cartridge material and condition, water chemistry, dilution, and soak time. Read the current label and SDS, confirm material compatibility, and replace cartridges according to the service life stated by the manufacturer.",
+      "sort_order": 20,
+      "image_after": "/img/proof/story/pool-cartridge-after-aligned-202609.webp",
+      "image_after_h": 1017,
+      "image_after_w": 1200,
+      "image_after_alt": "Same pool cartridge filter after VertKleen HCR cleaning",
       "publication_scope": "Published result summary",
       "seo": {}
     },
@@ -248,6 +323,31 @@
       "image_alt": "Residential AC coil after VertKleen cleaning",
       "narrative": "Buildup had packed the coil and fin surface. Descaler worked into the fin pack, loosened the buildup, and rinsed away to reveal a visibly cleaner coil.",
       "sort_order": 8,
+      "publication_scope": "Published result summary",
+      "seo": {}
+    },
+    {
+      "slug": "shower-track",
+      "title": "Shower track calcium removal",
+      "kind": "facility",
+      "chips": [
+        "VertKleen Descaler",
+        "Glass and track",
+        "Aligned before and after"
+      ],
+      "image": "/img/proof/story/shower-track-before-aligned-202609.webp",
+      "result": "The same glass edge and lower track stay aligned while Descaler clears the concentrated orange calcium line. Both frames share one camera position so the track edge can be compared directly.",
+      "source": "Source: registered field comparison record",
+      "eyebrow": "Facilities · Result",
+      "image_h": 1017,
+      "image_w": 1200,
+      "image_alt": "Shower track before VertKleen Descaler cleaning",
+      "narrative": "This record covers one shower track treated with VertKleen Descaler. Results vary with deposit type and thickness, water chemistry, surface finish, dilution, and dwell time. Read the current label and SDS and confirm material compatibility before use, particularly on finished metal and coated surfaces.",
+      "sort_order": 19,
+      "image_after": "/img/proof/story/shower-track-after-aligned-202609.webp",
+      "image_after_h": 1017,
+      "image_after_w": 1200,
+      "image_after_alt": "Same shower track after VertKleen Descaler cleaning",
       "publication_scope": "Published result summary",
       "seo": {}
     },
