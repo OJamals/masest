@@ -4101,6 +4101,15 @@ fully clickable cards) ---- */
   font-size: var(--fs-h5);
   line-height: 1;
 }
+/* "Pending review" is a status, not an amount. At the subtotal's 20px it wrapped to two
+   lines on 393-412px phones, which the pre-paint reserve in cart.html cannot predict —
+   whether a cart is priced is precisely what it does not know — leaving a 21.7px shift
+   there. At the small scale it fits on one line, and the line box is still set by the
+   dd's own 20px strut, so the priced and unpriced states measure identically. */
+.cart-estimate .cart-total-row .cart-total-pending {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
 .cart-estimate .cart-total-count {
   display: block;
   margin-top: var(--s1);
