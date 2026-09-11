@@ -65,7 +65,7 @@ export function initAdminSupport({ auth, root = "", staff = null, openContext = 
   if (!document.querySelector('link[data-masest-admin-support="true"]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = root + "css/admin-support.css?v=20260910b";
+    stylesheet.href = root + "css/admin-support.css?v=20260911c";
     stylesheet.dataset.masestAdminSupport = "true";
     document.head.append(stylesheet);
   }

@@ -1,6 +1,6 @@
 /* MASEST user dashboard controller. Loaded as a module by dashboard.html.
  * Reuses the auth helper (session token + /api wrapper) and the cart for reorders. */
-import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260910b';
+import { me, logout, orders as fetchOrders, api, updatePassword } from './auth.js?v=20260911c';
 import {
   add as cartAdd,
   clear as cartClear,
@@ -8,9 +8,9 @@ import {
   replaceWithQuote,
 } from './cart.js';
 import { esc, safeUrl, money, fmtDate, fmtDT, wireTablist, rovingTabindex, linkTabsToPanels, confirmDialog, promptDialog, restoreFocusOnClose, toast, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
-import { initBusinessHub } from './business.js?v=20260910b';
-import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260910b';
-import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260910b';
+import { initBusinessHub } from './business.js?v=20260911c';
+import { mountAddressAutocomplete } from './address-autocomplete.js?v=20260911c';
+import { isStaffAccount, staffSurfaceNotice } from './staff-surface.js?v=20260911c';
 
 const $ = (id) => document.getElementById(id);
 

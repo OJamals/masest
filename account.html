@@ -9,9 +9,9 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260910b">
-<link rel="stylesheet" href="css/navigation.css?v=20260910b">
-<link rel="stylesheet" href="css/components.css?v=20260910b">
+<link rel="stylesheet" href="css/style.css?v=20260911c">
+<link rel="stylesheet" href="css/navigation.css?v=20260911c">
+<link rel="stylesheet" href="css/components.css?v=20260911c">
 <style>
   /* Signed-out layout: auth card left, account-value panel right, so the sheet
      doesn't read as a lone card floating in a 60%-empty viewport. */
@@ -185,7 +185,7 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/main.js?v=20260910b"></script>
+<script type="module" src="js/main.js?v=20260911c"></script>
 
 <!-- Tab toggle: classic script so it works without modules / before auth loads -->
 <script>
@@ -221,7 +221,7 @@
 
 <!-- Auth wiring: module imports the Supabase helper -->
 <script type="module">
-  import { register, login, logout, me, completeRegistration, resendConfirmation, resetPasswordForEmail, updatePassword, onPasswordRecovery } from "./js/auth.js?v=20260910b";
+  import { register, login, logout, me, completeRegistration, resendConfirmation, resetPasswordForEmail, updatePassword, onPasswordRecovery } from "./js/auth.js?v=20260911c";
 
   const $ = (id) => document.getElementById(id);
   const authBox = $("acctAuth");

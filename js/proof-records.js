@@ -1,4 +1,4 @@
-import { canonicalPublicImageUrl } from "./image-url.js?v=20260910b";
+import { canonicalPublicImageUrl } from "./image-url.js?v=20260911c";
 
 function escapeHtml(value) {
   return String(value ?? "")
