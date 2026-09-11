@@ -36,8 +36,11 @@ test("homepage story contains six R2-backed true before-after scenes", () => {
     const section = sceneTags.find((match) => match[1] === act)?.[0] || "";
     const before = `https://media.masest.co/site/img/proof/story/${scene}-before-aligned-202609.webp`;
     const after = `https://media.masest.co/site/img/proof/story/${scene}-after-aligned-202609.webp`;
-    assert.match(section, new RegExp(`data-before-src="${before.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
-    assert.match(section, new RegExp(`data-after-src="${after.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
+    // An optional ?v= cache-bust is allowed: these objects are served immutable, so a
+    // re-encoded image can only reach browsers under a new URL. The contract being held
+    // here is the host and the aligned filename, not the absence of a version query.
+    assert.match(section, new RegExp(`data-before-src="${before.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\?v=[0-9a-z]+)?"`));
+    assert.match(section, new RegExp(`data-after-src="${after.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\?v=[0-9a-z]+)?"`));
     assert.match(section, new RegExp(`data-before-width="${alignedWidth}"`));
     assert.match(section, new RegExp(`data-before-height="${alignedHeight}"`));
     assert.match(section, new RegExp(`data-after-width="${alignedWidth}"`));

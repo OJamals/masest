@@ -195,6 +195,19 @@
     });
   }
 
+  // Speculative bytes for a scene nobody has scrolled to must never compete with the hero
+  // image, which is this page's LCP element. requestIdleCallback's 1200ms timeout fires
+  // during load on a slow connection -- "idle" on a busy main thread is not the same as
+  // "the network is free" -- so hold the request until load and let the idle scheduling
+  // apply unchanged after that. Only the newest scene is held: scrolling through several
+  // acts before load must not queue a preload for each one.
+  var heldPreload = null;
+  function releaseHeldPreload() {
+    var run = heldPreload;
+    heldPreload = null;
+    if (run) run();
+  }
+
   function preloadNextScene(st) {
     var next = states[st.index + 1];
     if (!next) return;
@@ -203,8 +216,16 @@
       preloadImage(next.config.after.src);
       preloadImage(next.config.product.src);
     };
-    if ("requestIdleCallback" in window) window.requestIdleCallback(preload, { timeout: 1200 });
-    else window.setTimeout(preload, 240);
+    var schedule = function () {
+      if ("requestIdleCallback" in window) window.requestIdleCallback(preload, { timeout: 1200 });
+      else window.setTimeout(preload, 240);
+    };
+    if (document.readyState === "complete") {
+      schedule();
+      return;
+    }
+    if (!heldPreload) window.addEventListener("load", releaseHeldPreload, { once: true });
+    heldPreload = schedule;
   }
 
   function automaticReveal(progress) {

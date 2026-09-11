@@ -5,7 +5,9 @@ import test from 'node:test';
 const rootFile = (path, encoding) => readFileSync(new URL(`../${path}`, import.meta.url), encoding);
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const KITCHEN_BEFORE = 'https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp';
+// Carries a version query: the R2 object was re-encoded in place and is served
+// cache-control: immutable, so only a new URL reaches browsers that already have it.
+const KITCHEN_BEFORE = 'https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp?v=20260911a';
 const KITCHEN_AFTER = 'https://media.masest.co/site/img/proof/story/kitchen-grease-after-aligned-202609.webp';
 const CRHD_PACKSHOT = 'https://media.masest.co/site/img/products/crhd-food-beverage-studio.webp';
 
