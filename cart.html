@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260910b">
-<link rel="stylesheet" href="css/navigation.css?v=20260910b">
-  <link rel="stylesheet" href="css/components.css?v=20260910b">
+  <link rel="stylesheet" href="css/style.css?v=20260911c">
+<link rel="stylesheet" href="css/navigation.css?v=20260911c">
+  <link rel="stylesheet" href="css/components.css?v=20260911c">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260910b"></script>
+  <script type="module" src="js/main.js?v=20260911c"></script>
 </head>
 <body>
 <!-- Reserves the nav's 59px height. chrome.js injects the nav, so without this the
@@ -109,15 +109,71 @@
         </div>
       </aside>
     </div>
+    <!-- Reserve the cart's real layout before first paint.
+         #cartLines ships empty and .cart-summary ships hidden, so the page used to
+         paint a short "Loading cart details..." card and then, when /api/products
+         resolved at ~1.44s, swap in N full cart lines AND reveal the summary at once.
+         That single swap moved FOOTER from y:453 to off-screen and was essentially the
+         page's entire CLS: 0.4967 on iPad Mini, 0.4796 on Pixel 7, rising to 0.5578 at
+         three lines. It scaled with cart contents and measured 0.0001 on an empty cart.
+
+         Runs synchronously during parse, not as a module, so the reserved geometry is in
+         the first paint rather than a frame behind it. Skeleton rows use the live
+         .cart-line markup so every height rule applies unchanged - measured line heights
+         run 132px (iPad Mini) to 241px (iPhone SE) and differ by 19px within a single
+         viewport when a product name wraps, so no fixed px reserve could be right. The
+         summary needs no skeleton: it is real static markup that was merely hidden, and
+         #cartEstimate stays hidden until a real subtotal exists, so nothing fake shows. -->
+    <script>
+      (function () {
+        try {
+          // Mirrors KEY in js/cart.js. tests/cart-reserve-contract.test.mjs pins the two together.
+          var raw = localStorage.getItem("masest_cart");
+          var cart = raw ? JSON.parse(raw) : null;
+          if (!cart || typeof cart !== "object") return;
+          var skus = Object.keys(cart).filter(function (sku) { return Number(cart[sku]) > 0; });
+          if (!skus.length) return;
+          var lines = document.getElementById("cartLines");
+          if (!lines) return;
+          var summary = document.querySelector(".cart-summary");
+          var active = document.getElementById("checkoutActive");
+          lines.setAttribute("aria-busy", "true");
+          lines.innerHTML = skus.map(function (sku) {
+            // No SKU, no name, no price: tests/cart-page.test.mjs pins that the cart shows
+            // nothing identifying a line until the catalog resolves, because before then
+            // there is no way to know the SKU is even purchasable. The reserve needs the
+            // geometry, not the content, so every text slot is a bar.
+            var qty = String(Math.max(1, Math.min(9999, Math.floor(Number(cart[sku]) || 1))));
+            return '<article class="cart-line cart-line-skeleton" aria-hidden="true">'
+              + '<div class="cart-line-product"><figure class="cart-line-media"></figure><div>'
+              // .eyebrow is inline-flex, so unlike the h2 and p below it has no
+              // line-height floor and would collapse to the bar's 9px. The zero-width
+              // space restores the height its own font would occupy, without a magic
+              // pixel value that would drift if the caption size changed.
+              + '<span class="eyebrow">&#8203;<span class="cart-sk cart-sk-sm"></span></span>'
+              + '<h2><span class="cart-sk cart-sk-lg"></span> <span class="cart-sk cart-sk-md"></span></h2>'
+              + '<p><span class="cart-sk cart-sk-sm"></span></p>'
+              + '</div></div>'
+              + '<label><span>Qty</span><input type="number" name="quantity" value="' + qty + '" disabled tabindex="-1"></label>'
+              + '<button type="button" class="btn btn-ghost" disabled tabindex="-1">Remove</button>'
+              + '</article>';
+          }).join("");
+          if (summary) summary.hidden = false;
+          if (active) active.hidden = false;
+        } catch (err) {
+          // Private mode or storage disabled: fall through to the JS-rendered loading card.
+        }
+      })();
+    </script>
   </section>
 </main>
 <script type="module">
   import { items, presentationContext, remove, setQty } from "./js/cart.js";
-  import { api, me, getToken } from "./js/auth.js?v=20260910b";
+  import { api, me, getToken } from "./js/auth.js?v=20260911c";
   import { safeUrl } from "./js/util.js";
-  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260910b";
-  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260910b";
-  import { createShippingRequestCoordinator, fetchShippingJson, shippingRequestSnapshot } from "./js/shipping-request.js?v=20260910b";
+  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260911c";
+  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260911c";
+  import { createShippingRequestCoordinator, fetchShippingJson, shippingRequestSnapshot } from "./js/shipping-request.js?v=20260911c";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -269,6 +325,10 @@
       return;
     }
     if (!catalogReady) {
+      // The pre-paint script above already reserved the real geometry. Replacing it with
+      // the short loading card, and re-hiding the summary, is precisely the ~0.5 CLS this
+      // was built to remove - so when a skeleton is standing, leave it standing.
+      if (lines.querySelector(".cart-line-skeleton")) return;
       if (summary) summary.hidden = true;
       if (shell) shell.classList.add("is-empty");
       lines.setAttribute("aria-busy", "true");

@@ -26,6 +26,22 @@ import { startStaticTestServer } from "./test-static-server.mjs";
 const DIR = "output/playwright/homepage-vitals";
 const LCP_BUDGET_MS = 2500;
 const CLS_BUDGET = 0.01;
+// The cart cannot reach the homepage's 0.01, and the reason is worth stating precisely
+// rather than hand-waving as "some residual". With the reserve in place the skeleton rows
+// are exact -- measured per-line delta on hydration is 0px at every viewport tried. What
+// still moves is the order summary, which grows 539 -> 761px (+222px) when #cartEstimate
+// and the ZIP-estimate form un-hide once real prices arrive. Those two cannot be reserved
+// from localStorage alone: one needs prices, the other needs to know whether the cart
+// consolidates into a single carton. Measured 0.0609 with very low variance
+// (0.06089/0.06089/0.06075), so 0.08 is headroom over a deterministic number, not a guess.
+// Against 0.4967 (iPad Mini) / 0.4796 (Pixel 7) / 0.5578 (three lines) before the fix.
+// Reserving the summary block is the named follow-up.
+const CART_CLS_BUDGET = 0.08;
+// Held open so the skeleton is still standing when CLS is sampled. Against the local
+// static server /api/products 404s in single-digit milliseconds, so without this delay
+// the swap lands before first paint and the assertion passes even with the reserve
+// deleted -- a gate that guards nothing.
+const CART_CATALOG_DELAY_MS = 1200;
 const SAMPLES = 3;
 // A single throttled run is flaky; require the median to pass rather than every sample, so
 // one slow CI runner does not block a deploy while a real regression still does.
@@ -115,4 +131,69 @@ test("homepage LCP is not an oversized above-the-fold image", async ({ context, 
 
   expect(oversized, `above-the-fold images far larger than their box: ${JSON.stringify(oversized)}`)
     .toEqual([]);
+});
+
+// The cart is the page one tap before checkout and, until the pre-paint reserve landed,
+// carried the site's worst layout instability by a wide margin: #cartLines shipped empty
+// and .cart-summary shipped hidden, so a short "Loading cart details..." card was swapped
+// for N full lines and the summary revealed together the moment /api/products resolved.
+// One shift, FOOTER y:453 -> off-screen, worth 0.4967 on iPad Mini and 0.4796 on Pixel 7,
+// rising to 0.5578 at three lines and measuring 0.0001 on an empty cart.
+//
+// Sampled at 768x1024, the worst of the five devices measured. tests/cart-reserve-contract
+// holds the deterministic half: this asserts the outcome, that asserts the mechanism is
+// still in place, because an outcome-only gate goes green when its subject stops running.
+async function sampleCartCls(context) {
+  const page = await context.newPage();
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.route("**/api/products*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, CART_CATALOG_DELAY_MS));
+    // continue, never fulfil: substituting a body detaches the request from real
+    // conditions, which is how a 48KB and a 127KB image once scored identically.
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    window.__cartCls = 0;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (!entry.hadRecentInput) window.__cartCls += entry.value;
+      }
+    }).observe({ type: "layout-shift", buffered: true });
+  });
+
+  // Seed on the same origin before the cart page parses; the reserve reads it during parse.
+  await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded", timeout: 45000 });
+  await page.evaluate(() =>
+    localStorage.setItem("masest_cart", JSON.stringify({ "CRCIP-1G": 2, "HCRCIP-25G": 1 })),
+  );
+  // Not networkidle: the cart keeps chat, tracking and image requests in flight long
+  // enough that quiescence never arrives, and it is the wrong signal regardless. Wait on
+  // the swap this test exists to measure -- skeleton rows replaced by real ones -- then
+  // let the shift it causes register.
+  await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded", timeout: 45000 });
+  await page.locator(".cart-line:not(.cart-line-skeleton)").first().waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1200);
+  const result = await page.evaluate(() => ({
+    cls: window.__cartCls,
+    lines: document.querySelectorAll(".cart-line").length,
+  }));
+  await page.close();
+  return result;
+}
+
+test("cart reserves its lines so hydration does not shift the page", async ({ context }) => {
+  // Three samples that each deliberately hold the catalog open for CART_CATALOG_DELAY_MS
+  // and then settle cannot fit in Playwright's 30s default, which overrides the per-
+  // navigation timeout. The delay is the point of the test, so raise the budget rather
+  // than shorten it into uselessness.
+  test.setTimeout(120_000);
+  const samples = [];
+  for (let index = 0; index < SAMPLES; index += 1) samples.push(await sampleCartCls(context));
+
+  const report = JSON.stringify({ budget: CART_CLS_BUDGET, samples });
+  // A cart that rendered no lines would trivially score 0 and hide a real regression.
+  expect(samples.every((s) => s.lines >= 2), `cart rendered no lines: ${report}`).toBe(true);
+
+  const passing = samples.filter((s) => s.cls <= CART_CLS_BUDGET);
+  expect(passing.length, `cart CLS budget: ${report}`).toBeGreaterThanOrEqual(REQUIRED_PASSING);
 });

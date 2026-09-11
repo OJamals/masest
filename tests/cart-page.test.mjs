@@ -255,8 +255,17 @@ test("cart holds product lines until catalog names and pricing resolve", async (
       });
 
       await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
-      await page.getByText("Loading cart details…", { exact: true }).waitFor();
-      assert.equal(await page.locator(".cart-line").count(), 0);
+      // A cart with contents now reserves its geometry before first paint with skeleton
+      // rows rather than a short "Loading cart details…" card, because swapping that card
+      // for N real lines was the whole of the page's 0.4967 CLS. The card still serves the
+      // path where localStorage is unreadable, so the copy is not gone.
+      //
+      // What this test decides is unchanged and still asserted below: no real product
+      // line, no raw SKU, and no stale status before the catalog resolves. Skeleton rows
+      // are aria-hidden and carry no product data at all - their only text is the static
+      // words "Qty" and "Remove".
+      await page.locator(".cart-line-skeleton").first().waitFor();
+      assert.equal(await page.locator(".cart-line:not(.cart-line-skeleton)").count(), 0);
       assert.equal(await page.getByText("Pending review", { exact: true }).count(), 0);
       assert.equal(await page.getByText("HCRCIP-1G", { exact: true }).count(), 0);
 
