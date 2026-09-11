@@ -259,8 +259,15 @@
 .site-support__context { margin-left: var(--s2); color: var(--accent); font-size: var(--fs-caption); font-weight: 800; text-decoration: none; }
 .site-support__order-scope { display: flex; width: fit-content; align-items: center; gap: var(--s2); margin-top: var(--s3); color: var(--accent); font-size: var(--fs-caption); font-weight: 800; }
 .site-support__properties-popover .site-support__order-scope { width: 100%; min-height: 44px; margin: 0; }
+/* Down the scale, not up. The support drawer is a fixed-height floating panel
+   (height: min(620px, 100dvh - 104px), overflow: hidden), so the compose form has a hard
+   vertical budget and the spec at tools/admin-support-entrypoints.spec.mjs:1142 asserts it
+   fits without scrolling. The spacing migration snapped this rule's literals UP -- gap
+   10px -> --s3 (12px), margin-top 14px -> --s4 (16px) -- which pushed the composer 3px
+   past the drawer at 1440x1000. --s2/--s3 are the neighbouring rungs and sit inside the
+   budget; snapping up here is the one direction this rule cannot go. */
 .site-support__composer,
-.site-support__recipient-search { display: grid; gap: var(--s3); margin-top: var(--s4); }
+.site-support__recipient-search { display: grid; gap: var(--s2); margin-top: var(--s3); }
 .site-support__composer > label,
 .site-support__recipient-search > label { display: grid; gap: var(--s1); color: var(--ink-soft); font-size: var(--fs-caption); font-weight: 800; }
 .site-support__composer textarea { min-height: 80px; border: 1px solid var(--line); border-radius: var(--r-input, 10px); padding: var(--s3); font: inherit; }
