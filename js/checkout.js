@@ -44,18 +44,30 @@ export function addressMatches(saved, current) {
   ].every(([savedKey, currentKey]) => comparable(saved?.[savedKey]) === comparable(current?.[currentKey]));
 }
 
+// Google returns CONFIRM_ADD_SUBPREMISES for a street it recognises in a building that
+// needs a unit number. Saying only "we could not confirm this address" sends the buyer
+// back over a street, city and ZIP that are all correct, past a collapsed "Add apartment
+// or suite" control on the same form.
+export function needsSuiteNumber(error) {
+  return error?.data?.possible_next_action === 'CONFIRM_ADD_SUBPREMISES';
+}
+
 function checkoutError(error) {
   const code = error?.data?.error || error?.code || error?.message;
   // Errors that name specific cart lines are useless without those lines — a buyer told
   // only "checkout could not continue" has no way to find the one item at fault.
   const skus = Array.isArray(error?.data?.skus) ? error.data.skus.filter(Boolean) : [];
   const skuList = skus.length ? ` (${skus.join(', ')})` : '';
+  if (needsSuiteNumber(error)) {
+    return 'That building needs an apartment, suite, or unit number. Add it below and calculate again.';
+  }
   return ({
     address_incomplete: 'Enter a complete U.S. address.',
     shipping_address_incomplete: 'Enter a complete shipping address and phone number.',
     shipping_address_invalid: 'Check each address field. One is too long or contains a character we cannot use.',
     shipping_domestic_only: 'Online checkout ships within the United States. Request a quote for international freight.',
     address_not_deliverable: 'We could not confirm this delivery address. Check the street, unit, city, state, and ZIP.',
+    shipping_address_unverified: 'No carrier could find that street address. Check the street number and spelling, then calculate again.',
     address_validation_unavailable: 'We could not check that address right now. Try again.',
     address_validation_timeout: 'The address check took too long. Try again.',
     address_validation_not_configured: 'We cannot check addresses online right now. Contact MASEST and we will help place your order.',
@@ -374,13 +386,16 @@ async function boot() {
     if (focus) ui.line1.focus();
   }
 
-  function toggleSuite(prefix) {
+  function setSuiteOpen(prefix, open, focus = true) {
     const ui = addressElements(prefix);
-    const opening = ui.suiteField.hidden;
-    ui.suiteField.hidden = !opening;
-    ui.suite.hidden = opening;
-    ui.suite.setAttribute('aria-expanded', String(opening));
-    if (opening) document.getElementById(`${prefix}Address2`).focus();
+    ui.suiteField.hidden = !open;
+    ui.suite.hidden = open;
+    ui.suite.setAttribute('aria-expanded', String(open));
+    if (open && focus) document.getElementById(`${prefix}Address2`).focus();
+  }
+
+  function toggleSuite(prefix) {
+    setSuiteOpen(prefix, addressElements(prefix).suiteField.hidden);
   }
 
   function toggleBilling() {
@@ -849,6 +864,9 @@ async function boot() {
     } catch (error) {
       if (error?.code === 'shipping_request_cancelled') return;
       if (!rateRequests.isCurrent(rateRequest, rateSnapshot())) return;
+      // Open the field the buyer is being asked for. The message alone leaves them
+      // hunting for a control that is collapsed behind a text button.
+      if (needsSuiteNumber(error)) setSuiteOpen('shipping', true);
       showStatus(checkoutError(error), 'err');
     } finally {
       if (rateRequests.isCurrent(rateRequest, requestSnapshot)) {

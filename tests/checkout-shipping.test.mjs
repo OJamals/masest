@@ -257,3 +257,84 @@ test("shipping selection tokens reject tampering and expiry", async () => {
     (error) => error.code === "shipping_quote_expired",
   );
 });
+
+test("a street the carrier cannot find is a 422, not a gateway failure", async () => {
+  // Reproduced against production: Google's validator verdicts "123 Main St, Brooklyn NY
+  // 11201" as ACCEPT and returns it without a ZIP+4, then ShipStation answers the rate
+  // call with 400 "Address not found". That escaped as a bare ShipStationError, missed
+  // the CheckoutFulfillmentError branch in /api/shipping-rates, and reached the buyer as
+  // a 502 reading "no shipping option is available for this address and cart".
+  const carrierRejection = Object.assign(new Error("shipstation_http_400"), {
+    name: "ShipStationError",
+    code: "shipstation_http_400",
+    status: 400,
+    detail: "Address not found",
+  });
+
+  await assert.rejects(
+    quoteCheckoutRates({
+      env: {
+        SHIPSTATION_API_KEY: "se_test",
+        SHIPSTATION_WAREHOUSE_ID: "se-2287981",
+        SHIPPING_QUOTE_SECRET: "q".repeat(48),
+      },
+      cart: [{ sku: "VK-TRQ-1G", qty: 1 }],
+      address,
+      billing_same_as_shipping: true,
+      billing_address: null,
+      email: "buyer@example.com",
+      variants,
+    }, {
+      now: () => 1_700_000_000_000,
+      validateAddress,
+      persistShippingQuotes,
+      async listCarriers() {
+        return { carriers: [{ carrier_id: "se-usps", friendly_name: "USPS" }] };
+      },
+      async quoteRates() {
+        throw carrierRejection;
+      },
+    }),
+    (error) => error instanceof CheckoutFulfillmentError
+      && error.code === "shipping_address_unverified"
+      && error.status === 422,
+  );
+});
+
+test("a carrier 400 that is not about the address still fails as a gateway error", async () => {
+  // Only address rejections get the buyer-facing 422. Anything else keeps reaching
+  // /api/shipping-rates as an unmapped provider failure, which is what 502 is for.
+  const providerRejection = Object.assign(new Error("shipstation_http_400"), {
+    name: "ShipStationError",
+    code: "shipstation_http_400",
+    status: 400,
+    detail: "Requested service is not available for this account",
+  });
+
+  await assert.rejects(
+    quoteCheckoutRates({
+      env: {
+        SHIPSTATION_API_KEY: "se_test",
+        SHIPSTATION_WAREHOUSE_ID: "se-2287981",
+        SHIPPING_QUOTE_SECRET: "q".repeat(48),
+      },
+      cart: [{ sku: "VK-TRQ-1G", qty: 1 }],
+      address,
+      billing_same_as_shipping: true,
+      billing_address: null,
+      email: "buyer@example.com",
+      variants,
+    }, {
+      now: () => 1_700_000_000_000,
+      validateAddress,
+      persistShippingQuotes,
+      async listCarriers() {
+        return { carriers: [{ carrier_id: "se-usps", friendly_name: "USPS" }] };
+      },
+      async quoteRates() {
+        throw providerRejection;
+      },
+    }),
+    (error) => !(error instanceof CheckoutFulfillmentError) && error.code === "shipstation_http_400",
+  );
+});

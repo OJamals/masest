@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { groupServiceRates, shippingServiceLabel, uniqueServiceRates } from '../js/checkout.js';
+import { groupServiceRates, needsSuiteNumber, shippingServiceLabel, uniqueServiceRates } from '../js/checkout.js';
 
 const root = new URL('../', import.meta.url);
 const checkout = readFileSync(new URL('checkout.html', root), 'utf8');
@@ -109,4 +109,26 @@ test('bare address inputs declare their own width', () => {
   const block = style.match(/\.checkout-address-control > input \{[^}]*\}/);
   assert.ok(block, '.checkout-address-control > input must be styled');
   assert.match(block[0], /width:\s*100%/, 'bare address inputs must fill their column');
+});
+
+test('an address that needs a unit number names the field instead of blaming the street', () => {
+  // Google answers a recognised building with no unit as address_not_deliverable plus
+  // possible_next_action CONFIRM_ADD_SUBPREMISES. The generic copy sent the buyer back
+  // over a street, city and ZIP that were all correct, past a collapsed "Add apartment
+  // or suite" control sitting on the same form.
+  assert.equal(needsSuiteNumber({ data: { error: 'address_not_deliverable', possible_next_action: 'CONFIRM_ADD_SUBPREMISES' } }), true);
+  assert.equal(needsSuiteNumber({ data: { error: 'address_not_deliverable', possible_next_action: 'FIX' } }), false);
+  assert.equal(needsSuiteNumber({ data: { error: 'shipping_rates_timeout' } }), false);
+  assert.equal(needsSuiteNumber(undefined), false);
+
+  assert.match(checkoutSource, /apartment, suite, or unit number\. Add it below and calculate again\./);
+  // The message alone is not enough: the field it names is collapsed behind a button.
+  assert.match(checkoutSource, /if \(needsSuiteNumber\(error\)\) setSuiteOpen\('shipping', true\);/);
+  // setSuiteOpen is idempotent so an already-open field is never toggled shut.
+  assert.match(checkoutSource, /function setSuiteOpen\(prefix, open, focus = true\)/);
+});
+
+test('a street no carrier can find reads as a street problem, not as unavailable shipping', () => {
+  assert.match(checkoutSource, /shipping_address_unverified: 'No carrier could find that street address\./);
+  assert.match(checkoutSource, /shipping_rates_unavailable: 'No shipping option is available for this address and cart\.'/);
 });

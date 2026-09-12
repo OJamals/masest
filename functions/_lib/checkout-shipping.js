@@ -360,6 +360,16 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
     ratePayload = await quoteRates(env, request);
   } catch (error) {
     if (error?.code === 'shipstation_timeout') throw new CheckoutFulfillmentError('shipping_rates_timeout', 503);
+    // Google's validator accepts streets USPS CASS cannot standardize: "123 Main St,
+    // Brooklyn NY 11201" verdicts ACCEPT and comes back without a ZIP+4, and the carrier
+    // is the first party to say otherwise, with a 400 "Address not found". Left bare that
+    // escapes as a shipstation_http_400, misses the CheckoutFulfillmentError branch in
+    // /api/shipping-rates, and reaches the buyer as a 502 reading "no shipping option is
+    // available for this address and cart" -- which says "we do not deliver to you" for
+    // what is nearly always a typo in the street.
+    if (error?.status === 400 && /address/i.test(error?.detail || '')) {
+      throw new CheckoutFulfillmentError('shipping_address_unverified', 422);
+    }
     throw error;
   }
   const rates = providerRates(ratePayload);
