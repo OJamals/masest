@@ -48,7 +48,7 @@ export function parseMarineCatalog(payload) {
 }
 
 export async function loadMarineCatalog(fetchImpl = fetch) {
-  for (const url of ["/data/marine-catalog.json?v=20260911f", "/data/industry-applications.json"]) {
+  for (const url of ["/data/marine-catalog.json?v=20260911g", "/data/industry-applications.json"]) {
     try {
       const response = await fetchImpl(url, {
         headers: { Accept: "application/json" },

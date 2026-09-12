@@ -1,9 +1,9 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260911f";
-import { smoothPref } from "./engagement.js?v=20260911f";
-import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260911f";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260911f";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260911g";
+import { smoothPref } from "./engagement.js?v=20260911g";
+import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260911g";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260911g";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -674,6 +674,9 @@ export function catalogCard(id, eager = false, context = null) {
     ? ""
     : `<span class="shop-card-quick-commerce" data-commerce-action="${id}" data-commerce-size="quick"${context?.market ? ` data-commerce-market="${htmlEscape(context.market)}"` : ""} data-customer-chat-obstruction></span>`;
   // Strict grid: image / eyebrow (1 line) / title (2 lines) / price / one action.
+  // No "See details" row: it sat inside the same <a> that already carries
+  // aria-label="View X details" and wraps the media and the title, so it repeated the
+  // card's only destination back to the reader for 34px of every card's height.
   // FITS and RESULTS (catalogDecisionHTML) moved to the detail page — a card that
   // stacks eleven blocks can't align across a row, and the buyer decides "is this
   // worth a closer look" from the photo, name and price, not a case study. The
@@ -696,7 +699,6 @@ export function catalogCard(id, eager = false, context = null) {
         <span class="shop-card-body">
           <span class="shop-card-type">${type}</span>
           <b class="shop-card-name">${htmlEscape(displayName)}</b>
-          <span class="shop-card-cta">See details <i class="ph ph-arrow-right" aria-hidden="true"></i></span>
         </span>
         </a>
         <div class="shop-card-buybar">
@@ -848,9 +850,26 @@ export function initShop() {
     });
   };
 
+  // The default "Featured" view used to walk CATALOG_ORDER, which interleaved the job
+  // groups the site defines and the chips already filter by: degrease, water, descale x3,
+  // degrease x4, exterior, water, exterior x2, descale, water. The grouping existed in
+  // code and a buyer had to click a chip to see it. Ordering by CATALOG_GROUPS clusters
+  // related products without costing a pixel of height.
+  //
+  // Anything in CATALOG_ORDER that no group claims is appended rather than dropped: the
+  // two lists happen to hold the same fifteen ids today, and a new SKU added to one and
+  // not the other must still be sellable.
+  const featuredOrder = () => {
+    const grouped = CATALOG_GROUPS.flatMap((group) => group.ids);
+    const placed = new Set(grouped);
+    return [...grouped, ...CATALOG_ORDER.filter((id) => !placed.has(id))];
+  };
+
   const visibleIds = () => {
     const marineView = state.group === MARINE_CATALOG_GROUP.key;
-    let ids = marineView ? state.marineEntries.map(({ id }) => id) : [...CATALOG_ORDER];
+    let ids = marineView
+      ? state.marineEntries.map(({ id }) => id)
+      : (state.sort === "featured" ? featuredOrder() : [...CATALOG_ORDER]);
     if (state.sort === "az") {
       ids.sort((a, b) => {
         const nameA = state.marineById.get(a)?.name || PRODUCTS[a].name;

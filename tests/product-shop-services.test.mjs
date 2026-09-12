@@ -175,7 +175,10 @@ test("product cards expose price and compact quick add without a second control 
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector(".shop-card-buybar .price-main");
 
-      const first = await page.locator(".shop-card").first().evaluate((card) => ({
+      // By data-id, not .first(): the default sort clusters by job group, so the lead
+      // card is whatever heads the first group. What this test is about is the card's
+      // structure, and it has always been cr's numbers.
+      const first = await page.locator('.shop-card[data-id="cr"]').evaluate((card) => ({
         price: card.querySelector(".price-main")?.textContent.trim(),
         subprice: card.querySelector(".price-note")?.textContent.trim(),
         variantCount: card.querySelectorAll(".commerce-vol option").length,

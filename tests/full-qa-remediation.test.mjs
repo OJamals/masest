@@ -142,19 +142,26 @@ test("sitemap publishes accurate-format last modification dates", () => {
   }
 });
 
-test("product imagery does not upscale beyond source width and secondary hero media is deferred", () => {
+test("product imagery does not upscale beyond source width and the catalog hero stays text-led", () => {
   const css = read("css/style.css");
   assert.match(css, /\.product-shot\s*\{[\s\S]*?max-width:\s*900px/);
   const products = read("products.html");
-  assert.match(
+  // This assertion used to require a high-priority preload of hvac-hcr-studio.webp and
+  // lazy, low-priority loading for the other two bottles in the hero collage. Its subject
+  // was "secondary hero media is deferred" - a ratchet against hero imagery costing LCP.
+  //
+  // The collage is gone: it stood 474px tall on a page where no product was visible
+  // without scrolling, and its lead image held a high-priority preload slot for a
+  // decoration. A text-led hero satisfies that ratchet's intent more completely than
+  // preloading ever did, so the assertion moves with it rather than pinning a mechanism
+  // whose subject no longer exists.
+  assert.doesNotMatch(
     products,
-    /<link\s+rel=["']preload["']\s+as=["']image["']\s+href=["']img\/products\/hvac-hcr-studio\.webp["']\s+fetchpriority=["']high["']>/,
+    /<link\s+rel=["']preload["']\s+as=["']image["']/,
+    "the catalog hero is text-led; nothing on it should hold an image preload slot",
   );
-  for (const product of ["crhd", "multiwash"]) {
-    const image = products.match(new RegExp(`<img[^>]+src=["'][^"']*${product}[^"']*["'][^>]*>`, "i"))?.[0] || "";
-    assert.match(image, /loading=["']lazy["']/);
-    assert.match(image, /fetchpriority=["']low["']/);
-  }
+  const heroMarkup = products.slice(0, products.indexOf('id="catalog"'));
+  assert.doesNotMatch(heroMarkup, /<img/i, "no eager hero imagery above the catalog section");
 });
 
 test("HCR marketing uses the published rust-and-scale field records", () => {

@@ -1,4 +1,4 @@
-import { esc, delegate } from '../util.js?v=20260911f';
+import { esc, delegate } from '../util.js?v=20260911g';
 
 const clean = (value) => String(value || '').trim();
 

@@ -6,9 +6,9 @@
 // Money on this screen is always display-only (moneyDisplay renders "$1,840.00" for
 // USD, falling back to money()'s "EUR 99.99" ISO form for anything else) — nothing in
 // this file feeds a CSV/export/email/PDF, those go through server-rendered paths.
-import { esc, moneyDisplay, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260911f';
-import { captureDirty, restoreDirty } from './edits.js?v=20260911f';
-import { createSavedViews } from './saved-views.js?v=20260911f';
+import { esc, moneyDisplay, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260911g';
+import { captureDirty, restoreDirty } from './edits.js?v=20260911g';
+import { createSavedViews } from './saved-views.js?v=20260911g';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 /* Lifecycle view rather than a column value: everything still owed a shipment.
