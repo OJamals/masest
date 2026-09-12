@@ -74,6 +74,18 @@ const PRICING = {
       product_mode: "buy",
       tiers: { retail: 19.27 },
     },
+    // The marine line rebrands the same product row, so it shares `product_sku`
+    // and is separated only by `market`.
+    {
+      vsku: "VK-SB-1G",
+      product_sku: "hcr",
+      product_name: "Scale Buster",
+      label: "1 gal jug",
+      market: "marine",
+      active: true,
+      product_mode: "buy",
+      tiers: { retail: 64.99 },
+    },
   ],
 };
 
@@ -125,6 +137,29 @@ test("buildProductOffers emits active buy variants with CMS prices and stock-awa
       seller: { "@type": "Organization", name: "MASEST Consulting LLC" },
     },
   ]);
+});
+
+test("buildProductOffers keeps the marine line out of the industrial product page", () => {
+  const industrial = buildProductOffers({
+    productSku: "hcr",
+    pageUrl: "https://masest.co/products/hcr",
+    pricing: PRICING,
+  });
+
+  assert.deepEqual(industrial.map((offer) => offer.sku), ["VK-HCR-1G", "VK-HCR-2.5G", "VK-HCR-5G"]);
+  assert.equal(industrial.some((offer) => /Scale Buster/.test(offer.name)), false);
+  // The published price range must match the buybar the page renders, not the
+  // union of every market that shares this product_sku.
+  assert.equal(Math.max(...industrial.map((offer) => Number(offer.price))), 108.15);
+
+  const marine = buildProductOffers({
+    productSku: "hcr",
+    pageUrl: "https://masest.co/products/hcr",
+    pricing: PRICING,
+    market: "marine",
+  });
+
+  assert.deepEqual(marine.map((offer) => offer.sku), ["VK-SB-1G"]);
 });
 
 test("injectProductOffers adds the CMS offers to the existing Product node", () => {
