@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /* Generate per-industry landing pages into site/industries/<slug>.html
    from a single data source. Re-runnable; overwrites. Pages are static HTML
-   (real, indexable URLs); product cards are filled at runtime by
-   initIndustryProducts() in js/main.js so they stay in sync with PRODUCTS{}.
+   (real, indexable URLs); the recommended-product cards are rendered here from the
+   same productCard() the client uses (tools/industry-product-grid.mjs), so they are
+   in the HTML for crawlers that do not run JavaScript and still stay in sync with
+   PRODUCTS{}. initIndustryProducts() leaves a populated grid alone.
 
    Run from anywhere:  node site/tools/gen_industries.mjs
 */
@@ -10,6 +12,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { proofCardHtml } from "../js/proof-records.js";
+import { industryProductGrid } from "./industry-product-grid.mjs";
 import { organizationJsonLd } from "./company-identity.mjs";
 import { COMPONENT_VERSION, MAIN_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
@@ -505,7 +508,7 @@ function recommendedProductsBlock(ind) {
         <h2 class="headline">VertKleen products for ${ind.name}.</h2>
           <p class="subhead">Match the cleaner to the mess, surface, and way your team cleans.</p>
       </div>
-      <div class="prod-grid prod-grid-rec" data-ind-products="${ind.products.join(" ")}"></div>
+      ${industryProductGrid(ind.products)}
     </div>
   </section>`;
 }

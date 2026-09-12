@@ -1,12 +1,18 @@
 /* Industry product blocks, lightbox, and image fallback helpers. */
 
-import { PRODUCTS } from "./catalog-data.js?v=20260911g";
-import { productCard } from "./commerce-ui.js?v=20260911g";
+import { PRODUCTS } from "./catalog-data.js?v=20260912a";
+import { productCard } from "./commerce-ui.js?v=20260912a";
 
 export function initIndustryProducts() {
   document.querySelectorAll("[data-ind-products]").forEach((box) => {
     const ids = (box.dataset.indProducts || "").split(/\s+/).filter((id) => PRODUCTS[id]);
     if (!ids.length) return;
+    // tools/industry-product-grid.mjs renders these cards into the HTML from this
+    // same productCard(), so crawlers that do not run JavaScript still read the
+    // product names. Repainting identical markup would only cost a layout pass and
+    // throw away the browser's decoded images. refreshCommerceActions() walks the
+    // document and hydrates the live price and buy controls either way.
+    if (box.querySelector(".prod-card")) return;
     box.innerHTML = ids.map((id) => productCard(id)).join("");
     // Industry pages live one level deep; rewrite relative product assets and
     // links to resolve from /industries/.

@@ -10,6 +10,7 @@ import {
   documentSurfaceMode,
 } from "./public-document-policy.mjs";
 import { COMPONENT_VERSION, STYLE_VERSION } from "./static-release.mjs";
+import { replaceIndustryProductGrid } from "./industry-product-grid.mjs";
 
 const root = new URL("../", import.meta.url);
 const registryPath = new URL("data/industry-applications.json", root);
@@ -455,10 +456,11 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
     `css/components.css?v=${COMPONENT_VERSION}`,
   );
   if (expectedProductMounts) {
-    html = html.replace(
-      /data-ind-products="[^"]*"/,
-      `data-ind-products="${escapeHtml(industry.products.join(" "))}"`,
-    );
+    // Rewrites the cards with the attribute. Replacing the attribute alone would
+    // leave the previous build's product cards sitting under a new product list.
+    const withProducts = replaceIndustryProductGrid(html, industry.products);
+    if (withProducts === null) throw new Error(`${industry.slug}: recommended-product grid not found`);
+    html = withProducts;
   }
   let output = replaceMarker(html, "hero-facts", hero);
   if (output === null) {
