@@ -2,30 +2,26 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
+import { attr, find, findAll, rawOf } from "../tools/html-query.mjs";
 import { industryProductCards, replaceIndustryProductGrid } from "../tools/industry-product-grid.mjs";
 
 const root = new URL("../", import.meta.url);
 const read = (file) => readFileSync(new URL(file, root), "utf8");
 const industryPages = readdirSync(new URL("industries/", root)).filter((file) => file.endsWith(".html"));
 
-const GRID_OPEN = /<div class="prod-grid prod-grid-rec" data-ind-products="([^"]*)"\s*>/;
+const GRID = { tag: "div", classes: ["prod-grid", "prod-grid-rec"], attrs: { "data-ind-products": null } };
 
-// The cards nest <div>s, so the element has to be closed by matching depth. A
-// non-greedy regex closes on the first inner </div> and silently reports one card.
+// parse5 rather than a regex: the cards nest <div>s, so a non-greedy pattern closes on the
+// first inner </div> and reports one card per grid however many are there.
 function gridOf(html) {
-  const open = html.match(GRID_OPEN);
-  if (!open) return null;
-  const tag = /<\/?div\b[^>]*>/g;
-  tag.lastIndex = open.index;
-  let depth = 0;
-  let match;
-  while ((match = tag.exec(html))) {
-    depth += match[0].startsWith("</") ? -1 : 1;
-    if (depth === 0) {
-      return { ids: open[1].split(/\s+/).filter(Boolean), html: html.slice(open.index, match.index + match[0].length) };
-    }
-  }
-  throw new Error("Unclosed recommended-product grid");
+  const node = find(html, GRID, { locations: true });
+  if (!node) return null;
+  return {
+    node,
+    ids: String(attr(node, "data-ind-products") || "").split(/\s+/).filter(Boolean),
+    cards: findAll(node, { tag: "div", classes: ["prod-card"] }),
+    html: rawOf(html, node),
+  };
 }
 
 test("every industry recommended-product grid ships its cards in the HTML", () => {
@@ -39,11 +35,7 @@ test("every industry recommended-product grid ships its cards in the HTML", () =
     if (!grid) continue;
     mounted.push(page);
     assert.ok(grid.ids.length, `${page}: recommended-product grid lists no products`);
-    assert.equal(
-      (grid.html.match(/class="prod-card/g) || []).length,
-      grid.ids.length,
-      `${page}: one card per product in data-ind-products`,
-    );
+    assert.equal(grid.cards.length, grid.ids.length, `${page}: one card per product in data-ind-products`);
     for (const id of grid.ids) {
       assert.ok(grid.html.includes(`href="/products/${id}"`), `${page}: ${id} card links to its product page`);
     }
@@ -59,7 +51,7 @@ test("server-rendered industry cards are byte-identical to the client renderer",
     const grid = gridOf(read(`industries/${page}`));
     if (!grid) continue;
     const expected = industryProductCards(grid.ids);
-    const cards = grid.html.replace(GRID_OPEN, "").replace(/<\/div>$/, "").trim();
+    const cards = grid.html.slice(grid.html.indexOf(">") + 1, grid.html.lastIndexOf("</div>")).trim();
     assert.equal(cards, expected, `${page}: shipped cards differ from productCard() output`);
   }
 });
@@ -73,7 +65,7 @@ test("industry product images resolve through the R2 media registry", () => {
   for (const page of industryPages) {
     const grid = gridOf(read(`industries/${page}`));
     if (!grid) continue;
-    const sources = [...grid.html.matchAll(/\ssrc="([^"]+)"/g)].map((match) => match[1]);
+    const sources = findAll(grid.node, { tag: "img" }).map((img) => attr(img, "src"));
     assert.ok(sources.length, `${page}: cards render no product image`);
     for (const src of sources) {
       assert.match(src, /^\.\.\/img\//, `${page}: ${src} must stay relative to /industries/`);

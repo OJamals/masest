@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
+import { find, textOf as nodeText } from "../tools/html-query.mjs";
+
 const root = new URL("../", import.meta.url);
 const read = (file) => readFileSync(new URL(file, root), "utf8");
 const industries = JSON.parse(read("data/industry-applications.json")).industries;
@@ -17,14 +19,10 @@ const ROWS = [
   ["wastewater", "Wash water"],
 ];
 
-const textOf = (html) => html
-  .replace(/<script[\s\S]*?<\/script>/g, " ")
-  .replace(/<[^>]+>/g, " ")
-  .replace(/&amp;/g, "&")
-  .replace(/&#39;/g, "'")
-  .replace(/&quot;/g, '"')
-  .replace(/\s+/g, " ")
-  .trim();
+// parse5 decodes entities and drops <script> content for us; hand-rolled tag stripping
+// left &#39; and &amp; in the text and compared them against raw registry copy.
+const textOf = (html) => nodeText(find(html, { tag: "body" }) || find(html, { tag: "dl" }) || null)
+  || nodeText(find(`<div>${html}</div>`, { tag: "div" }));
 
 test("every industry page ships the operating standard its registry entry carries", () => {
   // These six fields were authored per industry and reached no page at all: the
