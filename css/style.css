@@ -302,9 +302,13 @@ h3 {
   text-wrap: balance;
 }
 .display {
+  /* No font-size here: the .display below sets it, and a second declaration in this block
+     was shadowed and had been for long enough that an audit mistook the whole rule for
+     dead. The rest of these properties are live and load-bearing - overflow-wrap is what
+     keeps a long headline inside its container. */
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: clamp(2.6rem, 5.4vw, 4.2rem); font-weight: var(--heading-weight);
+  font-weight: var(--heading-weight);
   letter-spacing: -0.035em; line-height: 1.02;
 }
 .headline { min-width: 0; overflow-wrap: anywhere; font-size: clamp(1.75rem, 3.4vw, 2.55rem); font-weight: 700; letter-spacing: -0.028em; }
@@ -609,7 +613,6 @@ scoped to the hero */
   align-items: center;
 }
 .contact-hero-copy { min-width: 0; }
-.contact-hero-copy .display { font-size: clamp(3rem, 5.5vw, 5rem); }
 .contact-hero-copy .subhead { max-width: 58ch; }
 .contact-hero-actions {
   display: flex;
@@ -637,7 +640,6 @@ scoped to the hero */
   .contact-hero-media { aspect-ratio: 16 / 9; }
 }
 @media (max-width: 560px) {
-  .contact-hero-copy .display { font-size: clamp(2.7rem, 13vw, 3.5rem); }
   .contact-hero-media {
     aspect-ratio: 4 / 3;
     border-radius: var(--r-input);
@@ -1301,7 +1303,12 @@ light) ---------- */
   align-items: center;
 }
 .page-hero-scene-copy { min-width: 0; }
-.page-hero-scene .display {
+/* The compact heading step. Shared by every hero whose headline is a full sentence
+   rather than a phrase, which at this width wraps to three or four lines at the default
+   size. One rule, not one per page: services and this were within 0.1rem of each other
+   at every stop, which is two hand-tunings of a single intent rather than two sizes. */
+.page-hero-scene .display,
+.services-hero-copy .display {
   max-width: 780px;
   font-size: clamp(2.8rem, 5vw, 4.8rem);
 }
@@ -1327,6 +1334,10 @@ light) ---------- */
 }
 @media (max-width: 560px) {
   .page-hero-scene { padding: var(--s8) 0 var(--s8); }
+  /* page-hero-scene only. The services hero also carries .product-catalog-hero, whose
+     own <=720px rule is declared later and wins there, so naming services here would be
+     a shadowed declaration of exactly the kind removed above. Below 721px the two catalog
+     pages, services and products, deliberately share that smaller step. */
   .page-hero-scene .display { font-size: clamp(2.45rem, 12vw, 3.25rem); }
   .page-hero-scene-media {
     aspect-ratio: 4 / 3;
@@ -6067,11 +6078,6 @@ body .page-hero .product-shot {
   align-items: center;
 }
 
-.services-hero-copy .display {
-  max-width: 780px;
-  font-size: clamp(2.7rem, 4.8vw, 4.7rem);
-}
-
 .services-hero-copy .subhead {
   max-width: 58ch;
 }
@@ -7249,6 +7255,13 @@ button.viz-segment {
     gap: var(--s6);
   }
 
+  /* Services keeps its own step below 721px, deliberately, and must not be folded into
+     .product-catalog-hero's smaller one even though the services hero carries that class.
+     The h1 is this page's LCP element; shrinking it here dropped a line and took its area
+     under the subhead's, which handed LCP to the subhead on a Pixel 7. Both are text in
+     the same paint so the timing barely moves, but /services' LCP was measured and fixed
+     this week and is not worth trading for 0.8px of consistency. Above 720px services
+     shares the compact step with .page-hero-scene. */
   .services-hero-copy .display {
     font-size: clamp(2.05rem, 10vw, 2.8rem);
   }
