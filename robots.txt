@@ -1,11 +1,57 @@
+# Crawl preferences for masest.co.
+#
+# These rules used to be prepended at the edge by Cloudflare's managed robots.txt, which
+# is an all-or-nothing list: it disallowed Google-Extended alongside the training
+# scrapers, and there is no way to keep one and drop another inside it. Google-Extended
+# is the token that decides whether Google may use this site for Gemini Apps and the
+# Vertex AI API for Gemini, both for training and for grounding answers at prompt time.
+# It does NOT affect Googlebot, Google Search ranking, or AI Overviews in Search.
+# Allowing it is a deliberate decision to be visible in Gemini's answers.
+#
+# So the managed block is off and the file lives here, versioned and reviewable.
+# tests/robots-crawl-preferences.test.mjs pins the parts that matter.
+
+# search:   building a search index and returning links and short excerpts.
+# ai-input: supplying content to a model at prompt time - retrieval, grounding, the thing
+#           that produces a citation.
+# ai-train: training or fine-tuning models.
+# use:      how an AI system may consume the content.
+# Restrictions expressed as content signals are express reservations of rights under
+# Article 4 of EU Directive 2019/790.
+
 User-agent: *
+Content-Signal: search=yes,ai-input=yes,ai-train=no,use=reference
 Allow: /
-Disallow: /account.html
-Disallow: /dashboard.html
-Disallow: /business.html
-Disallow: /admin.html
-Disallow: /cart.html
-Disallow: /order-confirmed.html
 Disallow: /api/
+
+# Bulk training and scraping crawlers. These are not the crawlers that produce citations:
+# OAI-SearchBot, ChatGPT-User and PerplexityBot fetch at answer time and are allowed above.
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+# The signed-in surfaces - cart, checkout, account, dashboard, business, admin,
+# order-confirmed - are kept out of the index by their own <meta name="robots"
+# content="noindex">, deliberately and NOT by a Disallow here. A disallowed URL cannot be
+# fetched, so its noindex can never be read, and the page can still be indexed from
+# inbound links with no snippet. The previous Disallow list pointed at .html paths that
+# now 308-redirect to clean routes, so it was inert and hid this.
 
 Sitemap: https://masest.co/sitemap.xml
