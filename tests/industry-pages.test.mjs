@@ -689,7 +689,15 @@ test('supplemental routes state a narrower buyer, task scope, and search intent 
     )?.[1] || '';
     assert.match(scope, /Built for your work/);
     assert.match(scope, new RegExp(industry.buyer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.match(scope, /This page focuses on the cleaning jobs, products, and results most useful to your operation\./);
+    // The page states the work it covers, in its own words. Ten pages used to share one
+    // generic sentence here while distinct_scope went unrendered, which left the block
+    // whose whole job is separating a page from its parent reading identically on all of
+    // them. Only the positive half ships: the registry's contrastive "- not that work"
+    // tail stays in the registry, which is what the doesNotMatch below holds.
+    const covered = industry.distinct_scope.split(/\s+[-–—]\s+not\s+/i)[0].trim().replace(/[.,;]+$/, '');
+    assert.ok(covered.split(/\s+/).length >= 6, `${industry.slug}: covered scope must be a sentence`);
+    assert.match(scope, new RegExp(covered.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.doesNotMatch(scope, /This page focuses on the cleaning jobs, products, and results most useful to your operation\./);
     assert.doesNotMatch(scope, /not general|search intent|distinct scope/i);
     assert.match(scope, new RegExp(`href="./${industry.parent}"`));
   }

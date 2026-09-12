@@ -343,6 +343,23 @@ function renderTrialBrief(industry) {
       </section>`;
 }
 
+// A supplemental page exists because its work is not its parent's work. distinct_scope
+// states that in one sentence per page, built as "this work - not that work", and all ten
+// pages shipped a single generic line instead while the sentence went unrendered.
+//
+// Only the positive half reaches the page. tests/industry-pages.test.mjs keeps the
+// registry's contrastive framing out of customer copy on purpose -- it bans the phrase
+// "not general" in this block, and its sibling guards say the same thing twice more
+// ("technical boundaries stay in the registry", "wastewater guidance stays in registry").
+// Telling a buyer what a page is not is taxonomy; telling them what it covers is copy.
+function supplementalScopeSentence(industry) {
+  const scope = String(industry.distinct_scope || "").trim();
+  const [covered] = scope.split(/\s+[-–—]\s+not\s+/i);
+  const sentence = String(covered || "").trim().replace(/[.,;]+$/, "");
+  if (!sentence) throw new Error(`${industry.slug}: distinct_scope must state what the page covers`);
+  return `${sentence}.`;
+}
+
 function renderApplications(industry, allIndustries, documents) {
   const parent = industry.parent
     ? allIndustries.find((candidate) => candidate.slug === industry.parent)
@@ -353,7 +370,7 @@ function renderApplications(industry, allIndustries, documents) {
       <aside class="ind-scope-note" data-supplemental-scope>
         <span class="eyebrow">Built for your work</span>
         <h3>${escapeHtml(industry.buyer)}</h3>
-        <p>This page focuses on the cleaning jobs, products, and results most useful to your operation.</p>
+        <p>${escapeHtml(supplementalScopeSentence(industry))}</p>
         <p class="ind-related">See the broader industry: <a href="./${escapeHtml(parent.slug)}">${escapeHtml(parent.label)}</a></p>
       </aside>`
     : children.length
