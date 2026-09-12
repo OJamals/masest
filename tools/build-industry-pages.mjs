@@ -401,6 +401,44 @@ function renderApplications(industry, allIndustries, documents) {
         </div>
       </div>
     </div>
+  </section>${renderOperatingStandard(industry)}`;
+}
+
+// Six fields the registry has carried for every industry, each one distinct per industry,
+// and none of which reached a page: concentration, process, boundary, verification,
+// materials and wastewater. The applications grid above answers "what" -- the job, the
+// assets, the soil, the products. This answers "how it is actually run", which is the
+// question a facilities engineer or sanitation lead asks before trialling anything, and
+// it is what an answer engine has to quote from if it is going to quote the site at all.
+// The labels are buyer-facing; the registry field names are not.
+function renderOperatingStandard(industry) {
+  const rows = [
+    ["Dilution", industry.concentration],
+    ["What to log", industry.process],
+    ["Site controls", industry.boundary],
+    ["Finished-result check", industry.verification],
+    ["Surfaces", industry.materials],
+    ["Wash water", industry.wastewater],
+  ];
+  for (const [label, value] of rows) {
+    if (!String(value || "").trim()) throw new Error(`${industry.slug}: missing operating standard for ${label}`);
+  }
+  const grid = rows
+    .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`)
+    .join("\n        ");
+
+  return `
+<section class="section section-slim ind-operating" id="how-the-work-is-run" data-industry-operating-standard>
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">On site</span>
+        <h2 class="headline">How the work is run on site.</h2>
+        <p class="subhead">Set the job up the way the crew will actually run it, then check the finished result against the same marks every time.</p>
+      </div>
+      <dl class="ind-proof-grid">
+        ${grid}
+      </dl>
+    </div>
   </section>`;
 }
 

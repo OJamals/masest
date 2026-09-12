@@ -136,7 +136,7 @@
       ],
       "concentration": "Use only the current CR HD or Neutral label/TDS range; begin at the weakest effective dilution after an aluminum, coating, and elastomer coupon test.",
       "process": "Record solution temperature, wet soak, brush or parts-washer scrubbing, rinse-water quality, and dry time; never let chemistry dry on the surface.",
-      "boundary": "Use the crew member's maintenance manual, material approvals, lockout, FOD controls, and wash-water capture. No application to flight-critical parts without written engineering approval.",
+      "boundary": "Use the operator's maintenance manual, material approvals, lockout, FOD controls, and wash-water capture. No application to flight-critical parts without written engineering approval.",
       "verification": "Dry visual inspection under task lighting, white-wipe or water-break check where approved, and corrosion/coating inspection before return to service.",
       "materials": "Aluminum alloy, stainless steel, painted steel, composites, sealants, and elastomers",
       "wastewater": "Capture ramp and shop wash water; route oil-bearing waste through the airport's approved separator and discharge program."
@@ -655,7 +655,7 @@
       "boundary": "Use the facility SSOP, isolate product and allergen paths, verify food-contact materials, and never substitute a cleaning claim for sanitizing or disinfection.",
       "verification": "No visible residue, rinse pH/conductivity at baseline, and the facility's ATP, protein/allergen, or microbiological acceptance result.",
       "materials": "304/316 stainless steel, PVC, approved elastomers, conveyor polymers, aluminum where permitted, and heat-exchanger gaskets",
-      "wastewater": "Balance pH and organic load within the pretreatment permit; schedule discharge volume with the plant's wastewater crew member."
+      "wastewater": "Balance pH and organic load within the pretreatment permit; schedule discharge volume with the plant's wastewater operator."
     },
     {
       "slug": "agriculture",
