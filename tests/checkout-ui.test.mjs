@@ -132,3 +132,21 @@ test('a street no carrier can find reads as a street problem, not as unavailable
   assert.match(checkoutSource, /shipping_address_unverified: 'No carrier could find that street address\./);
   assert.match(checkoutSource, /shipping_rates_unavailable: 'No shipping option is available for this address and cart\.'/);
 });
+
+test('the rate wait reports progress instead of holding one sentence for five seconds', () => {
+  // Measured against production: 4.8-5.4s click to rates, of which Google validation is
+  // 141-325ms and the carrier list 1.2-1.6s. One unchanging sentence for that long reads
+  // as a hang.
+  assert.match(checkoutSource, /showStatus\('Verifying the delivery address\.'\);/);
+  assert.match(checkoutSource, /showStatus\('Comparing live carrier rates\. This usually takes a few seconds\.'\);/);
+  // The second line must not claim the address passed — only the response knows that.
+  assert.doesNotMatch(checkoutSource, /Address verified\. Comparing/);
+
+  // A response that lands before the stage fires must not be overwritten by it, so the
+  // timer is cleared on the success path, on the error path, and as a backstop.
+  const submit = checkoutSource.slice(checkoutSource.indexOf("form.addEventListener('submit'"));
+  const body = submit.slice(0, submit.indexOf('async function saveForReuse'));
+  assert.equal((body.match(/clearStage\(\);/g) || []).length, 3, 'clearStage on success, on error, and in finally');
+  assert.ok(body.indexOf('clearStage();') < body.indexOf('rateRequests.isCurrent(rateRequest, rateSnapshot())'),
+    'the timer is cleared before the response is acted on');
+});

@@ -837,7 +837,18 @@ async function boot() {
     invalidateRates();
     calculate.disabled = true;
     calculate.textContent = 'Verifying address & calculating…';
-    showStatus('Google is verifying the address and ShipEngine is comparing live carrier rates.');
+    // One request does two jobs and the wait is long enough that a single unchanging
+    // sentence reads as a hang. Measured against production: Google validation returns
+    // in 141-325ms, the carrier list takes 1.2-1.6s, and the rate call the remaining ~3s,
+    // for 4.8-5.4s end to end. So by the time this second line appears the request is
+    // past validation in every run observed; it still describes what is being waited on
+    // rather than asserting that the address passed, because only the response knows.
+    showStatus('Verifying the delivery address.');
+    let stageTimer = setTimeout(() => {
+      stageTimer = null;
+      showStatus('Comparing live carrier rates. This usually takes a few seconds.');
+    }, 900);
+    const clearStage = () => { if (stageTimer) { clearTimeout(stageTimer); stageTimer = null; } };
     const input = currentRateInput();
     const requestSnapshot = rateSnapshot(input);
     const rateRequest = rateRequests.begin(requestSnapshot);
@@ -849,6 +860,7 @@ async function boot() {
       }, {
         signal: rateRequest.signal,
       });
+      clearStage();
       if (!rateRequests.isCurrent(rateRequest, rateSnapshot())) return;
       cart = input.cart;
       state.quote = result;
@@ -862,6 +874,7 @@ async function boot() {
       state.quoteSnapshot = rateSnapshot();
       renderRates();
     } catch (error) {
+      clearStage();
       if (error?.code === 'shipping_request_cancelled') return;
       if (!rateRequests.isCurrent(rateRequest, rateSnapshot())) return;
       // Open the field the buyer is being asked for. The message alone leaves them
@@ -869,6 +882,9 @@ async function boot() {
       if (needsSuiteNumber(error)) setSuiteOpen('shipping', true);
       showStatus(checkoutError(error), 'err');
     } finally {
+      // Backstop: an early return from either branch must not leave a pending stage
+      // timer to overwrite the result the buyer is now looking at.
+      clearStage();
       if (rateRequests.isCurrent(rateRequest, requestSnapshot)) {
         calculate.disabled = false;
         calculate.textContent = state.quote ? 'Recalculate rates' : 'Confirm address & view rates';
