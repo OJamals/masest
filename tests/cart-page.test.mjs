@@ -383,3 +383,104 @@ test("a 320px cart does not push its own content past the right edge", async () 
     }
   });
 });
+
+test("cart blocks checkout for a SKU the catalog no longer sells", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage();
+    try {
+      // The catalog knows HCRCIP-1G and nothing else, so RETIRED-1G is the stale-bookmark
+      // case: a cart saved before a product was renamed or retired. DBNPA was discontinued
+      // for real, so this is not hypothetical.
+      await routeProducts(page);
+      await page.addInitScript(() => {
+        localStorage.setItem("masest_cart", JSON.stringify({ "RETIRED-1G": 1 }));
+      });
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+      await page.locator(".cart-line:not(.cart-line-skeleton)").first().waitFor();
+
+      // Before this guard existed the line passed straight through -- `meta && !meta.purchasable`
+      // reads false when meta is undefined -- and the buyer met a 409 at /api/shipping-rates
+      // several screens later, with the cart line no longer in front of them.
+      const checkout = page.locator("#checkoutContinue");
+      assert.equal(await checkout.getAttribute("aria-disabled"), "true");
+      assert.equal(await checkout.getAttribute("tabindex"), "-1");
+      assert.match(
+        (await page.locator("#cartStatus").textContent()) || "",
+        /no longer sold in this size/i,
+        "a retired SKU needs different words than a bulk freight size",
+      );
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("cart does not condemn a good line while the catalog is still loading", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage();
+    let releaseProducts;
+    const productsBlocked = new Promise(resolve => { releaseProducts = resolve; });
+    try {
+      // Every line's meta is undefined until /api/products answers. The blocked-line guard
+      // is gated on catalogReady precisely so that window does not disable checkout on a
+      // cart that turns out to be perfectly buyable.
+      await page.addInitScript(() => {
+        window.MASEST_ENABLE_LOCAL_API = true;
+        localStorage.setItem("masest_cart", JSON.stringify({ "HCRCIP-1G": 1 }));
+      });
+      await page.route("**/api/products", async route => {
+        await productsBlocked;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ products: [hcrProduct()] }),
+        });
+      });
+
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+      await page.locator(".cart-line-skeleton").first().waitFor();
+      assert.notEqual(await page.locator("#checkoutContinue").getAttribute("aria-disabled"), "true");
+
+      releaseProducts();
+      await page.locator(".cart-line:not(.cart-line-skeleton)").first().waitFor();
+      assert.equal(await page.locator("#checkoutContinue").getAttribute("aria-disabled"), "false");
+    } finally {
+      releaseProducts?.();
+      await browser.close();
+    }
+  });
+});
+
+test("a failed catalog does not condemn every line in a good cart", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser({ channel: "chrome" });
+    const page = await browser.newPage();
+    try {
+      // loadCatalog() swallows every failure and catalogReady is set in a .finally(), so a
+      // 503 leaves vmap empty and indistinguishable from "the catalog answered and this SKU
+      // is not in it" -- unless the two are tracked separately. Gating the retired-SKU guard
+      // on catalogReady rather than catalogAnswered disabled checkout for a perfectly
+      // buyable cart on the one day /api/products was down. tools/homepage-vitals caught it
+      // as a CLS regression, because the error status un-hiding is itself a layout shift.
+      await page.addInitScript(() => {
+        window.MASEST_ENABLE_LOCAL_API = true;
+        localStorage.setItem("masest_cart", JSON.stringify({ "HCRCIP-1G": 2 }));
+      });
+      await page.route("**/api/products", route => route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "catalog_unavailable" }),
+      }));
+
+      await page.goto(`${BASE_URL}/cart.html`, { waitUntil: "domcontentloaded" });
+      await page.locator(".cart-line:not(.cart-line-skeleton)").first().waitFor();
+
+      assert.equal(await page.locator("#checkoutContinue").getAttribute("aria-disabled"), "false");
+      assert.equal(await page.locator("#cartStatus").isVisible(), false);
+    } finally {
+      await browser.close();
+    }
+  });
+});

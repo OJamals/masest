@@ -250,6 +250,12 @@
   // vsku -> { name, price, currency }, flattened from /api/products variants.
   const vmap = new Map();
   let catalogReady = false;
+  // catalogReady only means the request settled - loadCatalog() swallows every failure and
+  // the .finally() below sets it either way. catalogAnswered means the catalog actually came
+  // back with products, which is the only state in which "this SKU is not in the catalog"
+  // means anything. Without the distinction, an API outage empties vmap and every line in a
+  // perfectly good cart looks retired.
+  let catalogAnswered = false;
   const fallbackNames = {
     crhd: "VertKleen CR HD",
     hcr: "VertKleen HCR",
@@ -260,7 +266,9 @@
     const r = await fetch("/api/products", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
     if (!r.ok) return;
       const data = await r.json();
-      (data.products || []).forEach(p => {
+      const catalogProducts = data.products || [];
+      catalogAnswered = catalogProducts.length > 0;
+      catalogProducts.forEach(p => {
         const parent = p.products && typeof p.products === "object" ? p.products : p;
         if (p.vsku) {
           const productName = parent.name || p.name || p.sku;
@@ -365,15 +373,35 @@
     const cartItems = items();
     saveRequisitionForm.hidden = !canSaveRequisition || !cartItems.length;
     syncQuoteHref();
-    const hasBlockedLine = cartItems.some(item => {
+    // Two different reasons a line cannot be bought online, and they need different words.
+    //
+    // A line the catalog KNOWS and marks unpurchasable is a bulk freight size — the buyer
+    // is meant to take the quote path. A line the catalog does not know at all is a stale
+    // SKU: a bookmarked cart from before a product was renamed or retired, which is a real
+    // case here since DBNPA was discontinued. That second kind used to pass this guard
+    // entirely, because `meta && !meta.purchasable` is false when `meta` is undefined, and
+    // the buyer only discovered it at /api/shipping-rates, several screens later, as a 409
+    // shipping_product_unavailable. Catch it on the page where the line is still visible
+    // and removable.
+    //
+    // Gated on catalogAnswered, not catalogReady. Before the catalog answers every line's
+    // meta is undefined, and blocking then would condemn a good cart for 1.4s; when the
+    // request FAILED, meta is undefined forever and blocking would condemn it permanently,
+    // on the one day the API is down. Only an answered catalog can say a SKU is retired.
+    const blockedLines = cartItems.filter(item => {
       const meta = vmap.get(item.sku);
-      return meta && !meta.purchasable;
+      if (!meta) return catalogAnswered;
+      return !meta.purchasable;
     });
+    const hasBlockedLine = blockedLines.length > 0;
+    const unknownOnly = hasBlockedLine && blockedLines.every(item => !vmap.get(item.sku));
     checkoutContinue.setAttribute("aria-disabled", hasBlockedLine ? "true" : "false");
     checkoutContinue.tabIndex = hasBlockedLine ? -1 : 0;
     if (hasBlockedLine) {
       status.dataset.state = "err";
-      status.textContent = "Remove bulk freight items before checkout, or send a quote request.";
+      status.textContent = unknownOnly
+        ? "One item is no longer sold in this size. Remove it to continue, or ask us for a quote."
+        : "Remove bulk freight items before checkout, or send a quote request.";
       status.hidden = false;
     } else if (status.dataset.state === "err" && cartItems.length) {
       status.dataset.state = "";
@@ -691,6 +719,7 @@
   }
 
   catalogReady = false;
+  catalogAnswered = false;
   render();
   loadCatalog().finally(() => { catalogReady = true; render(); });
   // One me() for both jobs. Staff run the store rather than shop it — the nav already
