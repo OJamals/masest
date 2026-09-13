@@ -62,7 +62,10 @@ test('manual order entry uses a business picker and structured line items', () =
   }
   // Business lookup by name, with stale responses dropped.
   assert.match(ordersUi, /\/api\/admin\/companies\?search=\$\{encodeURIComponent\(term\)\}/);
-  assert.match(ordersUi, /if \(token !== lookupSeq\) return/);
+  // The stale-response guard moved into the lookup that the create form and every order edit
+  // form now share, with its sequence kept per search box so re-rendered edit forms cannot
+  // share one. tools/admin-order-company-picker.spec.mjs proves the drop in a browser.
+  assert.match(ordersUi, /function lookupCompanies\(search, select[\s\S]*?if \(token !== entry\.seq\) return/);
   // Totals derive from the lines so they cannot disagree with them.
   assert.match(ordersUi, /function refreshOrderCreateTotals\(\)/);
   assert.match(ordersUi, /subtotal \+ tax/);

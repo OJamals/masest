@@ -6,9 +6,9 @@
 // Money on this screen is always display-only (moneyDisplay renders "$1,840.00" for
 // USD, falling back to money()'s "EUR 99.99" ISO form for anything else) — nothing in
 // this file feeds a CSV/export/email/PDF, those go through server-rendered paths.
-import { esc, moneyDisplay, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260912a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260912a';
-import { createSavedViews } from './saved-views.js?v=20260912a';
+import { esc, moneyDisplay, dateTime as date, confirmDialog, delegate, detailDialog, promptDialog, rowMatchesQuery } from '../util.js?v=20260913a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260913a';
+import { createSavedViews } from './saved-views.js?v=20260913a';
 
 export const ORDER_STATUSES = ['pending_payment', 'paid', 'net_open', 'net_paid', 'fulfilled', 'cancelled', 'refunded'];
 /* Lifecycle view rather than a column value: everything still owed a shipment.
@@ -91,6 +91,31 @@ export function orderAdjustmentEvidence(providerLinks = []) {
     promotionDiscountMinor: positiveMinor(metadata.promotion_discount_minor),
     storeCreditMinor: positiveMinor(metadata.store_credit_minor),
   };
+}
+
+// One option list for both business pickers. The order's current business is pinned, so a
+// search that happens not to match it cannot drop it, and the prior selection survives a
+// rebuild whenever it is still offered. Without the pin, typing a name and clearing it would
+// silently turn a business order into a guest order on the next save.
+export function companyOptions(companies = [], { pinned = null, selected = '' } = {}) {
+  const seen = new Set();
+  const rows = [];
+  if (pinned?.id) {
+    seen.add(String(pinned.id));
+    rows.push({ id: String(pinned.id), name: pinned.name || String(pinned.id), status: null });
+  }
+  for (const company of Array.isArray(companies) ? companies : []) {
+    const id = String(company?.id || '');
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    rows.push({ id, name: company.name || id, status: company.status || null });
+  }
+  // A choice that is no longer offered falls back to the pinned business, not to guest:
+  // otherwise pick a result, search again, and the save strips the order's business.
+  const keep = seen.has(String(selected || '')) ? String(selected) : (pinned?.id ? String(pinned.id) : '');
+  const option = (value, label) => `<option value="${esc(value)}"${value === keep ? ' selected' : ''}>${label}</option>`;
+  return option('', 'No business (guest order)')
+    + rows.map((row) => option(row.id, `${esc(row.name)}${row.status && row.status !== 'approved' ? ` (${esc(row.status)})` : ''}`)).join('');
 }
 
 export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats, onMessageCustomer }) {
@@ -384,13 +409,46 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
     });
   }
 
+  // Shared by the create form and every order's edit form: staff type a business name and
+  // choose from real companies instead of pasting a UUID. The server stores company_id as
+  // free text (functions/_lib/staff-order-operations.js), so this picker is what keeps a
+  // mistyped id out of an order. State is per search box, so edit forms that re-render do
+  // not share a debounce or a stale-response token.
+  const companyLookups = new WeakMap();
+  function lookupCompanies(search, select, { statusId, pinned = null } = {}) {
+    let entry = companyLookups.get(search);
+    if (!entry) { entry = { seq: 0, timer: null }; companyLookups.set(search, entry); }
+    clearTimeout(entry.timer);
+    entry.timer = setTimeout(async () => {
+      const term = search.value.trim();
+      const token = ++entry.seq;
+      if (term.length < 2) {
+        select.innerHTML = companyOptions([], { pinned, selected: select.value });
+        return;
+      }
+      try {
+        const res = await api(`/api/admin/companies?search=${encodeURIComponent(term)}&limit=20`);
+        if (token !== entry.seq) return; // a newer keystroke already won
+        const companies = res.companies || [];
+        select.innerHTML = companyOptions(companies, { pinned, selected: select.value });
+        if (!companies.length && statusId) message(statusId, `No business matches “${term}”.`, '');
+      } catch { /* leave the current options in place */ }
+    }, 220);
+  }
+
+  function pinnedCompany(select) {
+    const id = select?.dataset.currentCompanyId;
+    return id ? { id, name: select.dataset.currentCompanyName || id } : null;
+  }
+
   function orderEditor(order) {
     const id = esc(order.id);
     return `<details class="adm-order-editor" data-capability-scope="order.write">
       <summary>Edit order</summary>
       <div class="adm-form-grid">
         <label class="wide">Customer email <input class="adm-input" name="customer_email" data-edit-email="${id}" type="email" autocomplete="email" spellcheck="false" value="${esc(order.customer_email || '')}"></label>
-        <label class="wide">Company ID <input class="adm-input" name="company_id" autocomplete="off" data-edit-company="${id}" value="${esc(order.company_id || '')}"></label>
+        <label class="wide">Find business <input class="adm-input" type="search" name="company_search" autocomplete="off" spellcheck="false" placeholder="Type a business name…" data-edit-company-search="${id}"></label>
+        <label class="wide">Business <select class="adm-select" name="company_id" data-edit-company="${id}" data-current-company-id="${esc(order.company_id || '')}" data-current-company-name="${esc(order.companies?.name || order.company_name || '')}">${companyOptions([], { pinned: order.company_id ? { id: order.company_id, name: order.companies?.name || order.company_name || order.company_id } : null, selected: order.company_id || '' })}</select></label>
         <label>Status <select class="adm-select" name="order_status" data-edit-status="${id}" disabled>${orderStatusOptions(order.status, order)}</select></label>
         <label>Payment <select class="adm-select" name="payment_method" data-edit-payment="${id}" disabled>${paymentOptions(order.payment_method || 'net')}</select></label>
         <label>Subtotal <input class="adm-input" name="subtotal" data-edit-subtotal="${id}" type="number" min="0" step="0.01" value="${esc(order.subtotal ?? '')}"></label>
@@ -1112,26 +1170,7 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
       const companySearch = $('ordCreateCompanySearch');
       const companySelect = $('ordCreateCompany');
       if (companySearch && companySelect) {
-        let lookupSeq = 0;
-        let lookupTimer;
-        const runLookup = (fn) => { clearTimeout(lookupTimer); lookupTimer = setTimeout(fn, 220); };
-        companySearch.addEventListener('input', () => runLookup(async () => {
-          const term = companySearch.value.trim();
-          const token = ++lookupSeq;
-          if (term.length < 2) {
-            companySelect.innerHTML = '<option value="">No business (guest order)</option>';
-            return;
-          }
-          try {
-            const res = await api(`/api/admin/companies?search=${encodeURIComponent(term)}&limit=20`);
-            if (token !== lookupSeq) return; // a newer keystroke already won
-            const options = (res.companies || [])
-              .map((company) => `<option value="${esc(company.id)}">${esc(company.name)}${company.status === 'approved' ? '' : ` (${esc(company.status)})`}</option>`)
-              .join('');
-            companySelect.innerHTML = `<option value="">No business (guest order)</option>${options}`;
-            if (!options) message('ordCreateStatusText', `No business matches “${term}”.`, '');
-          } catch { /* leave the current options in place */ }
-        }));
+        companySearch.addEventListener('input', () => lookupCompanies(companySearch, companySelect, { statusId: 'ordCreateStatusText' }));
       }
       createForm.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -1285,6 +1324,10 @@ export function createOrdersTab({ $, api, apiBlob, state, message, admSkeleton, 
 
     // Line-item rows in the per-order editor. Same markup and reader as the
     // create form, so both surfaces enforce one contract.
+    delegate(box, 'input', '[data-edit-company-search]', (event, search) => {
+      const select = box.querySelector(`[data-edit-company="${CSS.escape(search.dataset.editCompanySearch)}"]`);
+      if (select) lookupCompanies(search, select, { statusId: 'ordStatus', pinned: pinnedCompany(select) });
+    });
     delegate(box, 'click', '[data-edit-add-line]', (event, button) => {
       box.querySelector(`[data-edit-lines="${CSS.escape(button.dataset.editAddLine)}"]`)
         ?.insertAdjacentHTML('beforeend', orderLineRow());

@@ -75,11 +75,11 @@ test("marine catalog loads the public artifact with a source-tree fallback", asy
   const requested = [];
   const entries = await loadMarineCatalog(async (url) => {
     requested.push(url);
-    if (url === "/data/marine-catalog.json?v=20260912a") return { ok: false };
+    if (url === "/data/marine-catalog.json?v=20260913a") return { ok: false };
     return { ok: true, async json() { return payload; } };
   });
 
-  assert.deepEqual(requested, ["/data/marine-catalog.json?v=20260912a", "/data/industry-applications.json"]);
+  assert.deepEqual(requested, ["/data/marine-catalog.json?v=20260913a", "/data/industry-applications.json"]);
   assert.equal(entries.length, 8);
 });
 

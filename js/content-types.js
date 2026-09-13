@@ -1,4 +1,4 @@
-import { canonicalPublicImageUrl } from "./image-url.js?v=20260912a";
+import { canonicalPublicImageUrl } from "./image-url.js?v=20260913a";
 
 const IMAGE_FIELD_KEYS = new Set(["hero", "image", "image_after", "og_image"]);
 const URL_FIELD_KEYS = new Set(["href", ...IMAGE_FIELD_KEYS]);

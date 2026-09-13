@@ -49,6 +49,16 @@ test('admin orders tab exposes create, edit, fulfillment, and remove controls', 
   assert.match(ADMIN_HTML, /id="ordCreateCompanySearch"/);
   assert.doesNotMatch(ADMIN_HTML, /id="ordCreateItems"/, 'the pipe-delimited line-item blob should be gone');
   assert.doesNotMatch(ADMIN_HTML, /Company ID/, 'staff should not be asked to paste a company id');
+  // The edit form is rendered at runtime by js/admin/orders.js, so a check that reads only
+  // admin.html never saw it: order *edit* kept a raw "Company ID" text box long after order
+  // *creation* moved to search-and-select. Both forms now share one picker.
+  assert.doesNotMatch(ADMIN_ORDERS_UI, /Company ID/, 'the edit form should not ask for a pasted company id either');
+  assert.match(ADMIN_ORDERS_UI, /data-edit-company-search="\$\{id\}"/);
+  assert.match(ADMIN_ORDERS_UI, /<select[^>]*data-edit-company="\$\{id\}"/, 'the edit business field is a select of real companies');
+  assert.equal((ADMIN_ORDERS_UI.match(/function lookupCompanies\(/g) || []).length, 1, 'one lookup, not a copy per form');
+  assert.match(ADMIN_ORDERS_UI, /lookupCompanies\(companySearch, companySelect/, 'the create form uses the shared lookup');
+  assert.match(ADMIN_ORDERS_UI, /delegate\(box, 'input', '\[data-edit-company-search\]'/, 'edit pickers survive re-render via delegation');
+  assert.doesNotMatch(ADMIN_ORDERS_UI, /lookupSeq/, 'the create form no longer carries its own copy of the lookup');
   assert.match(ADMIN_ORDERS_UI, /data-save-order-edit=/);
   assert.match(ADMIN_ORDERS_UI, /data-delete-order=/);
   assert.match(ADMIN_ORDERS_UI, /data-track-status/);

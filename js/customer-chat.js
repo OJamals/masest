@@ -51,7 +51,7 @@ export async function initCustomerChat() {
   document.addEventListener("masest:open-support-order", handleSupportOrderRequest);
   let authModule;
   const auth = async () => {
-    authModule ||= import(window.MASEST?.authModule || "./auth.js?v=20260912a");
+    authModule ||= import(window.MASEST?.authModule || "./auth.js?v=20260913a");
     return authModule;
   };
   try {
@@ -60,7 +60,7 @@ export async function initCustomerChat() {
       const account = await session.me();
       if (account?.can_admin) {
         document.removeEventListener("masest:open-support-order", handleSupportOrderRequest);
-        const { initAdminSupport } = await import("./admin-support.js?v=20260912a");
+        const { initAdminSupport } = await import("./admin-support.js?v=20260913a");
         initAdminSupport({ auth: session, root, staff: account.staff });
         return;
       }
@@ -76,7 +76,7 @@ export async function initCustomerChat() {
       stylesheet.addEventListener("error", resolve, { once: true });
     });
     stylesheet.rel = "stylesheet";
-    stylesheet.href = `${root}css/customer-chat.css?v=20260912a`;
+    stylesheet.href = `${root}css/customer-chat.css?v=20260913a`;
     stylesheet.dataset.masestCustomerChat = "true";
     document.head.append(stylesheet);
   }
@@ -166,8 +166,8 @@ export async function initCustomerChat() {
   const updateQuoteHref = async () => {
     try {
       [requestContextModule, cartModule] = await Promise.all([
-        requestContextModule || import("./request-context.js?v=20260912a"),
-        cartModule || import("./cart.js?v=20260912a"),
+        requestContextModule || import("./request-context.js?v=20260913a"),
+        cartModule || import("./cart.js?v=20260913a"),
       ]);
       const href = requestContextModule.buildRequestContextHref({
         pageUrl: location.href,
