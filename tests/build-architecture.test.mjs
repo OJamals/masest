@@ -95,11 +95,22 @@ test("package exposes one-command build and verification scripts", () => {
   }
 });
 
-test("verify workflow pins and exports supported PostgreSQL tooling", () => {
+test("verify workflow isolates public PRs and pins supported PostgreSQL tooling", () => {
   const workflow = read(".github/workflows/verify.yml");
   const verifyJob = workflow.slice(workflow.indexOf("  verify:"), workflow.indexOf("  web_vitals:"));
 
-  assert.match(verifyJob, /runs-on: ubuntu-24\.04/);
+  assert.match(
+    verifyJob,
+    /runs-on: \$\{\{ github\.event_name == 'pull_request' && 'ubuntu-24\.04' \|\| 'masest-trusted' \}\}/,
+  );
+  assert.match(
+    verifyJob,
+    /if: runner\.environment == 'github-hosted'[\s\S]*npx playwright install --with-deps chromium/,
+  );
+  assert.match(
+    verifyJob,
+    /if: runner\.environment == 'self-hosted'[\s\S]*npx playwright install chromium/,
+  );
   assert.match(verifyJob, /timeout-minutes: 20/);
   assert.match(verifyJob, /pg_config --bindir/);
   assert.match(verifyJob, /for binary in initdb pg_ctl postgres/);
