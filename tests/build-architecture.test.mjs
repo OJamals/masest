@@ -146,6 +146,15 @@ test("the self-hosted runner only ever receives trusted events", () => {
   const publish = read(".github/workflows/publish-blog.yml");
   assert.doesNotMatch(publish, /cron: "\*\/\d+ \* \* \* \*"/, "the blog backstop runs daily; the CMS dispatch is the fast path");
   assert.match(publish, /repository_dispatch:\s+types: \[content-published\]/);
+
+  // The trusted runner carries Playwright's bundled Chromium, not Google Chrome. A test that
+  // asks for the "chrome" channel passes on GitHub-hosted images and a Mac, then fails to
+  // launch there (first trusted run, 2026-09-14: 53 launches across 12 files).
+  for (const dir of ["tests/", "tools/"]) {
+    for (const file of readdirSync(new URL(dir, root)).filter((name) => name.endsWith(".mjs"))) {
+      assert.doesNotMatch(read(`${dir}${file}`), /channel:\s*["']chrome["']/, `${dir}${file} must launch the bundled Chromium`);
+    }
+  }
 });
 
 test("Cloudflare build emits baseline security headers", () => {
