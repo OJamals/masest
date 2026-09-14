@@ -3,9 +3,9 @@
 // actions). Shared primitives ($, api, state, admSkeleton, admEmpty) and the
 // admin-local statusBadge / admListPager helpers are injected; esc + confirmDialog
 // come from util.js and the dirty-edit helpers from edits.js.
-import { esc, confirmDialog, delegate, detailDialog, moneyDisplay, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260913c';
-import { captureDirty, restoreDirty } from './edits.js?v=20260913c';
-import { ORDER_STATUSES } from './orders.js?v=20260913c';
+import { esc, confirmDialog, delegate, detailDialog, moneyDisplay, safeUrl, dateTime as date, restoreFocusOnClose } from '../util.js?v=20260914a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260914a';
+import { ORDER_STATUSES } from './orders.js?v=20260914a';
 
 // Roles an admin can assign to a company member or a standalone user (must match
 // the server ROLES set in functions/api/admin/users.js).
@@ -91,7 +91,7 @@ export function createCompaniesTab({ $, api, state, admSkeleton, admEmpty, statu
     if (accountFilter === 'all') params.delete('account_filter');
     else params.set('account_filter', accountFilter);
     const query = params.toString();
-    history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
+    history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
   }
   function setupProgress(company) {
     const setup = company.setup;

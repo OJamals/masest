@@ -3,9 +3,9 @@
 // slice; sub-views are filled by later plans. Mirrors the createQuotesTab shape
 // (#36 per-tab split). Shared primitives ($, api, state, admSkeleton, admEmpty)
 // are injected; esc/delegate come from util.js.
-import { esc, delegate, dateTime as date } from '../util.js?v=20260913c';
-import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260913c';
-import { createCrmProspects } from './crm-prospects.js?v=20260913c';
+import { esc, delegate, dateTime as date } from '../util.js?v=20260914a';
+import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260914a';
+import { createCrmProspects } from './crm-prospects.js?v=20260914a';
 
 const DIR_ROLES = [
   ['', 'All roles'],
@@ -48,7 +48,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     };
     Object.entries(values).forEach(([key, value]) => value ? params.set(key, value) : params.delete(key));
     const query = params.toString();
-    history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
+    history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
   }
 
   // The heading is named for the tab that opens it. "Relationship workspace"

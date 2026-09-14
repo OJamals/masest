@@ -5,8 +5,8 @@ import { waitForHttpServer } from "./test-http-server.mjs";
 
 // Live navigation + state guard for the staff console (admin.html / js/admin.js).
 // Everything here ran green as a throwaway probe on 2026-09-13 and was then found to
-// have NO browser-level coverage: hash routing and legacy aliases, the replaceState
-// contract, the render-token race, the panel-height reservation, feature-load
+// have NO browser-level coverage: hash routing and legacy aliases, the tab history
+// contract (a switch pushes, a committed hash canonicalizes in place), the render-token race, the panel-height reservation, feature-load
 // failure, the dirty-edit guard (the one data-loss stop on this surface), the
 // cross-tab session broadcast, saved-view persistence, and the roving tablist. The
 // node:test suite pins these as source regexes only.
@@ -151,7 +151,7 @@ test("support-family hashes open the console over the current tab instead of rep
   }
 });
 
-test("tab clicks rewrite one history entry and never fire hashchange; a typed hash still does", async ({ page }) => {
+test("each tab click pushes one history entry without firing hashchange, and Back/Forward step through tabs", async ({ page }) => {
   await stubAdmin(page);
   await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("#admApp")).toBeVisible();
@@ -162,13 +162,30 @@ test("tab clicks rewrite one history entry and never fire hashchange; a typed ha
     await page.locator(`[data-tab="${tab}"]`).click();
     await expect(page).toHaveURL(new RegExp(`#${tab}$`));
   }
-  expect(await page.evaluate(() => history.length), "replaceState must not grow history").toBe(h0);
+  expect(await page.evaluate(() => history.length), "each switch adds exactly one entry").toBe(h0 + 3);
   expect(await page.evaluate(() => window.__hc), "clicks must not fire hashchange (double render)").toBe(0);
+  await page.locator('[data-tab="products"]').click();
+  expect(await page.evaluate(() => history.length), "re-clicking the open tab adds nothing").toBe(h0 + 3);
 
-  // Positive control: the hashchange path is wired and routes a typed hash.
-  await page.evaluate(() => { location.hash = "quotes"; });
-  await expect(page.locator('[data-panel="quotes"]')).toHaveAttribute("data-active", "true");
-  expect(await page.evaluate(() => window.__hc)).toBe(1);
+  await page.goBack();
+  await expect(page).toHaveURL(/#companies$/);
+  await expect(page.locator('[data-panel="companies"]')).toHaveAttribute("data-active", "true");
+  await page.goBack();
+  await expect(page).toHaveURL(/#orders$/);
+  await expect(page.locator('[data-panel="orders"]')).toHaveAttribute("data-active", "true");
+  await page.goForward();
+  await expect(page).toHaveURL(/#companies$/);
+  await expect(page.locator('[data-panel="companies"]')).toHaveAttribute("data-active", "true");
+  await expect(page.locator('[data-tab="companies"]')).toHaveAttribute("aria-selected", "true");
+
+  // Positive control: a typed hash still routes. An alias is canonicalized in place,
+  // so Back from it returns to the previous workspace instead of bouncing forward.
+  await page.evaluate(() => { location.hash = "customers"; });
+  await expect(page).toHaveURL(/#crm$/);
+  await expect(page.locator('[data-panel="crm"]')).toHaveAttribute("data-active", "true");
+  await page.goBack();
+  await expect(page).toHaveURL(/#companies$/);
+  await expect(page.locator('[data-panel="companies"]')).toHaveAttribute("data-active", "true");
 });
 
 test("a delayed orders render cannot win over an immediately-clicked companies tab", async ({ page }) => {
@@ -247,9 +264,12 @@ test("a failed feature module shows a tab-scoped retry banner, and Retry reloads
   await expect(page.locator('[data-panel="reviews"] [data-feature-load-error]')).toHaveCount(0);
 });
 
-test("the dirty-edit guard blocks tab clicks and typed hashes, restores the hash on cancel, and clears on discard", async ({ page }) => {
+test("the dirty-edit guard blocks tab clicks, Back, and typed hashes, restores the URL on cancel, and clears on discard", async ({ page }) => {
   await stubAdmin(page);
-  await page.goto(`${BASE_URL}/admin.html#orders`, { waitUntil: "domcontentloaded" });
+  // Arrive on Orders by a click so there is a console entry behind it for Back.
+  await page.goto(`${BASE_URL}/admin.html#overview`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#admApp")).toBeVisible();
+  await page.locator('[data-tab="orders"]').click();
   await settled(page, "orders");
   await page.evaluate(() => {
     const input = document.createElement("input");
@@ -281,6 +301,18 @@ test("the dirty-edit guard blocks tab clicks and typed hashes, restores the hash
   await expect(page.locator('[data-panel="orders"]')).toHaveAttribute("data-active", "true");
   await expect(page).toHaveURL(/#orders$/);
   await expect(page.locator("#probeDirtyInput")).toHaveAttribute("data-dirty", "1");
+
+  // Back has already moved the URL when the guard asks; Cancel walks it home by the
+  // same distance without re-rendering the panel that holds the edits.
+  const lengthBeforeBack = await page.evaluate(() => history.length);
+  await page.goBack();
+  await expect(dialog, "the guard also fires from Back").toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(page, "cancelled Back returns to the workspace").toHaveURL(/#orders$/);
+  await expect(page.locator('[data-panel="orders"]')).toHaveAttribute("data-active", "true");
+  await expect(page.locator("#probeDirtyInput"), "the kept edits survive the walk home").toHaveValue("edited");
+  await expect(page.locator("#probeDirtyInput")).toHaveAttribute("data-dirty", "1");
+  expect(await page.evaluate(() => history.length), "walking home adds no entry").toBe(lengthBeforeBack);
 
   await page.evaluate(() => { location.hash = "companies"; });
   await expect(dialog, "the guard also fires from hashchange").toBeVisible();

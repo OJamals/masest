@@ -385,6 +385,7 @@ body:has(.about-router) .page-hero { padding-bottom: var(--s12); }
 .crm-prospect-detail-grid > div { display: grid; gap: var(--s1); padding: var(--s3) var(--s3); border: 1px solid var(--border); border-radius: var(--r-input); background: var(--surface); min-width: 0; }
 .crm-prospect-detail-grid b { overflow-wrap: anywhere; }
 .crm-prospect-account-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--s2); flex-wrap: wrap; }
+.crm-prospect-detail-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--s2); flex-wrap: wrap; }
 .crm-prospect-channels { list-style: none; display: grid; gap: var(--s1); margin: 0; padding: 0; min-width: 0; }
 .crm-prospect-channels li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--s2); min-width: 0; }
 .crm-prospect-channels a,

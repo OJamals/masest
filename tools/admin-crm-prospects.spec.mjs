@@ -25,7 +25,7 @@ test.afterAll(async () => {
   await exitedOnce;
 });
 
-async function boot(page) {
+async function boot(page, { capabilities = ['prospect.write', 'prospect.delete', 'company.credit'] } = {}) {
   await page.addInitScript(() => {
     window.MASEST_SUPABASE_URL = 'https://stub.supabase.co';
     window.MASEST_SUPABASE_ANON = 'stub-anon-key';
@@ -46,9 +46,9 @@ async function boot(page) {
     body: JSON.stringify({
       staff_context: {
         email: 'dev@masest.co',
-        role: 'owner',
-        can_write: true,
-        capabilities: ['prospect.write', 'prospect.delete', 'company.credit'],
+        role: capabilities.includes('prospect.delete') ? 'owner' : 'support',
+        can_write: capabilities.includes('prospect.write'),
+        capabilities,
       },
     }),
   }));
@@ -392,4 +392,96 @@ test('Unlinked Prospect creates one pending account and recovers a failed auto-l
   expect(companyCreates).toHaveLength(1);
   await expect(page.locator('[data-prospect-open-company]')).toHaveText('Open customer account');
   await expect(page.locator('[data-prospect-update-status]')).toHaveText('Customer account linked.');
+});
+
+test('Owner deletes a prospect through a confirm dialog and the row disappears', async ({ page }) => {
+  await boot(page);
+  const deleteCalls = [];
+  let removed = false;
+  const organization = {
+    id: '4b6c9a2e-4a1a-4a5c-9d3a-2c6a6f9a1234',
+    name: 'Acme Mechanical',
+    segment: 'HVAC / Refrigeration',
+    city: 'Detroit',
+    state: 'MI',
+    status: 'new',
+    priority: 'unassigned',
+    marketing_consent: 'unknown',
+    outreach_status: 'unreviewed',
+    contact_count: 1,
+  };
+
+  await page.route('**/api/admin/crm/prospects**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (request.method() === 'DELETE') {
+      deleteCalls.push(Object.fromEntries(url.searchParams));
+      removed = true;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    }
+    if (url.searchParams.get('id')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ prospect: { ...organization, contacts: [], outreach_drafts: [] } }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ prospects: removed ? [] : [organization], total: removed ? 0 : 1, has_more: false }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#crm`);
+  await page.locator('[data-crm-ws-tab="prospects"]').click();
+  await page.locator('[data-prospect-open]').click();
+  await expect(page.getByRole('heading', { name: 'Acme Mechanical' })).toBeVisible();
+
+  const deleteButton = page.locator('[data-prospect-delete]');
+  await expect(deleteButton).toBeEnabled();
+  await deleteButton.click();
+  await expect(page.locator('.confirm-dialog')).toBeVisible();
+  await expect(page.locator('.confirm-dialog')).toContainText('Acme Mechanical');
+  await page.locator('.confirm-dialog button[value="confirm"]').click();
+
+  await expect.poll(() => deleteCalls.length).toBe(1);
+  expect(deleteCalls[0]).toMatchObject({ id: organization.id, confirm: 'erase' });
+  await expect(page.getByRole('heading', { name: 'Pre-account prospects' })).toBeVisible();
+  await expect(page.locator('.crm-prospect-card')).toHaveCount(0);
+});
+
+test('A prospect.write-only staff never gets an enabled Delete prospect control', async ({ page }) => {
+  await boot(page, { capabilities: ['prospect.write'] });
+  const organization = {
+    id: '4b6c9a2e-4a1a-4a5c-9d3a-2c6a6f9a5678',
+    name: 'Acme Mechanical',
+    segment: 'HVAC / Refrigeration',
+    status: 'new',
+    priority: 'unassigned',
+    marketing_consent: 'unknown',
+    outreach_status: 'unreviewed',
+    contact_count: 1,
+  };
+  await page.route('**/api/admin/crm/prospects**', async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('id')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ prospect: { ...organization, contacts: [], outreach_drafts: [] } }),
+      });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ prospects: [organization], total: 1, has_more: false }),
+    });
+  });
+
+  await page.goto(`${BASE_URL}/admin.html#crm`);
+  await page.locator('[data-crm-ws-tab="prospects"]').click();
+  await page.locator('[data-prospect-open]').click();
+  await expect(page.getByRole('heading', { name: 'Acme Mechanical' })).toBeVisible();
+  await expect(page.locator('[data-prospect-delete]')).toBeDisabled();
 });

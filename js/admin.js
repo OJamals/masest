@@ -1,12 +1,12 @@
 /* MASEST staff admin console. */
-import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260913c';
-import { esc, safeUrl, moneyDisplay, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260913c';
-import { editKey } from './admin/edits.js?v=20260913c';
-import { createFeatureLoader } from './admin/feature-loader.js?v=20260913c';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260913c';
-import { renderAdminChrome, setAdminChromeSession } from './admin/chrome.js?v=20260913c';
-import { createAdminSessionLifecycle, createSessionPeerChannel } from './admin/session.js?v=20260913c';
-import { createAdminSearch } from './admin/search.js?v=20260913c';
+import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260914a';
+import { esc, safeUrl, moneyDisplay, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260914a';
+import { editKey } from './admin/edits.js?v=20260914a';
+import { createFeatureLoader } from './admin/feature-loader.js?v=20260914a';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260914a';
+import { renderAdminChrome, setAdminChromeSession } from './admin/chrome.js?v=20260914a';
+import { createAdminSessionLifecycle, createSessionPeerChannel } from './admin/session.js?v=20260914a';
+import { createAdminSearch } from './admin/search.js?v=20260914a';
 
 const $ = (id) => document.getElementById(id);
 
@@ -213,7 +213,7 @@ async function boot() {
     mountGlobalSearch();
     void mountSupportConsole();
     renderStats(stats);
-    setTab(location.hash.slice(1) || 'overview');
+    setTab(location.hash.slice(1) || 'overview', {}, { mode: 'load' });
   } catch (err) {
     showAdminGate({ expired: err.status === 401 && hadToken });
  if (err.status === 403) {
@@ -355,7 +355,7 @@ function renderFeatureTab(tab, token, options, invalidated) {
   return task;
 }
 
-async function setTab(tab, context = {}) {
+async function setTab(tab, context = {}, navigation = {}) {
   // The old top-level Customers tab folded into the CRM People directory —
   // keep #customers deep links working by landing on that sub-view. Historical
   // Pricing and Emails hashes still land on their current host workspaces.
@@ -382,19 +382,13 @@ async function setTab(tab, context = {}) {
       danger: true,
     });
     if (!discard) {
-      if (location.hash.slice(1) !== state.tab) history.replaceState(null, '', '#' + state.tab);
+      restoreTabHistory(navigation);
       return Promise.resolve({ cancelled: true });
     }
     clearUnsavedAdminEdits();
   }
   state.tab = nextTab;
-  // replaceState, NOT location.hash: assigning location.hash fires hashchange →
-  // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
-  // like quotes painted every row twice). Tab switches therefore rewrite ONE history
-  // entry: Back leaves the console rather than stepping through tabs (measured
-  // 2026-09-13). hashchange only serves typed/linked hashes and the dirty-guard
-  // hash restore below.
-  if (location.hash.slice(1) !== state.tab) history.replaceState(null, '', '#' + state.tab);
+  commitTabHistory(state.tab, navigation);
   reserveAdminHeight();
   document.querySelectorAll('[data-panel]').forEach((panel) => {
     panel.dataset.active = String(panel.dataset.panel === state.tab);
@@ -448,8 +442,56 @@ async function setTab(tab, context = {}) {
   return task;
 }
 
+// Tab history. A switch staff make (sidebar click, arrow key, search result, overview
+// metric) pushes one entry, so Back steps to the previous workspace instead of
+// leaving the console. A hash the browser has already committed (first load, a typed
+// or linked hash, Back/Forward) is only canonicalized in place: pushing there would
+// stack an alias like #customers under the #crm it resolves to, and Back would bounce
+// straight forward again. Each entry carries its position so a Back/Forward cancelled
+// by the unsaved-edits guard can be walked back by the same distance.
+//
+// Never assign location.hash for a switch: it fires hashchange → syncTabFromHash →
+// setTab again and double-renders the tab (concat-based lists painted every row twice).
+// Other writers of history state on this page must pass history.state through.
+let tabHistoryIndex = Number.isInteger(history.state?.admTabIndex) ? history.state.admTabIndex : 0;
+
+function commitTabHistory(tab, navigation = {}) {
+  if (navigation.mode === 'hash') {
+    tabHistoryIndex = Number.isInteger(navigation.entryIndex) ? navigation.entryIndex : tabHistoryIndex + 1;
+  } else if (navigation.mode !== 'load' && location.hash.slice(1) !== tab) {
+    tabHistoryIndex += 1;
+    history.pushState({ admTabIndex: tabHistoryIndex }, '', '#' + tab);
+    return;
+  }
+  if (location.hash.slice(1) !== tab || history.state?.admTabIndex !== tabHistoryIndex) {
+    history.replaceState({ admTabIndex: tabHistoryIndex }, '', '#' + tab);
+  }
+}
+
+function restoreTabHistory(navigation = {}) {
+  // Only a hash the browser already committed moved the URL before the guard asked.
+  if (navigation.mode !== 'hash') return;
+  if (Number.isInteger(navigation.entryIndex) && navigation.entryIndex !== tabHistoryIndex) {
+    // Back/Forward: walk home. syncTabFromHash sees that entry belongs to the
+    // workspace on screen and leaves the render (and the edits) alone.
+    history.go(tabHistoryIndex - navigation.entryIndex);
+    return;
+  }
+  // A typed or linked hash added a fresh entry: point it back at this workspace.
+  if (!Number.isInteger(navigation.entryIndex)) tabHistoryIndex += 1;
+  history.replaceState({ admTabIndex: tabHistoryIndex }, '', '#' + state.tab);
+}
+
 function syncTabFromHash() {
-  setTab(location.hash.slice(1) || 'overview');
+  const entryIndex = history.state?.admTabIndex;
+  const hashTab = location.hash.slice(1) || 'overview';
+  // An entry of the workspace already on screen (a cancelled Back walking home) needs
+  // no render; re-rendering would discard the edits the guard just kept.
+  if (Number.isInteger(entryIndex) && hashTab === state.tab) {
+    tabHistoryIndex = entryIndex;
+    return;
+  }
+  setTab(hashTab, {}, { mode: 'hash', entryIndex });
 }
 
 function renderSetupFollowups(stats = {}) {
@@ -577,7 +619,7 @@ async function downloadCsv(url, filename, statusId) {
 // Reports & exports card (#96). Bound once — the overview tab re-renders on each visit.
 let reportsWired = false;
 function wireReports() {
-  void import('./admin/stripe.js?v=20260913c').then(({ wireStripePayouts, renderStripePayouts }) => {
+  void import('./admin/stripe.js?v=20260914a').then(({ wireStripePayouts, renderStripePayouts }) => {
     wireStripePayouts();
     return renderStripePayouts();
   }).catch(() => {
@@ -658,8 +700,8 @@ let supportEntry = {};
 const featureLoader = createFeatureLoader({
   analytics: async () => {
     const [{ createTrafficRenderer }, { createSeoAudit }] = await Promise.all([
-      import('./admin/traffic.js?v=20260913c'),
-      import('./admin/seo.js?v=20260913c'),
+      import('./admin/traffic.js?v=20260914a'),
+      import('./admin/seo.js?v=20260914a'),
     ]);
     const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
     const runSeoAudit = createSeoAudit({ $, state });
@@ -669,11 +711,11 @@ const featureLoader = createFeatureLoader({
     };
   },
   integrations: async () => {
-    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260913c');
-    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260913c');
-    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260913c');
-    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260913c');
-    const { createAutomationCard } = await import('./admin/automation.js?v=20260913c');
+    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260914a');
+    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260914a');
+    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260914a');
+    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260914a');
+    const { createAutomationCard } = await import('./admin/automation.js?v=20260914a');
     const { renderAutomation } = createAutomationCard({ $, api, admSkeleton });
     return {
       wire() {
@@ -694,7 +736,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   orders: async () => {
-    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260913c');
+    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260914a');
     const { renderOrders, wireOrders } = createOrdersTab({
       $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
       onMessageCustomer: ({ companyId, orderId, userId }) => showSupportConsole({
@@ -730,8 +772,8 @@ const featureLoader = createFeatureLoader({
   },
   companies: async () => {
     const [{ createCompaniesTab }, { createCrmPanel }] = await Promise.all([
-      import('./admin/companies.js?v=20260913c'),
-      import('./admin/crm.js?v=20260913c'),
+      import('./admin/companies.js?v=20260914a'),
+      import('./admin/crm.js?v=20260914a'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const { renderCompanies, wireCompanies, openCompanyDetail, applyAcctView } = createCompaniesTab({
@@ -772,10 +814,10 @@ const featureLoader = createFeatureLoader({
       { createInventoryCard },
       { createCouponsCard },
     ] = await Promise.all([
-      import('./admin/products.js?v=20260913c'),
-      import('./admin/pricing.js?v=20260913c'),
-      import('./admin/inventory.js?v=20260913c'),
-      import('./admin/coupons.js?v=20260913c'),
+      import('./admin/products.js?v=20260914a'),
+      import('./admin/pricing.js?v=20260914a'),
+      import('./admin/inventory.js?v=20260914a'),
+      import('./admin/coupons.js?v=20260914a'),
     ]);
     const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({
       $, api, state, message, admSkeleton, admEmpty,
@@ -815,7 +857,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260913c');
+    const { createContentTab } = await import('./admin/content.js?v=20260914a');
     const { renderContent, renderBlog, wireContent, wireBlog, confirmSubviewChange } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -857,7 +899,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   support: async () => {
-    const { createThreadsTab } = await import('./admin/threads.js?v=20260913c');
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260914a');
     const { renderThreads, wireThreads, openThread, openNewChat, openConsole, openSettings } = createThreadsTab({
       api,
       state,
@@ -878,7 +920,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   quotes: async () => {
-    const { createQuotesTab } = await import('./admin/quotes.js?v=20260913c');
+    const { createQuotesTab } = await import('./admin/quotes.js?v=20260914a');
     const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager,
     });
@@ -899,7 +941,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   reviews: async () => {
-    const { createReviewsTab } = await import('./admin/reviews.js?v=20260913c');
+    const { createReviewsTab } = await import('./admin/reviews.js?v=20260914a');
     const {
       renderReviews,
       wireReviews,
@@ -919,8 +961,8 @@ const featureLoader = createFeatureLoader({
   },
   newsletter: async () => {
     const [{ createNewsletterTab }, { createOffersTab }] = await Promise.all([
-      import('./admin/newsletter.js?v=20260913c'),
-      import('./admin/offers.js?v=20260913c'),
+      import('./admin/newsletter.js?v=20260914a'),
+      import('./admin/offers.js?v=20260914a'),
     ]);
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
@@ -942,8 +984,8 @@ const featureLoader = createFeatureLoader({
   },
   crm: async () => {
     const [{ createCrmWorkspace }, { createCrmPanel }] = await Promise.all([
-      import('./admin/crm-workspace.js?v=20260913c'),
-      import('./admin/crm.js?v=20260913c'),
+      import('./admin/crm-workspace.js?v=20260914a'),
+      import('./admin/crm.js?v=20260914a'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const openSubject = (type, id, label) => {

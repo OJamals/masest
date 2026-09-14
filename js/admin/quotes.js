@@ -5,11 +5,11 @@
 // helpers are injected; esc/delegate/money/confirmDialog/dateTime come from util.js and
 // the dirty-edit helpers from edits.js. The CRM activity panel (Timeline/Tasks/Notes,
 // slice 1) is reused inside the drawer via createCrmPanel — no js/admin.js change needed.
-import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260913c';
-import { captureDirty, restoreDirty } from './edits.js?v=20260913c';
-import { createCrmPanel } from './crm.js?v=20260913c';
-import { createSavedViews } from './saved-views.js?v=20260913c';
-import { QUOTE_TASK_DETAILS } from '../quote-task-details.js?v=20260913c';
+import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260914a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260914a';
+import { createCrmPanel } from './crm.js?v=20260914a';
+import { createSavedViews } from './saved-views.js?v=20260914a';
+import { QUOTE_TASK_DETAILS } from '../quote-task-details.js?v=20260914a';
 
 const REQUEST_DETAIL_FIELDS = [
   ['samples', 'Sample products'],
@@ -109,7 +109,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     };
     Object.entries(filters).forEach(([key, value]) => value ? params.set(key, value) : params.delete(key));
     const query = params.toString();
-    history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
+    history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`);
   }
 
   function quoteDueInDays(days) { return new Date(Date.now() + days * 86400e3).toISOString(); }

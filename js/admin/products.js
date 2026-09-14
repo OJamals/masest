@@ -2,10 +2,10 @@
 // image/gallery upload, and the add-product / add-variant forms. Shared primitives
 // ($, api, state, message, admSkeleton, admEmpty) are injected; esc/safeUrl/
 // confirmDialog, getToken, and the dirty-edit helpers come from their own modules.
-import { esc, safeUrl, confirmDialog, delegate, moneyDisplay, rowMatchesQuery } from '../util.js?v=20260913c';
-import { captureDirty, restoreDirty } from './edits.js?v=20260913c';
-import { PRODUCTS } from '../main/catalog-data.js?v=20260913c';
-import { openImageLibraryPicker } from './image-library-picker.js?v=20260913c';
+import { esc, safeUrl, confirmDialog, delegate, moneyDisplay, rowMatchesQuery } from '../util.js?v=20260914a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260914a';
+import { PRODUCTS } from '../main/catalog-data.js?v=20260914a';
+import { openImageLibraryPicker } from './image-library-picker.js?v=20260914a';
 
 export function withCatalogMediaFallback(product = {}) {
   const catalog = PRODUCTS[product.sku === 'cr-hd' ? 'crhd' : product.sku];
@@ -39,7 +39,7 @@ export function createProductsTab({ $, api, state, message, admSkeleton, admEmpt
     const search = params.toString();
     const next = `${location.pathname}${search ? `?${search}` : ''}${location.hash}`;
     const current = `${location.pathname}${location.search}${location.hash}`;
-    if (next !== current) history.replaceState(null, '', next);
+    if (next !== current) history.replaceState(history.state, '', next);
   }
 
   async function renderProducts({ refetch = true } = {}) {

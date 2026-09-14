@@ -83,6 +83,21 @@ test('prospect list and detail are responsive and use existing CRM primitives', 
   assert.match(prospects, /admEmpty\(/);
 });
 
+test('owner-only Delete prospect control erases the organization and its records', () => {
+  assert.match(prospects, /data-prospect-delete="\$\{esc\(prospect\.id\)\}"/);
+  assert.match(prospects, /data-capability="prospect\.delete"/);
+  assert.match(prospects, /state\.staff\?\.capabilities\?\.includes\('prospect\.delete'\)/);
+  assert.match(prospects, /canDelete \? '' : ' disabled aria-disabled="true"'/);
+  assert.match(prospects, /confirmDialog\(\s*\n\s*`Delete \$\{name\} permanently\?[\s\S]*?danger: true/);
+  assert.match(prospects, /contacts and source records/i);
+  assert.match(prospects, /confirm:\s*'erase'/);
+  assert.match(prospects, /\/api\/admin\/crm\/prospects\?\$\{params\}`,\s*\{\s*method:\s*'DELETE'\s*\}/);
+  assert.match(prospects, /toast\(`\$\{name\} deleted\.`, \{ variant: 'success' \}\)/);
+  assert.match(prospects, /err\.status === 403/);
+  assert.match(prospects, /err\.status === 404/);
+  assert.doesNotMatch(prospects, /style="/);
+});
+
 test('admin loads a cache-busted CRM workspace version', () => {
   assert.match(admin, /import\('\.\/admin\/crm-workspace\.js\?v=\d{8}[a-z]'\)/);
 });

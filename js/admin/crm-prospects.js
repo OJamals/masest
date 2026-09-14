@@ -1,7 +1,7 @@
 // Pre-account Prospect surface for the integrated CRM workspace. Prospect
 // Organizations stay separate from customer Companies until explicitly linked.
-import { esc, delegate, confirmDialog } from '../util.js?v=20260913c';
-import { createCrmProspectAccount, renderProspectChannels } from './crm-prospect-account.js?v=20260913c';
+import { esc, delegate, confirmDialog, toast } from '../util.js?v=20260914a';
+import { createCrmProspectAccount, renderProspectChannels } from './crm-prospect-account.js?v=20260914a';
 
 const STATUSES = [
   ['', 'All stages'], ['new', 'New'], ['researching', 'Researching'],
@@ -220,6 +220,7 @@ export function createCrmProspects({
         return `<option value="${esc(value)}"${value === prospect.status ? ' selected' : ''}${disabled ? ' disabled' : ''}>${esc(label)}</option>`;
       }).join('');
       const canWrite = state.staff?.capabilities?.includes('prospect.write');
+      const canDelete = state.staff?.capabilities?.includes('prospect.delete');
       body.innerHTML = `<section class="crm-prospect-detail" aria-labelledby="prospectDetailTitle">
         <div class="crm-section-head">
           <div>
@@ -227,7 +228,10 @@ export function createCrmProspects({
             <h3 id="prospectDetailTitle">${esc(prospect.name)}</h3>
             <p class="muted">${esc(prospect.segment || 'Unsegmented')} · ${prospect.source_record_count || 0} source record${prospect.source_record_count === 1 ? '' : 's'}</p>
           </div>
-          ${linked}
+          <div class="crm-prospect-detail-actions">
+            ${linked}
+            <button class="btn btn-danger btn-sm" type="button" data-prospect-delete="${esc(prospect.id)}" data-prospect-name="${esc(prospect.name)}" data-capability="prospect.delete"${canDelete ? '' : ' disabled aria-disabled="true"'}>Delete prospect</button>
+          </div>
         </div>
         <div class="crm-prospect-detail-grid">
           <div><span class="muted">Location</span><b>${location || 'Not recorded'}</b></div>
@@ -329,6 +333,30 @@ export function createCrmProspects({
         button.disabled = false;
         status.dataset.state = 'err';
         status.textContent = err.data?.error || 'Could not save draft. Retry.';
+      }
+    });
+    delegate(box, 'click', '[data-prospect-delete]', async (event, button) => {
+      if (!state.staff?.capabilities?.includes('prospect.delete') || button.disabled) return;
+      const id = button.dataset.prospectDelete;
+      const name = button.dataset.prospectName || 'this organization';
+      if (!(await confirmDialog(
+        `Delete ${name} permanently? This erases the organization along with its contacts and source records. This cannot be undone.`,
+        { confirmText: 'Delete prospect', cancelText: 'Keep', danger: true },
+      ))) return;
+      button.disabled = true;
+      try {
+        const params = new URLSearchParams({ id, confirm: 'erase' });
+        await api(`/api/admin/crm/prospects?${params}`, { method: 'DELETE' });
+        toast(`${name} deleted.`, { variant: 'success' });
+        await render(box.querySelector('[data-crm-ws-body]'));
+      } catch (err) {
+        button.disabled = false;
+        const errMessage = err.status === 403
+          ? 'You do not have permission to delete prospects.'
+          : err.status === 404
+            ? 'This prospect was already removed.'
+            : (err.data?.error || 'Could not delete the prospect. Retry.');
+        toast(errMessage, { variant: 'error' });
       }
     });
     delegate(box, 'click', '[data-outreach-action]', async (event, button) => {
