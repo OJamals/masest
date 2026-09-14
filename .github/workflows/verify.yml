@@ -24,7 +24,9 @@ concurrency:
 jobs:
   verify:
     needs: [web_vitals]
-    runs-on: ubuntu-24.04
+    # Fork pull requests must never execute on the persistent production runner.
+    # Trusted push, dispatch, and scheduled work uses its repository-scoped label.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || 'masest-trusted' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -65,8 +67,13 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build:content
 
-      - name: Install Chromium
+      - name: Install Chromium and system dependencies
+        if: runner.environment == 'github-hosted'
         run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium
+        if: runner.environment == 'self-hosted'
+        run: npx playwright install chromium
 
       - name: Verify core
         run: npm run verify:core
