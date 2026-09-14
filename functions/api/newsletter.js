@@ -1,7 +1,8 @@
 // POST /api/newsletter — subscribe an email to the canonical Supabase audience.
-import { json } from '../_lib/supabase.js';
+import { adminClient, json } from '../_lib/supabase.js';
 import { rateLimit, clientIp } from '../_lib/ratelimit.js';
 import { setMarketingPreference } from '../_lib/marketing-subscribers.js';
+import { linkNewsletterSignupToContacts } from '../_lib/newsletter-crm-link.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../_lib/request-body.js';
 
 function clean(value, max = 180) {
@@ -48,5 +49,14 @@ export async function onRequestPost({ request, env }) {
     tags: [properties.industry, properties.document].filter(Boolean),
   });
   if (!r.ok) return json(503, { error: r.error, retryable: r.retryable });
+
+  // Best effort: when this email already belongs to a CRM contact, note the signup on that
+  // contact's timeline with the page it came from. The subscription is recorded by now, so a
+  // CRM failure must never turn a successful signup into an error. Logs carry no email.
+  try {
+    await linkNewsletterSignupToContacts(adminClient(env), { email, properties });
+  } catch (error) {
+    console.error('newsletter_crm_link_failed', error?.message || String(error));
+  }
   return json(200, { ok: true });
 }
