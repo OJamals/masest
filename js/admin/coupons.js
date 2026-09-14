@@ -1,7 +1,7 @@
 // Admin promo-codes card (#97, #36 per-tab split): Stripe promotion-code
 // management. Lives inside the Products tab; shared primitives ($, api, message,
 // admSkeleton, admEmpty) are injected. esc/money/dateTime/confirmDialog from util.
-import { esc, money, dateTime as date, confirmDialog } from '../util.js?v=20260913b';
+import { esc, money, dateTime as date, confirmDialog } from '../util.js?v=20260913c';
 
 const COUPON_ERROR_COPY = Object.freeze({
   ambiguous_discount: 'Enter either a percent discount or a fixed-dollar discount.',

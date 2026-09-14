@@ -138,6 +138,12 @@
      and pushed the last stage column, the saved-view buttons and the search field
      past the card, which clips. Let the track shrink so the board scrolls itself. */
   #admQuotes { min-width: 0; }
+  /* Same trap for every other panel child (#admNewsletter grew to 892px in a
+     354px panel for Recipients; the Integrations card did the same), and for
+     #admApp itself as a grid item of .adm-wrap. With html{overflow-x:clip} the
+     cut content was simply gone — no scrollbar — so every .adm-table-wrap needs
+     a constrained ancestor to scroll against. Measured 2026-09-13. */
+  .adm-panel[data-active="true"] > *, .adm-workspace-card > *, #admApp { min-width: 0; }
   .adm-main .btn-sm { min-height: 40px !important; padding: 8px 14px; justify-content: center; line-height: 1.2; }
   .adm-main :where(.adm-tools, .adm-inline-actions, .company-detail-actions, .company-user-actions, .account-filterbar, .crm-inbox-tools) { row-gap: 10px; column-gap: 10px; }
   .adm-main :where(.crm-tabs, .pipe-toggle, .saved-views) { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -145,6 +151,19 @@
   .adm-main .crm-tabs .btn,
   .adm-main .pipe-toggle .btn,
   .adm-main .saved-views .btn { min-height: 40px !important; padding: 8px 14px; }
+  /* The 40px density above beats the sitewide 44px .btn-sm floor (css/style.css
+     "Review remediation"). Mouse users keep the density; a finger gets the floor
+     back, and so do the Overview report links (35px on iPad, measured 2026-09-13). */
+  @media (pointer: coarse) {
+    .adm-main .btn-sm,
+    .adm-main .crm-tabs .btn,
+    .adm-main .pipe-toggle .btn,
+    .adm-main .saved-views .btn { min-height: 44px !important; }
+    .adm-report-card a.dash-row-route { min-height: 44px; align-items: center; }
+  }
+  /* A modal <dialog> must own the scroll: the page behind it kept scrolling under
+     a finger at phone width. :modal matches only showModal() dialogs. */
+  html:has(dialog:modal) { overflow: hidden; }
   /* Sub-view toggles (Content, Products, CRM) carry "which workspace am I in?".
      .btn-ghost paints the same surface white the shared .crm-tabs .is-active rule
      uses, so the selected pill was separated from the others by font-weight alone.
@@ -1290,6 +1309,6 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/admin.js?v=20260913b"></script>
+<script type="module" src="js/admin.js?v=20260913c"></script>
 </body>
 </html>

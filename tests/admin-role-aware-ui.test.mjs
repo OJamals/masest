@@ -13,6 +13,26 @@ test('client permission helpers fail closed for explicit unknown roles', () => {
   assert.match(capabilityReason('order.refund'), /finance or owner access/);
 });
 
+test('the legacy owner fallback grants every server capability, so an owner without staff_context loses nothing', async () => {
+  // The client derives the no-staff_context owner UI from its own label table. A key
+  // the server knows but the client does not is silently denied to that owner
+  // (coupons and prospects were, before 2026-09-13).
+  const { staffAccessSummary } = await import('../functions/_lib/authz.js');
+  const server = staffAccessSummary('owner').capabilities.sort();
+  const legacy = normalizeStaffContext({}).capabilities.sort();
+  assert.deepEqual(legacy, server);
+  for (const capability of server) {
+    assert.doesNotMatch(capabilityReason(capability), /additional staff access/, `${capability} needs a real reason`);
+  }
+});
+
+test('prospect outreach controls are declared to applyCapabilityUi, not hand-gated', () => {
+  const prospects = read('js/admin/crm-prospects.js');
+  assert.match(prospects, /data-outreach-action="\$\{action\}"[^>]*data-capability="prospect\.write"/);
+  assert.match(prospects, /type="submit" data-capability="prospect\.write"[^>]*>Save draft</);
+  assert.match(prospects, /type="submit" data-capability="prospect\.write"[^>]*>Save workflow</);
+});
+
 test('admin boot consumes uncached staff context and reapplies permissions to dynamic UI', () => {
   const source = read('js/admin.js');
   assert.match(source, /applyStaffContext\(stats\.staff_context\)/);

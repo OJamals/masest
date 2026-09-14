@@ -1,7 +1,7 @@
 // Pre-account Prospect surface for the integrated CRM workspace. Prospect
 // Organizations stay separate from customer Companies until explicitly linked.
-import { esc, delegate, confirmDialog } from '../util.js?v=20260913b';
-import { createCrmProspectAccount, renderProspectChannels } from './crm-prospect-account.js?v=20260913b';
+import { esc, delegate, confirmDialog } from '../util.js?v=20260913c';
+import { createCrmProspectAccount, renderProspectChannels } from './crm-prospect-account.js?v=20260913c';
 
 const STATUSES = [
   ['', 'All stages'], ['new', 'New'], ['researching', 'Researching'],
@@ -144,7 +144,7 @@ export function createCrmProspects({
 
   function outreachActions(draft, prospectId, canWrite) {
     const actions = [];
-    const button = (action, tone = 'ghost') => `<button class="btn btn-${tone} btn-sm" type="button" data-outreach-action="${action}" data-outreach-id="${esc(draft.id)}" data-prospect-id="${esc(prospectId)}"${canWrite ? '' : ' disabled aria-disabled="true"'}>${OUTREACH_ACTION_LABELS[action]}</button>`;
+    const button = (action, tone = 'ghost') => `<button class="btn btn-${tone} btn-sm" type="button" data-outreach-action="${action}" data-outreach-id="${esc(draft.id)}" data-prospect-id="${esc(prospectId)}" data-capability="prospect.write"${canWrite ? '' : ' disabled aria-disabled="true"'}>${OUTREACH_ACTION_LABELS[action]}</button>`;
     if (draft.status === 'draft') actions.push(button('approve', 'primary'));
     if (draft.status === 'approved') {
       const href = outreachMailto(draft);
@@ -188,7 +188,7 @@ export function createCrmProspects({
           <label class="crm-field crm-outreach-wide">Why this contact is relevant<textarea name="compliance_basis" required minlength="12" maxlength="1000" rows="2" placeholder="Public business contact; role and facility need relevant to VertKleen."></textarea></label>
           <label class="crm-field crm-outreach-wide">Subject<input class="adm-search" name="subject" required maxlength="180" value="${esc(`${prospect.name}: a facility cleaning question`)}"></label>
           <label class="crm-field crm-outreach-wide">Personalized message<textarea name="body_text" required maxlength="8000" rows="12">${esc(starterMessage(prospect, selected.contact))}</textarea></label>
-          <div class="crm-outreach-submit"><button class="btn btn-primary btn-sm" type="submit"${canWrite ? '' : ' disabled aria-disabled="true"'}>Save draft</button><span class="adm-status" data-prospect-outreach-status aria-live="polite"></span></div>
+          <div class="crm-outreach-submit"><button class="btn btn-primary btn-sm" type="submit" data-capability="prospect.write"${canWrite ? '' : ' disabled aria-disabled="true"'}>Save draft</button><span class="adm-status" data-prospect-outreach-status aria-live="polite"></span></div>
         </form>`
       : admEmpty('ph-envelope-simple', 'No verified email channel', 'Add a business email to the organization or a named contact before drafting outreach.');
     const drafts = prospect.outreach_drafts || [];

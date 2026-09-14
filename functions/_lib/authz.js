@@ -65,9 +65,11 @@ export function staffCan(role, capability) {
 }
 
 // Baseline write gate: only explicit write roles may mutate. Every admin mutation
-// path checks this; fine-grained staffCan() then narrows dangerous actions.
+// path checks this; fine-grained staffCan() then narrows dangerous actions. The
+// admin UI tags the same controls `data-capability="admin.write"`, so both gates
+// read the one capability row and cannot drift apart.
 export function staffCanWrite(role) {
-  return ["owner", "finance", "support"].includes(role);
+  return staffCan(role, "admin.write");
 }
 
 // Safe client-facing access summary. API handlers remain authoritative; this only

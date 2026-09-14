@@ -5,13 +5,21 @@ const ROLE_LABELS = Object.freeze({
   read_only: 'Read only',
 });
 
+// Mirrors STAFF_CAPABILITIES in functions/_lib/authz.js. The no-context owner fallback
+// below is derived from these keys, so a capability missing here is silently
+// DENIED to an owner booted without staff_context (coupons and prospects were, until 2026-09-13).
+// tests/admin-role-aware-ui.test.mjs pins this list against the server's.
 const CAPABILITY_LABELS = Object.freeze({
   'admin.write': 'staff write access',
+  'order.read': 'staff access',
   'order.write': 'order editing access',
   'order.delete': 'owner access',
   'order.refund': 'finance or owner access',
   'company.credit': 'finance or owner access',
+  'promotion.write': 'finance or owner access',
   'company.view_as': 'support, finance, or owner access',
+  'prospect.write': 'staff write access',
+  'prospect.delete': 'owner access',
   'product.write': 'owner catalog access',
   'content.assets': 'owner asset access',
   'content.publish': 'owner publishing access',

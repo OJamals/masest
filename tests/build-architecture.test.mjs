@@ -15,6 +15,8 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/update-content-regressions.spec.mjs",
   ];
   const workspaceSpecs = [
+    "tools/admin-nav-state.spec.mjs",
+    "tools/admin-responsive.spec.mjs",
     "tools/admin-content-workspace.spec.mjs",
     "tools/admin-support-entrypoints.spec.mjs",
     "tools/admin-order-company-picker.spec.mjs",

@@ -78,6 +78,70 @@ test('session expiry reloads only an established staff session', () => {
   assert.deepEqual(staff.calls, ['gate:expired', 'clear', 'reload', 'gate:expired']);
 });
 
+test('ending a session announces to sibling tabs, and a peer notice resets only a staff tab without re-announcing', async () => {
+  const announced = [];
+  let peer;
+  const staff = lifecycleFixture({
+    hasStaff: () => true,
+    announce: (reason) => announced.push(reason),
+    subscribe: (handler) => { peer = handler; },
+  });
+  assert.equal(typeof peer, 'function', 'lifecycle subscribes to peer notices on creation');
+
+  assert.equal(peer('expired'), true);
+  assert.deepEqual(staff.calls, ['gate:expired', 'clear', 'reload']);
+  assert.deepEqual(announced, [], 'a peer notice must not echo back into the channel');
+  assert.equal(peer('expired'), false, 'a tab already ending ignores further notices');
+  assert.equal(staff.lifecycle.expire({ hadStaff: true }), false);
+
+  const signedOutPeer = lifecycleFixture({ hasStaff: () => true, subscribe: (handler) => { peer = handler; } });
+  assert.equal(peer('signed-out'), true);
+  assert.deepEqual(signedOutPeer.calls, ['gate:signed-out', 'clear', 'reload']);
+
+  const anonymous = lifecycleFixture({ hasStaff: () => false, subscribe: (handler) => { peer = handler; } });
+  assert.equal(peer('expired'), false, 'an anonymous tab already sits on the gate');
+  assert.deepEqual(anonymous.calls, []);
+
+  const announcing = lifecycleFixture({ announce: (reason) => announced.push(reason) });
+  assert.equal(await announcing.lifecycle.signOut(), true);
+  announcing.lifecycle.expire({ hadStaff: true });
+  assert.deepEqual(announced, ['signed-out'], 'sign-out announces once; an already-ending tab never announces expiry');
+  const expiring = lifecycleFixture({ announce: (reason) => announced.push(reason) });
+  assert.equal(expiring.lifecycle.expire({ hadStaff: true }), true);
+  assert.equal(expiring.lifecycle.expire({ hadStaff: false }), false);
+  assert.deepEqual(announced, ['signed-out', 'expired']);
+});
+
+test('the peer channel rides the storage event: same key only, other tabs only, malformed payloads fail closed', async () => {
+  const { createSessionPeerChannel } = await import('../js/admin/session.js');
+  const listeners = [];
+  const written = [];
+  const channel = createSessionPeerChannel({
+    key: 'k',
+    storage: { setItem: (key, value) => written.push([key, value]) },
+    target: { addEventListener: (type, fn) => listeners.push([type, fn]) },
+  });
+  const received = [];
+  channel.subscribe((reason) => received.push(reason));
+  assert.deepEqual(listeners.map(([type]) => type), ['storage']);
+  const fire = (event) => listeners.forEach(([, fn]) => fn(event));
+
+  channel.announce('signed-out');
+  assert.equal(written[0][0], 'k');
+  assert.equal(JSON.parse(written[0][1]).reason, 'signed-out');
+
+  fire({ key: 'other', newValue: written[0][1] });
+  fire({ key: 'k', newValue: null });
+  assert.deepEqual(received, [], 'other keys and removals are ignored');
+  fire({ key: 'k', newValue: written[0][1] });
+  fire({ key: 'k', newValue: 'not json' });
+  assert.deepEqual(received, ['signed-out', 'expired'], 'malformed payloads still end the session');
+
+  const broken = createSessionPeerChannel({ key: 'k', storage: { setItem() { throw new Error('quota'); } }, target: null });
+  assert.doesNotThrow(() => broken.announce('expired'));
+  assert.doesNotThrow(() => broken.subscribe(() => {}));
+});
+
 test('staff chrome exposes session-only controls only after verified staff context', () => {
   assert.equal(typeof chromeModule.setAdminChromeSession, 'function');
   const user = { textContent: '', hidden: false };

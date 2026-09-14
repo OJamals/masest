@@ -1,12 +1,12 @@
 /* MASEST staff admin console. */
-import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260913b';
-import { esc, safeUrl, moneyDisplay, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260913b';
-import { editKey } from './admin/edits.js?v=20260913b';
-import { createFeatureLoader } from './admin/feature-loader.js?v=20260913b';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260913b';
-import { renderAdminChrome, setAdminChromeSession } from './admin/chrome.js?v=20260913b';
-import { createAdminSessionLifecycle } from './admin/session.js?v=20260913b';
-import { createAdminSearch } from './admin/search.js?v=20260913b';
+import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260913c';
+import { esc, safeUrl, moneyDisplay, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260913c';
+import { editKey } from './admin/edits.js?v=20260913c';
+import { createFeatureLoader } from './admin/feature-loader.js?v=20260913c';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260913c';
+import { renderAdminChrome, setAdminChromeSession } from './admin/chrome.js?v=20260913c';
+import { createAdminSessionLifecycle, createSessionPeerChannel } from './admin/session.js?v=20260913c';
+import { createAdminSearch } from './admin/search.js?v=20260913c';
 
 const $ = (id) => document.getElementById(id);
 
@@ -22,6 +22,9 @@ const adminSession = createAdminSessionLifecycle({
   clearUnsavedEdits: () => clearUnsavedAdminEdits(),
   showGate: ({ expired }) => showAdminGate({ expired }),
   reload: () => location.reload(),
+  hasStaff: () => Boolean(state.staff),
+  // Sibling admin tabs share the Supabase session; tell them when it ends here.
+  ...createSessionPeerChannel({ key: 'masest:adm:session-ended', storage: window.localStorage, target: window }),
 });
 const adminChrome = renderAdminChrome({ onSignOut: () => adminSession.signOut() });
 
@@ -387,7 +390,10 @@ async function setTab(tab, context = {}) {
   state.tab = nextTab;
   // replaceState, NOT location.hash: assigning location.hash fires hashchange →
   // syncTabFromHash → setTab again, double-rendering every tab (concat-based lists
-  // like quotes painted every row twice). Back/forward still works via hashchange.
+  // like quotes painted every row twice). Tab switches therefore rewrite ONE history
+  // entry: Back leaves the console rather than stepping through tabs (measured
+  // 2026-09-13). hashchange only serves typed/linked hashes and the dirty-guard
+  // hash restore below.
   if (location.hash.slice(1) !== state.tab) history.replaceState(null, '', '#' + state.tab);
   reserveAdminHeight();
   document.querySelectorAll('[data-panel]').forEach((panel) => {
@@ -571,7 +577,7 @@ async function downloadCsv(url, filename, statusId) {
 // Reports & exports card (#96). Bound once — the overview tab re-renders on each visit.
 let reportsWired = false;
 function wireReports() {
-  void import('./admin/stripe.js?v=20260913b').then(({ wireStripePayouts, renderStripePayouts }) => {
+  void import('./admin/stripe.js?v=20260913c').then(({ wireStripePayouts, renderStripePayouts }) => {
     wireStripePayouts();
     return renderStripePayouts();
   }).catch(() => {
@@ -652,8 +658,8 @@ let supportEntry = {};
 const featureLoader = createFeatureLoader({
   analytics: async () => {
     const [{ createTrafficRenderer }, { createSeoAudit }] = await Promise.all([
-      import('./admin/traffic.js?v=20260913b'),
-      import('./admin/seo.js?v=20260913b'),
+      import('./admin/traffic.js?v=20260913c'),
+      import('./admin/seo.js?v=20260913c'),
     ]);
     const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
     const runSeoAudit = createSeoAudit({ $, state });
@@ -663,11 +669,11 @@ const featureLoader = createFeatureLoader({
     };
   },
   integrations: async () => {
-    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260913b');
-    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260913b');
-    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260913b');
-    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260913b');
-    const { createAutomationCard } = await import('./admin/automation.js?v=20260913b');
+    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260913c');
+    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260913c');
+    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260913c');
+    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260913c');
+    const { createAutomationCard } = await import('./admin/automation.js?v=20260913c');
     const { renderAutomation } = createAutomationCard({ $, api, admSkeleton });
     return {
       wire() {
@@ -688,7 +694,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   orders: async () => {
-    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260913b');
+    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260913c');
     const { renderOrders, wireOrders } = createOrdersTab({
       $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
       onMessageCustomer: ({ companyId, orderId, userId }) => showSupportConsole({
@@ -724,8 +730,8 @@ const featureLoader = createFeatureLoader({
   },
   companies: async () => {
     const [{ createCompaniesTab }, { createCrmPanel }] = await Promise.all([
-      import('./admin/companies.js?v=20260913b'),
-      import('./admin/crm.js?v=20260913b'),
+      import('./admin/companies.js?v=20260913c'),
+      import('./admin/crm.js?v=20260913c'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const { renderCompanies, wireCompanies, openCompanyDetail, applyAcctView } = createCompaniesTab({
@@ -766,10 +772,10 @@ const featureLoader = createFeatureLoader({
       { createInventoryCard },
       { createCouponsCard },
     ] = await Promise.all([
-      import('./admin/products.js?v=20260913b'),
-      import('./admin/pricing.js?v=20260913b'),
-      import('./admin/inventory.js?v=20260913b'),
-      import('./admin/coupons.js?v=20260913b'),
+      import('./admin/products.js?v=20260913c'),
+      import('./admin/pricing.js?v=20260913c'),
+      import('./admin/inventory.js?v=20260913c'),
+      import('./admin/coupons.js?v=20260913c'),
     ]);
     const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({
       $, api, state, message, admSkeleton, admEmpty,
@@ -809,7 +815,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260913b');
+    const { createContentTab } = await import('./admin/content.js?v=20260913c');
     const { renderContent, renderBlog, wireContent, wireBlog, confirmSubviewChange } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -851,7 +857,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   support: async () => {
-    const { createThreadsTab } = await import('./admin/threads.js?v=20260913b');
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260913c');
     const { renderThreads, wireThreads, openThread, openNewChat, openConsole, openSettings } = createThreadsTab({
       api,
       state,
@@ -872,7 +878,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   quotes: async () => {
-    const { createQuotesTab } = await import('./admin/quotes.js?v=20260913b');
+    const { createQuotesTab } = await import('./admin/quotes.js?v=20260913c');
     const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager,
     });
@@ -893,7 +899,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   reviews: async () => {
-    const { createReviewsTab } = await import('./admin/reviews.js?v=20260913b');
+    const { createReviewsTab } = await import('./admin/reviews.js?v=20260913c');
     const {
       renderReviews,
       wireReviews,
@@ -913,8 +919,8 @@ const featureLoader = createFeatureLoader({
   },
   newsletter: async () => {
     const [{ createNewsletterTab }, { createOffersTab }] = await Promise.all([
-      import('./admin/newsletter.js?v=20260913b'),
-      import('./admin/offers.js?v=20260913b'),
+      import('./admin/newsletter.js?v=20260913c'),
+      import('./admin/offers.js?v=20260913c'),
     ]);
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
@@ -936,8 +942,8 @@ const featureLoader = createFeatureLoader({
   },
   crm: async () => {
     const [{ createCrmWorkspace }, { createCrmPanel }] = await Promise.all([
-      import('./admin/crm-workspace.js?v=20260913b'),
-      import('./admin/crm.js?v=20260913b'),
+      import('./admin/crm-workspace.js?v=20260913c'),
+      import('./admin/crm.js?v=20260913c'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const openSubject = (type, id, label) => {
@@ -1067,10 +1073,24 @@ function wire() {
     if (state.acctToggleWired) return;
     state.acctView = button.dataset.acctView;
   });
+  const setNavDrawer = (open) => {
+    document.querySelector('.adm-sidebar')?.classList.toggle('is-open', open);
+    $('admNavToggle')?.setAttribute('aria-expanded', String(open));
+  };
   $('admNavToggle')?.addEventListener('click', () => {
-    const sidebar = document.querySelector('.adm-sidebar');
-    const open = sidebar?.classList.toggle('is-open') || false;
-    $('admNavToggle').setAttribute('aria-expanded', String(open));
+    setNavDrawer(!document.querySelector('.adm-sidebar')?.classList.contains('is-open'));
+  });
+  // The phone-width drawer closes like every other overlay: Escape, or a tap
+  // anywhere outside the sidebar. Escape returns focus to the toggle.
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !document.querySelector('.adm-sidebar.is-open')) return;
+    setNavDrawer(false);
+    $('admNavToggle')?.focus();
+  });
+  document.addEventListener('click', (event) => {
+    if (!document.querySelector('.adm-sidebar.is-open')) return;
+    if (event.target.closest('.adm-sidebar')) return;
+    setNavDrawer(false);
   });
   wireTablist(document.querySelector('.adm-tabs[role="tablist"]'), (tab) => setTab(tab.dataset.tab));
   window.addEventListener('hashchange', syncTabFromHash);
