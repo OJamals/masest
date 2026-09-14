@@ -372,13 +372,20 @@ export function createContentRepository(sb) {
         .eq("version", revisionVersion)
         .single();
       if (error) throw error;
+      const keepLive = entry.status === "published" && options.canPublish === true;
       return this.saveEntry(
         {
           ...entry,
           payload: objectValue(revision.payload),
           seo: objectValue(revision.seo),
-          status: "draft",
-          published_at: null,
+          // Restoring used to force every entry to a draft. content_entries holds one row per
+          // entry and the public build selects status='published' (tools/build-content.mjs),
+          // so restoring an old revision of a live page silently dropped it from the next
+          // deploy's snapshot. A published entry now stays published, but only when the
+          // restorer may publish; anyone else still gets a draft, so a restore can never put
+          // content live on behalf of someone who could not publish it directly.
+          status: keepLive ? "published" : "draft",
+          published_at: keepLive ? entry.published_at || null : null,
         },
         userId,
         `Restored revision ${revision.version}`,

@@ -33,7 +33,9 @@ export async function onRequest({ request, env }) {
       const result = await repo.restoreRevision(
         body || {},
         user.id,
-        { expectedVersion: body?.expected_version },
+        // Restoring into a published entry keeps it live, which is a publish; only a restorer
+        // who holds content.publish gets that, everyone else restores to a draft.
+        { expectedVersion: body?.expected_version, canPublish: staffCan(role, "content.publish") },
       );
       if (!result.ok) {
         return json(["content_locked", "content_version_conflict"].includes(result.error) ? 409 : 400, result);

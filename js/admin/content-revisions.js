@@ -6,8 +6,8 @@
 // The diff compares against live editor state, read via the injected getCurrentEntry
 // getter. Shared primitives ($, api, admSkeleton, admEmpty) are injected; esc + the diff
 // helpers come from their own modules.
-import { esc } from "../util.js?v=20260913a";
-import { diffContentFields, formatFieldValue } from "./content-diff.js?v=20260913a";
+import { esc } from "../util.js?v=20260913b";
+import { diffContentFields, formatFieldValue } from "./content-diff.js?v=20260913b";
 
 export function createContentRevisions({ $, api, admSkeleton, admEmpty, getCurrentEntry }) {
   let revisionsCache = [];
@@ -91,7 +91,7 @@ export function createContentRevisions({ $, api, admSkeleton, admEmpty, getCurre
         </table>
       </div>
       <div class="adm-content-revision-diff-actions">
-        <button class="btn btn-primary btn-sm" type="button" data-content-revision-restore="${esc(version)}" data-capability="content.write">Restore version ${esc(version)} as draft</button>
+        <button class="btn btn-primary btn-sm" type="button" data-content-revision-restore="${esc(version)}" data-capability="content.write">${getCurrentEntry()?.status === "published" ? `Restore version ${esc(version)} to the live page` : `Restore version ${esc(version)} as draft`}</button>
         <button class="btn btn-ghost btn-sm" type="button" data-content-revision-close>Close</button>
       </div>`;
     panel.hidden = false;

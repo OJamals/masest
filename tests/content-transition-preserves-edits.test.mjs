@@ -234,3 +234,66 @@ test("revision restore rejects a stale editor version before replacing content",
   assert.equal(db.content_entries[0].title, "Concurrent edit");
   assert.equal(db.content_entries[0].version, 4);
 });
+
+test("restoring a revision of a published entry keeps it published for a restorer who can publish", async () => {
+  // content_entries holds one row per entry and the public build selects status='published',
+  // so forcing a draft here took the live page out of the next deploy's snapshot.
+  const db = {
+    content_entries: [seedEntry({ status: "published", published_at: "2026-09-01T12:00:00Z", version: 3, payload: { sku: "LIVE" } })],
+    content_revisions: [{ entry_id: "e1", version: 2, payload: { sku: "RESTORE" }, seo: { description: "old" } }],
+  };
+  const repo = createContentRepository(fakeSb(db));
+
+  const result = await repo.restoreRevision(
+    { type: "service", slug: "water-analysis", locale: "en", version: 2 },
+    "staff_owner",
+    { expectedVersion: 3, canPublish: true },
+  );
+
+  assert.equal(result.ok, true);
+  const entry = db.content_entries[0];
+  assert.equal(entry.payload.sku, "RESTORE", "the revision's content was restored");
+  assert.equal(entry.status, "published", "a live page stays live");
+  assert.equal(entry.published_at, "2026-09-01T12:00:00Z", "its original publish time is kept");
+  assert.equal(entry.version, 4);
+  assert.ok(db.content_revisions.some((revision) => revision.version === 4), "the restore is itself a revision");
+});
+
+test("a restorer who cannot publish still gets a draft, even for a published entry", async () => {
+  const db = {
+    content_entries: [seedEntry({ status: "published", published_at: "2026-09-01T12:00:00Z", version: 3 })],
+    content_revisions: [{ entry_id: "e1", version: 2, payload: { sku: "RESTORE" }, seo: {} }],
+  };
+  const repo = createContentRepository(fakeSb(db));
+
+  for (const options of [{ expectedVersion: 3 }, { expectedVersion: 3, canPublish: false }]) {
+    db.content_entries[0] = seedEntry({ status: "published", published_at: "2026-09-01T12:00:00Z", version: 3 });
+    db.content_revisions = [{ entry_id: "e1", version: 2, payload: { sku: "RESTORE" }, seo: {} }];
+    const result = await repo.restoreRevision(
+      { type: "service", slug: "water-analysis", locale: "en", version: 2 },
+      "staff_writer",
+      options,
+    );
+    assert.equal(result.ok, true);
+    assert.equal(db.content_entries[0].status, "draft", `canPublish=${options.canPublish} must not keep content live`);
+    assert.equal(db.content_entries[0].published_at, null);
+  }
+});
+
+test("restoring a revision of a draft entry leaves it a draft", async () => {
+  const db = {
+    content_entries: [seedEntry({ status: "draft", version: 3 })],
+    content_revisions: [{ entry_id: "e1", version: 2, payload: { sku: "RESTORE" }, seo: {} }],
+  };
+  const repo = createContentRepository(fakeSb(db));
+
+  const result = await repo.restoreRevision(
+    { type: "service", slug: "water-analysis", locale: "en", version: 2 },
+    "staff_owner",
+    { expectedVersion: 3, canPublish: true },
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(db.content_entries[0].status, "draft", "restore never publishes something that was not live");
+  assert.equal(db.content_entries[0].published_at, null);
+});
