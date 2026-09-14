@@ -100,7 +100,7 @@ jobs:
             -d '{"action":"sweep"}'
 
   web_vitals:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-24.04' || 'masest-trusted' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -113,8 +113,13 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Install Chromium
+      - name: Install Chromium and system dependencies
+        if: runner.environment == 'github-hosted'
         run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium
+        if: runner.environment == 'self-hosted'
+        run: npx playwright install chromium
 
       - name: Verify homepage Core Web Vitals
         run: npm run qa:ui-critical:performance

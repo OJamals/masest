@@ -120,6 +120,34 @@ test("verify workflow isolates public PRs and pins supported PostgreSQL tooling"
   assert.doesNotMatch(verifyJob, /(?:service|systemctl)\s+(?:start|restart).*postgres/i);
 });
 
+// masest is a public repository. A pull request from a fork runs the workflow file
+// from the fork, so the only safe place for the owner's self-hosted runner is behind
+// triggers a fork cannot fire. Fork approval ("all outside contributors") is the
+// second lock; this test is the first.
+test("the self-hosted runner only ever receives trusted events", () => {
+  const workflowDir = new URL(".github/workflows/", root);
+  const guarded = /runs-on: \$\{\{ github\.event_name == 'pull_request' && 'ubuntu-24\.04' \|\| 'masest-trusted' \}\}/;
+  for (const name of readdirSync(workflowDir).filter((file) => /\.ya?ml$/.test(file))) {
+    const workflow = read(`.github/workflows/${name}`);
+    const triggers = workflow.slice(workflow.indexOf("\non:"), workflow.search(/\n(?:concurrency|permissions|jobs):/));
+    const prTriggered = /\n\s+pull_request(?:_target)?:/.test(triggers);
+    assert.doesNotMatch(triggers, /pull_request_target:/, `${name} must not use pull_request_target`);
+    for (const line of workflow.match(/^\s+runs-on:.*$/gm) || []) {
+      if (!/self-hosted|masest-trusted/.test(line)) continue;
+      if (prTriggered) assert.match(line, guarded, `${name}: pull requests must stay on GitHub-hosted runners`);
+      else assert.match(line, /runs-on: masest-trusted$/, `${name}: target the trusted runner label`);
+    }
+    // The runner has no root. System packages live on the host; a job that can land there
+    // installs only the browser, and --with-deps (apt via sudo) runs on GitHub-hosted only.
+    const withDeps = (workflow.match(/playwright install --with-deps/g) || []).length;
+    const hostedOnly = (workflow.match(/if: runner\.environment == 'github-hosted'\s+run: npx playwright install --with-deps chromium/g) || []).length;
+    if (/masest-trusted/.test(workflow)) assert.equal(hostedOnly, withDeps, `${name}: gate --with-deps to GitHub-hosted runners`);
+  }
+  const publish = read(".github/workflows/publish-blog.yml");
+  assert.doesNotMatch(publish, /cron: "\*\/\d+ \* \* \* \*"/, "the blog backstop runs daily; the CMS dispatch is the fast path");
+  assert.match(publish, /repository_dispatch:\s+types: \[content-published\]/);
+});
+
 test("Cloudflare build emits baseline security headers", () => {
   const build = read("tools/cf-build.mjs");
 

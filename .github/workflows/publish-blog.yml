@@ -15,15 +15,19 @@
 #   SUPABASE_PUBLISHABLE_KEY     read-only through content_entries RLS
 #
 # Triggers:
-#   - schedule: baseline automation (every 30 min) with no wiring needed
+#   - repository_dispatch (type: content-published): the fast path — the CMS
+#     publish action (triggerBlogPublishWorkflow in functions/_lib/content.js)
+#     POSTs it the moment a blog post is published
+#   - schedule: one daily backstop in case a dispatch was dropped (this ran every
+#     30 minutes until 2026-09-14, ~48 no-op runs a day)
 #   - workflow_dispatch: run on demand from the Actions tab
-#   - repository_dispatch (type: content-published): optional — have the CMS
-#     publish action POST to the GitHub dispatch API to go live immediately
+#
+# Runs on the owner's self-hosted runner; nothing here triggers on pull requests.
 name: Publish blog + content
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "17 11 * * *"
   workflow_dispatch: {}
   repository_dispatch:
     types: [content-published]
@@ -38,7 +42,7 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: masest-trusted
     steps:
       - uses: actions/checkout@v5
         with:
