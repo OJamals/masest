@@ -231,27 +231,44 @@ test("staff reviews a requisition workspace and sends all priced lines", async (
 test("staff replies to a support thread with the expected payload", async ({ page }) => {
   await bootAsStaff(page);
 
+  // Support moved from a simple per-company thread list to a full ticket
+  // queue (support ticket operator workflow, commit 6c0744c2 and follow-ups):
+  // GET now returns { tickets } / a single { ticket, thread } keyed by
+  // ticket_id, and a reply posts { action: "reply", ticket_id, version, body }
+  // rather than the old { company_id, body, order_id }.
   let replyBody = null;
   await page.route("**/api/admin/messages**", (route) => {
     const req = route.request();
+    const url = new URL(req.url());
+    if (url.searchParams.get("summary") === "1") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: {} }) });
+    }
+    if (url.searchParams.get("view") === "assignees") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ assignees: [] }) });
+    }
     if (req.method() === "POST") {
       replyBody = req.postDataJSON();
-      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ id: "m-2", created_at: "2026-06-18T12:00:00Z" }) });
+      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ id: "m-2", ticket_id: "t-1", thread_id: "th-1", created_at: "2026-06-18T12:00:00Z" }) });
     }
-    if (req.url().includes("company_id=")) {
-      // Single-thread view (also re-fetched after the reply posts).
+    if (url.searchParams.get("ticket_id")) {
+      // Single-ticket view (also re-fetched after the reply posts).
       return route.fulfill({
         status: 200, contentType: "application/json",
         body: JSON.stringify({
-          thread: { company_id: "co-1", company_name: "Acme Mfg", status: "open" },
+          ticket: { id: "t-1", subject: "When does my order ship?", status: "open", category: "general", priority: "normal", version: 1, assigned_to: null, company: { name: "Acme Mfg" } },
+          thread: { thread_id: "th-1", company_id: "co-1", company_name: "Acme Mfg", scope: "company" },
           messages: [{ id: "m-1", sender_role: "buyer", body: "When does my order ship?", created_at: "2026-06-18T10:00:00Z" }],
+          has_more: false,
         }),
       });
     }
-    // Thread list.
+    // Ticket list (queue view).
     return route.fulfill({
       status: 200, contentType: "application/json",
-      body: JSON.stringify({ threads: [{ company_id: "co-1", company_name: "Acme Mfg", last_body: "When does my order ship?", unanswered: true, status: "open" }] }),
+      body: JSON.stringify({
+        tickets: [{ id: "t-1", subject: "When does my order ship?", status: "open", category: "general", priority: "normal", last_message_at: "2026-06-18T10:00:00Z", last_message_body: "When does my order ship?", last_sender_role: "buyer", needs_staff_reply: true, company: { name: "Acme Mfg" }, version: 1 }],
+        summary: {}, has_more: false, next_cursor: null,
+      }),
     });
   });
 
@@ -266,7 +283,7 @@ test("staff replies to a support thread with the expected payload", async ({ pag
   await expect(drawer).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(page.locator(".site-support__launcher")).toHaveCSS("color", "rgb(255, 255, 255)");
 
-  const thread = page.locator('.site-support__thread[data-company-id="co-1"]');
+  const thread = page.locator('.site-support__ticket[data-support-ticket-id="t-1"]');
   await expect(thread).toBeVisible();
   await thread.click();
 
@@ -279,56 +296,78 @@ test("staff replies to a support thread with the expected payload", async ({ pag
   await replyResp;
 
   expect(replyBody).toEqual({
-    company_id: "co-1",
+    action: "reply",
+    ticket_id: "t-1",
+    version: 1,
     body: "Ships Friday via LTL freight.",
-    order_id: null,
   });
 });
 
-test("new customer chat keeps its start action visible and opens the linked order thread", async ({ page }) => {
+test("staff starts a new support ticket with the expected payload and it keeps its order context", async ({ page }) => {
   await bootAsStaff(page);
   await page.setViewportSize({ width: 1440, height: 900 });
 
+  // Same ticket-queue rewrite as the reply test above: "New chat" is now
+  // "New ticket" (data-support-new-ticket), the recipient step no longer has
+  // its own #siteSupportNewChat* form/ids (it's the shared .site-support__composer
+  // with plain name= fields), and starting a ticket posts
+  // { action: "start_ticket", recipient_user_id, subject, category, body, order_id }.
   let startBody = null;
   await page.route("**/api/admin/messages**", (route) => {
     const request = route.request();
     const url = new URL(request.url());
+    if (url.searchParams.get("summary") === "1") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ summary: {} }) });
+    }
+    if (url.searchParams.get("view") === "assignees") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ assignees: [] }) });
+    }
     if (request.method() === "POST") {
       startBody = request.postDataJSON();
       return route.fulfill({
         status: 201,
         contentType: "application/json",
-        body: JSON.stringify({ id: "message-1", created_at: "2026-09-01T05:00:00Z" }),
+        body: JSON.stringify({ id: "message-1", ticket_id: "t-new-1", thread_id: "th-1", created_at: "2026-09-01T05:00:00Z" }),
       });
     }
-    if (url.searchParams.has("company_id")) {
+    if (url.searchParams.get("ticket_id")) {
       return route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          ticket: {
+            id: "t-new-1",
+            subject: "Replacement drum needed",
+            status: "open",
+            category: "shipping",
+            priority: "normal",
+            version: 1,
+            assigned_to: null,
+            participant: { id: "user-1", full_name: "Alex Rivera" },
+            company: { name: "Acme Manufacturing" },
+          },
           thread: {
+            thread_id: "th-1",
             company_id: "co-1",
             company_name: "Acme Manufacturing",
-            status: "open",
-            participant: { id: "user-1", full_name: "Alex Rivera", email: "alex@example.com" },
-            order_scope: { id: "order-1", reference: "MST-1042", status: "processing" },
+            participant: { id: "user-1", full_name: "Alex Rivera" },
+            scope: "user",
           },
+          order_scope: { id: "order-1", reference: "MST-1042", status: "processing", admin_url: "/admin.html?order=order-1#orders" },
           messages: [{
             id: "message-1",
             sender_role: "staff",
             body: "Your replacement drum ships tomorrow.",
             created_at: "2026-09-01T05:00:00Z",
-            participant: { id: "user-1", full_name: "Alex Rivera", email: "alex@example.com" },
-            order: { id: "order-1", reference: "MST-1042", status: "processing", admin_url: "/admin.html?order=order-1#orders" },
           }],
-          order_scope: { id: "order-1", reference: "MST-1042", status: "processing" },
+          has_more: false,
         }),
       });
     }
     return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ threads: [] }),
+      body: JSON.stringify({ tickets: [], has_more: false }),
     });
   });
   await page.route("**/api/admin/customers**", (route) => route.fulfill({
@@ -337,11 +376,9 @@ test("new customer chat keeps its start action visible and opens the linked orde
     body: JSON.stringify({
       customers: [{
         id: "user-1",
-        company_id: "co-1",
         full_name: "Alex Rivera",
         email: "alex@example.com",
         company_name: "Acme Manufacturing",
-        company_status: "active",
       }],
     }),
   }));
@@ -356,44 +393,26 @@ test("new customer chat keeps its start action visible and opens the linked orde
   }));
 
   await page.goto(`${BASE_URL}/admin.html#messages`, { waitUntil: "domcontentloaded" });
-  await page.locator("[data-support-new-chat]").click();
-  const start = page.locator("[data-support-compose-submit]");
-  await expect(start).toBeHidden();
-  await page.locator('[data-support-user-id="user-1"]').click();
-  await expect(start).toBeVisible();
-  await expect(start).toHaveAttribute("form", "siteSupportNewChatForm");
-  await page.locator("#siteSupportNewChatOrder").selectOption("order-1");
-  const message = page.locator("#siteSupportNewChatMessage");
+  await page.locator("[data-support-new-ticket]").click();
+  await expect(page.locator("[data-support-recipient-search]")).toBeFocused();
+  await page.locator("[data-support-recipient-search]").fill("Alex");
+  await page.getByRole("button", { name: /Alex Rivera/ }).click();
+  await expect(page.locator(".site-support__recipient")).toContainText("Alex Rivera");
+
+  const subject = page.locator('[name="subject"]');
+  await expect(subject).toBeFocused();
+  await subject.fill("Replacement drum needed");
+  await page.locator('.site-support__composer [name="category"]').selectOption("shipping");
+  await page.locator('[name="order_id"]').selectOption("order-1");
+  const message = page.locator('.site-support__composer [name="body"]');
   await message.fill("Your replacement drum ships tomorrow.");
+
+  const submit = page.getByRole("button", { name: "Start ticket" });
   await message.press("Tab");
-  await expect(start).toBeFocused();
+  await expect(submit).toBeFocused();
 
-  const readLayout = () => page.evaluate(() => {
-    const toolbar = document.querySelector(".site-support__conversation-toolbar");
-    const toolbarLead = document.querySelector(".site-support__toolbar-lead");
-    const action = document.querySelector("[data-support-compose-submit]");
-    const close = document.querySelector("[data-support-close]");
-    const drawer = document.querySelector(".site-support__drawer");
-    const toolbarRect = toolbar.getBoundingClientRect();
-    const toolbarLeadRect = toolbarLead.getBoundingClientRect();
-    const actionRect = action.getBoundingClientRect();
-    const closeRect = close.getBoundingClientRect();
-    const drawerRect = drawer.getBoundingClientRect();
-    return {
-      toolbarTop: toolbarRect.top,
-      toolbarBottom: toolbarRect.bottom,
-      toolbarLeadRight: toolbarLeadRect.right,
-      actionLeft: actionRect.left,
-      actionTop: actionRect.top,
-      actionRight: actionRect.right,
-      actionBottom: actionRect.bottom,
-      closeLeft: closeRect.left,
-      drawerLeft: drawerRect.left,
-      drawerRight: drawerRect.right,
-      viewportWidth: innerWidth,
-    };
-  });
-
+  // The start action (and the drawer it lives in) must stay reachable and
+  // never force horizontal scrolling across the widths staff actually use.
   for (const viewport of [
     { width: 320, height: 720 },
     { width: 390, height: 844 },
@@ -402,25 +421,28 @@ test("new customer chat keeps its start action visible and opens the linked orde
     { width: 1440, height: 900 },
   ]) {
     await page.setViewportSize(viewport);
-    const layout = await readLayout();
-    expect(layout.actionTop, JSON.stringify({ viewport, layout })).toBeGreaterThanOrEqual(layout.toolbarTop);
-    expect(layout.actionBottom, JSON.stringify({ viewport, layout })).toBeLessThanOrEqual(layout.toolbarBottom);
-    expect(layout.actionLeft, JSON.stringify({ viewport, layout })).toBeGreaterThanOrEqual(layout.toolbarLeadRight);
-    expect(layout.actionRight, JSON.stringify({ viewport, layout })).toBeLessThanOrEqual(layout.closeLeft);
-    expect(layout.drawerLeft, JSON.stringify({ viewport, layout })).toBeGreaterThanOrEqual(0);
-    expect(layout.drawerRight, JSON.stringify({ viewport, layout })).toBeLessThanOrEqual(layout.viewportWidth);
+    await expect(submit, JSON.stringify(viewport)).toBeInViewport();
+    const overflow = await page.locator(".site-support__drawer").evaluate((node) => node.scrollWidth - node.clientWidth);
+    expect(overflow, JSON.stringify(viewport)).toBeLessThanOrEqual(1);
   }
 
   const startResponse = page.waitForResponse((response) =>
     response.url().includes("/api/admin/messages") && response.request().method() === "POST");
-  await start.click();
+  await submit.click();
   await startResponse;
   expect(startBody).toEqual({
-    company_id: "co-1",
+    action: "start_ticket",
     recipient_user_id: "user-1",
+    subject: "Replacement drum needed",
+    category: "shipping",
     body: "Your replacement drum ships tomorrow.",
     order_id: "order-1",
-    start_thread: true,
   });
+
+  // The composer's own header shares the ".site-support__ticket-head" class
+  // (see admin-support.js renderComposer()), so scope to the shell's
+  // data-support-ticket-head element rather than the class alone.
+  await expect(page.locator("[data-support-ticket-head]")).toContainText("Replacement drum needed");
+  await page.getByRole("button", { name: "Properties" }).click();
   await expect(page.locator(".site-support__order-scope")).toContainText("MST-1042");
 });

@@ -198,6 +198,14 @@ test("Products can relink primary and add gallery images through the shared R2 v
   await expect(photo).toHaveAttribute("src", initialUrl);
   await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
 
+  // SQ-18 (js/admin/products.js) moved the CMS picker buttons out of the
+  // always-visible row and into the "Edit product details" editor, which
+  // starts collapsed and only auto-opens when a search narrows the list to
+  // exactly one match. renderProducts() re-renders (and re-collapses unless
+  // still filtered) after every save, so keep the filter active rather than
+  // toggling <summary> once.
+  await page.locator("#prodSearch").fill("hcr");
+  await expect(card.locator("details.product-admin-editor")).toHaveAttribute("open", "");
   await card.getByRole("button", { name: "Choose primary" }).click();
   const picker = page.locator("dialog.shared-image-picker");
   await expect(picker).toBeVisible();
