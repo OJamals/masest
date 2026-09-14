@@ -206,7 +206,7 @@ async function withServer(fn) {
 
 test("product grid lays out 4-5 clickable cards per row at desktop width", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await gotoDomReady(page, "products.html", ".shop-card");
@@ -236,7 +236,7 @@ test("product grid lays out 4-5 clickable cards per row at desktop width", async
 
 test("products page exposes the eight marine aliases as a dedicated catalog view", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await gotoDomReady(page, "products.html?category=marine", "[data-group=\"marine\"]");
@@ -302,7 +302,7 @@ test("products page exposes the eight marine aliases as a dedicated catalog view
 
 test("single product search result keeps a catalog-width card on desktop", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await gotoDomReady(page, "products.html", "#shopSearch");
@@ -333,7 +333,7 @@ test("single product search result keeps a catalog-width card on desktop", async
 
 test("products page thumbnails use the blue media stage", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: "reduce" });
     try {
       await gotoDomReady(page, "products.html", ".shop-card-media img");
@@ -359,7 +359,7 @@ test("products page thumbnails use the blue media stage", async () => {
 
 test("commerce size labels stay readable and bulk quote actions stay centered", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, reducedMotion: "reduce" });
     try {
       await gotoDomReady(page, "products.html", ".shop-card-buybar");
@@ -506,7 +506,7 @@ test("specialty product pages explain their fit in plain language", () => {
 
 test("catalog category controls filter the product grid", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
     try {
       await gotoDomReady(page, "products.html", ".shop-card");
@@ -525,7 +525,7 @@ test("catalog category controls filter the product grid", async () => {
 
 test("product job router headline does not overlap its copy", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     try {
       for (const viewport of [
         { width: 390, height: 900 },
@@ -558,7 +558,7 @@ test("product job router headline does not overlap its copy", async () => {
 
 test("public CTA groups keep a consistent gap from their lead copy", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const cases = [
       ["services.html", ".services-hero-copy .subhead", ".services-hero-copy .hero-actions", 28, 36],
       ["proof.html", ".page-hero .subhead", ".page-hero .btn", 28, 36],
@@ -605,7 +605,7 @@ test("public CTA groups keep a consistent gap from their lead copy", async () =>
 
 test("static product detail keeps the price panel clear of the following card", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1024, height: 900 }, reducedMotion: "reduce" });
     try {
       await page.addInitScript(() => {

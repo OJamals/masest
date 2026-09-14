@@ -61,7 +61,7 @@ test("customer chat is always mounted and gates sending on an auth session", () 
 
 test("dashboard restores floating chat after leaving the full message inbox", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const authModule = `
       export async function getToken() { return "test-token"; }
       export async function me() { return { can_admin: false, profile: { full_name: "Test Buyer" } }; }
@@ -93,7 +93,7 @@ test("dashboard restores floating chat after leaving the full message inbox", as
 
 test("order chat requests emitted during auth startup open after chat mounts", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.route("**/js/auth.js*", (route) => route.fulfill({
@@ -172,7 +172,7 @@ test("customer chat uses the active buyer ticket contract", () => {
 
 test("customer chat replies to the active ticket and starts a deliberate new issue without reusing it", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const context = await browser.newContext();
     const page = await context.newPage();
     const authModule = `
@@ -212,7 +212,7 @@ test("customer chat replies to the active ticket and starts a deliberate new iss
 
 test("customer chat isolates order drafts and settles sends across same-context refreshes", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
     const authModule = `
@@ -322,7 +322,7 @@ test("customer chat records presence and delegates counterpart email to shared s
 
 test("logged-out visitors always see chat and get a sign-up/login link", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
@@ -380,7 +380,7 @@ test("logged-out visitors always see chat and get a sign-up/login link", async (
 
 test("customer chat close paths remove the hidden panel from layout", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const authenticatedAuth = `
       export async function getToken() { return "test-token"; }
       export async function me() { return { can_admin: false }; }
@@ -420,7 +420,7 @@ test("customer chat close paths remove the hidden panel from layout", async () =
 
 test("guest and authenticated chat quote links carry bounded page and cart context", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const guestAuth = `
       export async function getToken() { return null; }
       export async function me() { return null; }
@@ -509,7 +509,7 @@ test("guest and authenticated chat quote links carry bounded page and cart conte
 
 test("customer chat places and restores focus for every open path", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const guestAuth = `
       export async function getToken() { return null; }
       export async function me() { return null; }

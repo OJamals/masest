@@ -16,7 +16,7 @@ async function withServer(fn) {
 
 test("homepage first fold prioritizes replacement and trial without duplicate shortcuts", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({
       viewport: { width: 1440, height: 1000 },
       reducedMotion: "reduce",
@@ -71,7 +71,7 @@ test("homepage first fold prioritizes replacement and trial without duplicate sh
 
 test("homepage keeps a primary action visible on short mobile", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({
       viewport: { width: 390, height: 700 },
       reducedMotion: "reduce",

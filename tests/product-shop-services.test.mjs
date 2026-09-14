@@ -128,7 +128,7 @@ test("products page is shop-focused and routes services to a standalone page", a
 
 test("service catalog preserves customer-facing compound words", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     try {
       await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
@@ -155,7 +155,7 @@ test("service catalog preserves customer-facing compound words", async () => {
 
 test("product cards expose price and compact quick add without a second control row", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     const apiErrors = [];
     await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
@@ -228,7 +228,7 @@ test("product cards expose price and compact quick add without a second control 
 
 test("staff product pages route commerce work to catalog management", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await page.addInitScript(() => {
       window.MASEST_ENABLE_LOCAL_API = true;
@@ -302,7 +302,7 @@ test("staff product pages route commerce work to catalog management", async () =
 
 test("segment pricing pages render isolated metadata with live API prices", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     try {
       const hvac = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
       await hvac.route("**/api/pricing", (route) => route.fulfill({
@@ -355,7 +355,7 @@ test("resources page declares CMS-driven public pricing tables only", () => {
 
 test("descaler card defaults price and quick add to the first live API variant", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
     await page.route("**/api/products", (route) => route.fulfill({
@@ -386,7 +386,7 @@ test("descaler card defaults price and quick add to the first live API variant",
 
 test("changing product-detail volume updates the visible price and cart SKU", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
     await page.route("**/api/products", (route) => route.fulfill({

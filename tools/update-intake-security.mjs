@@ -131,13 +131,24 @@ function rtfText(path) {
     .replace(/[{}]/g, " ");
 }
 
+// unzip reads the archive where it exists (macOS, GitHub-hosted images). Minimal CI hosts
+// ship without it, so a missing binary — and only that — falls back to python3's zipfile,
+// which the Playwright specs already require on every runner.
+const ZIP_NAMES = "import sys, zipfile; print('\\n'.join(zipfile.ZipFile(sys.argv[1]).namelist()))";
+const ZIP_READ = "import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read(sys.argv[2]))";
+
+function readArchive(unzipArgs, pythonArgs, encoding) {
+  const options = { encoding, maxBuffer: MAX_EXTRACTED_BYTES, stdio: ["ignore", "pipe", "pipe"], timeout: 15_000 };
+  try {
+    return execFileSync("unzip", unzipArgs, options);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    return execFileSync("python3", ["-c", ...pythonArgs], options);
+  }
+}
+
 function archiveText(path) {
-  const entries = execFileSync("unzip", ["-Z1", path], {
-    encoding: "utf8",
-    maxBuffer: MAX_EXTRACTED_BYTES,
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout: 15_000,
-  }).split(/\r?\n/).filter((entry) => (
+  const entries = readArchive(["-Z1", path], [ZIP_NAMES, path], "utf8").split(/\r?\n/).filter((entry) => (
     ARCHIVE_TEXT_ENTRY.test(entry)
     && !/[\[\]*?]/.test(entry)
     && !entry.startsWith("-")
@@ -146,12 +157,7 @@ function archiveText(path) {
   const chunks = [];
   let total = 0;
   for (const entry of entries) {
-    const bytes = execFileSync("unzip", ["-p", path, entry], {
-      encoding: "buffer",
-      maxBuffer: MAX_EXTRACTED_BYTES,
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 15_000,
-    });
+    const bytes = readArchive(["-p", path, entry], [ZIP_READ, path, entry], "buffer");
     total += bytes.length;
     if (total > MAX_EXTRACTED_BYTES) throw new Error("archive-expanded-too-large");
     chunks.push(bytes.toString("utf8"));

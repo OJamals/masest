@@ -29,7 +29,7 @@ function productPayload() {
 
 test("local product routes keep a working purchase path and catalog quick add", async () => {
   const staticSite = await startStaticTestServer(PROJECT_ROOT);
-  const browser = await launchTestBrowser({ channel: "chrome" });
+  const browser = await launchTestBrowser();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   let catalogRequests = 0;
   await page.route("**/api/products", (route) => {

@@ -87,7 +87,8 @@ test("directory scan inspects Office XML archives without leaking values", () =>
     mkdirSync(intake);
     writeFileSync(join(source, "[Content_Types].xml"), "<Types />");
     writeFileSync(join(source, "word", "document.xml"), `<w:t>API key: ${secret}</w:t>`);
-    execFileSync("zip", ["-q", "-r", join(intake, "notes.docx"), "[Content_Types].xml", "word"], { cwd: source });
+    // python3 ships with every runner (the Playwright specs serve with it); zip does not.
+    execFileSync("python3", ["-m", "zipfile", "-c", join(intake, "notes.docx"), "[Content_Types].xml", "word"], { cwd: source });
 
     const report = scanUpdateDirectory(intake);
     assert.equal(report.findings.length, 1);

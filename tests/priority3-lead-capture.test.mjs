@@ -105,7 +105,7 @@ test("contact page exposes all six public request types", () => {
 
 test("quote form defaults to email updates and respects an unchecked option", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const requests = [];
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
@@ -196,7 +196,7 @@ test("contact form posts all six public request types to quote intake", async ()
   ];
 
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const requests = [];
     try {
       for (const flow of flows) {
@@ -263,7 +263,7 @@ test("contact form posts all six public request types to quote intake", async ()
 
 test("task economics and operating boundaries survive URL prefill, editing, and submission", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const requests = [];
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
@@ -363,7 +363,7 @@ test("task economics and operating boundaries survive URL prefill, editing, and 
 
 test("product-prefilled sample requests can submit one requested product", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const requests = [];
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });

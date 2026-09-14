@@ -69,7 +69,7 @@ async function routeProducts(page, products = [hcrProduct()]) {
 
 test("static catalog does not show cart controls without commerce metadata", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
@@ -92,7 +92,7 @@ test("static catalog does not show cart controls without commerce metadata", asy
 
 test("confirmed catalog products hydrate compact quick-add controls instead of quote-first CTAs", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await routeProducts(page, [hcrProduct(), ...confirmedProducts()]);
@@ -116,7 +116,7 @@ test("confirmed catalog products hydrate compact quick-add controls instead of q
 
 test("product catalog shows public list pricing and compact default-pack quick add", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await routeProducts(page);
@@ -165,7 +165,7 @@ test("product catalog shows public list pricing and compact default-pack quick a
 
 test("priced products can be added to the cart", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await routeProducts(page);
@@ -183,7 +183,7 @@ test("priced products can be added to the cart", async () => {
 
 test("cart routes purchasable SKUs to delivery checkout before provider validation", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await routeProducts(page);
@@ -201,7 +201,7 @@ test("cart routes purchasable SKUs to delivery checkout before provider validati
 
 test("cart uses a conventional order summary without catalog policy duplication", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await routeProducts(page);
@@ -234,7 +234,7 @@ test("cart uses a conventional order summary without catalog policy duplication"
 
 test("cart holds product lines until catalog names and pricing resolve", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     let releaseProducts;
     const productsBlocked = new Promise(resolve => {
@@ -282,7 +282,7 @@ test("cart holds product lines until catalog names and pricing resolve", async (
 
 test("cart preserves marine selection context without changing the canonical line item", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await routeProducts(page, [marineHcrProduct()]);
@@ -310,7 +310,7 @@ test("cart preserves marine selection context without changing the canonical lin
 
 test("cart renders untrusted SKU text without creating injected markup", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await page.addInitScript(() => {
@@ -349,7 +349,7 @@ test("a 320px cart does not push its own content past the right edge", async () 
   // 320px is the iPhone SE viewport. Measured, not asserted from the stylesheet: pinning the
   // CSS text would pass just as happily if some later rule reintroduced the floor.
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       await page.setViewportSize({ width: 320, height: 568 });
@@ -386,7 +386,7 @@ test("a 320px cart does not push its own content past the right edge", async () 
 
 test("cart blocks checkout for a SKU the catalog no longer sells", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       // The catalog knows HCRCIP-1G and nothing else, so RETIRED-1G is the stale-bookmark
@@ -418,7 +418,7 @@ test("cart blocks checkout for a SKU the catalog no longer sells", async () => {
 
 test("cart does not condemn a good line while the catalog is still loading", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     let releaseProducts;
     const productsBlocked = new Promise(resolve => { releaseProducts = resolve; });
@@ -455,7 +455,7 @@ test("cart does not condemn a good line while the catalog is still loading", asy
 
 test("a failed catalog does not condemn every line in a good cart", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     const page = await browser.newPage();
     try {
       // loadCatalog() swallows every failure and catalogReady is set in a .finally(), so a

@@ -8,7 +8,7 @@ const INJECTION = '"><img data-catalog-injection src=x onerror="window.__catalog
 
 test("public product and service catalogs escape API-derived markup", async () => {
   const staticSite = await startStaticTestServer(PROJECT_ROOT);
-  const browser = await launchTestBrowser({ channel: "chrome" });
+  const browser = await launchTestBrowser();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
 
   await page.route("**/api/products", (route) => route.fulfill({

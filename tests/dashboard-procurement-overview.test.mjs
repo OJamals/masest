@@ -60,7 +60,7 @@ test("buyer messages expose ticket history and exact ticket replies", () => {
 
 test("buyer ticket selection replies with the exact ticket id and does not mark other tickets read", async () => {
   const site = await startStaticTestServer(root);
-  const browser = await launchTestBrowser({ channel: "chrome" });
+  const browser = await launchTestBrowser();
   const context = await browser.newContext({ viewport: { width: 1100, height: 900 } });
   const authFixture = `
     const calls = [];
@@ -137,7 +137,7 @@ test("buyer ticket selection replies with the exact ticket id and does not mark 
 
 test("buyer messages preserve order scope, drafts, and the selected ticket across reordered races", async () => {
   const site = await startStaticTestServer(root);
-  const browser = await launchTestBrowser({ channel: "chrome" });
+  const browser = await launchTestBrowser();
   const context = await browser.newContext({ viewport: { width: 1100, height: 900 } });
   const authFixture = `
     const calls = [];
@@ -296,7 +296,7 @@ test("buyer messages preserve order scope, drafts, and the selected ticket acros
 
 test("buyer messages show an explicit empty state for companyless accounts without a matching order", async () => {
   const site = await startStaticTestServer(root);
-  const browser = await launchTestBrowser({ channel: "chrome" });
+  const browser = await launchTestBrowser();
   const context = await browser.newContext({ viewport: { width: 900, height: 800 } });
   const authFixture = `
     const order = { id: "order-missing", reference: "MST-9999", status: "shipped" };
@@ -335,7 +335,7 @@ test("buyer messages show an explicit empty state for companyless accounts witho
 
 test("buyer new issue settles against its chosen order and ignores stale composer completions", async () => {
   const site = await startStaticTestServer(root);
-  const browser = await launchTestBrowser({ channel: "chrome" });
+  const browser = await launchTestBrowser();
   const context = await browser.newContext({ viewport: { width: 1100, height: 900 } });
   const authFixture = `
     const calls = [];

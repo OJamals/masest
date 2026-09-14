@@ -51,7 +51,7 @@ test("every referenced MASEST logo has a local source and an R2 ledger entry", (
 
 test("shared chrome renders decoded, named logos on root and nested routes", async () => {
   const staticSite = await startStaticTestServer(ROOT);
-  const browser = await launchTestBrowser({ channel: "chrome" });
+  const browser = await launchTestBrowser();
 
   try {
     for (const viewport of [

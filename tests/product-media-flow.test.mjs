@@ -38,7 +38,7 @@ async function routeProducts(page) {
 
 test("storefront grid uses owner-updated product photos from the commerce API", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
@@ -55,7 +55,7 @@ test("storefront grid uses owner-updated product photos from the commerce API", 
 
 test("product detail publishes product-specific SEO metadata", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);
@@ -86,7 +86,7 @@ test("product detail publishes product-specific SEO metadata", async () => {
 
 test("product detail uses owner-updated product photos from the commerce API", async () => {
   await withServer(async () => {
-    const browser = await launchTestBrowser({ channel: "chrome" });
+    const browser = await launchTestBrowser();
     try {
       const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       await routeProducts(page);

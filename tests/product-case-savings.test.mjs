@@ -86,7 +86,7 @@ test("public product projection marks only verified pending cases as contact-ord
 
 test("product detail offers exact case savings without sending an inactive case to checkout", async () => {
   const staticSite = await startStaticTestServer(PROJECT_ROOT);
-  const browser = await launchTestBrowser({ channel: "chrome" });
+  const browser = await launchTestBrowser();
   const page = await browser.newPage({ viewport: { width: 390, height: 900 }, reducedMotion: "reduce" });
   await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
   await page.route("**/api/products", (route) => route.fulfill({
