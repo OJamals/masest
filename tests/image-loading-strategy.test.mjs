@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import test from "node:test";
@@ -25,13 +26,20 @@ const SKIP = new Set([
   "dist", "docs", "factory", "functions", "node_modules", "prototypes",
   "supabase", "test-results", "tests", "tmp", "tools", "_local",
 ]);
+// cf-build ships `git ls-files --cached --others --exclude-standard`; a git-ignored
+// snapshot (backups/premium-redesign-*) is not a shipped page.
+const SHIPPABLE = new Set(execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
+  cwd: ROOT,
+  encoding: "utf8",
+  maxBuffer: 64 * 1024 * 1024,
+}).split("\n").filter(Boolean));
 
 function pages(dir = ROOT.pathname, found = []) {
   for (const entry of readdirSync(dir)) {
     if (SKIP.has(entry) || entry.startsWith(".")) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) pages(full, found);
-    else if (entry.endsWith(".html")) found.push(full);
+    else if (entry.endsWith(".html") && SHIPPABLE.has(relative(ROOT.pathname, full))) found.push(full);
   }
   return found;
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
@@ -15,9 +16,18 @@ const ignoredHtmlDirectories = new Set([
   "outputs",
   "supabase",
 ]);
+// cf-build publishes `git ls-files --cached --others --exclude-standard`. Anything git
+// ignores (graft caches, stale Claude worktrees, audit scratch) never ships and must
+// not be judged — on a developer machine it made four suites fail that CI passed.
+const shippable = new Set(execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
+  cwd: new URL("../", import.meta.url),
+  encoding: "utf8",
+  maxBuffer: 64 * 1024 * 1024,
+}).split("\n").filter(Boolean));
 const htmlFiles = readdirSync(new URL("../", import.meta.url), { recursive: true })
   .filter((path) => path.endsWith(".html"))
-  .filter((path) => !path.split("/").some((segment) => ignoredHtmlDirectories.has(segment)));
+  .filter((path) => !path.split("/").some((segment) => ignoredHtmlDirectories.has(segment)))
+  .filter((path) => shippable.has(path));
 const jsFiles = readdirSync(new URL("../js/", import.meta.url), { recursive: true })
   .filter((path) => path.endsWith(".js"))
   .map((path) => `js/${path}`);

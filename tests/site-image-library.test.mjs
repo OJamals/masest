@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { extname, join, relative, sep } from "node:path";
@@ -40,6 +41,13 @@ const PUBLIC_SOURCE_DENY = [
   /^img\/clients\//,
   /^img\/proof\/carib-brewery-table\.webp$/i,
 ];
+// cf-build ships `git ls-files --cached --others --exclude-standard`. Git-ignored local
+// files (graft's extract cache quoted image paths from a test) never publish.
+const SHIPPABLE = new Set(execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
+  cwd: ROOT,
+  encoding: "utf8",
+  maxBuffer: 64 * 1024 * 1024,
+}).split("\n").filter(Boolean));
 
 function publishedSourceFiles(directory = ROOT) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -47,6 +55,7 @@ function publishedSourceFiles(directory = ROOT) {
     const publicPath = relative(ROOT, path).replaceAll(sep, "/");
     if (PUBLIC_SOURCE_DENY.some((pattern) => pattern.test(publicPath))) return [];
     if (entry.isDirectory()) return publishedSourceFiles(path);
+    if (!SHIPPABLE.has(publicPath)) return [];
     if (!PUBLIC_TEXT_EXTENSIONS.has(extname(path).toLowerCase())) return [];
     if (publicPath === "data/content/site-images.json") return [];
     return [path];
