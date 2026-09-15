@@ -5,6 +5,7 @@ import {
   DELIVERY_CONCURRENCY,
   DELIVERY_MAX_ATTEMPTS,
   DELIVERY_MAX_BATCH_SIZE,
+  DELIVERY_MAX_CONCURRENCY,
   createSupabaseDeliveryStore,
   deliveryIdentity,
   deliverySummary,
@@ -166,6 +167,29 @@ test('worker defaults to SES-safe serial delivery and remains bounded for 1, 5, 
       store.rows.filter((row) => row.state === 'pending').length,
       Math.max(0, count - DELIVERY_MAX_BATCH_SIZE),
     );
+  }
+});
+
+test('worker honors configured production concurrency without exceeding the safety cap', async () => {
+  const now = Date.parse('2026-09-14T12:00:00.000Z');
+  for (const [requested, expected] of [[4, 4], [100, DELIVERY_MAX_CONCURRENCY]]) {
+    const store = new MemoryDeliveryStore(emails(100), now);
+    let inFlight = 0;
+    let maxInFlight = 0;
+    await runDeliveryWorker({
+      store,
+      limit: 100,
+      concurrency: requested,
+      now: () => now,
+      send: async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setImmediate(resolve));
+        inFlight -= 1;
+        return { ok: true };
+      },
+    });
+    assert.equal(maxInFlight, expected);
   }
 });
 

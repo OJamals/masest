@@ -43,6 +43,9 @@
     "AWS_SES_CONFIGURATION_SET": "masest-marketing",
     "AWS_SES_CONTACT_LIST": "masest-marketing",
     "AWS_SES_CONTACT_TOPIC": "marketing",
-    "SES_SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:791359098991:masest-ses-events"
+    "SES_SNS_TOPIC_ARN": "arn:aws:sns:us-east-1:791359098991:masest-ses-events",
+    "MARKETING_DELIVERY_BATCH_SIZE": "10",
+    "MARKETING_DELIVERY_CONCURRENCY": "4",
+    "MARKETING_DELIVERY_CONTINUATION_DELAY_SECONDS": "1"
   }
 }

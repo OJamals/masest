@@ -72,10 +72,26 @@ recipients, then emits a Queue wake signal containing only source identity.
 
 Newsletters, blog announcements, nurture, offers, and review requests snapshot rendered HTML in
 `newsletter_delivery_sources`, then materialize one idempotent recipient row in
-`newsletter_deliveries`. Cloudflare Queue wakes one serial SES delivery at a time
-(matching the current SES 1 message/second quota), then reconciles
+`newsletter_deliveries`. Cloudflare Queue drains a bounded batch using
+`MARKETING_DELIVERY_BATCH_SIZE` and `MARKETING_DELIVERY_CONCURRENCY`, then reconciles
 sent/suppressed/dead totals. Audience reads use only the canonical
 recipient email column; auth-directory enumeration is not part of campaign send.
+
+Code defaults remain `1`; checked-in production Worker vars use batch `10` and
+concurrency `4` against the approved `50,000/day`, `14/second` `us-east-1` quota.
+Change them only after `aws sesv2 get-account` confirms production access, sending
+enabled, healthy enforcement, and a compatible `SendQuota.MaxSendRate`; keep
+configured concurrency at or below that current rate.
+Production access removes the verified-recipient sandbox restriction but does not
+guarantee inbox placement or justify a sudden reputation-damaging volume spike.
+Run `npm run verify:ses-production` after AWS login. It fails closed unless production
+access, identity/DKIM/custom MAIL FROM, configuration-set sending/reputation/suppression,
+all required SNS event types, exact topic policy, confirmed HTTPS subscription,
+opt-out-by-default contact topic, and checked-in Worker delivery settings match this contract.
+It also reads the active Cloudflare Worker deployment and fails closed when deployed
+delivery vars or Queue binding differ from checked-in config.
+SES enforces the account send rate; explicit 429 responses retry. Batch/concurrency
+settings are not a strict account-wide per-second limiter.
 Company-targeted offers resolve eligible account emails through one database RPC,
 not one Supabase Auth request per user.
 

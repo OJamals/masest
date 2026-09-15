@@ -94,7 +94,7 @@ Transactional Email Worker owns restricted `EMAIL` binding, idempotency Durable 
 lifecycle queue, and inbound Email Routing handler for service/transactional mail,
 including requested quote follow-ups. Pages materializes consented marketing rows and
 emits PII-free Queue wake signals. `masest-marketing-email` alone owns SES credentials,
-serial delivery, SES contact-list mirroring, suppression sync, and signed SNS lifecycle
+bounded-batch delivery, SES contact-list mirroring, suppression sync, and signed SNS lifecycle
 ingress. Supabase owns canonical consent, suppression, and durable delivery rows.
 
 Required `masest-marketing-email` Worker secrets:
@@ -111,6 +111,17 @@ set `AWS_SES_REGION=us-east-1`, sender `news@marketing.masest.co`, Reply-To
 `bounce.marketing.masest.co`, not the visible sending domain. Contact list
 `masest-marketing` uses topic `marketing` with default `OPT_OUT`; explicit Supabase
 consent must sync before campaign claim.
+
+SES production access is approved in `us-east-1` for `50,000/day` and `14/second`.
+Checked-in Worker pacing starts at batch `10`, concurrency `4`, and a one-second
+continuation delay. SES enforces the account send rate; explicit 429 responses
+retry. These settings are not an account-wide per-second limiter. Run
+`npm run verify:ses-production` after `aws login` before increasing throughput;
+the verifier checks account, identity, DKIM, custom
+MAIL FROM, configuration set, suppression, contact topic, SNS event destination,
+topic policy, confirmed Worker subscription, and delivery settings against live quota.
+It also checks active Worker delivery vars and Queue binding against local config;
+an undeployed or drifted Worker fails readiness.
 
 After env var changes, run the `Verify` workflow on `main` so the new values bind.
 

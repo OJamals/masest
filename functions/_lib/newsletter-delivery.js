@@ -1,6 +1,7 @@
 import { marketingEmailViewUrl, sendSesMarketingEmail } from './ses-email.js';
 
 export const DELIVERY_CONCURRENCY = 1;
+export const DELIVERY_MAX_CONCURRENCY = 25;
 export const DELIVERY_BATCH_SIZE = 25;
 export const DELIVERY_MAX_BATCH_SIZE = 500;
 export const DELIVERY_LEASE_SECONDS = 5 * 60;
@@ -129,7 +130,10 @@ export async function runDeliveryWorker({
   if (!store?.claim || !store?.finish || !store?.reconcile) throw new Error('delivery_store_required');
   const activeWorkerId = requestedWorkerId || workerId();
   const claimLimit = Math.min(DELIVERY_MAX_BATCH_SIZE, Math.max(1, Number(limit) || DELIVERY_BATCH_SIZE));
-  const maxConcurrency = Math.min(DELIVERY_CONCURRENCY, Math.max(1, Number(concurrency) || DELIVERY_CONCURRENCY));
+  const maxConcurrency = Math.min(
+    DELIVERY_MAX_CONCURRENCY,
+    Math.max(1, Math.floor(Number(concurrency) || DELIVERY_CONCURRENCY)),
+  );
   const claimed = await store.claim({
     workerId: activeWorkerId,
     sourceType,

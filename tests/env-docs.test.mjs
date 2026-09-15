@@ -28,6 +28,9 @@ test('.env.example documents least-privilege Amazon SES marketing config', () =>
     'AWS_SES_REPLY_TO',
     'AWS_SES_CONFIGURATION_SET',
     'SES_SNS_TOPIC_ARN',
+    'MARKETING_DELIVERY_BATCH_SIZE',
+    'MARKETING_DELIVERY_CONCURRENCY',
+    'MARKETING_DELIVERY_CONTINUATION_DELAY_SECONDS',
   ]) {
     assert.match(env, new RegExp(`^${key}=`, 'm'), `${key} missing from .env.example`);
   }

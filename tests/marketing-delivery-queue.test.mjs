@@ -11,6 +11,7 @@ import {
 } from '../functions/_lib/marketing-delivery-queue.js';
 import {
   consumeMarketingDeliveryBatch,
+  marketingDeliveryOptions,
   runMarketingConsentSync,
   scheduleMarketingDeliveryWork,
 } from '../workers/marketing-email/src/core.js';
@@ -173,6 +174,50 @@ test('Queue consumer ACKs committed work, emits continuation, and retries infras
   assert.deepEqual(recovery, [{
     job: { sourceType: 'offer', sourceId: 'offer-42' },
     options: { delaySeconds: 60 },
+  }]);
+});
+
+test('Queue consumer uses bounded production delivery settings from Worker vars', async () => {
+  assert.deepEqual(marketingDeliveryOptions({}), {
+    limit: 1,
+    concurrency: 1,
+    continuationDelaySeconds: 1,
+  });
+  assert.deepEqual(marketingDeliveryOptions({
+    MARKETING_DELIVERY_BATCH_SIZE: '10',
+    MARKETING_DELIVERY_CONCURRENCY: '4',
+    MARKETING_DELIVERY_CONTINUATION_DELAY_SECONDS: '2',
+  }), {
+    limit: 10,
+    concurrency: 4,
+    continuationDelaySeconds: 2,
+  });
+
+  const message = queueMessage({
+    version: 1, kind: 'marketing_delivery.drain', sourceType: 'newsletter', sourceId: 'campaign-prod',
+  });
+  const continuations = [];
+  await consumeMarketingDeliveryBatch({ messages: [message] }, {
+    MARKETING_DELIVERY_BATCH_SIZE: '10',
+    MARKETING_DELIVERY_CONCURRENCY: '4',
+    MARKETING_DELIVERY_CONTINUATION_DELAY_SECONDS: '2',
+  }, {
+    runWorker: async (_env, _sb, options) => {
+      assert.deepEqual(options, {
+        sourceType: 'newsletter', sourceId: 'campaign-prod', limit: 10, concurrency: 4,
+      });
+      return { claimed: 10, summaries: [{ complete: false }] };
+    },
+    createClient: () => ({}),
+    enqueue: async (_env, job, options) => {
+      continuations.push({ job, options });
+      return { ok: true, queued: true };
+    },
+  });
+  assert.deepEqual(message.calls, ['ack']);
+  assert.deepEqual(continuations, [{
+    job: { sourceType: 'newsletter', sourceId: 'campaign-prod' },
+    options: { delaySeconds: 2 },
   }]);
 });
 

@@ -11,13 +11,12 @@ const topicPolicy = JSON.parse(readFileSync(
   'utf8',
 ));
 
-test('SES runtime policy locks sender while permitting the verified sandbox recipient identity', () => {
+test('SES production runtime policy locks sender without sandbox recipient permissions', () => {
   const send = policy.Statement.find((statement) => statement.Action === 'ses:SendEmail');
   assert.ok(send);
   assert.deepEqual(send.Resource, [
     'arn:aws:ses:us-east-1:791359098991:identity/marketing.masest.co',
     'arn:aws:ses:us-east-1:791359098991:identity/masest.co',
-    'arn:aws:ses:us-east-1:791359098991:identity/aoaljamal@gmail.com',
     'arn:aws:ses:us-east-1:791359098991:configuration-set/masest-marketing',
     'arn:aws:ses:us-east-1:791359098991:contact-list/masest-marketing',
   ]);

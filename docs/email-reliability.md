@@ -10,9 +10,9 @@ pins its first-send envelope, quote delivery uses a private immutable
 `integration_effects.source_snapshot`, order mail resolves current operational
 recipients and suppression state, marketing delivery rechecks current
 eligibility, and campaign delivery retains its occurrence source ID and
-per-recipient ledger identity. This runbook describes
-the implementation rollout; it does not claim that production delivery or
-provider access has been verified.
+per-recipient ledger identity. Marketing SES production sending and simulator
+lifecycle paths were verified on 2026-09-14; this evidence does not establish
+real-recipient inbox placement or validate every transactional workflow.
 
 The detailed support and quote contract is in
 [Durable support and quote communication](email-reliability-communication.md).
@@ -43,6 +43,28 @@ The detailed support and quote contract is in
   fallback. Blog sweeps remain tied to completed content deployment.
 
 ## Required baseline
+
+Amazon SES marketing production access is approved in `us-east-1` at `50,000/day`
+and `14/second`. Verify live state with `npm run verify:ses-production`; approval
+mail alone does not prove identity, custom MAIL FROM, configuration-set, suppression,
+SNS subscription, or Worker delivery settings.
+
+Before any real campaign, send isolated `test` deliveries to the SES mailbox
+simulator: `success@simulator.amazonses.com`, `bounce@simulator.amazonses.com`, and
+`complaint@simulator.amazonses.com`. Confirm SNS events reach the durable ledger and
+that bounce/complaint paths suppress as designed. Simulator messages still obey the
+maximum send rate but do not consume daily quota or harm bounce/complaint reputation.
+
+Simulator canaries completed on 2026-09-14 through the live admin test-send route:
+success source `8f29b064-127c-4eed-b37d-4bfc27f8e37a` reached `delivered`;
+bounce source `e679d537-a750-421c-b4b1-27bc6cfb426e` reached `bounced` and
+created an all-stream bounce suppression; complaint source
+`0ca0faa1-66b1-4412-9905-416ec9afd32d` reached `complained` and created an
+all-stream complaint suppression. Each source reconciled `complete`, with one
+sent ledger row and one attempt. The historical dead `test` row
+`live-qa-worker-20260903-v1` predates the corrected IAM policy; it is not an
+active delivery backlog. Recheck live provider and Worker state before a real
+campaign with `npm run verify:ses-production`, then warm up volume gradually.
 
 Install the schemas that provide the shared effect store, canonical workflow
 rows, and existing marketing ledger before the reliability migrations:

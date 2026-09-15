@@ -5,11 +5,35 @@ import {
   enqueueMarketingSweep,
   normalizeMarketingDeliveryJob,
 } from '../../../functions/_lib/marketing-delivery-queue.js';
-import { runSupabaseDeliveryWorker } from '../../../functions/_lib/newsletter-delivery.js';
+import {
+  DELIVERY_MAX_BATCH_SIZE,
+  DELIVERY_MAX_CONCURRENCY,
+  runSupabaseDeliveryWorker,
+} from '../../../functions/_lib/newsletter-delivery.js';
 import { syncSesMarketingContact } from '../../../functions/_lib/ses-email.js';
 
 const RETRY_DELAY_SECONDS = 60;
 const CONTINUATION_DELAY_SECONDS = 1;
+const MAX_CONTINUATION_DELAY_SECONDS = 60;
+
+function positiveInteger(env, name, fallback, maximum) {
+  const value = Math.floor(Number(env?.[name]));
+  if (!Number.isFinite(value) || value < 1) return fallback;
+  return Math.min(value, maximum);
+}
+
+export function marketingDeliveryOptions(env = {}) {
+  return {
+    limit: positiveInteger(env, 'MARKETING_DELIVERY_BATCH_SIZE', 1, DELIVERY_MAX_BATCH_SIZE),
+    concurrency: positiveInteger(env, 'MARKETING_DELIVERY_CONCURRENCY', 1, DELIVERY_MAX_CONCURRENCY),
+    continuationDelaySeconds: positiveInteger(
+      env,
+      'MARKETING_DELIVERY_CONTINUATION_DELAY_SECONDS',
+      CONTINUATION_DELAY_SECONDS,
+      MAX_CONTINUATION_DELAY_SECONDS,
+    ),
+  };
+}
 
 export async function runMarketingConsentSync(env, sb, {
   syncContact = syncSesMarketingContact,
@@ -52,6 +76,7 @@ export async function consumeMarketingDeliveryBatch(batch, env, {
   runConsentSync = runMarketingConsentSync,
 } = {}) {
   const sb = createClient(env);
+  const deliveryOptions = marketingDeliveryOptions(env);
   for (const message of batch?.messages || []) {
     let job;
     try {
@@ -79,11 +104,13 @@ export async function consumeMarketingDeliveryBatch(batch, env, {
         const result = await runWorker(env, sb, {
           sourceType: null,
           sourceId: null,
-          limit: 1,
-          concurrency: 1,
+          limit: deliveryOptions.limit,
+          concurrency: deliveryOptions.concurrency,
         });
         if (result.claimed > 0) {
-          const continuation = await enqueueSweep(env, { delaySeconds: CONTINUATION_DELAY_SECONDS });
+          const continuation = await enqueueSweep(env, {
+            delaySeconds: deliveryOptions.continuationDelaySeconds,
+          });
           if (!continuation.ok) throw new Error(continuation.error || 'marketing_queue_enqueue_failed');
         }
         message.ack();
@@ -92,14 +119,14 @@ export async function consumeMarketingDeliveryBatch(batch, env, {
       const result = await runWorker(env, sb, {
         sourceType: job.sourceType,
         sourceId: job.sourceId || null,
-        limit: 1,
-        concurrency: 1,
+        limit: deliveryOptions.limit,
+        concurrency: deliveryOptions.concurrency,
       });
       if (result.claimed > 0) {
         const continuation = await enqueue(env, {
           sourceType: job.sourceType,
           ...(job.sourceId ? { sourceId: job.sourceId } : {}),
-        }, { delaySeconds: CONTINUATION_DELAY_SECONDS });
+        }, { delaySeconds: deliveryOptions.continuationDelaySeconds });
         if (!continuation.ok) throw new Error(continuation.error || 'marketing_queue_enqueue_failed');
       }
       message.ack();
