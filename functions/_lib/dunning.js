@@ -1,7 +1,7 @@
 // Pure planners for failed-payment dunning + dispute/refund reconciliation (#24).
 // The stripe-webhook stays a thin signature-verifying adapter; these decide what to
 // persist and notify for each billing event, so the logic is unit-testable in isolation.
-import { centsToAmount } from './order-shape.js';
+import { centsToAmount, invoiceSubscriptionId, invoiceSubscriptionMetadata } from './order-shape.js';
 import { round2 } from './credit.js';
 
 // A subscription Stripe has stopped collecting on (smart-retries failed or exhausted).
@@ -11,7 +11,7 @@ export function isDelinquentStatus(status) {
 
 function companyIdOf(invoice) {
   return invoice?.metadata?.company_id
-    || invoice?.subscription_details?.metadata?.company_id
+    || invoiceSubscriptionMetadata(invoice)?.company_id
     || null;
 }
 
@@ -20,7 +20,7 @@ function companyIdOf(invoice) {
 export function planFailedPayment(invoice) {
   const next = invoice?.next_payment_attempt || null;
   return {
-    subscriptionId: invoice?.subscription || null,
+    subscriptionId: invoiceSubscriptionId(invoice),
     companyId: companyIdOf(invoice),
     amountDue: centsToAmount(invoice?.amount_due),
     currency: (invoice?.currency || 'usd').toUpperCase(),
@@ -35,7 +35,7 @@ export function planFailedPayment(invoice) {
 // notice when the prior status was delinquent, so ordinary renewals stay silent.
 export function planRecoveredPayment(invoice) {
   return {
-    subscriptionId: invoice?.subscription || null,
+    subscriptionId: invoiceSubscriptionId(invoice),
     companyId: companyIdOf(invoice),
     amountPaid: centsToAmount(invoice?.amount_paid),
     currency: (invoice?.currency || 'usd').toUpperCase(),

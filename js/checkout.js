@@ -1,10 +1,10 @@
-import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260913b';
-import { catalogImageDimensions } from './main/catalog-data.js?v=20260913b';
+import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260915a';
+import { catalogImageDimensions } from './main/catalog-data.js?v=20260915a';
 import {
   createShippingRequestCoordinator,
   fetchShippingJson,
   shippingRequestSnapshot,
-} from './shipping-request.js?v=20260913b';
+} from './shipping-request.js?v=20260915a';
 
 const money = (amount, currency = 'usd') => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: String(currency).toUpperCase(),
@@ -66,6 +66,8 @@ function checkoutError(error) {
     shipping_address_incomplete: 'Enter a complete shipping address and phone number.',
     shipping_address_invalid: 'Check each address field. One is too long or contains a character we cannot use.',
     shipping_domestic_only: 'Online checkout ships within the United States. Request a quote for international freight.',
+    shipping_region_unsupported: 'Online checkout ships to the 48 contiguous states and Washington, DC. For Alaska, Hawaii, U.S. territories, or military addresses, request a quote.',
+    shipping_po_box_unsupported: 'Our carriers cannot deliver to PO boxes. Enter a street address.',
     address_not_deliverable: 'We could not confirm this delivery address. Check the street, unit, city, state, and ZIP.',
     shipping_address_unverified: 'No carrier could find that street address. Check the street number and spelling, then calculate again.',
     address_validation_unavailable: 'We could not check that address right now. Try again.',
@@ -291,9 +293,9 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260913b'),
-    import('./auth.js?v=20260913b'),
-    import('./staff-surface.js?v=20260913b'),
+    import('./address-autocomplete.js?v=20260915a'),
+    import('./auth.js?v=20260915a'),
+    import('./staff-surface.js?v=20260915a'),
   ]);
   const { acceptedQuoteContext, checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;

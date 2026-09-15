@@ -456,7 +456,7 @@ test("mobile service-category guide reaches decision content without redundant h
   expect(layout.bodyWidth).toBeLessThanOrEqual(layout.viewportWidth);
   expect(layout.decisionTop).toBeLessThanOrEqual(790);
   await expect.poll(() => configResponses).toContainEqual({
-    url: `${BASE_URL}/js/config.js?v=20260913b`,
+    url: `${BASE_URL}/js/config.js?v=20260915a`,
     status: 200,
   });
   await expect(page.getByRole("link", { name: "Request water analysis" })).toHaveAttribute("href", /contact\?type=services/);
@@ -512,7 +512,7 @@ test("footer legal links keep touch-sized hit areas", async ({ page }) => {
     };
   }));
 
-  expect(legalLinks.map((link) => link.text)).toEqual(["Privacy", "Terms", "Site use"]);
+  expect(legalLinks.map((link) => link.text)).toEqual(["Shipping & returns", "Privacy", "Terms", "Site use"]);
   for (const link of legalLinks) {
     expect(link.height, `${link.text} footer link height`).toBeGreaterThanOrEqual(44);
     expect(link.display, `${link.text} footer link display`).toBe("flex");

@@ -4797,9 +4797,14 @@ body.checkout-flow-page::before { display: none; }
 .checkout-primary { width: 100%; min-height: 54px; justify-content: center; border-radius: var(--r-input); }
 .checkout-primary:disabled { opacity: 1; background: #e2e5e7; color: #9aa1a8; }
 .checkout-pay-hint { margin: var(--s3) 0 0; color: var(--muted); font-size: var(--fs-caption); }
-.checkout-payment-trust { display: flex; align-items: center; gap: var(--s4); margin-top: var(--s7); color: var(--muted); font-size: var(--fs-caption); }
-.checkout-payment-trust > i { display: grid; place-items: center; width: 46px; height: 46px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 50%; color: var(--ink-soft); font-size: 1.15rem; background: var(--surface); }
-.checkout-payment-trust p { max-width: 260px; }
+/* .checkout-payment-trust is the one Stripe line (a commerce spec locates it strictly); the
+   shipping and returns line shares its look under its own class. */
+.checkout-payment-trust,
+.checkout-policy-trust { display: flex; align-items: center; gap: var(--s4); margin-top: var(--s7); color: var(--muted); font-size: var(--fs-caption); }
+.checkout-payment-trust > i,
+.checkout-policy-trust > i { display: grid; place-items: center; width: 46px; height: 46px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 50%; color: var(--ink-soft); font-size: 1.15rem; background: var(--surface); }
+.checkout-payment-trust p,
+.checkout-policy-trust p { max-width: 260px; }
 
 @media (max-width: 960px) {
   .checkout-header { grid-template-columns: 80px 1fr 110px; padding-inline: var(--s6); }
@@ -8312,6 +8317,8 @@ body.products-page .conversion-proof .proof-pill em {
   line-height: 1.65;
   color: var(--ink-soft);
 }
+/* Two paragraphs under one heading otherwise touch: p carries no margin sitewide. */
+.legal-page p + p { margin-top: var(--s4); }
 .legal-page ul { padding-left: var(--s6); }
 
 /* Compact headline sizes for sub-sections (override base .headline clamp). */
@@ -8835,6 +8842,29 @@ body.product-detail-page main > section.product-static-section {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--s3);
+  margin-top: var(--s4);
+}
+
+/* Purchase policy lines: the shipping cutoff, returns window, and NET terms stated where
+   buyers decide (product hero, cart summary, checkout), each linking to /shipping-returns.
+   tests/shipping-policy-copy.test.mjs keeps the wording tied to the fulfillment schedule. */
+.product-detail-page .product-hero-policy,
+.cart-policy-note {
+  margin: var(--s3) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+}
+
+.product-hero-policy a,
+.cart-policy-note a,
+.checkout-policy-trust a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.checkout-policy-trust {
   margin-top: var(--s4);
 }
 

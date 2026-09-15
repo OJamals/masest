@@ -129,6 +129,61 @@ test("orderRowFromSession: unsettled ACH session -> pending_payment with QBO syn
   assert.equal(orderRowFromSession({}).status, "paid"); // absent payment_status = settled (card)
 });
 
+// Events reach the webhook in the account's default API version (the endpoint pins none),
+// currently 2026-05-27.dahlia. Basil moved or removed several fields these shapes read.
+test("qboSubscriptionInvoiceRow reads a basil-or-later invoice: parent subscription, total_taxes", () => {
+  const row = qboSubscriptionInvoiceRow({
+    id: "in_new",
+    livemode: true,
+    total: 10700,
+    total_taxes: [{ amount: 500 }, { amount: 200 }],
+    customer: "cus_1",
+    parent: { type: "subscription_details", subscription_details: { subscription: { id: "sub_7" } } },
+    lines: { data: [{ description: "VertKleen Gold program" }] },
+  }, { companyId: "co-1", tier: "Gold" });
+  assert.equal(row.stripe_subscription_id, "sub_7");
+  assert.equal(row.tax, 7);
+  assert.equal(row.subtotal, 100);
+  assert.equal(row.total, 107);
+  // payments is expandable only, so an event payload never names the PaymentIntent;
+  // subscriptionOrderForQbo falls back to the invoice id for the QBO payment reference.
+  assert.equal(row.stripe_payment_intent, null);
+});
+
+test("qboSubscriptionInvoiceRow takes the PaymentIntent from expanded invoice payments when present", () => {
+  const row = qboSubscriptionInvoiceRow({
+    id: "in_expanded",
+    total: 4900,
+    payments: { data: [
+      { status: "canceled", payment: { type: "payment_intent", payment_intent: "pi_old" } },
+      { status: "paid", payment: { type: "payment_intent", payment_intent: { id: "pi_paid" } } },
+    ] },
+  });
+  assert.equal(row.stripe_payment_intent, "pi_paid");
+});
+
+test("qboSubscriptionInvoiceRow still reads an acacia invoice", () => {
+  const row = qboSubscriptionInvoiceRow({
+    id: "in_old",
+    total: 10700,
+    total_tax_amounts: [{ amount: 700 }],
+    subscription: "sub_old",
+    payment_intent: "pi_old",
+  });
+  assert.equal(row.stripe_subscription_id, "sub_old");
+  assert.equal(row.stripe_payment_intent, "pi_old");
+  assert.equal(row.tax, 7);
+});
+
+test("orderRowFromSession reads shipping collected by Stripe from collected_information", () => {
+  const row = orderRowFromSession({
+    payment_status: "paid",
+    collected_information: { shipping_details: { name: "Pat", address: { line1: "9 B St" } } },
+    customer_details: { address: { city: "Tampa" } },
+  });
+  assert.deepEqual(row.ship_address, { name: "Pat", address: { line1: "9 B St" } });
+});
+
 test("Stripe test-mode orders and subscription invoices never enter production QBO queues", () => {
   assert.equal(stripeQboSyncStatus(false), "skipped");
   assert.equal(stripeQboSyncStatus(true), "pending");

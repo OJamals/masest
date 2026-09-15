@@ -178,6 +178,29 @@ test("estimate rejects non-US and malformed postal codes", async () => {
   );
 });
 
+test("estimate refuses ZIPs outside the contiguous states before asking the carrier", async () => {
+  const base = { env: ENV, cart: [{ sku: "VK-CRHD-1G", qty: 1 }], variants: [JUG] };
+  let carrierCalls = 0;
+  const deps = estimateDeps({
+    estimateRates: async () => { carrierCalls += 1; return providerEstimatePayload(); },
+  });
+  // Alaska, Hawaii, Puerto Rico, Virgin Islands, military AE/AA/AP, Guam.
+  for (const postal_code of ["99501", "96813", "00901", "00802", "09012", "34001", "96601", "96910"]) {
+    await assert.rejects(
+      () => estimateCheckoutRates({ ...base, destination: { postal_code } }, deps),
+      (error) => error.code === "shipping_region_unsupported" && error.status === 422,
+      postal_code,
+    );
+  }
+  assert.equal(carrierCalls, 0);
+  // DC, and Holtsville NY at 005 — one below the first excluded prefix.
+  for (const postal_code of ["20001", "00501"]) {
+    const result = await estimateCheckoutRates({ ...base, destination: { postal_code } }, deps);
+    assert.equal(result.postal_code, postal_code);
+  }
+  assert.equal(carrierCalls, 2);
+});
+
 test("estimate fails closed when the warehouse has no usable origin", async () => {
   await assert.rejects(
     () => estimateCheckoutRates(

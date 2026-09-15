@@ -193,6 +193,73 @@ test('billing-failed branch commits alert effects before 200', async () => {
   );
 });
 
+// The Stripe webhook endpoint pins no API version, so live events use the account default
+// (2026-05-27.dahlia), where an Invoice names its subscription only under parent. These two
+// tests send that shape; before the fix both branches silently skipped the subscription.
+function subscriptionTableSpy(writes, current = { status: 'past_due', company_id: 'company-1', tier: 'Gold' }) {
+  return () => {
+    const query = {
+      select() { return query; },
+      eq(column, value) { writes.push(['eq', column, value]); return query; },
+      update(patch) { writes.push(['update', patch]); return query; },
+      async maybeSingle() { return { data: current, error: null }; },
+      then(resolve, reject) { return Promise.resolve({ data: null, error: null }).then(resolve, reject); },
+    };
+    return query;
+  };
+}
+
+const dahliaSubscriptionInvoice = {
+  id: 'in_dahlia',
+  livemode: true,
+  currency: 'usd',
+  total: 4900,
+  amount_paid: 4900,
+  amount_due: 4900,
+  attempt_count: 1,
+  next_payment_attempt: null,
+  total_taxes: [],
+  parent: {
+    type: 'subscription_details',
+    subscription_details: { subscription: 'sub_1', metadata: { company_id: 'company-1' } },
+  },
+};
+
+test('invoice.paid with a basil-or-later payload clears delinquency and queues the QBO invoice', async () => {
+  const calls = [];
+  const subscriptionWrites = [];
+  const qboRows = [];
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({ id: 'evt_invoice_paid_dahlia', type: 'invoice.paid', data: { object: dahliaSubscriptionInvoice } }),
+    adminClient: () => effectCaptureDb(calls, {
+      program_subscriptions: subscriptionTableSpy(subscriptionWrites),
+      qbo_subscription_invoices: () => ({
+        async upsert(row) { qboRows.push(row); return { error: null }; },
+      }),
+    }),
+  });
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.deepEqual(result, { status: 200, body: { received: true } });
+  assert.equal(qboRows.length, 1, 'the paid subscription invoice is queued for QuickBooks');
+  assert.equal(qboRows[0].stripe_subscription_id, 'sub_1');
+  assert.deepEqual(subscriptionWrites.filter(([op]) => op === 'eq').map(([, column, value]) => [column, value]),
+    [['stripe_subscription_id', 'sub_1'], ['stripe_subscription_id', 'sub_1']]);
+  assert.deepEqual(subscriptionWrites.find(([op]) => op === 'update'), ['update', { status: 'active' }]);
+  assert.deepEqual(calls[0][1].map((row) => row.effect_key), ['billing-recovery-email', 'company-billing-recovered']);
+});
+
+test('invoice.payment_failed with a basil-or-later payload marks the subscription past_due', async () => {
+  const calls = [];
+  const subscriptionWrites = [];
+  const handler = createStripeWebhookHandler({
+    constructEvent: async () => ({ id: 'evt_invoice_failed_dahlia', type: 'invoice.payment_failed', data: { object: dahliaSubscriptionInvoice } }),
+    adminClient: () => effectCaptureDb(calls, { program_subscriptions: subscriptionTableSpy(subscriptionWrites) }),
+  });
+  const result = await responseJson(await handler({ request: webhookRequest(), env: webhookEnv }));
+  assert.deepEqual(result, { status: 200, body: { received: true } });
+  assert.deepEqual(subscriptionWrites, [['update', { status: 'past_due' }], ['eq', 'stripe_subscription_id', 'sub_1']]);
+});
+
 test('dispute branch commits staff alert effect before 200', async () => {
   const calls = [];
   const handler = createStripeWebhookHandler({

@@ -115,7 +115,7 @@ function wireDocumentDownloadCapture() {
 }
 
 export function renderChrome({
-  authModule = "/js/auth.js?v=20260913b",
+  authModule = "/js/auth.js?v=20260915a",
   resolveSession = false,
 } = {}) {
   initCmpTableLabels();
@@ -288,7 +288,7 @@ export function renderChrome({
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
-  import("/js/account-nav.js?v=20260913b").then((m) => (
+  import("/js/account-nav.js?v=20260915a").then((m) => (
     m.initAccountNav && m.initAccountNav({ nav, root, authModule, resolveSession })
   )).catch(() => {});
   const setMenuOpen = open => {
@@ -390,7 +390,7 @@ export function renderChrome({
       </div>`}
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
-        <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">Site use</a></span>
+        <span class="foot-legal"><a href="${root}shipping-returns">Shipping &amp; returns</a><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">Site use</a></span>
         <span translate="no">VertKleen is a trademark of MASEST Consulting LLC.</span>
       </div>
     </div>`;
@@ -428,9 +428,9 @@ export function renderChrome({
     window.__masestIntegrations = true;
     window.MASEST = Object.assign(window.MASEST || {}, { chatRoot: root, authModule });
     const cfg = document.createElement("script");
-    cfg.src = `${root}js/config.js?v=20260913b`;
+    cfg.src = `${root}js/config.js?v=20260915a`;
     cfg.onload = () => {
-      ["integrations.js?v=20260913b", "customer-chat.js?v=20260913b"].forEach((src) => {
+      ["integrations.js?v=20260915a", "customer-chat.js?v=20260915a"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;

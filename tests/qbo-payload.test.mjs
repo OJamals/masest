@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import {
+  NET_INVOICE_CARD_LIMIT,
   buildInvoicePayload,
   buildInvoicePaymentPayload,
   qboCustomerPayload,
@@ -96,6 +97,26 @@ test("invoice payload enables QuickBooks online card and ACH payments", () => {
   assert.equal(payload.AllowOnlinePayment, true);
   assert.equal(payload.AllowOnlineCreditCardPayment, true);
   assert.equal(payload.AllowOnlineACHPayment, true);
+});
+
+test("invoices of $2,500 or more are payable online by ACH only, as the payment terms promise", () => {
+  assert.equal(NET_INVOICE_CARD_LIMIT, 2500);
+  const invoiceFor = (total) => buildInvoicePayload({
+    order: { ...order, total },
+    items: [{ sku: "crhd", name: "CR-HD - 55 gal", qty: 1, unit_price: total - 7.5, line_total: total - 7.5 }],
+    customerRef: "55",
+    itemRefs,
+  });
+
+  assert.equal(invoiceFor(2499.99).AllowOnlineCreditCardPayment, true);
+  for (const total of [2500, 12000]) {
+    const payload = invoiceFor(total);
+    assert.equal(payload.AllowOnlineCreditCardPayment, false, `${total} offers no card button`);
+    assert.equal(payload.AllowOnlineACHPayment, true, `${total} stays payable by bank`);
+    assert.equal(payload.AllowOnlinePayment, true);
+  }
+  assert.match(readFileSync(new URL("../shipping-returns.html", import.meta.url), "utf8"),
+    /NET invoices of \$2,500 or more are paid by ACH bank transfer/);
 });
 
 test("invoice payment payload links Stripe payment to the QuickBooks invoice", () => {

@@ -57,6 +57,43 @@ export function normalizeShippingAddress(value) {
   return address;
 }
 
+// Online orders ship by ground parcel to street addresses in the 48 contiguous states and
+// DC, which is exactly what the published shipping policy promises. Alaska, Hawaii, the
+// territories, military mail and PO boxes are quoted instead. Billing addresses are never
+// gated: a Honolulu card can pay for a Florida delivery.
+const SHIPPABLE_STATES = new Set([
+  'AL', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'DC', 'FL', 'GA', 'ID', 'IL', 'IN', 'IA', 'KS',
+  'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM',
+  'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA',
+  'WA', 'WV', 'WI', 'WY',
+]);
+
+// First three ZIP digits that deliver outside the contiguous states whatever state was typed:
+// 006-009 Puerto Rico and the Virgin Islands, 090-098 and 340 and 962-966 military mail,
+// 967-968 Hawaii and American Samoa, 969 Guam and the Pacific territories, 995-999 Alaska.
+function zipOutsideContiguousStates(postalCode) {
+  const prefix = Number(String(postalCode).slice(0, 3));
+  return (prefix >= 6 && prefix <= 9)
+    || (prefix >= 90 && prefix <= 98)
+    || prefix === 340
+    || (prefix >= 962 && prefix <= 969)
+    || prefix >= 995;
+}
+
+// Carriers cannot deliver a parcel to a post office box. Requires a box number so street
+// names like "Boxwood Ln" or "Pobox Rd" pass; a private mailbox (PMB) is a street address.
+const PO_BOX = /\bp\s*\.?\s*o\s*\.?\s*(?:box|b\b\.?)\s*#?\s*\d|\bpost(?:al)?\s+office\s+box\b|^\s*box\s*#?\s*\d/i;
+
+export function assertShippableAddress(address) {
+  if (!SHIPPABLE_STATES.has(address?.state) || zipOutsideContiguousStates(address?.postal_code)) {
+    throw new CheckoutFulfillmentError('shipping_region_unsupported', 422);
+  }
+  if ([address.address1, address.address2].some((line) => PO_BOX.test(String(line || '')))) {
+    throw new CheckoutFulfillmentError('shipping_po_box_unsupported', 422);
+  }
+  return address;
+}
+
 // `bookable` rates must carry a provider rate_id — that id is what gets signed into the
 // selection token and replayed at label purchase. The estimate endpoint returns no rate_id
 // (its results are not addressable), so that path passes bookable:false.
@@ -203,6 +240,9 @@ export function normalizeEstimateDestination(value) {
     throw new CheckoutFulfillmentError('shipping_estimate_postal_invalid');
   }
   if (countryCode !== 'US') throw new CheckoutFulfillmentError('shipping_domestic_only');
+  if (zipOutsideContiguousStates(postalCode)) {
+    throw new CheckoutFulfillmentError('shipping_region_unsupported', 422);
+  }
   return { postalCode, countryCode, residential: value?.residential === true };
 }
 
@@ -293,7 +333,8 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
   const billingSameAsShipping = input.billing_same_as_shipping !== false;
   try {
     const validateAddress = dependencies.validateAddress || validateGoogleAddress;
-    validation = await validateAddress(normalizeShippingAddress(input.address), env);
+    // Gate the typed address before paying for a lookup, and the corrected one after.
+    validation = await validateAddress(assertShippableAddress(normalizeShippingAddress(input.address)), env);
     if (billingSameAsShipping) {
       billingValidation = validation;
     } else {
@@ -311,7 +352,7 @@ export async function quoteCheckoutRates(input, dependencies = {}) {
     }
     throw error;
   }
-  const address = normalizeShippingAddress(validation.address);
+  const address = assertShippableAddress(normalizeShippingAddress(validation.address));
   const billingAddress = normalizeShippingAddress(billingValidation.address);
   const order = checkoutOrder({ cart, variants, address, email: input.email, now });
   // The carrier prices transit from the day it collects, so tell it which day that is.

@@ -5,6 +5,7 @@ import {
   verifyShippingSelectionToken,
 } from "../functions/_lib/checkout-fulfillment-contract.js";
 import {
+  assertShippableAddress,
   combinePackagesForRates,
   normalizeShippingAddress,
   quoteCheckoutRates,
@@ -337,4 +338,118 @@ test("a carrier 400 that is not about the address still fails as a gateway error
     }),
     (error) => !(error instanceof CheckoutFulfillmentError) && error.code === "shipstation_http_400",
   );
+});
+
+// Online orders ship by ground parcel from Florida to street addresses in the 48 contiguous
+// states and DC. Everything else (Alaska, Hawaii, territories, military mail, PO boxes) is
+// a quote. The published shipping policy says exactly this, so the gate has to hold for the
+// typed address, for the address Google hands back, and never for the billing address.
+const regionEnv = {
+  SHIPSTATION_API_KEY: "se_test",
+  SHIPSTATION_WAREHOUSE_ID: "se-2287981",
+  SHIPPING_QUOTE_SECRET: "q".repeat(48),
+};
+const pastTheGate = Object.assign(new Error("reached_carrier"), { code: "reached_carrier" });
+
+function regionQuote(input, dependencies = {}) {
+  const calls = { validate: 0 };
+  const promise = quoteCheckoutRates({
+    env: regionEnv,
+    cart: [{ sku: "VK-TRQ-1G", qty: 1 }],
+    billing_same_as_shipping: true,
+    billing_address: null,
+    email: "buyer@example.com",
+    variants,
+    ...input,
+  }, {
+    now: () => 1_700_000_000_000,
+    async validateAddress(value, env) {
+      calls.validate += 1;
+      return (dependencies.validateAddress || validateAddress)(value, env);
+    },
+    persistShippingQuotes,
+    async listCarriers() {
+      return { carriers: [{ carrier_id: "se-ups", friendly_name: "UPS" }] };
+    },
+    async quoteRates() {
+      throw pastTheGate;
+    },
+  });
+  return { promise, calls };
+}
+
+test("online checkout ships only to street addresses in the contiguous states and DC", async () => {
+  for (const [state, postal_code] of [["AK", "99501"], ["HI", "96813"], ["PR", "00901"], ["VI", "00802"],
+    ["GU", "96910"], ["AS", "96799"], ["MP", "96950"], ["AE", "09012"], ["AA", "34001"], ["AP", "96601"]]) {
+    const { promise, calls } = regionQuote({ address: { ...address, state, postal_code } });
+    await assert.rejects(
+      promise,
+      (error) => error instanceof CheckoutFulfillmentError
+        && error.code === "shipping_region_unsupported"
+        && error.status === 422,
+      `${state} must be refused`,
+    );
+    assert.equal(calls.validate, 0, `${state} is refused before the paid address lookup`);
+  }
+
+  for (const [state, postal_code] of [["FL", "32901"], ["DC", "20001"], ["CA", "95112"], ["ME", "04101"]]) {
+    const { promise } = regionQuote({ address: { ...address, state, postal_code } });
+    await assert.rejects(promise, (error) => error?.code === "reached_carrier", `${state} must reach the carrier`);
+  }
+});
+
+test("a state and ZIP that disagree cannot smuggle an excluded destination through", () => {
+  // The typed state is not trusted on its own: a Honolulu ZIP under "FL" is still Hawaii.
+  for (const postal_code of ["96813", "99501", "00901", "09012", "96910"]) {
+    assert.throws(
+      () => assertShippableAddress({ ...address, state: "FL", postal_code }),
+      (error) => error.code === "shipping_region_unsupported",
+      postal_code,
+    );
+  }
+  // Nor is the ZIP: an excluded state is refused even when its ZIP looks contiguous.
+  for (const state of ["AK", "HI", "PR", "GU", "AE", "AP", "ZZ"]) {
+    assert.throws(
+      () => assertShippableAddress({ ...address, state, postal_code: "32901" }),
+      (error) => error.code === "shipping_region_unsupported",
+      state,
+    );
+  }
+});
+
+test("PO boxes are refused on either address line, and look-alikes are not", async () => {
+  for (const line of ["PO Box 12", "P.O. Box 12", "p o box 12", "POB 12", "P.O.B. 12",
+    "Post Office Box 4", "Box 99", "po box #7"]) {
+    for (const field of ["address1", "address2"]) {
+      const { promise, calls } = regionQuote({ address: { ...address, [field]: line } });
+      await assert.rejects(
+        promise,
+        (error) => error instanceof CheckoutFulfillmentError
+          && error.code === "shipping_po_box_unsupported"
+          && error.status === 422,
+        `${field}: ${line}`,
+      );
+      assert.equal(calls.validate, 0);
+    }
+  }
+  for (const line of ["12 Boxwood Ln", "PMB 204, 400 Main St", "1 Pobox Rd", "Box Elder Rd", "Suite 2"]) {
+    const { promise } = regionQuote({ address: { ...address, address1: line, address2: "" } });
+    await assert.rejects(promise, (error) => error?.code === "reached_carrier", line);
+  }
+});
+
+test("the address Google corrects to is gated too, and the billing address never is", async () => {
+  const movedToAlaska = async (value) => ({
+    ...(await validateAddress(value)),
+    address: { ...value, city: "Anchorage", state: "AK", postal_code: "99501" },
+  });
+  const corrected = regionQuote({ address }, { validateAddress: movedToAlaska });
+  await assert.rejects(corrected.promise, (error) => error.code === "shipping_region_unsupported");
+
+  const hawaiiBilling = regionQuote({
+    address,
+    billing_same_as_shipping: false,
+    billing_address: { ...address, address1: "PO Box 5", city: "Honolulu", state: "HI", postal_code: "96813" },
+  });
+  await assert.rejects(hawaiiBilling.promise, (error) => error?.code === "reached_carrier");
 });
