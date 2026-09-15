@@ -3,7 +3,6 @@ import { recordAutomationRun } from '../../../functions/_lib/automation-runs.js'
 import { applyEmailLifecycleEvent } from '../../../functions/_lib/email-events.js';
 import { sweepNewsletterPreparation } from '../../../functions/_lib/newsletter-preparation.js';
 import { syncSesSuppressions } from '../../../functions/_lib/ses-email.js';
-import { createEmailOctopusWebhook, runEmailOctopusSync } from './emailoctopus.js';
 import {
   consumeMarketingDeliveryBatch,
   scheduleMarketingDeliveryWork,
@@ -107,17 +106,6 @@ export function createSesSnsHandler({
 }
 
 const handleSesSns = createSesSnsHandler();
-const handleEmailOctopusWebhook = createEmailOctopusWebhook();
-
-export async function runMarketingProviders(controller, env, {
-  runSes = runMarketingSchedule, runCompanion = runEmailOctopusSync,
-} = {}) {
-  const results = await Promise.allSettled([runSes(controller, env), runCompanion(env)]);
-  for (const result of results) {
-    if (result.status === 'rejected') throw result.reason;
-    if (result.value?.ok === false) throw new Error('emailoctopus_sync_failed');
-  }
-}
 
 export async function runMarketingSchedule(controller, env, {
   createClient = adminClient,
@@ -159,7 +147,6 @@ export default {
   async fetch(request, env) {
     const path = new URL(request.url).pathname;
     if (path === '/health' && request.method === 'GET') return json(200, { ok: true });
-    if (path === '/v1/emailoctopus/events') return handleEmailOctopusWebhook(request, env);
     if (path !== '/v1/ses/events') return json(404, { error: 'not_found' });
     return handleSesSns(request, env);
   },
@@ -169,6 +156,6 @@ export default {
   },
 
   async scheduled(controller, env) {
-    await runMarketingProviders(controller, env);
+    await runMarketingSchedule(controller, env);
   },
 };

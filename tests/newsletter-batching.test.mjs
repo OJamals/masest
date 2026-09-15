@@ -18,6 +18,18 @@ function emails(count) {
   return Array.from({ length: count }, (_, index) => `person-${index}@example.test`);
 }
 
+test('delivery worker requires an explicit sender before claiming recipients', async () => {
+  let claimed = false;
+  await assert.rejects(runDeliveryWorker({
+    store: {
+      claim: async () => { claimed = true; return []; },
+      finish: async () => {},
+      reconcile: async () => {},
+    },
+  }), /delivery_sender_required/);
+  assert.equal(claimed, false);
+});
+
 test('materialization normalizes and deduplicates empty, overlapping, and large audiences', () => {
   assert.deepEqual(normalizeDeliveryEmails([]), []);
   assert.deepEqual(
@@ -212,6 +224,7 @@ test('exact-source jobs reconcile even when no delivery remains claimable', asyn
   const result = await runDeliveryWorker({
     sourceType: 'offer',
     sourceId: 'offer-42',
+    send: async () => ({ ok: true }),
     store: {
       claim: async () => [],
       finish: async () => true,

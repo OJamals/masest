@@ -128,6 +128,7 @@ export async function runDeliveryWorker({
   workerId: requestedWorkerId = null,
 } = {}) {
   if (!store?.claim || !store?.finish || !store?.reconcile) throw new Error('delivery_store_required');
+  if (typeof send !== 'function') throw new Error('delivery_sender_required');
   const activeWorkerId = requestedWorkerId || workerId();
   const claimLimit = Math.min(DELIVERY_MAX_BATCH_SIZE, Math.max(1, Number(limit) || DELIVERY_BATCH_SIZE));
   const maxConcurrency = Math.min(
@@ -141,19 +142,11 @@ export async function runDeliveryWorker({
     limit: claimLimit,
     leaseSeconds: Math.max(30, Number(leaseSeconds) || DELIVERY_LEASE_SECONDS),
   });
-  const sendDelivery = send || (async (row) => sendSesMarketingEmail(row.env || {}, {
-    to: row.normalized_email,
-    subject: row.subject,
-    html: row.html,
-    category: row.category,
-    idempotencyKey: row.provider_idempotency_key,
-  }));
-
   const sendable = (claimed || []).filter((row) => row.state === 'processing');
   await mapConcurrent(sendable, maxConcurrency, async (row) => {
     let result;
     try {
-      result = await sendDelivery(row);
+      result = await send(row);
     } catch (error) {
       result = { network: true, error: String(error) };
     }

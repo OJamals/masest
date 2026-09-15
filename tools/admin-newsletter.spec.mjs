@@ -161,27 +161,17 @@ test("test send reports queue acceptance without claiming provider acceptance", 
   await expect(page.locator("#nlStatus")).not.toContainText("accepted by Amazon SES");
 });
 
-test("EmailOctopus settings distinguish pending setup, sync backlog, and unavailable status", async ({ page }, testInfo) => {
+test("newsletter settings show only canonical SES campaign controls", async ({ page }) => {
   await bootAsOwner(page, []);
-  let status = 200;
-  let body = { checked_at: null, pending: 2, synced: 0, dead: 0, blocked: 0 };
-  await page.route("**/api/admin/emailoctopus", route => route.fulfill({
-    status, contentType: "application/json", body: JSON.stringify(body),
-  }));
   await page.goto(`${BASE_URL}/admin.html#newsletter`);
   await page.locator('[data-nl-section="settings"]').click();
-  const message = page.locator('#nlEmailOctopusStatus');
-  await expect(message).toContainText('Setup pending');
-  await expect(page.getByRole('link', { name: 'Open EmailOctopus' })).toHaveAttribute('href', 'https://emailoctopus.com');
-  body = { checked_at: new Date().toISOString(), pending: 2, synced: 10, dead: 1, blocked: 3 };
-  await page.locator('[data-nl-section="compose"]').click();
-  await page.locator('[data-nl-section="settings"]').click();
-  await expect(message).toContainText('Synced: 10');
-  await expect(message).toContainText('Pending: 2');
-  await expect(message).toContainText('Needs attention: 1');
-  await page.screenshot({ path: testInfo.outputPath('emailoctopus-settings.png'), fullPage: true });
-  status = 503;
-  await page.locator('[data-nl-section="compose"]').click();
-  await page.locator('[data-nl-section="settings"]').click();
-  await expect(message).toContainText('Sync status unavailable');
+  await expect(page.locator('#nlAutoSend')).toBeVisible();
+  await expect(page.locator('#nlEmailOctopusStatus')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Open EmailOctopus' })).toHaveCount(0);
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.locator('#nlAutoSend')).toBeVisible();
+    const overflow = await page.locator('[data-nl-body]').evaluate((body) => body.scrollWidth > body.clientWidth);
+    expect(overflow).toBe(false);
+  }
 });

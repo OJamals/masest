@@ -1,4 +1,5 @@
--- Optional EmailOctopus companion. Apply after schema-email.sql and schema-newsletters.sql.
+-- Historical EmailOctopus schema. Retired by migrate-retire-emailoctopus-2026-09-15.sql.
+-- Keep only for database replay/rollback; do not apply to current deployments.
 begin;
 
 create table if not exists public.emailoctopus_contacts (

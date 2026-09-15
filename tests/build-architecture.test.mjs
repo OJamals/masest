@@ -25,7 +25,7 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/admin-newsletter.spec.mjs",
     "tools/blog-index.spec.mjs",
   ];
-  const verifyCore = "npm run check && npm test && npm run qa:support-tickets:db && npm run qa:emailoctopus:db && npm run build && npm run verify:site && npm run qa:workspace-regressions && npm run qa:commerce-smoke && npm run qa:ui-critical:interaction";
+  const verifyCore = "npm run check && npm test && npm run qa:support-tickets:db && npm run qa:marketing-provider-retirement:db && npm run build && npm run verify:site && npm run qa:workspace-regressions && npm run qa:commerce-smoke && npm run qa:ui-critical:interaction";
 
   assert.match(scripts.check || "", /node tools\/check-js\.mjs/);
   assert.match(scripts.test || "", /node --test --test-concurrency=1 --test-timeout=\d+ tests\/\*\.test\.mjs/);

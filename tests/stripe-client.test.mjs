@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import Stripe from "stripe";
 import { STRIPE_API_VERSION, createStripeClient } from "../functions/_lib/stripe-client.js";
@@ -13,7 +13,7 @@ function shippedFunctionFiles() {
     "git",
     ["ls-files", "--cached", "--others", "--exclude-standard", "functions"],
     { cwd: root, encoding: "utf8" },
-  ).split("\n").filter((file) => file.endsWith(".js"));
+  ).split("\n").filter((file) => file.endsWith(".js") && existsSync(new URL(file, root)));
 }
 
 test("the pinned Stripe API version is the one the installed SDK was generated for", () => {

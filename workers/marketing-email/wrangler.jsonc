@@ -34,7 +34,6 @@
     "crons": ["*/5 * * * *", "0 */6 * * *"]
   },
   "vars": {
-    "EMAILOCTOPUS_ENABLED": "true",
     "APP_URL": "https://masest.co",
     "AWS_SES_REGION": "us-east-1",
     "AWS_SES_FROM_EMAIL": "news@marketing.masest.co",
