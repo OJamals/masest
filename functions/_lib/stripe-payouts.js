@@ -1,5 +1,6 @@
 import { stripeCredentialMode } from './stripe-runtime.js';
 import { qboConfigEnv } from './qbo-config.js';
+import { STRIPE_API_VERSION } from './stripe-api-version.js';
 
 const STRIPE_API = 'https://api.stripe.com/v1';
 const DEFAULT_PAYOUT_LIMIT = 3;
@@ -144,7 +145,7 @@ async function defaultStripeRequest(env, path, dependencies = {}) {
   let response;
   try {
     response = await fetchImpl(`${STRIPE_API}${path}`, {
-      headers: { Authorization: `Bearer ${text(env?.STRIPE_SECRET_KEY)}` },
+      headers: { Authorization: `Bearer ${text(env?.STRIPE_SECRET_KEY)}`, 'Stripe-Version': STRIPE_API_VERSION },
     });
   } catch {
     throw new StripePayoutError('stripe_payouts_failed', 502);

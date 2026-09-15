@@ -82,7 +82,7 @@ test("orderRowFromSession mirrors the paid-order insert incl. qbo + customer_ema
     amount_total: 12225,
     currency: "usd",
     payment_intent: "pi_123",
-    shipping_details: { address: { line1: "1 A St" } },
+    collected_information: { shipping_details: { address: { line1: "1 A St" } } },
   };
   assert.deepEqual(orderRowFromSession(session, "buyer@x.com"), {
     company_id: "co-9",
@@ -130,7 +130,7 @@ test("orderRowFromSession: unsettled ACH session -> pending_payment with QBO syn
 });
 
 // Events reach the webhook in the account's default API version (the endpoint pins none),
-// currently 2026-05-27.dahlia. Basil moved or removed several fields these shapes read.
+// a dahlia version. Basil moved or removed several fields these shapes read.
 test("qboSubscriptionInvoiceRow reads a basil-or-later invoice: parent subscription, total_taxes", () => {
   const row = qboSubscriptionInvoiceRow({
     id: "in_new",
@@ -162,7 +162,9 @@ test("qboSubscriptionInvoiceRow takes the PaymentIntent from expanded invoice pa
   assert.equal(row.stripe_payment_intent, "pi_paid");
 });
 
-test("qboSubscriptionInvoiceRow still reads an acacia invoice", () => {
+test("qboSubscriptionInvoiceRow no longer reads pre-basil invoice fields", () => {
+  // Every invoice arrives in a basil-or-later version, so these fields cannot appear; reading
+  // them would only hide a payload in an unexpected version.
   const row = qboSubscriptionInvoiceRow({
     id: "in_old",
     total: 10700,
@@ -170,9 +172,9 @@ test("qboSubscriptionInvoiceRow still reads an acacia invoice", () => {
     subscription: "sub_old",
     payment_intent: "pi_old",
   });
-  assert.equal(row.stripe_subscription_id, "sub_old");
-  assert.equal(row.stripe_payment_intent, "pi_old");
-  assert.equal(row.tax, 7);
+  assert.equal(row.stripe_subscription_id, null);
+  assert.equal(row.stripe_payment_intent, null);
+  assert.equal(row.tax, 0);
 });
 
 test("orderRowFromSession reads shipping collected by Stripe from collected_information", () => {
@@ -182,6 +184,13 @@ test("orderRowFromSession reads shipping collected by Stripe from collected_info
     customer_details: { address: { city: "Tampa" } },
   });
   assert.deepEqual(row.ship_address, { name: "Pat", address: { line1: "9 B St" } });
+  // The pre-basil top-level shipping_details is no longer read.
+  const old = orderRowFromSession({
+    payment_status: "paid",
+    shipping_details: { name: "Old", address: { line1: "1 Old Rd" } },
+    customer_details: { address: { city: "Tampa" } },
+  });
+  assert.deepEqual(old.ship_address, { address: { city: "Tampa" } });
 });
 
 test("Stripe test-mode orders and subscription invoices never enter production QBO queues", () => {
@@ -305,13 +314,13 @@ test("subscriptionRow mirrors the program_subscriptions upsert", () => {
 test("qboSubscriptionInvoiceRow queues paid Stripe program invoices exactly once", () => {
   assert.deepEqual(qboSubscriptionInvoiceRow({
     id: "in_123",
-    subscription: "sub_123",
+    parent: { type: "subscription_details", subscription_details: { subscription: "sub_123" } },
     customer: "cus_123",
-    payment_intent: "pi_123",
+    payments: { data: [{ status: "paid", payment: { type: "payment_intent", payment_intent: "pi_123" } }] },
     customer_email: "billing@example.test",
     currency: "usd",
     total: 10900,
-    total_tax_amounts: [{ amount: 900 }],
+    total_taxes: [{ amount: 900 }],
     lines: { data: [{ description: "VertKleen Gold program" }] },
   }, { companyId: "co-1", tier: "Gold" }), {
     company_id: "co-1",

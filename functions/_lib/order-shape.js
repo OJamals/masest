@@ -106,9 +106,8 @@ export function orderRowFromSession(session, customerEmail = null) {
     stripe_payment_intent: s.payment_intent,
     customer_email: customerEmail ?? null,
     purchase_order_number: s.metadata?.purchase_order_number || null,
-    // shipping_details moved to collected_information in 2025-03-31.basil; events use the
-    // account's default version, so read both.
-    ship_address: s.shipping_details || s.collected_information?.shipping_details
+    // Stripe-collected shipping lives in collected_information since 2025-03-31.basil.
+    ship_address: s.collected_information?.shipping_details
       || metadataAddress || s.customer_details || null,
     // What the buyer actually selected and paid for. Fulfillment pre-selects this service
     // instead of re-shopping blind, and any divergence stays visible to staff.
@@ -184,38 +183,34 @@ function stripeId(value) {
   return value?.id || null;
 }
 
-// Webhook events arrive in the account's default API version, because the endpoint pins
-// none (2026-05-27.dahlia today), while the SDK calls the API at 2025-02-24.acacia.
-// 2025-03-31.basil moved an Invoice's subscription under parent.subscription_details and
-// replaced total_tax_amounts with total_taxes, so these readers accept both shapes until
-// the SDK and the endpoint share one version.
+// Since 2025-03-31.basil an Invoice names its subscription under parent.subscription_details
+// (check parent.type first, as Stripe's migration guide says), no longer carries
+// payment_intent, and reports taxes in total_taxes. Every Invoice this code reads is in a
+// basil-or-later version: webhook events use the account default, and SDK calls use
+// STRIPE_API_VERSION.
 function invoiceSubscriptionDetails(invoice) {
   const parent = invoice?.parent;
   return parent?.type === "subscription_details" ? parent.subscription_details || null : null;
 }
 
 export function invoiceSubscriptionId(invoice) {
-  return stripeId(invoiceSubscriptionDetails(invoice)?.subscription)
-    || stripeId(invoice?.subscription)
-    || null;
+  return stripeId(invoiceSubscriptionDetails(invoice)?.subscription) || null;
 }
 
 export function invoiceSubscriptionMetadata(invoice) {
-  return invoiceSubscriptionDetails(invoice)?.metadata || invoice?.subscription_details?.metadata || null;
+  return invoiceSubscriptionDetails(invoice)?.metadata || null;
 }
 
-// Basil also removed Invoice.payment_intent. Its replacement, invoice.payments, is
-// expandable only, so an event payload names no PaymentIntent and this returns null;
-// subscriptionOrderForQbo then references the invoice id instead.
+// invoice.payments is expandable only, so an event payload names no PaymentIntent and this
+// returns null; subscriptionOrderForQbo then references the invoice id instead.
 export function invoicePaymentIntentId(invoice) {
-  if (invoice?.payment_intent) return stripeId(invoice.payment_intent);
   const paid = (invoice?.payments?.data || [])
     .find((row) => row?.status === "paid" && row?.payment?.type === "payment_intent");
   return stripeId(paid?.payment?.payment_intent) || null;
 }
 
 export function invoiceTaxCents(invoice) {
-  const rows = Array.isArray(invoice?.total_taxes) ? invoice.total_taxes : (invoice?.total_tax_amounts || []);
+  const rows = Array.isArray(invoice?.total_taxes) ? invoice.total_taxes : [];
   return rows.reduce((sum, row) => sum + Number(row?.amount || 0), 0);
 }
 

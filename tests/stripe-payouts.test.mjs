@@ -35,6 +35,23 @@ test('QBO Stripe mapping gate is redacted and fail-closed until every account is
   assert.equal(JSON.stringify(bundled).includes('configured'), false);
 });
 
+test('Stripe payout requests name the pinned API version instead of following the account default', async () => {
+  const { STRIPE_API_VERSION } = await import('../functions/_lib/stripe-api-version.js');
+  const requests = [];
+  const fetchImpl = async (url, init = {}) => {
+    requests.push({ url: String(url), version: new Headers(init.headers).get('stripe-version') });
+    return new Response(JSON.stringify({ data: [], has_more: false }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  const result = await stripePayoutReconciliation({ STRIPE_SECRET_KEY: 'sk_live_fixture' }, { limit: 1 }, { fetchImpl });
+  assert.deepEqual(result.payouts, []);
+  assert.deepEqual(requests, [
+    { url: 'https://api.stripe.com/v1/payouts?limit=1', version: STRIPE_API_VERSION },
+  ]);
+});
+
 test('Stripe balance transaction summary uses integer minor units and keeps categories distinct', () => {
   assert.equal(stripeCurrencyExponent('usd'), 2);
   assert.equal(stripeCurrencyExponent('jpy'), 0);

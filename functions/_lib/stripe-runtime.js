@@ -1,3 +1,7 @@
+import { STRIPE_API_VERSION } from './stripe-api-version.js';
+
+// Raw requests name their API version explicitly, like SDK clients, so they never drift
+// with the account default.
 const STRIPE_API = 'https://api.stripe.com/v1';
 
 export const REQUIRED_STRIPE_WEBHOOK_EVENTS = Object.freeze([
@@ -66,7 +70,7 @@ export function stripeRuntimeConfig(env = {}) {
 async function defaultListWebhookEndpoints(env, dependencies = {}) {
   const fetchImpl = dependencies.fetchImpl || fetch;
   const response = await fetchImpl(`${STRIPE_API}/webhook_endpoints?limit=100`, {
-    headers: { Authorization: `Bearer ${text(env.STRIPE_SECRET_KEY)}` },
+    headers: { Authorization: `Bearer ${text(env.STRIPE_SECRET_KEY)}`, 'Stripe-Version': STRIPE_API_VERSION },
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -124,7 +128,7 @@ export async function stripeIntegrationStatus(env = {}, dependencies = {}) {
 async function defaultRetrieveShippingRate(env, id, dependencies = {}) {
   const fetchImpl = dependencies.fetchImpl || fetch;
   const response = await fetchImpl(`${STRIPE_API}/shipping_rates/${encodeURIComponent(id)}`, {
-    headers: { Authorization: `Bearer ${text(env.STRIPE_SECRET_KEY)}` },
+    headers: { Authorization: `Bearer ${text(env.STRIPE_SECRET_KEY)}`, 'Stripe-Version': STRIPE_API_VERSION },
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) return null;

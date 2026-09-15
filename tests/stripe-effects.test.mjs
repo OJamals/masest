@@ -172,7 +172,7 @@ test('billing-failed branch commits alert effects before 200', async () => {
       type: 'invoice.payment_failed',
       data: {
         object: {
-          subscription: 'sub_1',
+          parent: { type: 'subscription_details', subscription_details: { subscription: 'sub_1' } },
           metadata: { company_id: 'company-1' },
           amount_due: 2500,
           currency: 'usd',

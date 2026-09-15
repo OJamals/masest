@@ -148,10 +148,11 @@ test("storefront enables promotion entry only for the exact VK5-only Stripe stat
   assert.equal(storefrontPromotionSetAllowed([withCoupon({ percent_off: 5, amount_off: null })]), false);
   // An unexpanded coupon is only an id: nothing to verify, so it is not enough.
   assert.equal(storefrontPromotionSetAllowed([withCoupon("coupon_VK5")]), false);
-  // A top-level coupon is still read, for objects shaped before clover.
+  // The pre-clover top-level coupon is no longer read: promotion codes come from the pinned
+  // API version, where that field does not exist.
   assert.equal(storefrontPromotionSetAllowed([{
     id: "promo_VK5", code: "VK5", active: true, coupon: { percent_off: 5, amount_off: null, valid: true },
-  }]), true);
+  }]), false);
 
   assert.equal(await storefrontPromotionCodesReady({
     promotionCodes: {

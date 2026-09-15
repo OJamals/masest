@@ -23,9 +23,17 @@ test('isDelinquentStatus flags only past_due / unpaid', () => {
   assert.equal(isDelinquentStatus(undefined), false);
 });
 
+// Since 2025-03-31.basil an Invoice names its subscription under parent.subscription_details.
+const subscriptionParent = (subscription, metadata) => ({
+  parent: {
+    type: 'subscription_details',
+    subscription_details: { subscription, ...(metadata ? { metadata } : {}) },
+  },
+});
+
 test('planFailedPayment extracts dunning details and marks past_due', () => {
   const plan = planFailedPayment({
-    subscription: 'sub_1',
+    ...subscriptionParent('sub_1'),
     currency: 'usd',
     amount_due: 12900,
     attempt_count: 2,
@@ -43,18 +51,25 @@ test('planFailedPayment extracts dunning details and marks past_due', () => {
 });
 
 test('planFailedPayment with no further retry has willRetry false and null next attempt', () => {
-  const plan = planFailedPayment({ subscription: 'sub_2', amount_due: 5000, next_payment_attempt: null });
+  const plan = planFailedPayment({ ...subscriptionParent('sub_2'), amount_due: 5000, next_payment_attempt: null });
   assert.equal(plan.willRetry, false);
   assert.equal(plan.nextAttemptIso, null);
 });
 
-test('planFailedPayment reads company_id from subscription_details metadata fallback', () => {
-  const plan = planFailedPayment({ subscription: 'sub_3', subscription_details: { metadata: { company_id: 'co-9' } } });
+test('planFailedPayment reads company_id from the subscription metadata when the invoice has none', () => {
+  const plan = planFailedPayment(subscriptionParent('sub_3', { company_id: 'co-9' }));
   assert.equal(plan.companyId, 'co-9');
 });
 
-// The webhook endpoint has no pinned API version, so events arrive in the account default
-// (2026-05-27.dahlia). Since 2025-03-31.basil an Invoice carries its subscription under
+test('planners no longer read the pre-basil top-level subscription fields', () => {
+  const legacy = { subscription: 'sub_old', subscription_details: { metadata: { company_id: 'co-old' } } };
+  assert.equal(planFailedPayment(legacy).subscriptionId, null);
+  assert.equal(planFailedPayment(legacy).companyId, null);
+  assert.equal(planRecoveredPayment(legacy).subscriptionId, null);
+});
+
+// The webhook endpoint has no pinned API version, so events arrive in the account default,
+// a dahlia version. Since 2025-03-31.basil an Invoice carries its subscription under
 // parent.subscription_details, and the top-level subscription / subscription_details are gone.
 const dahliaInvoice = {
   parent: {
@@ -91,7 +106,7 @@ test('planners ignore a parent that is not a subscription', () => {
 });
 
 test('planRecoveredPayment marks active and carries the paid amount', () => {
-  const plan = planRecoveredPayment({ subscription: 'sub_1', currency: 'usd', amount_paid: 12900, metadata: { company_id: 'co-1' } });
+  const plan = planRecoveredPayment({ ...subscriptionParent('sub_1'), currency: 'usd', amount_paid: 12900, metadata: { company_id: 'co-1' } });
   assert.equal(plan.subscriptionId, 'sub_1');
   assert.equal(plan.companyId, 'co-1');
   assert.equal(plan.amountPaid, 129);

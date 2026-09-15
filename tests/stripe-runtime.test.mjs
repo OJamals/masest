@@ -69,3 +69,22 @@ test('Stripe admin status verifies production webhook URL and required events wi
   assert.equal(JSON.stringify(status).includes('sk_live_secret'), false);
   assert.equal(JSON.stringify(status).includes('whsec_live'), false);
 });
+
+test('raw Stripe requests name the pinned API version instead of following the account default', async () => {
+  const { STRIPE_API_VERSION } = await import('../functions/_lib/stripe-api-version.js');
+  const requests = [];
+  const fetchImpl = async (url, init = {}) => {
+    requests.push({ url: String(url), version: new Headers(init.headers).get('stripe-version') });
+    const body = String(url).includes('/webhook_endpoints')
+      ? { data: [] }
+      : { id: 'shr_ground', active: true, livemode: true };
+    return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const env = { APP_URL: 'https://masest.co', STRIPE_SECRET_KEY: 'sk_live_secret', STRIPE_WEBHOOK_SECRET: 'whsec_live' };
+  await stripeIntegrationStatus(env, { fetchImpl });
+  await stripeShippingRatesStatus(env, [{ slug: 'ground', payload: { active: true, stripe_rate_id: 'shr_ground' } }], { fetchImpl });
+  assert.deepEqual(requests, [
+    { url: 'https://api.stripe.com/v1/webhook_endpoints?limit=100', version: STRIPE_API_VERSION },
+    { url: 'https://api.stripe.com/v1/shipping_rates/shr_ground', version: STRIPE_API_VERSION },
+  ]);
+});

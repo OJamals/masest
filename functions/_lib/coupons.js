@@ -61,13 +61,11 @@ export function checkoutPromotion(session) {
   return null;
 }
 
-// Since 2025-09-30.clover a Promotion Code names its coupon at promotion.coupon (and only
-// when expanded is it an object); before that it was the top-level coupon. Read the new
-// place first. An unexpanded coupon is just an id, which carries no discount to check.
+// Since 2025-09-30.clover a Promotion Code names its coupon at promotion.coupon, and only an
+// expanded coupon is an object. An unexpanded coupon is just an id, which carries no
+// discount to check.
 export function promotionCoupon(promotion) {
-  const coupon = promotion?.promotion?.type === 'coupon'
-    ? promotion.promotion.coupon
-    : promotion?.coupon;
+  const coupon = promotion?.promotion?.type === 'coupon' ? promotion.promotion.coupon : null;
   return coupon && typeof coupon === 'object' ? coupon : {};
 }
 
