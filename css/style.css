@@ -8312,6 +8312,8 @@ body.products-page .conversion-proof .proof-pill em {
   line-height: 1.65;
   color: var(--ink-soft);
 }
+/* Two paragraphs under one heading otherwise touch: p carries no margin sitewide. */
+.legal-page p + p { margin-top: var(--s4); }
 .legal-page ul { padding-left: var(--s6); }
 
 /* Compact headline sizes for sub-sections (override base .headline clamp). */
