@@ -9,12 +9,12 @@
   <meta name="theme-color" content="#fafbfc">
   <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
   <link rel="stylesheet" href="vendor/phosphor/style.css">
-  <link rel="stylesheet" href="css/style.css?v=20260913b">
-<link rel="stylesheet" href="css/navigation.css?v=20260913b">
-  <link rel="stylesheet" href="css/components.css?v=20260913b">
+  <link rel="stylesheet" href="css/style.css?v=20260915a">
+<link rel="stylesheet" href="css/navigation.css?v=20260915a">
+  <link rel="stylesheet" href="css/components.css?v=20260915a">
   <script src="js/config.js" defer></script>
   <script src="js/track.js" defer></script>
-  <script type="module" src="js/main.js?v=20260913b"></script>
+  <script type="module" src="js/main.js?v=20260915a"></script>
 </head>
 <body>
 <!-- Reserves the nav's 59px height. chrome.js injects the nav, so without this the
@@ -237,11 +237,11 @@
 </main>
 <script type="module">
   import { items, presentationContext, remove, setQty } from "./js/cart.js";
-  import { api, me, getToken } from "./js/auth.js?v=20260913b";
+  import { api, me, getToken } from "./js/auth.js?v=20260915a";
   import { safeUrl } from "./js/util.js";
-  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260913b";
-  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260913b";
-  import { createShippingRequestCoordinator, fetchShippingJson, shippingRequestSnapshot } from "./js/shipping-request.js?v=20260913b";
+  import { isStaffAccount, replaceBuyerSurface } from "./js/staff-surface.js?v=20260915a";
+  import { shippingServiceSummary } from "./js/shipping-service-label.js?v=20260915a";
+  import { createShippingRequestCoordinator, fetchShippingJson, shippingRequestSnapshot } from "./js/shipping-request.js?v=20260915a";
 
   const priceMoney = (n, currency = "USD") => new Intl.NumberFormat("en-US", {
     style: "currency", currency: String(currency || "USD").toUpperCase(), minimumFractionDigits: 2, maximumFractionDigits: 2

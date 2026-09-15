@@ -4,7 +4,7 @@
  * tab); QuickBooks NET invoicing lives here, in the business context.
  * Program-enrollment and bulk-order requests post through the company support thread
  * (/api/account/messages) so staff see them in the admin Messages tab - no extra tables. */
-import { me, api, getToken } from './auth.js?v=20260913b';
+import { me, api, getToken } from './auth.js?v=20260915a';
 import { esc, safeUrl, money, fmtDate, confirmDialog, openReservedTab, sendReservedTab, closeReservedTab } from './util.js';
 
 const $ = (id) => document.getElementById(id);
