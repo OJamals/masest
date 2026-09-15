@@ -20,11 +20,11 @@ import {
   deliverSupportMessageEmail,
   isSupportEmailPolicySkip,
 } from './support-email-delivery.js';
-import Stripe from 'stripe';
+import { createStripeClient } from './stripe-client.js';
 
 async function defaultCreateStripeRefund(env, { paymentIntent, amountCents, idempotencyKey }) {
   if (!env?.STRIPE_SECRET_KEY) throw errorWithCode('stripe_not_configured');
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+  const stripe = createStripeClient(env.STRIPE_SECRET_KEY);
   return stripe.refunds.create(
     { payment_intent: paymentIntent, amount: amountCents },
     { idempotencyKey },

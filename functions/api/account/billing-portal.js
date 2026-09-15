@@ -4,9 +4,9 @@
 // subscription cancel/update flow (self-serve program cancel/pause/tier-swap). Cancellation
 // proration, pause, and plan-switch availability are set in the Stripe Dashboard portal
 // *configuration* (one-time owner-op), not here.
-import Stripe from 'stripe';
 import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { ensureCompanyStripeCustomer } from '../../_lib/stripe-customer.js';
+import { createStripeClient } from '../../_lib/stripe-client.js';
 
 // flow_data for a subscription cancel/update deep-link, or null for the portal landing page.
 // Pure: the handler supplies a verified subscription id and the return url.
@@ -32,7 +32,7 @@ export async function onRequestPost({ request, env }) {
 
   const body = await readBody(request).catch(() => ({}));
 
-  const stripe = new Stripe(secret);
+  const stripe = createStripeClient(secret);
   let customerId;
   try {
     customerId = await ensureCompanyStripeCustomer({ stripe, sb, company, email: user.email });

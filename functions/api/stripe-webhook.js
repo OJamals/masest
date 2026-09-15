@@ -6,6 +6,7 @@
 // Signing secret in STRIPE_WEBHOOK_SECRET.
 // On the Workers runtime signature verification must use the SubtleCrypto provider.
 import Stripe from 'stripe';
+import { createStripeClient } from '../_lib/stripe-client.js';
 import { adminClient, json, htmlEscape } from '../_lib/supabase.js';
 import {
   buyerEmailFromStripeSession,
@@ -177,7 +178,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const consumeStoreCredit = dependencies.consumeCompanyStoreCredit || consumeCompanyStoreCredit;
   const releaseStoreCredit = dependencies.releaseCompanyStoreCredit || releaseCompanyStoreCredit;
   const constructEvent = dependencies.constructEvent || (async ({ raw, sig, whSecret }) => {
-    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+    const stripe = createStripeClient(env.STRIPE_SECRET_KEY);
     const cryptoProvider = Stripe.createSubtleCryptoProvider();
     return stripe.webhooks.constructEventAsync(raw, sig, whSecret, undefined, cryptoProvider);
   });
@@ -187,11 +188,11 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
   const runtimeError = stripeRuntimeError(env);
   if (runtimeError) return json(503, { error: runtimeError });
   const retrieveCheckoutSession = dependencies.retrieveCheckoutSession || (async (id, params) => {
-    const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
+    const stripe = createStripeClient(secret);
     return stripe.checkout.sessions.retrieve(id, params);
   });
   const updateCheckoutSession = dependencies.updateCheckoutSession || (async (id, params) => {
-    const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
+    const stripe = createStripeClient(secret);
     return stripe.checkout.sessions.update(id, params);
   });
 

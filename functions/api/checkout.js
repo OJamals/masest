@@ -1,7 +1,7 @@
 // POST /api/checkout - create a Stripe-hosted Checkout Session for the cart.
 // Card/ACH only. NET (on-account) orders are not self-serve: sales raises them from an
 // accepted quote via functions/api/admin/quotes.js -> _lib/quote-convert.js netOrderRow().
-import Stripe from 'stripe';
+import { createStripeClient } from '../_lib/stripe-client.js';
 import {
   adminClient,
   CommerceContextError,
@@ -108,8 +108,7 @@ export async function handleCheckout({ request, env }, dependencies = {}) {
   const createGuestCustomer = dependencies.guestStripeCustomer || guestStripeCustomer;
   const checkRateLimit = dependencies.rateLimit || rateLimit;
   const parseBody = dependencies.readBoundedJson || readBoundedJson;
-  const createStripe = dependencies.createStripe
-    || ((secret) => new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() }));
+  const createStripe = dependencies.createStripe || createStripeClient;
   const validateShippingRates = dependencies.validateShippingRates || stripeShippingRatesError;
   const resolveShippingSelection = dependencies.resolveCheckoutFulfillmentSelection
     || resolveCheckoutFulfillmentSelection;

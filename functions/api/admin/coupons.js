@@ -2,22 +2,23 @@
 //   GET                          → active promotion codes (with coupon detail)
 //   POST { code, percent_off|amount_off, … } → create coupon + promotion code
 //   POST { id, action:'deactivate' }         → deactivate a promotion code
-import Stripe from 'stripe';
 import { adminClient, requireStaff, json } from '../../_lib/supabase.js';
 import { staffCan } from '../../_lib/authz.js';
 import { recordAudit } from '../../_lib/audit.js';
 import {
   buildCouponParams,
   normalizePromotionId,
+  promotionCoupon,
   promotionListParams,
 } from '../../_lib/coupons.js';
 import { RequestBodyTooLargeError, readBoundedJson } from '../../_lib/request-body.js';
+import { createStripeClient } from '../../_lib/stripe-client.js';
 
 const BODY_LIMIT = 8 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function shapePromo(p) {
-  const c = p.coupon || {};
+  const c = promotionCoupon(p);
   return {
     id: p.id, code: p.code, active: p.active,
     percent_off: c.percent_off ?? null,
@@ -37,7 +38,7 @@ export async function onRequest({ request, env }) {
 
   const secret = env.STRIPE_SECRET_KEY;
   if (!secret) return json(500, { error: 'stripe_not_configured' });
-  const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
+  const stripe = createStripeClient(secret);
 
   if (request.method === 'GET') {
     const listed = promotionListParams(request.url);
@@ -93,7 +94,10 @@ export async function onRequest({ request, env }) {
       const coupon = await stripe.coupons.create(built.coupon, {
         idempotencyKey: `promotion-coupon:${requestId}`,
       });
-      const promo = await stripe.promotionCodes.create({ coupon: coupon.id, ...built.promo }, {
+      const promo = await stripe.promotionCodes.create({
+        promotion: { type: 'coupon', coupon: coupon.id },
+        ...built.promo,
+      }, {
         idempotencyKey: `promotion-code:${requestId}`,
       });
       await recordAudit(sb, {
@@ -103,7 +107,8 @@ export async function onRequest({ request, env }) {
         targetId: promo.id,
         detail: { code: promo.code, coupon_id: coupon.id, request_id: requestId },
       });
-      return json(200, { ok: true, coupon: shapePromo({ ...promo, coupon }) });
+      // The created code names its coupon by id only; show the coupon we just made.
+      return json(200, { ok: true, coupon: shapePromo({ ...promo, promotion: { type: 'coupon', coupon } }) });
     } catch {
       return json(502, { error: 'stripe_error' });
     }

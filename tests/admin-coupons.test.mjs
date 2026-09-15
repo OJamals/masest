@@ -93,6 +93,9 @@ test("promotion creation retries use one browser identity across both Stripe wri
   assert.match(API_SRC, /request_id/);
   assert.match(API_SRC, /idempotencyKey:\s*`promotion-coupon:\$\{requestId\}`/);
   assert.match(API_SRC, /idempotencyKey:\s*`promotion-code:\$\{requestId\}`/);
+  // 2025-09-30.clover removed the top-level coupon parameter on promotion code creation.
+  assert.match(API_SRC, /promotion:\s*\{\s*type:\s*'coupon',\s*coupon:\s*coupon\.id\s*\}/);
+  assert.doesNotMatch(API_SRC, /promotionCodes\.create\(\{\s*coupon:/);
   assert.match(UI_SRC, /crypto\.randomUUID\(\)/);
   assert.match(UI_SRC, /body\.request_id\s*=\s*couponCreateIdentity\.requestId/);
 });
@@ -102,14 +105,14 @@ test("promotion-code listing accepts only bounded Stripe cursors", () => {
   assert.equal(normalizePromotionId("not-a-promo"), null);
   assert.deepEqual(
     promotionListParams("https://masest.co/api/admin/coupons"),
-    { params: { limit: 100, expand: ["data.coupon"] } },
+    { params: { limit: 100, expand: ["data.promotion.coupon"] } },
   );
   assert.deepEqual(
     promotionListParams("https://masest.co/api/admin/coupons?starting_after=promo_123AbC"),
     {
       params: {
         limit: 100,
-        expand: ["data.coupon"],
+        expand: ["data.promotion.coupon"],
         starting_after: "promo_123AbC",
       },
     },
@@ -128,27 +131,32 @@ test("promotion-code list exposes and consumes Stripe cursor pagination", () => 
 });
 
 test("storefront enables promotion entry only for the exact VK5-only Stripe state", async () => {
+  // 2025-09-30.clover and later: the coupon lives at promotion.coupon.
   const vk5 = {
     id: "promo_VK5",
     code: "VK5",
     active: true,
-    coupon: { percent_off: 5, amount_off: null, valid: true },
+    promotion: { type: "coupon", coupon: { percent_off: 5, amount_off: null, valid: true } },
   };
+  const withCoupon = (coupon) => ({ ...vk5, promotion: { type: "coupon", coupon } });
   assert.equal(storefrontPromotionSetAllowed([vk5]), true);
   assert.equal(storefrontPromotionSetAllowed([]), false);
   assert.equal(storefrontPromotionSetAllowed([{ ...vk5, code: "VK10" }]), false);
   assert.equal(storefrontPromotionSetAllowed([vk5, { ...vk5, id: "promo_other" }]), false);
-  assert.equal(storefrontPromotionSetAllowed([{ ...vk5, coupon: { percent_off: 10 } }]), false);
+  assert.equal(storefrontPromotionSetAllowed([withCoupon({ percent_off: 10 })]), false);
   assert.equal(storefrontPromotionSetAllowed([{ ...vk5, active: undefined }]), false);
+  assert.equal(storefrontPromotionSetAllowed([withCoupon({ percent_off: 5, amount_off: null })]), false);
+  // An unexpanded coupon is only an id: nothing to verify, so it is not enough.
+  assert.equal(storefrontPromotionSetAllowed([withCoupon("coupon_VK5")]), false);
+  // A top-level coupon is still read, for objects shaped before clover.
   assert.equal(storefrontPromotionSetAllowed([{
-    ...vk5,
-    coupon: { percent_off: 5, amount_off: null },
-  }]), false);
+    id: "promo_VK5", code: "VK5", active: true, coupon: { percent_off: 5, amount_off: null, valid: true },
+  }]), true);
 
   assert.equal(await storefrontPromotionCodesReady({
     promotionCodes: {
       async list(params) {
-        assert.deepEqual(params, { active: true, limit: 100, expand: ["data.coupon"] });
+        assert.deepEqual(params, { active: true, limit: 100, expand: ["data.promotion.coupon"] });
         return { data: [vk5], has_more: false };
       },
     },

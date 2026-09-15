@@ -4,8 +4,8 @@
 // Requisition offers use only their immutable requester + current Company ownership.
 // Customer-safe fields only — internal triage data (priority, lead score, staff
 // notes, deal value) never leaves this endpoint.
-import Stripe from 'stripe';
 import { userFromRequest, adminClient, json } from '../../_lib/supabase.js';
+import { createStripeClient } from '../../_lib/stripe-client.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
 import { escapeLike } from '../../_lib/crm.js';
 import {
@@ -169,7 +169,7 @@ export async function onRequestPost({ request, env }, dependencies = {}) {
     reason: body.reason,
     now: clock,
     stripe: env.STRIPE_SECRET_KEY
-      ? new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() })
+      ? createStripeClient(env.STRIPE_SECRET_KEY)
       : null,
   }, {
     prepareQuoteCheckoutMutation: dependencies.prepareQuoteCheckoutMutation,

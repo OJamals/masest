@@ -1,8 +1,8 @@
 // /api/admin/users - staff user directory + full per-user console: profile, role,
 // business (company) + status, addresses, payment methods, orders. Also company-member
 // invites. The consolidated admin Accounts console consumes this.
-import Stripe from 'stripe';
 import { deleteAccountUser } from '../../_lib/account-erasure.js';
+import { createStripeClient } from '../../_lib/stripe-client.js';
 import { adminClient, emailLayout, htmlEscape, json, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { STAFF_ROLES, staffCan, staffCanWrite } from '../../_lib/authz.js';
@@ -33,7 +33,7 @@ function normalizeAddress(input = {}) {
 async function stripeCards(env, customerId) {
   if (!customerId || !env.STRIPE_SECRET_KEY) return [];
   try {
-    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+    const stripe = createStripeClient(env.STRIPE_SECRET_KEY);
     const pm = await stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 20 });
     return (pm.data || []).map((m) => ({ id: m.id, brand: m.card?.brand || 'card', last4: m.card?.last4 || '????', exp: `${m.card?.exp_month}/${m.card?.exp_year}` }));
   } catch { return []; }
@@ -256,7 +256,7 @@ export async function onRequest({ request, env }) {
     if (!body.payment_method_id) return json(400, { error: 'payment_method_id_required' });
     if (!env.STRIPE_SECRET_KEY) return json(400, { error: 'stripe_not_configured' });
     try {
-      const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+      const stripe = createStripeClient(env.STRIPE_SECRET_KEY);
       await stripe.paymentMethods.detach(String(body.payment_method_id));
     } catch (err) { return json(502, { error: 'stripe_detach_failed', message: String(err?.message || err) }); }
     await recordAudit(sb, { user, action: 'user.payment_detach', targetType: 'company', targetId: companyId || null, detail: { pm: body.payment_method_id } });

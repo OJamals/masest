@@ -1,6 +1,6 @@
 // /api/admin/quotes - staff view of inbound /api/quote leads.
-import Stripe from 'stripe';
 import { adminClient, emailLayout, htmlEscape, json, logEmailEvent, readBody, requireStaff, sendEmail } from '../../_lib/supabase.js';
+import { createStripeClient } from '../../_lib/stripe-client.js';
 import { recordAudit } from '../../_lib/audit.js';
 import { staffCanWrite } from '../../_lib/authz.js';
 import { parsePage, pageEnvelope } from '../../_lib/paginate.js';
@@ -170,7 +170,7 @@ async function sendTrackedLeadEmail(env, options) {
 function quoteLeadLifecycle({ sb, env }) {
   const checkoutAttemptStore = createSupabaseQuoteCheckoutAttemptStore(sb);
   const stripe = env.STRIPE_SECRET_KEY
-    ? new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() })
+    ? createStripeClient(env.STRIPE_SECRET_KEY)
     : null;
   return createQuoteLeadLifecycle({
     store: createSupabaseQuoteLeadStore(sb),

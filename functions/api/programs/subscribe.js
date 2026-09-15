@@ -3,10 +3,10 @@
 //   POST { tier }  → Stripe subscription Checkout Session for that tier → { url }
 // Tier→price mapping is the PROGRAM_PRICES env var (JSON, e.g. {"Gold":"price_123"}). If a tier
 // has no price, returns 409 {fallback:true} so the client falls back to the request-enrollment flow.
-import Stripe from 'stripe';
 import { requireCompany, json, readBody } from '../../_lib/supabase.js';
 import { subscribeAction } from '../../_lib/order-shape.js';
 import { ensureCompanyStripeCustomer } from '../../_lib/stripe-customer.js';
+import { createStripeClient } from '../../_lib/stripe-client.js';
 
 const TIERS = ['Bronze', 'Silver', 'Gold', 'Platinum'];
 
@@ -42,7 +42,7 @@ export async function onRequest({ request, env }) {
     return json(403, { error: 'not_approved', message: 'Your account must be approved before starting a program.' });
   }
 
-  const stripe = new Stripe(secret);
+  const stripe = createStripeClient(secret);
   let customerId;
   try {
     customerId = await ensureCompanyStripeCustomer({ stripe, sb, company, email: user.email });

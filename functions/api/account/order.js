@@ -1,8 +1,8 @@
 // /api/account/order?id=<uuid> - single order detail scoped to caller's company.
 //   GET                 → order detail | GET ?receipt=1 → { receipt_url, qbo_invoice_id }
 //   POST { id }         → "buy again": re-priced cart lines + availability issues
-import Stripe from 'stripe';
 import { requireCommerceUser, json, readBody } from '../../_lib/supabase.js';
+import { createStripeClient } from '../../_lib/stripe-client.js';
 import { repriceCart } from '../../_lib/reorder.js';
 import { decorateOrderLifecycle } from '../../_lib/order-lifecycle.js';
 
@@ -29,7 +29,7 @@ export async function onRequestGet({ request, env }) {
     let receiptUrl = null;
     if (data.payment_method === 'stripe' && data.stripe_payment_intent && env.STRIPE_SECRET_KEY) {
       try {
-        const stripe = new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+        const stripe = createStripeClient(env.STRIPE_SECRET_KEY);
         const pi = await stripe.paymentIntents.retrieve(data.stripe_payment_intent, { expand: ['latest_charge'] });
         receiptUrl = pi?.latest_charge?.receipt_url || null;
       } catch { receiptUrl = null; }

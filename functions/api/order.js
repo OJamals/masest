@@ -1,9 +1,9 @@
 // GET /api/order?session_id=cs_… — order summary for the confirmation page.
 // Reads the Stripe Checkout Session directly (expand line_items), so totals work the instant
 // the buyer returns. The canonical number is resolved best-effort from Stripe metadata or DB.
-import Stripe from 'stripe';
 import { adminClient, json } from '../_lib/supabase.js';
 import { buyerEmailFromStripeSession } from '../_lib/checkout-session.js';
+import { createStripeClient } from '../_lib/stripe-client.js';
 
 const RESPONSE_HEADERS = {
   'cache-control': 'private, no-store',
@@ -28,7 +28,7 @@ export async function onRequestGet({ request, env }) {
 
   const secret = env.STRIPE_SECRET_KEY;
   if (!secret) return response(500, { error: 'stripe_not_configured' });
-  const stripe = new Stripe(secret, { httpClient: Stripe.createFetchHttpClient() });
+  const stripe = createStripeClient(secret);
 
   try {
     const s = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['line_items'] });

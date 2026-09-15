@@ -23,7 +23,7 @@ export function promotionListParams(requestUrl) {
   return {
     params: {
       limit: 100,
-      expand: ['data.coupon'],
+      expand: ['data.promotion.coupon'],
       ...(cursor ? { starting_after: cursor } : {}),
     },
   };
@@ -61,10 +61,20 @@ export function checkoutPromotion(session) {
   return null;
 }
 
+// Since 2025-09-30.clover a Promotion Code names its coupon at promotion.coupon (and only
+// when expanded is it an object); before that it was the top-level coupon. Read the new
+// place first. An unexpanded coupon is just an id, which carries no discount to check.
+export function promotionCoupon(promotion) {
+  const coupon = promotion?.promotion?.type === 'coupon'
+    ? promotion.promotion.coupon
+    : promotion?.coupon;
+  return coupon && typeof coupon === 'object' ? coupon : {};
+}
+
 export function storefrontPromotionSetAllowed(promotions = []) {
   if (!Array.isArray(promotions) || promotions.length !== 1) return false;
   const [promotion] = promotions;
-  const coupon = promotion?.coupon || {};
+  const coupon = promotionCoupon(promotion);
   return promotion?.active === true
     && String(promotion?.code || '').trim().toUpperCase() === 'VK5'
     && Number(coupon.percent_off) === 5
@@ -78,7 +88,7 @@ export async function storefrontPromotionCodesReady(stripe) {
     const result = await stripe.promotionCodes.list({
       active: true,
       limit: 100,
-      expand: ['data.coupon'],
+      expand: ['data.promotion.coupon'],
     });
     return result?.has_more !== true && storefrontPromotionSetAllowed(result?.data || []);
   } catch {
