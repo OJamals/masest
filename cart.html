@@ -81,6 +81,7 @@
             <div class="cart-actions" data-customer-chat-obstruction>
               <a class="btn btn-primary" id="checkoutContinue" href="checkout.html">Continue to checkout</a>
             </div>
+            <p class="cart-policy-note">Orders by 2 pm ET ship the next business day. Unopened returns within 30 days. <a href="shipping-returns">Shipping and returns</a></p>
           </div>
           <!-- Bulk sizes are quote-routed and cannot be bought online, so this is the only
                path for a large share of buyers. It stays visible; only the requisition
@@ -533,6 +534,7 @@
   const ESTIMATE_MESSAGES = {
     shipping_estimate_postal_invalid: "Enter a 5-digit US ZIP code.",
     shipping_domestic_only: "Online rates cover US delivery. Get a freight quote for international delivery.",
+    shipping_region_unsupported: "Online orders ship to the 48 contiguous states and DC. Get a quote for Alaska, Hawaii, U.S. territories, or military addresses.",
     shipping_estimate_unavailable: "This cart ships as more than one carton, so the exact rate is calculated at checkout.",
     shipping_product_unavailable: "A bulk size in this cart ships by freight, not parcel. Get a freight quote for it.",
     shipping_cart_too_large: "This cart is too large for parcel rates. Get one freight quote for the full shipment.",

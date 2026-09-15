@@ -8838,6 +8838,29 @@ body.product-detail-page main > section.product-static-section {
   margin-top: var(--s4);
 }
 
+/* Purchase policy lines: the shipping cutoff, returns window, and NET terms stated where
+   buyers decide (product hero, cart summary, checkout), each linking to /shipping-returns.
+   tests/shipping-policy-copy.test.mjs keeps the wording tied to the fulfillment schedule. */
+.product-detail-page .product-hero-policy,
+.cart-policy-note {
+  margin: var(--s3) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+}
+
+.product-hero-policy a,
+.cart-policy-note a,
+.checkout-policy-trust a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.checkout-payment-trust.checkout-policy-trust {
+  margin-top: var(--s4);
+}
+
 .product-detail-page .product-back-link {
   min-height: 44px;
   display: inline-flex;

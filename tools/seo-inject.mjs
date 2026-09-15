@@ -179,6 +179,7 @@ const PUBLIC = {
   "privacy.html": { loc: "/privacy", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Privacy", url: `${BASE}/privacy` }] },
   "terms.html": { loc: "/terms", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Terms", url: `${BASE}/terms` }] },
   "eula.html": { loc: "/eula", priority: "0.3", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "End-User License Agreement", url: `${BASE}/eula` }] },
+  "shipping-returns.html": { loc: "/shipping-returns", priority: "0.4", changefreq: "yearly", jsonld: [ORG, { "@type": "WebPage", name: "Shipping and Returns", url: `${BASE}/shipping-returns` }] },
   "industries.html": { loc: "/industries", priority: "0.7", changefreq: "monthly", jsonld: [ORG] },
 };
 
@@ -901,7 +902,8 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
           <span><b>HMIS</b>${text(product.hmis || "0-0-0")}</span>
           <span><b>Replaces</b>${text(replacement)}</span>
           <span><b>Available</b>${text(supply)}</span>${heroProof}
-        </div>${marineAlias}${QUOTE_ONLY_IDS.has(id) ? "" : `
+        </div>${marineAlias}${QUOTE_ONLY_IDS.has(id) ? `
+        <p class="product-hero-policy">Quoted orders ship by freight, and approved businesses can pay on NET terms. <a href="../shipping-returns#payment">Payment terms</a></p>` : `
         <!-- Hydrated by js/main.js (refreshCommerceActions): live price + volume select
              incl. bulk drum/tote sizes, Add-to-cart or quote-swap. Static fallback stays
              the "Get a quote" CTA below (data-quote-fallback="off" keeps this empty
@@ -909,7 +911,8 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         <div class="product-hero-buy">
           <span class="shop-card-price" data-commerce-price="${id}" hidden></span>
           <span class="commerce-slot" data-commerce-action="${id}" data-commerce-size="button" data-quote-fallback="off"></span>
-        </div>`}
+        </div>
+        <p class="product-hero-policy">Orders by 2 pm ET ship the next business day. Unopened returns within 30 days. <a href="../shipping-returns">Shipping and returns</a></p>`}
         <p class="subhead">${text(heroDesc)}</p>
         <div class="hero-actions">
           <a class="btn ${quoteButtonClass}" href="../contact?type=quote&product=${encodeURIComponent(product.name)}#quoteForm">${text(copy.quote_cta || "Get a quote")}</a>

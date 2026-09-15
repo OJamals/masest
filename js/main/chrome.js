@@ -390,7 +390,7 @@ export function renderChrome({
       </div>`}
       <div class="foot-bottom">
         <span>&copy; ${new Date().getFullYear()} MASEST Consulting LLC. All rights reserved.</span>
-        <span class="foot-legal"><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">Site use</a></span>
+        <span class="foot-legal"><a href="${root}shipping-returns">Shipping &amp; returns</a><a href="${root}privacy">Privacy</a><a href="${root}terms">Terms</a><a href="${root}eula">Site use</a></span>
         <span translate="no">VertKleen is a trademark of MASEST Consulting LLC.</span>
       </div>
     </div>`;
