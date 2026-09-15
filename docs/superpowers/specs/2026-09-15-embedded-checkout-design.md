@@ -27,7 +27,29 @@ push the validated address onto the Customer before creating the session.
 | Promotion codes: `allow_promotion_codes=true` on the session plus our own field calling `applyPromotionCode` / `removePromotionCode`; there is no built-in promo field | `payments/advanced/discounts` |
 | Stripe Tax works with `automatic_tax` and `billing_address_collection=auto`; `required` means we must collect a full billing address ourselves | `payments/advanced/tax?api-integration=checkout` |
 | Link, Apple Pay and Google Pay in Elements need the domain registered as a payment method domain | `payments/payment-methods/pmd-registration` |
-| Our SDK: `stripe` 17.7.0, pinned `2025-02-24.acacia`, no `apiVersion` override. Latest `stripe` 22.6.2 pins `2026-08-26.dahlia`. Account default `2026-05-27.dahlia`; the webhook endpoint has no pinned version | `node_modules/stripe`, npm, Stripe API (read-only) |
+| Our SDK: `stripe` 22.6.2 pinned `2026-08-26.dahlia` (LIVE `0a41501a`); raw fetch pinned too (`540f7987`). Account default still `2026-05-27.dahlia` until the owner upgrades it in Workbench; the webhook endpoint has no pinned version | `functions/_lib/stripe-api-version.js`, Stripe API (read-only) |
+
+### Checked against the pinned type definitions (2026-09-15)
+
+stripe-node 22.6.2 `cjs/resources/Checkout/Sessions.d.ts` (generated for `2026-08-26.dahlia`) and
+`@stripe/stripe-js` 9.16.0 `dist/stripe-js/checkout.d.ts`:
+
+| fact | where |
+|---|---|
+| `return_url` is required when `ui_mode` is `elements`; `success_url` and `cancel_url` are not allowed | `SessionCreateParams.return_url`, `.success_url`, `.cancel_url` |
+| `submit_type`, `after_expiration`, `branding_settings`, `origin_context` are not allowed with `elements`; `redirect_on_completion` applies only to `embedded_page` | same file |
+| `shipping_options`, `billing_address_collection`, `allow_promotion_codes`, `payment_method_types`, `automatic_tax`, `customer`/`customer_email`, `customer_update`, `metadata`, `expires_at` carry no `ui_mode` restriction. The "can't set if `ui_mode` is `custom`" notes (old enum name) belong to `optional_items`, `custom_fields`, `custom_text` — none used here | same file |
+| `Session.client_secret` is `string | null` and applies to `embedded_page` and `elements`; `Session.url` applies to `hosted_page` | `Session` interface |
+| Whether `checkout.sessions.retrieve` returns `client_secret` is **not stated** in the types or the retrieve reference; quote reuse must not depend on it (step 5) | `api/checkout/sessions/retrieve.md` has no mention |
+| `stripe.initCheckoutElementsSdk({ clientSecret, elementsOptions, defaultValues })` is synchronous; `clientSecret` may be a string or a Promise; `await checkout.loadActions()` returns `{ type: 'success', actions }` or `{ type: 'error', error }`; `checkout.on('change', (session) => …)` | `StripeCheckoutElementsSdk`, `StripeCheckoutElementsSdkOptions` |
+| `actions.confirm({ returnUrl, redirect: 'always' \| 'if_required', email, phoneNumber, billingAddress, shippingAddress })` → `{ type: 'success', session }` or `{ type: 'error', error }`; a decline is `error.code === 'paymentFailed'` with `paymentFailed.declineCode` | `StripeCheckoutLoadActionsSuccess.confirm`, `ConfirmError` |
+| `actions.applyPromotionCode(code)` → error `code: 'invalidCode'`; `removePromotionCode()` | `ApplyPromotionCodeError` |
+| Session fields for the summary: `canConfirm`, `total`, `discountAmounts` (with `promotionCode`), `shipping`, `shippingOptions`, `taxAmounts`, `status`, `lastPaymentError` | `StripeCheckoutSession` |
+| `StripeCheckoutContact` = `{ name?, address: { country, line1?, line2?, city?, postal_code?, state? } }` | `checkout.d.ts` |
+| Pinned script `https://js.stripe.com/dahlia/stripe.js` serves 200 and contains `initCheckoutElementsSdk`; stripe-js 9.16.0's loader uses release train `dahlia` | fetched 2026-09-15 |
+| Prod `quote_checkout_attempts` has 0 rows | read-only query 2026-09-15 |
+
+Still unverified (test in Stripe test mode before relying on it): ACH mandate display and `payment_status: "unpaid"` completion in `elements` mode; the landing state on `return_url` after a redirect-based method.
 
 ## What depends on the hosted page today
 
@@ -60,9 +82,17 @@ push the validated address onto the Customer before creating the session.
    shows Stripe's mandate text inside the element. Success lands on `order-confirmed.html`.
 4. **Promo code field** on `checkout.html` wired to `applyPromotionCode`, shown only when the
    server allows promotions for the cart; replace the `checkout.html:142` copy.
-5. **Quote checkout** switches from reusing a session URL to reopening the same open session
-   by its client secret. Confirm in Stripe's docs that an open `elements` session can be
-   retrieved with its `client_secret` before building.
+5. **Quote checkout** stops storing a session URL. An `elements` session has none, and today
+   both `quote_checkout_attempt_session_shape_chk` and `attach_quote_checkout_session` reject
+   an open attempt without an `https://` URL, so this needs a migration (plus rollback)
+   making `stripe_session_url` optional. Prod has 0 attempt rows, so no data moves. The
+   client secret is never stored. On a `reuse` claim the server retrieves the stored session
+   id: if it is still `open` and the response carries `client_secret`, return it; otherwise
+   take the existing reconcile path (expire, then open a fresh attempt). The design therefore
+   works whether or not retrieve returns the secret, and tests cover both branches.
+   Every checkout already carries a validated address (`SHIPPING_QUOTE_SECRET` is set in
+   prod, so `/api/checkout` returns 400 without a shipping quote token), so the embedded
+   session never asks Stripe to collect an address.
 6. **Tests and specs** rewritten for the embedded flow (list above), plus a Playwright spec
    against Stripe's test mode that confirms a card and an ACH payment end to end.
 7. **Later, owner:** registering `masest.co` as a payment method domain would turn on Link,
