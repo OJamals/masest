@@ -190,12 +190,18 @@ export function qboItemType(item = {}) {
   return 'NonInventory';
 }
 
+// Card fees on a large NET invoice come straight out of margin, while a bank transfer costs
+// little at any size. The published payment terms (/shipping-returns#payment) promise
+// ACH-only from this amount, so the invoice must not offer a card button above it.
+export const NET_INVOICE_CARD_LIMIT = 2500;
+
 export function buildInvoicePayload(input) {
+  const total = Number(input.order?.total || 0);
   return {
     ...baseDocumentPayload(input),
-    Balance: Number(input.order?.total || 0),
+    Balance: total,
     AllowOnlinePayment: true,
-    AllowOnlineCreditCardPayment: true,
+    AllowOnlineCreditCardPayment: total < NET_INVOICE_CARD_LIMIT,
     AllowOnlineACHPayment: true,
   };
 }
