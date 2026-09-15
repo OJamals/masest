@@ -46,7 +46,11 @@ merged, remove it.
   One Playwright owner at a time; never `npm test` beside Playwright. Verify agent claims
   before repeating them.
 - A push to `main` cancels an in-flight Verify, including a CMS-dispatch run. Check
-  `gh run list` first.
+  `gh run list` first. Pushing a range whose tip commit says `[skip ci]` runs no Verify.
+- `npm test` skips `tools/*.spec.mjs`; `verify:core` does not. Before pushing, run the
+  Playwright stages that cover what you changed (`qa:commerce-smoke`,
+  `qa:ui-critical:interaction`, `qa:workspace-regressions`), and `git grep` the visible
+  text you changed across `tools/*.spec.mjs` for pinned lists and strict locators.
 - `tests/shipping-policy-copy.test.mjs` ties policy wording to `FULFILLMENT_POLICY`: change
   both together.
 - Never `npm run build` without `build:content` first; `git checkout -- sitemap.xml` after,
