@@ -38,6 +38,7 @@ import {
   isSubscriptionCheckout,
   subscriptionRow,
   qboSubscriptionInvoiceRow,
+  invoiceSubscriptionId,
 } from '../_lib/order-shape.js';
 import {
   achFailedEffects,
@@ -674,11 +675,14 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
 
   // Subscription invoice paid → clear delinquency; email a recovery notice only if the
   // subscription was actually past_due, so ordinary renewals never trigger an email.
-  if (event.type === 'invoice.paid' && event.data.object?.subscription) {
+  // invoiceSubscriptionId reads both Invoice shapes: events arrive in the account's default
+  // API version, which has carried the subscription under parent since 2025-03-31.basil.
+  if (event.type === 'invoice.paid' && invoiceSubscriptionId(event.data.object)) {
     const sb = getAdminClient(env);
     const inv = event.data.object;
+    const subscriptionId = invoiceSubscriptionId(inv);
     const { data: row, error: subscriptionError } = await sb.from('program_subscriptions')
-      .select('status,company_id,tier').eq('stripe_subscription_id', inv.subscription).maybeSingle();
+      .select('status,company_id,tier').eq('stripe_subscription_id', subscriptionId).maybeSingle();
     if (subscriptionError) return json(503, { error: 'program_subscription_lookup_failed' });
     const qboRow = qboSubscriptionInvoiceRow(inv, { companyId: row?.company_id, tier: row?.tier });
     if (!qboRow.company_id) return json(503, { error: 'program_subscription_not_recorded_yet' });
@@ -697,7 +701,7 @@ export async function handleStripeWebhook({ request, env }, dependencies = {}) {
       if (enqueueError) return json(503, { error: 'stripe_effect_enqueue_failed' });
     }
     const { error: updateError } = await sb.from('program_subscriptions')
-      .update({ status: plan.status }).eq('stripe_subscription_id', inv.subscription);
+      .update({ status: plan.status }).eq('stripe_subscription_id', subscriptionId);
     if (updateError) return json(503, { error: 'program_subscription_update_failed' });
     return json(200, { received: true });
   }

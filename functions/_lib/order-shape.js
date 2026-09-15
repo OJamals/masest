@@ -106,7 +106,10 @@ export function orderRowFromSession(session, customerEmail = null) {
     stripe_payment_intent: s.payment_intent,
     customer_email: customerEmail ?? null,
     purchase_order_number: s.metadata?.purchase_order_number || null,
-    ship_address: s.shipping_details || metadataAddress || s.customer_details || null,
+    // shipping_details moved to collected_information in 2025-03-31.basil; events use the
+    // account's default version, so read both.
+    ship_address: s.shipping_details || s.collected_information?.shipping_details
+      || metadataAddress || s.customer_details || null,
     // What the buyer actually selected and paid for. Fulfillment pre-selects this service
     // instead of re-shopping blind, and any divergence stays visible to staff.
     paid_shipping_rate_id: s.metadata?.shipping_rate_id || null,
@@ -181,21 +184,56 @@ function stripeId(value) {
   return value?.id || null;
 }
 
+// Webhook events arrive in the account's default API version, because the endpoint pins
+// none (2026-05-27.dahlia today), while the SDK calls the API at 2025-02-24.acacia.
+// 2025-03-31.basil moved an Invoice's subscription under parent.subscription_details and
+// replaced total_tax_amounts with total_taxes, so these readers accept both shapes until
+// the SDK and the endpoint share one version.
+function invoiceSubscriptionDetails(invoice) {
+  const parent = invoice?.parent;
+  return parent?.type === "subscription_details" ? parent.subscription_details || null : null;
+}
+
+export function invoiceSubscriptionId(invoice) {
+  return stripeId(invoiceSubscriptionDetails(invoice)?.subscription)
+    || stripeId(invoice?.subscription)
+    || null;
+}
+
+export function invoiceSubscriptionMetadata(invoice) {
+  return invoiceSubscriptionDetails(invoice)?.metadata || invoice?.subscription_details?.metadata || null;
+}
+
+// Basil also removed Invoice.payment_intent. Its replacement, invoice.payments, is
+// expandable only, so an event payload names no PaymentIntent and this returns null;
+// subscriptionOrderForQbo then references the invoice id instead.
+export function invoicePaymentIntentId(invoice) {
+  if (invoice?.payment_intent) return stripeId(invoice.payment_intent);
+  const paid = (invoice?.payments?.data || [])
+    .find((row) => row?.status === "paid" && row?.payment?.type === "payment_intent");
+  return stripeId(paid?.payment?.payment_intent) || null;
+}
+
+export function invoiceTaxCents(invoice) {
+  const rows = Array.isArray(invoice?.total_taxes) ? invoice.total_taxes : (invoice?.total_tax_amounts || []);
+  return rows.reduce((sum, row) => sum + Number(row?.amount || 0), 0);
+}
+
 // One paid Stripe subscription invoice becomes one idempotent QBO queue row.
 // Store the accounting total exactly as Stripe reported it; a single service line
 // carries revenue before tax so the eventual QBO invoice and payment reconcile.
 export function qboSubscriptionInvoiceRow(invoice, { companyId, tier } = {}) {
   const inv = invoice || {};
   const total = centsToAmount(inv.total);
-  const tax = centsToAmount((inv.total_tax_amounts || []).reduce((sum, row) => sum + Number(row?.amount || 0), 0));
+  const tax = centsToAmount(invoiceTaxCents(inv));
   const subtotal = Math.max(0, Number((total - tax).toFixed(2)));
   const description = String(inv.lines?.data?.[0]?.description || `VertKleen ${tier || "Business"} program`).trim();
   return {
     company_id: companyId || null,
     stripe_invoice_id: inv.id || null,
-    stripe_subscription_id: stripeId(inv.subscription),
+    stripe_subscription_id: invoiceSubscriptionId(inv),
     stripe_customer_id: stripeId(inv.customer),
-    stripe_payment_intent: stripeId(inv.payment_intent),
+    stripe_payment_intent: invoicePaymentIntentId(inv),
     customer_email: inv.customer_email || null,
     tier: tier || null,
     description,

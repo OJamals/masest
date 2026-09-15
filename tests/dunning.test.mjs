@@ -53,6 +53,43 @@ test('planFailedPayment reads company_id from subscription_details metadata fall
   assert.equal(plan.companyId, 'co-9');
 });
 
+// The webhook endpoint has no pinned API version, so events arrive in the account default
+// (2026-05-27.dahlia). Since 2025-03-31.basil an Invoice carries its subscription under
+// parent.subscription_details, and the top-level subscription / subscription_details are gone.
+const dahliaInvoice = {
+  parent: {
+    type: 'subscription_details',
+    subscription_details: { subscription: 'sub_9', metadata: { company_id: 'co-7' } },
+  },
+  currency: 'usd',
+  amount_due: 4900,
+  amount_paid: 4900,
+  attempt_count: 1,
+  next_payment_attempt: null,
+};
+
+test('planners read the subscription and its company from a basil-or-later invoice', () => {
+  const failed = planFailedPayment(dahliaInvoice);
+  assert.equal(failed.subscriptionId, 'sub_9');
+  assert.equal(failed.companyId, 'co-7');
+  const recovered = planRecoveredPayment(dahliaInvoice);
+  assert.equal(recovered.subscriptionId, 'sub_9');
+  assert.equal(recovered.companyId, 'co-7');
+});
+
+test('planners ignore a parent that is not a subscription', () => {
+  const quoteParent = { parent: { type: 'quote_details', quote_details: { quote: 'qt_1' } } };
+  assert.equal(planFailedPayment(quoteParent).subscriptionId, null);
+  assert.equal(planRecoveredPayment(quoteParent).subscriptionId, null);
+  // Stripe's migration guide says to check parent.type before reading its details; a
+  // payload whose type disagrees with the details it carries must not be trusted.
+  const mislabelled = {
+    parent: { type: 'quote_details', subscription_details: { subscription: 'sub_wrong', metadata: { company_id: 'co-x' } } },
+  };
+  assert.equal(planFailedPayment(mislabelled).subscriptionId, null);
+  assert.equal(planFailedPayment(mislabelled).companyId, null);
+});
+
 test('planRecoveredPayment marks active and carries the paid amount', () => {
   const plan = planRecoveredPayment({ subscription: 'sub_1', currency: 'usd', amount_paid: 12900, metadata: { company_id: 'co-1' } });
   assert.equal(plan.subscriptionId, 'sub_1');
