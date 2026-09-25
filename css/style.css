@@ -1446,11 +1446,14 @@ figure.photo figcaption {
    the nav rather than transparent. */
 #nav-reserve { height: 59px; }
 
+/* One owner for skip-link positioning and focus. Keep it viewport-relative so
+   scrolling cannot leave a focused link partly visible with its label cut off. */
 .skip-link {
-  position: absolute; left: -9999px; top: 0; z-index: 100;
-  background: var(--ink); color:var(--on-accent); padding: var(--s3) var(--s5); border-radius: 0 0 10px 0;
+  position: fixed; left: -9999px; top: 8px; z-index: 1100;
+  background: var(--accent); color:var(--on-accent); padding: var(--s2) var(--s4);
+  border-radius: 8px; text-decoration: none; font-weight: 600;
 }
-.skip-link:focus { left: 0; }
+.skip-link:focus-visible { left: 8px; }
 
 /* Screen-reader-only text */
 .sr-only {

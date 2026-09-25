@@ -54,3 +54,50 @@ test("commerce controls ship a valid :focus-visible ring", async ({ page }) => {
   const globalRule = rules.find((r) => r.selector.trim() === ":focus-visible" && r.outline);
   expect(globalRule, "global :focus-visible outline must remain").toBeTruthy();
 });
+
+for (const width of [390, 1512]) {
+  for (const components of [false, true]) {
+    test(`skip link stays readable after scrolling (${width}px, components=${components})`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      // Use the shipped styles with a minimal page: scrolling must not turn a
+      // keyboard-focused skip link into a blank, partially clipped rectangle.
+      await page.route(`${BASE_URL}/skip-link-fixture.html`, (route) => route.fulfill({
+        contentType: "text/html",
+        body: `<!doctype html><html><head>
+          <link rel="stylesheet" href="/css/style.css">
+          ${components ? '<link rel="stylesheet" href="/css/components.css">' : ''}
+        </head><body>
+          <a class="skip-link" href="#main">Skip to content</a>
+          <header><a href="#main">Home</a></header>
+          <main id="main" tabindex="-1" style="min-height:2000px;padding-top:100px">
+            <button>First content control</button>
+          </main>
+        </body></html>`,
+      }));
+      await page.goto(`${BASE_URL}/skip-link-fixture.html`);
+      const skip = page.getByRole("link", { name: "Skip to content", exact: true });
+      const intersectsViewport = (rect) => rect.x + rect.width > 0 && rect.x < width
+        && rect.y + rect.height > 0 && rect.y < 800;
+
+      expect(intersectsViewport(await skip.boundingBox())).toBe(false);
+      await page.keyboard.press("Tab");
+      await expect(skip).toBeFocused();
+      const focused = await skip.boundingBox();
+      expect(focused.x).toBeGreaterThanOrEqual(0);
+      expect(focused.y).toBeGreaterThanOrEqual(0);
+
+      await page.mouse.move(width - 30, 300);
+      await page.mouse.wheel(0, 27);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(27);
+      await expect(skip).toBeFocused();
+      expect(await skip.boundingBox()).toEqual(focused);
+
+      await page.keyboard.press("Enter");
+      await expect(page.locator("#main")).toBeFocused();
+      await expect(page).toHaveURL(/#main$/);
+      expect(intersectsViewport(await skip.boundingBox())).toBe(false);
+      await page.keyboard.press("Tab");
+      await expect(page.getByRole("button", { name: "First content control" })).toBeFocused();
+    });
+  }
+}

@@ -16,13 +16,6 @@
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
-.skip-link {
-  position: absolute; left: 8px; top: 0; z-index: 1100;
-  background: var(--accent); color:var(--on-accent); padding: var(--s2) var(--s4);
-  border-radius: 0 0 8px 8px; text-decoration: none; font-weight: 600;
-  transform: translateY(-100%);
-}
-.skip-link:focus-visible { transform: translateY(0); }
 
 /* ----------------------------------------------------------------------------
    Skeleton loader — placeholder shimmer while async data (catalog, orders) loads
