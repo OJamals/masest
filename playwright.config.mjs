@@ -15,16 +15,6 @@ import { fileURLToPath } from "node:url";
 const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
-  // GPU-less Linux runners otherwise emulate GPU compositing with SwiftShader.
-  // Use Chromium's CPU compositor for this CSS/DOM site: emulating the GPU made
-  // the same scroll sweep ~60ms/frame. Disable GPU compositing explicitly too:
-  // headless Linux can still use SwiftShader when only --disable-gpu is set.
-  // Keep default rendering on other platforms; performance budgets stay intact.
-  use: {
-    launchOptions: process.platform === "linux"
-      ? { args: ["--disable-gpu", "--disable-gpu-compositing"] }
-      : {},
-  },
   testIgnore: [
     `${root}/.claude/**`,
     "**/dist/**",

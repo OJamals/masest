@@ -34,7 +34,7 @@ test("package exposes one-command build and verification scripts", () => {
   assert.match(scripts.build || "", /node tools\/cf-build\.mjs/);
   assert.equal(scripts["verify:core"], verifyCore);
   assert.equal(scripts["qa:support-tickets:db"], "node tools/verify-support-tickets-db.mjs");
-  assert.equal(scripts.verify, "npm run verify:core && npm run qa:ui-critical:performance");
+  assert.equal(scripts.verify, "npm run verify:core && npm run qa:ui-critical:performance && npm run qa:story:performance");
   assert.equal(
     scripts["qa:workspace-regressions"],
     `playwright test ${workspaceSpecs.join(" ")} --workers=1 --reporter=line`,
@@ -48,10 +48,15 @@ test("package exposes one-command build and verification scripts", () => {
     scripts["qa:ui-critical:interaction"],
     `playwright test ${criticalUiSpecs.join(" ")} --grep-invert="${storyPerformanceTitle}" --reporter=line`,
   );
-  // Preserve homepage vitals and run the restored story cadence gate in isolation.
+  // Keep the existing CI vitals gate. Cadence runs separately on a reference
+  // renderer; the CPU-only Linux runner is not a comparable graphics baseline.
   assert.equal(
     scripts["qa:ui-critical:performance"],
-    `playwright test tools/homepage-vitals.spec.mjs --workers=1 --retries=0 --reporter=line && playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --retries=0 --reporter=line`,
+    "playwright test tools/homepage-vitals.spec.mjs --workers=1 --retries=0 --reporter=line",
+  );
+  assert.equal(
+    scripts["qa:story:performance"],
+    `playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --retries=0 --reporter=line`,
   );
   assert.doesNotMatch(scripts["qa:ui-critical:interaction"], /tools\/\*\.spec/);
   assert.ok(
