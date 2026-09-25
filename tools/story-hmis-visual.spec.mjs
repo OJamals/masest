@@ -1,0 +1,1227 @@
+import { createMediaIsolation, expect, test } from "./playwright-test.mjs";
+import { startStaticTestServer } from "./test-static-server.mjs";
+import {
+  STORY_PERFORMANCE_SAMPLE_COUNT,
+  evaluateStoryPerformanceSamples,
+} from "./story-performance-budget.mjs";
+import {
+  collectStoryPerformanceDiagnostic,
+  diagnoseStoryPerformanceFailure,
+} from "./story-performance-diagnostics.mjs";
+
+let BASE_URL = "";
+const STORY_SCENES = [
+  {
+    id: "kitchen-grease",
+    rail: "01Strength",
+    before: "/site/img/proof/story/kitchen-grease-before-aligned-202609.webp",
+    after: "/site/img/proof/story/kitchen-grease-after-aligned-202609.webp",
+    product: "/site/img/products/crhd-food-beverage-studio-chip.webp",
+    shop: "products/crhd",
+    trialProduct: "VertKleen%20CRHD",
+    status: "Baked-on grease to exposed steel",
+  },
+  {
+    id: "cip-vessel",
+    rail: "02Outperform",
+    before: "/site/img/proof/story/cip-vessel-before-aligned-202609.webp",
+    after: "/site/img/proof/story/cip-vessel-after-aligned-202609.webp",
+    product: "/site/img/products/cip-cr-studio-chip.webp",
+    shop: "products/cr",
+    trialProduct: "VertKleen%20CR",
+    status: "Vessel residue removed",
+  },
+  {
+    id: "labelle-fermenter",
+    rail: "03HMIS 0-0-0",
+    before: "/site/img/proof/story/labelle-fermenter-before-aligned-202609.webp",
+    after: "/site/img/proof/story/labelle-fermenter-after-aligned-202609.webp",
+    product: "/site/img/products/cip-cr-studio-chip.webp",
+    shop: "products/cr",
+    trialProduct: "VertKleen%20CR",
+    status: "Fermenter ring removed",
+  },
+  {
+    id: "shower-track",
+    rail: "04Lower cost",
+    before: "/site/img/proof/story/shower-track-before-aligned-202609.webp",
+    after: "/site/img/proof/story/shower-track-after-aligned-202609.webp",
+    product: "/site/img/products/descaler-studio-chip.webp",
+    shop: "products/descaler",
+    trialProduct: "VertKleen%20Descaler",
+    status: "Calcium line removed",
+  },
+  {
+    id: "airboat-panel",
+    rail: "05Right formula",
+    before: "/site/img/proof/story/airboat-panel-before-aligned-202609.webp",
+    after: "/site/img/proof/story/airboat-panel-after-aligned-202609.webp",
+    product: "/site/img/products/alumibrite-studio-chip.webp",
+    shop: "products/alumibrite",
+    trialProduct: "VertKleen%20AlumiBrite",
+    status: "Aluminum finish restored",
+  },
+  {
+    id: "pool-cartridge",
+    rail: "06Prove it",
+    before: "/site/img/proof/story/pool-cartridge-before-aligned-202609.webp",
+    after: "/site/img/proof/story/pool-cartridge-after-aligned-202609.webp",
+    product: "/site/img/products/cip-hcr-studio-chip.webp",
+    shop: "products/hcr",
+    trialProduct: "VertKleen%20HCR",
+    status: "Filter pleats visibly cleaner",
+  },
+];
+
+let staticSite;
+
+test.beforeAll(async () => {
+  staticSite = await startStaticTestServer(new URL("..", import.meta.url));
+  BASE_URL = staticSite.baseUrl;
+});
+
+test.afterAll(async () => {
+  await staticSite?.close();
+});
+
+async function openStory(page) {
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    const storyCritical = /\/(?:css\/story\.css|js\/story\.js|vendor\/gsap\/)/.test(url.pathname)
+      || (url.hostname === "media.masest.co" && /\/site\/img\/(?:proof\/story|products)\//.test(url.pathname));
+    if (storyCritical && response.status() >= 400) {
+      errors.push(`response ${response.status()}: ${response.url()}`);
+    }
+  });
+  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: "html{scroll-behavior:auto!important}" });
+  await page.waitForTimeout(250);
+  return errors;
+}
+
+async function scrollAct(page, actNumber, progress = .5) {
+  await page.locator(`.story .act[data-act="${actNumber}"]`).evaluate((act, fraction) => {
+    if (innerWidth <= 760) {
+      act.scrollIntoView({ block: "start" });
+      return;
+    }
+    const story = document.getElementById("story");
+    const start = story.offsetTop + act.offsetTop - window.innerHeight * .5;
+    const end = story.offsetTop + act.offsetTop + act.offsetHeight - window.innerHeight * .5;
+    window.scrollTo(0, start + (end - start) * fraction);
+  }, progress);
+  await page.waitForTimeout(500);
+}
+
+test("story boots cleanly with one verified visual object and six scene renderers", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const errors = await openStory(page);
+
+  const state = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    const images = [...story.querySelectorAll(".story-object img")];
+    return {
+      ready: story.classList.contains("story-ready"),
+      acts: [...story.querySelectorAll(":scope > .act")].map((act) => act.dataset.scene),
+      objects: story.querySelectorAll(":scope > .story-object").length,
+      rendererScenes: window.__MASESTStory?.scenes,
+      images: images.map((image) => ({
+        complete: image.complete,
+        naturalWidth: image.naturalWidth,
+        declaredWidth: Number(image.getAttribute("width")),
+        declaredHeight: Number(image.getAttribute("height")),
+        host: new URL(image.currentSrc || image.src).hostname,
+        source: new URL(image.currentSrc || image.src).pathname,
+        chip: Boolean(image.closest(".story-object__product")),
+      })),
+    };
+  });
+
+  expect(errors).toEqual([]);
+  expect(state.ready).toBe(true);
+  expect(state.acts).toEqual([
+    "kitchen-grease",
+    "cip-vessel",
+    "labelle-fermenter",
+    "shower-track",
+    "airboat-panel",
+    "pool-cartridge",
+  ]);
+  expect(state.objects).toBe(1);
+  expect(state.rendererScenes).toEqual(state.acts);
+  expect(state.images).toHaveLength(3);
+  expect(state.images.map((image) => image.host)).toEqual([
+    "media.masest.co",
+    "media.masest.co",
+    "media.masest.co",
+  ]);
+  expect(state.images.map((image) => image.source)).toEqual([
+    "/site/img/proof/story/kitchen-grease-before-aligned-202609.webp",
+    "/site/img/proof/story/kitchen-grease-after-aligned-202609.webp",
+    "/site/img/products/crhd-food-beverage-studio-chip.webp",
+  ]);
+  for (const image of state.images) {
+    expect(image.complete, JSON.stringify(state.images)).toBe(true);
+    if (image.chip) {
+      // The product chip renders into a 28x42 CSS box (19x29 on phones). It needs to cover
+      // dpr3 and no more -- a full-size packshot here cost 45KB against the LCP.
+      expect(image.declaredWidth, JSON.stringify(state.images)).toBeGreaterThanOrEqual(126);
+      expect(image.declaredWidth, JSON.stringify(state.images)).toBeLessThanOrEqual(400);
+    } else {
+      expect(image.declaredWidth, JSON.stringify(state.images)).toBeGreaterThanOrEqual(671);
+      expect(image.declaredHeight, JSON.stringify(state.images)).toBeGreaterThanOrEqual(473);
+    }
+    expect(
+      image.naturalWidth === 1 || image.naturalWidth === image.declaredWidth,
+      JSON.stringify(state.images),
+    ).toBe(true);
+  }
+});
+
+test("desktop story uses a compact six-scene scroll road", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const geometry = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    return {
+      viewports: story.offsetHeight / window.innerHeight,
+      actViewports: [...story.querySelectorAll(":scope > .act")]
+        .map((act) => act.offsetHeight / window.innerHeight),
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+
+  expect(geometry.viewports, JSON.stringify(geometry)).toBeGreaterThanOrEqual(4.9);
+  expect(geometry.viewports, JSON.stringify(geometry)).toBeLessThanOrEqual(5.3);
+  expect(geometry.actViewports).toHaveLength(6);
+  expect(geometry.actViewports.every((height) => height >= .83 && height <= .85), JSON.stringify(geometry)).toBe(true);
+  expect(geometry.pageOverflow).toBe(0);
+});
+
+test("same story object remains pinned while scene state and chapter navigation advance", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const samples = [];
+  for (let index = 0; index < STORY_SCENES.length; index += 1) {
+    await scrollAct(page, index + 1, .58);
+    samples.push(await page.evaluate(() => {
+      const story = document.getElementById("story");
+      const object = story.querySelector(".story-object");
+      const box = object.getBoundingClientRect();
+      const media = story.querySelector(".story-object__media");
+      const product = story.querySelector(".story-object__product");
+      return {
+        scene: story.dataset.activeScene,
+        current: story.querySelector('.rail-btn[aria-current="step"]')?.textContent.trim(),
+        objectConnected: object.isConnected,
+        objectTop: Math.round(box.top),
+        objectWidth: Math.round(box.width),
+        reveal: Number.parseFloat(getComputedStyle(media).getPropertyValue("--story-reveal")),
+        product: Number(getComputedStyle(product).opacity),
+        status: story.querySelector(".story-object__status")?.textContent.trim(),
+        before: new URL(story.querySelector(".story-object__before").currentSrc).pathname,
+        after: new URL(story.querySelector(".story-object__after img").currentSrc).pathname,
+        productSource: new URL(product.querySelector("img").currentSrc).pathname,
+      };
+    }));
+  }
+
+  expect(samples.map((sample) => sample.scene)).toEqual(STORY_SCENES.map((scene) => scene.id));
+  expect(samples.map((sample) => sample.current)).toEqual(STORY_SCENES.map((scene) => scene.rail));
+  expect(samples.every((sample) => sample.objectConnected)).toBe(true);
+  expect(new Set(samples.map((sample) => sample.objectTop)).size).toBe(1);
+  expect(new Set(samples.map((sample) => sample.objectWidth)).size).toBe(1);
+  expect(samples.every((sample) => sample.reveal > 35 && sample.reveal < 80), JSON.stringify(samples)).toBe(true);
+  expect(samples.every((sample) => sample.product === 1)).toBe(true);
+  expect(samples.map((sample) => sample.status)).toEqual(STORY_SCENES.map((scene) => scene.status));
+  for (let index = 0; index < samples.length; index += 1) {
+    expect(samples[index].before).toBe(STORY_SCENES[index].before);
+    expect(samples[index].after).toBe(STORY_SCENES[index].after);
+    expect(samples[index].productSource).toBe(STORY_SCENES[index].product);
+  }
+});
+
+test("preloaded scene media fades out before its source swaps and fades back in", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const requestedPaths = new Set();
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    if (url.hostname === "media.masest.co") requestedPaths.add(url.pathname);
+  });
+  await openStory(page);
+
+  await expect.poll(() => (
+    requestedPaths.has(STORY_SCENES[1].before)
+    && requestedPaths.has(STORY_SCENES[1].after)
+  )).toBe(true);
+
+  const handoff = await page.evaluate(async ({ sceneId, beforePath }) => {
+    const card = document.querySelector(".story-object__card");
+    const before = document.querySelector(".story-object__before");
+    const startedAt = performance.now();
+    const events = [];
+    const observer = new MutationObserver((records) => {
+      records.forEach((record) => {
+        if (record.target === card) {
+          events.push({
+            type: "card-class",
+            at: performance.now() - startedAt,
+            swapping: card.classList.contains("is-swapping"),
+          });
+        }
+        if (record.target === before) {
+          events.push({
+            type: "before-src",
+            at: performance.now() - startedAt,
+            path: new URL(before.src).pathname,
+          });
+        }
+      });
+    });
+    observer.observe(card, {
+      attributes: true,
+      attributeFilter: ["class", "src"],
+      subtree: true,
+    });
+
+    window.__MASESTStory.render(sceneId, .5);
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
+    observer.disconnect();
+
+    const swapStart = events.find((event) => event.type === "card-class" && event.swapping);
+    const sourceSwap = events.find((event) => (
+      event.type === "before-src" && event.path === beforePath
+    ));
+    const swapEnd = events.find((event) => (
+      event.type === "card-class"
+      && !event.swapping
+      && swapStart
+      && event.at >= swapStart.at
+    ));
+    return {
+      events,
+      fadeOutMs: sourceSwap && swapStart ? sourceSwap.at - swapStart.at : -1,
+      fadeInStarted: Boolean(swapEnd && sourceSwap && swapEnd.at >= sourceSwap.at),
+      finalPath: new URL(before.currentSrc || before.src).pathname,
+      finalOpacity: Number(getComputedStyle(before).opacity),
+    };
+  }, {
+    sceneId: STORY_SCENES[1].id,
+    beforePath: STORY_SCENES[1].before,
+  });
+
+  expect(handoff.finalPath, JSON.stringify(handoff.events)).toBe(STORY_SCENES[1].before);
+  expect(handoff.fadeOutMs, JSON.stringify(handoff.events)).toBeGreaterThanOrEqual(140);
+  expect(handoff.fadeInStarted, JSON.stringify(handoff.events)).toBe(true);
+  expect(handoff.finalOpacity).toBe(1);
+});
+
+test("story requests only R2 media and preloads at most the next comparison", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const requests = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await openStory(page);
+  await page.waitForTimeout(500);
+
+  const storyPaths = () => [...new Set(requests
+    .map((raw) => new URL(raw))
+    .filter((url) => url.pathname.startsWith("/site/img/proof/story/"))
+    .map((url) => url.pathname))];
+  const initial = storyPaths();
+  const firstTwo = new Set(STORY_SCENES.slice(0, 2).flatMap((scene) => [scene.before, scene.after]));
+  expect(initial).toEqual(expect.arrayContaining([STORY_SCENES[0].before, STORY_SCENES[0].after]));
+  expect(initial.every((path) => firstTwo.has(path)), JSON.stringify(initial)).toBe(true);
+
+  for (let act = 1; act <= STORY_SCENES.length; act += 1) await scrollAct(page, act, .52);
+
+  expect(storyPaths().sort()).toEqual(
+    STORY_SCENES.flatMap((scene) => [scene.before, scene.after]).sort(),
+  );
+  const managedMedia = requests
+    .map((raw) => new URL(raw))
+    .filter((url) => /\/storage\/v1\/object\/|\/site\/img\//.test(url.pathname));
+  expect(managedMedia.some((url) => url.hostname.endsWith(".supabase.co")), managedMedia.map(String).join("\n")).toBe(false);
+  expect(managedMedia
+    .filter((url) => url.pathname.startsWith("/site/img/proof/story/"))
+    .every((url) => url.hostname === "media.masest.co")).toBe(true);
+});
+
+test("native range overrides scroll reveal per scene and remains reversible", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  await scrollAct(page, 1, .42);
+
+  const range = page.locator(".story-object__range");
+  await range.fill("73");
+  const overridden = await page.evaluate(() => ({
+    scene: document.getElementById("story").dataset.activeScene,
+    value: document.querySelector(".story-object__range").value,
+    valueText: document.querySelector(".story-object__range").getAttribute("aria-valuetext"),
+    reveal: getComputedStyle(document.querySelector(".story-object__media"))
+      .getPropertyValue("--story-reveal").trim(),
+  }));
+  expect(overridden).toEqual({
+    scene: "kitchen-grease",
+    value: "73",
+    valueText: "73% after image revealed",
+    reveal: "73%",
+  });
+
+  await scrollAct(page, 2, .32);
+  const nextReveal = await range.inputValue();
+  expect(nextReveal).not.toBe("73");
+
+  await scrollAct(page, 1, .32);
+  expect(await range.inputValue()).toBe("73");
+});
+
+for (const viewport of [
+  { name: "desktop", width: 1440, height: 900 },
+  { name: "compact", width: 390, height: 844 },
+]) {
+  test(`${viewport.name} comparison range receives a real pointer drag above scene layers`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await openStory(page);
+    await scrollAct(page, 1, .42);
+
+    const range = page.locator(".story-object__range");
+    await range.fill("50");
+    const box = await range.boundingBox();
+    expect(box).not.toBeNull();
+
+    const hitTarget = await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x, y);
+      return target?.className || target?.tagName || "";
+    }, {
+      x: box.x + box.width * .5,
+      y: box.y + box.height * .5,
+    });
+    expect(hitTarget).toContain("story-object__range");
+
+    await page.mouse.move(box.x + box.width * .5, box.y + box.height * .5);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * .8, box.y + box.height * .5, { steps: 12 });
+    await page.mouse.up();
+
+    const value = Number(await range.inputValue());
+    expect(value).toBeGreaterThan(70);
+    expect(value).toBeLessThan(90);
+    await expect(range).toHaveAttribute("aria-valuetext", `${value}% after image revealed`);
+    await expect.poll(() => page.locator(".story-object__media").evaluate((media) => (
+      getComputedStyle(media).getPropertyValue("--story-reveal").trim()
+    ))).toBe(`${value}%`);
+  });
+}
+
+test("pool-cartridge uses pre-registered pixels without runtime rotation", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  await scrollAct(page, 6, .52);
+  await page.waitForFunction((path) => (
+    new URL(document.querySelector(".story-object__after img").currentSrc).pathname === path
+  ), STORY_SCENES[5].after);
+
+  const state = await page.evaluate(() => {
+    const media = document.querySelector(".story-object__media");
+    const after = document.querySelector(".story-object__after img");
+    return {
+      scene: document.getElementById("story").dataset.activeScene,
+      rotate: getComputedStyle(media).getPropertyValue("--story-after-rotate").trim(),
+      transform: getComputedStyle(after).transform,
+      source: new URL(after.currentSrc).pathname,
+    };
+  });
+
+  expect(state.scene).toBe("pool-cartridge");
+  expect(state.rotate).toBe("0deg");
+  expect(state.transform).toMatch(/^matrix\(/);
+  expect(state.source).toBe(STORY_SCENES[5].after);
+});
+
+test("desktop chapter rail keeps unclipped labels clear of step numbers", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const geometry = await page.locator('.rail-btn[aria-current="step"]').evaluate((button) => {
+    const number = button.querySelector("b");
+    const label = button.querySelector("span");
+    const buttonStyle = getComputedStyle(button);
+    const labelStyle = getComputedStyle(label);
+    const connectorStyle = getComputedStyle(button, "::before");
+
+    return {
+      buttonPosition: buttonStyle.position,
+      connectorContent: connectorStyle.content,
+      numberRight: number.offsetLeft + number.offsetWidth,
+      labelLeft: label.offsetLeft,
+      labelOverflow: labelStyle.overflow,
+      lineHeightRatio: Number.parseFloat(labelStyle.lineHeight) / Number.parseFloat(labelStyle.fontSize),
+    };
+  });
+
+  expect(geometry.buttonPosition, JSON.stringify(geometry)).toBe("relative");
+  expect(geometry.connectorContent, JSON.stringify(geometry)).toBe("none");
+  expect(geometry.numberRight, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.labelLeft - 6);
+  expect(geometry.labelOverflow, JSON.stringify(geometry)).toBe("visible");
+  expect(geometry.lineHeightRatio, JSON.stringify(geometry)).toBeGreaterThanOrEqual(1.2);
+});
+
+test("desktop chapter rail clears the active copy column", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  for (let act = 1; act <= STORY_SCENES.length; act += 1) {
+    await scrollAct(page, act, .52);
+    const spacing = await page.evaluate(() => {
+      const active = document.querySelector('.rail-btn[aria-current="step"] span')
+        .getBoundingClientRect();
+      const copy = document.querySelector(
+        `.act[data-scene="${document.getElementById("story").dataset.activeScene}"] .act-content`
+      ).getBoundingClientRect();
+      return { railRight: active.right, copyLeft: copy.left };
+    });
+    expect(spacing.railRight, JSON.stringify(spacing)).toBeLessThanOrEqual(spacing.copyLeft - 16);
+  }
+});
+
+test("desktop chapter handoffs never leave a blank viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const result = await page.evaluate(async () => {
+    const story = document.getElementById("story");
+    const start = story.offsetTop;
+    const end = start + story.offsetHeight - innerHeight;
+    const blanks = [];
+    for (let step = 0; step <= 16; step += 1) {
+      const y = start + (end - start) * (step / 16);
+      scrollTo(0, y);
+      window.ScrollTrigger.update();
+      await new Promise((resolve) => setTimeout(resolve, 70));
+      const visibleCopy = [...story.querySelectorAll(".act-content")].some((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.bottom > 90
+          && rect.top < innerHeight - 60
+          && style.visibility !== "hidden"
+          && Number(style.opacity) > .08;
+      });
+      const object = story.querySelector(".story-object__card").getBoundingClientRect();
+      if (!visibleCopy || object.bottom <= 60 || object.top >= innerHeight) {
+        blanks.push({ step, y, visibleCopy, objectTop: object.top, objectBottom: object.bottom });
+      }
+    }
+    return blanks;
+  });
+
+  expect(result).toEqual([]);
+});
+
+test("persistent product actions remain visible and correctly routed in every scene", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  for (let index = 0; index < STORY_SCENES.length; index += 1) {
+    const expected = STORY_SCENES[index];
+    await scrollAct(page, index + 1, .52);
+    const action = await page.locator(".story-actions").evaluate((nav) => {
+      const box = nav.getBoundingClientRect();
+      const shop = nav.querySelector(".story-actions__shop");
+      const trial = nav.querySelector(".story-actions__trial");
+      return {
+        top: box.top,
+        bottom: box.bottom,
+        visible: getComputedStyle(nav).visibility,
+        shop: shop.getAttribute("href"),
+        trial: trial.getAttribute("href"),
+      };
+    });
+    expect(action.top).toBeGreaterThanOrEqual(58);
+    expect(action.bottom).toBeLessThanOrEqual(112);
+    expect(action.visible).toBe("visible");
+    expect(action.shop).toBe(expected.shop);
+    expect(action.trial).toContain(`product=${expected.trialProduct}`);
+  }
+});
+
+test("story actions leave the sticky scene without being clipped", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  await page.locator("#storySummary").evaluate((summary) => summary.scrollIntoView({ block: "start" }));
+  await page.waitForTimeout(350);
+
+  const exit = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    const action = story.querySelector(".story-actions");
+    const rail = story.querySelector(".story-rail");
+    const nav = document.querySelector(".nav");
+    const storyBox = story.getBoundingClientRect();
+    const actionBox = action.getBoundingClientRect();
+    const navBox = nav.getBoundingClientRect();
+    const style = getComputedStyle(action);
+    const railStyle = getComputedStyle(rail);
+    const visible = style.display !== "none"
+      && style.visibility !== "hidden"
+      && Number(style.opacity) > .01
+      && actionBox.width > 0
+      && actionBox.height > 0;
+    return {
+      visible,
+      navBottom: navBox.bottom,
+      storyBottom: storyBox.bottom,
+      actionTop: actionBox.top,
+      actionBottom: actionBox.bottom,
+      railOpacity: Number(railStyle.opacity),
+    };
+  });
+
+  expect(exit.railOpacity, JSON.stringify(exit)).toBeLessThanOrEqual(.01);
+  if (exit.visible) {
+    expect(exit.actionTop, JSON.stringify(exit)).toBeGreaterThanOrEqual(exit.navBottom - 1);
+    expect(exit.actionBottom, JSON.stringify(exit)).toBeLessThanOrEqual(exit.storyBottom + 1);
+  }
+});
+
+for (const width of [320, 390, 430]) {
+  test(`compact story fits ${width}px without clipping or horizontal overflow`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const errors = await openStory(page);
+
+    const layout = await page.evaluate(() => {
+      const story = document.getElementById("story");
+      const viewportWidth = document.documentElement.clientWidth;
+      const boxes = [
+        story.querySelector(".story-actions"),
+        story.querySelector(".story-object__card"),
+        ...story.querySelectorAll(".act-content"),
+        story.querySelector(".story-job-note"),
+      ].map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: rect.width };
+      });
+      const status = story.querySelector(".story-object__status").getBoundingClientRect();
+      const range = story.querySelector(".story-object__range").getBoundingClientRect();
+      return {
+        ready: story.classList.contains("story-ready"),
+        mobileReady: story.classList.contains("story-mobile-ready"),
+        overflow: document.documentElement.scrollWidth - viewportWidth,
+        viewportWidth,
+        boxes,
+        statusBottom: status.bottom,
+        rangeTop: range.top,
+      };
+    });
+
+    expect(errors).toEqual([]);
+    expect(layout.ready).toBe(false);
+    expect(layout.mobileReady).toBe(true);
+    expect(layout.overflow).toBe(0);
+    expect(layout.statusBottom, JSON.stringify(layout)).toBeLessThanOrEqual(layout.rangeTop + 1);
+    for (const box of layout.boxes) {
+      expect(box.left, JSON.stringify(layout)).toBeGreaterThanOrEqual(-1);
+      expect(box.right, JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewportWidth + 1);
+    }
+  });
+}
+
+for (const width of [656, 720]) {
+  test(`compact iPad story leaves room to read at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 683 });
+    await openStory(page);
+    await page.locator('.act[data-act="2"]').evaluate((act) => act.scrollIntoView({ block: "center" }));
+    await page.waitForTimeout(600);
+
+    const layout = await page.evaluate(() => {
+      const card = document.querySelector(".story-object__card").getBoundingClientRect();
+      const media = document.querySelector(".story-object__media").getBoundingClientRect();
+      const copy = document.querySelector('.act[data-act="2"] .act-content').getBoundingClientRect();
+      const paragraph = document.querySelector('.act[data-act="2"] .act-p').getBoundingClientRect();
+      return {
+        readingHeight: innerHeight - card.bottom - 16,
+        requiredHeight: innerHeight * .45,
+        cardBottom: card.bottom,
+        copyTop: copy.top,
+        paragraphBottom: paragraph.bottom,
+        viewportHeight: innerHeight,
+        mediaWidth: media.width,
+        cardWidth: card.width,
+      };
+    });
+    expect(layout.copyTop, JSON.stringify(layout)).toBeGreaterThanOrEqual(layout.cardBottom + 16);
+    expect(layout.readingHeight, JSON.stringify(layout)).toBeGreaterThanOrEqual(layout.requiredHeight);
+    expect(layout.paragraphBottom, JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewportHeight);
+    expect(layout.mediaWidth, JSON.stringify(layout)).toBeGreaterThanOrEqual(layout.cardWidth - 2);
+  });
+}
+
+test("compact chapter entry keeps active copy below the sticky proof card", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openStory(page);
+  await scrollAct(page, 3, 0);
+
+  const layout = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    const object = story.querySelector(".story-object__card").getBoundingClientRect();
+    const copy = story.querySelector('.act[data-act="3"] .act-content').getBoundingClientRect();
+    return {
+      active: story.dataset.activeScene,
+      objectBottom: Math.round(object.bottom),
+      copyTop: Math.round(copy.top),
+    };
+  });
+
+  expect(layout.active).toBe("labelle-fermenter");
+  expect(layout.copyTop, JSON.stringify(layout)).toBeGreaterThanOrEqual(layout.objectBottom + 16);
+});
+
+test("compact native-scroll chapters reveal in both directions", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openStory(page);
+
+  const scenes = [];
+  for (const act of [1, 2, 3, 4, 5, 6, 2]) {
+    await page.locator(`.story .act[data-act="${act}"]`).evaluate((element) => {
+      element.scrollIntoView({ block: "center" });
+    });
+    await page.waitForTimeout(350);
+    scenes.push(await page.evaluate(() => ({
+      active: document.getElementById("story").dataset.activeScene,
+      visibleActs: [...document.querySelectorAll(".story .act.is-mobile-visible")]
+        .map((element) => Number(element.dataset.act)),
+    })));
+  }
+
+  expect(scenes.map((sample) => sample.active)).toEqual([
+    "kitchen-grease",
+    "cip-vessel",
+    "labelle-fermenter",
+    "shower-track",
+    "airboat-panel",
+    "pool-cartridge",
+    "cip-vessel",
+  ]);
+  expect(scenes.at(-1).visibleActs).toEqual(expect.arrayContaining([1, 2, 3, 4, 5, 6]));
+});
+
+test("mobile cleaner comparison becomes complete conventional-versus-VertKleen cards", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openStory(page);
+  await page.locator(".replacement-guide details").evaluate((details) => {
+    details.open = true;
+    details.scrollIntoView({ block: "start" });
+  });
+
+  const ledger = await page.evaluate(() => {
+    const table = document.querySelector(".replacement-ledger");
+    const rows = [...table.querySelectorAll("tbody tr")];
+    return {
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      tableOverflow: table.scrollWidth - table.clientWidth,
+      cards: rows.map((row) => {
+        const box = row.getBoundingClientRect();
+        return {
+          width: box.width,
+          conventional: row.querySelector('[data-label="Conventional"]')?.innerText.trim(),
+          vertkleen: row.querySelector('[data-label="VertKleen"]')?.innerText.trim(),
+          conventionalLabel: getComputedStyle(
+            row.querySelector('[data-label="Conventional"]'),
+            "::before"
+          ).content,
+          vertkleenLabel: getComputedStyle(
+            row.querySelector('[data-label="VertKleen"]'),
+            "::before"
+          ).content,
+        };
+      }),
+    };
+  });
+
+  expect(ledger.pageOverflow).toBe(0);
+  expect(ledger.tableOverflow).toBe(0);
+  expect(ledger.cards).toHaveLength(4);
+  for (const card of ledger.cards) {
+    expect(card.width).toBeLessThanOrEqual(362);
+    expect(card.conventional).toBeTruthy();
+    expect(card.vertkleen).toMatch(/VertKleen/);
+    expect(card.conventionalLabel).toBe('"Conventional"');
+    expect(card.vertkleenLabel).toBe('"VertKleen"');
+  }
+});
+
+test("desktop tab order excludes links until their reveal is visible", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const linkState = (act) => page.locator(`.act[data-act="${act}"] a`).first().evaluate((link) => ({
+    opacity: Number(getComputedStyle(link.closest("[data-at]")).opacity),
+    tabIndex: link.tabIndex,
+  }));
+
+  await scrollAct(page, 3, .05);
+  expect(await linkState(3)).toMatchObject({ opacity: 0, tabIndex: -1 });
+  await scrollAct(page, 3, .94);
+  expect((await linkState(3)).opacity).toBeGreaterThan(.5);
+  expect((await linkState(3)).tabIndex).toBe(0);
+});
+
+test("desktop focusability follows the visible chapter", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const initial = await page.evaluate(() => ({
+    act1: document.querySelector('.act[data-act="1"] a').tabIndex,
+    act3: document.querySelector('.act[data-act="3"] a').tabIndex,
+    act3Hidden: document.querySelector('.act[data-act="3"]').getAttribute("aria-hidden"),
+  }));
+  expect(initial.act1).toBe(-1);
+  expect(initial.act3).toBe(-1);
+  expect(initial.act3Hidden).toBe("true");
+
+  await scrollAct(page, 3, .94);
+  const switched = await page.evaluate(() => ({
+    act1: document.querySelector('.act[data-act="1"] a').tabIndex,
+    act3: document.querySelector('.act[data-act="3"] a').tabIndex,
+    act1Hidden: document.querySelector('.act[data-act="1"]').getAttribute("aria-hidden"),
+    act3Hidden: document.querySelector('.act[data-act="3"]').getAttribute("aria-hidden"),
+  }));
+  expect(switched).toEqual({ act1: -1, act3: 0, act1Hidden: "true", act3Hidden: "false" });
+});
+
+test("skip-story control lands on the visible six-result summary", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  await page.locator(".story-skip").click();
+  await page.waitForTimeout(350);
+
+  const landing = await page.locator("#storySummary").evaluate((summary) => {
+    const rect = summary.getBoundingClientRect();
+    return {
+      hash: location.hash,
+      top: rect.top,
+      bottom: rect.bottom,
+      visible: getComputedStyle(summary).visibility,
+      steps: summary.querySelectorAll("li").length,
+    };
+  });
+  expect(landing.hash).toBe("#storySummary");
+  expect(landing.top).toBeGreaterThanOrEqual(0);
+  expect(landing.top).toBeLessThan(100);
+  expect(landing.bottom).toBeGreaterThan(landing.top);
+  expect(landing.visible).toBe("visible");
+  expect(landing.steps).toBe(6);
+});
+
+test("missing GSAP exposes complete static content and final proof", async ({ page }) => {
+  await page.route("**/vendor/gsap/**", (route) => route.abort());
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const errors = await openStory(page);
+
+  const fallback = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    return {
+      ready: story.classList.contains("story-ready"),
+      mobileReady: story.classList.contains("story-mobile-ready"),
+      scene: story.dataset.activeScene,
+      reveal: Number.parseFloat(
+        getComputedStyle(story.querySelector(".story-object__after")).getPropertyValue("--story-reveal")
+      ),
+      acts: [...story.querySelectorAll(":scope > .act")].map((act) => ({
+        ariaHidden: act.getAttribute("aria-hidden"),
+        height: act.getBoundingClientRect().height,
+        text: act.innerText.trim().length,
+      })),
+      proofHrefs: [...story.querySelectorAll(".story-job-note a")]
+        .map((link) => link.getAttribute("href")),
+    };
+  });
+
+  expect(errors).toEqual([]);
+  expect(fallback.ready).toBe(false);
+  expect(fallback.mobileReady).toBe(false);
+  expect(fallback.scene).toBe("kitchen-grease");
+  expect(fallback.reveal).toBeGreaterThanOrEqual(49);
+  expect(fallback.reveal).toBeLessThanOrEqual(51);
+  expect(fallback.proofHrefs).toHaveLength(6);
+  expect(fallback.proofHrefs[0]).toBe("proof#commercial-kitchen-crhd");
+  expect(fallback.proofHrefs[5]).toBe("docs/sds/vertkleen-hcr-pool-filter.pdf");
+  for (const act of fallback.acts) {
+    expect(act.ariaHidden).toBeNull();
+    expect(act.height).toBeGreaterThan(200);
+    expect(act.text).toBeGreaterThan(100);
+  }
+});
+
+test("no-JS mode keeps all six chapters, pairs, and actions readable", async ({ browser }) => {
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: { width: 390, height: 844 },
+  });
+  const mediaIsolation = createMediaIsolation();
+  await mediaIsolation.install(context);
+  const page = await context.newPage();
+  try {
+    await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+    const state = await page.evaluate(() => {
+      const story = document.getElementById("story");
+      return {
+        ready: story.classList.contains("story-ready"),
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        acts: [...story.querySelectorAll(":scope > .act")].map((act) => ({
+          heading: act.querySelector("h1, h2")?.textContent.trim(),
+          opacity: getComputedStyle(act.querySelector(".act-content")).opacity,
+          visibility: getComputedStyle(act.querySelector(".act-content")).visibility,
+        })),
+        actions: [...story.querySelectorAll('a[href]')].map((link) => link.getAttribute("href")),
+        fallbackPairs: story.querySelectorAll(".story-fallback-pair").length,
+      };
+    });
+    expect(state.ready).toBe(false);
+    expect(state.overflow).toBe(0);
+    expect(state.acts).toHaveLength(6);
+    expect(state.fallbackPairs).toBe(6);
+    for (const act of state.acts) {
+      expect(act.heading).toBeTruthy();
+      expect(act.opacity).toBe("1");
+      expect(act.visibility).toBe("visible");
+    }
+    expect(state.actions).toContain("products/crhd");
+    expect(state.actions).toContain("#storySummary");
+  } finally {
+    try {
+      await context.close();
+    } finally {
+      mediaIsolation.assertNoUnexpected();
+    }
+  }
+});
+
+test("reduced motion produces a complete, non-overlapping static story", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openStory(page);
+
+  const layout = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    const acts = [...story.querySelectorAll(":scope > .act")];
+    const boxes = acts.map((act) => {
+      const rect = act.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom };
+    });
+    const content = story.querySelector(".act-content");
+    const chat = document.querySelector(".customer-chat__toggle");
+    return {
+      ready: story.classList.contains("story-ready"),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      overlap: boxes.slice(1).some((box, index) => box.top < boxes[index].bottom - 1),
+      opacity: getComputedStyle(content).opacity,
+      transition: getComputedStyle(content).transitionDuration,
+      product: getComputedStyle(story.querySelector(".story-object__product")).opacity,
+      chatVisibility: chat ? getComputedStyle(chat).visibility : "missing",
+    };
+  });
+
+  expect(layout.ready).toBe(false);
+  expect(layout.overflow).toBe(0);
+  expect(layout.overlap).toBe(false);
+  expect(layout.opacity).toBe("1");
+  expect(layout.transition).toBe("0s");
+  expect(layout.product).toBe("1");
+  expect(layout.chatVisibility).toBe("hidden");
+});
+
+test("reverse scroll restores prior scene state", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  await scrollAct(page, 6, .9);
+  const end = await page.evaluate(() => ({
+    scene: document.getElementById("story").dataset.activeScene,
+    reveal: Number.parseFloat(
+      getComputedStyle(document.querySelector(".story-object__media")).getPropertyValue("--story-reveal")
+    ),
+  }));
+  await scrollAct(page, 2, .45);
+  const reversed = await page.evaluate(() => ({
+    scene: document.getElementById("story").dataset.activeScene,
+    reveal: Number.parseFloat(
+      getComputedStyle(document.querySelector(".story-object__media")).getPropertyValue("--story-reveal")
+    ),
+  }));
+
+  expect(end.scene).toBe("pool-cartridge");
+  expect(end.reveal).toBeGreaterThan(80);
+  expect(reversed.scene).toBe("cip-vessel");
+  expect(reversed.reveal).toBeGreaterThan(25);
+  expect(reversed.reveal).toBeLessThan(70);
+});
+
+test("720px compact layout covers a 200-percent desktop zoom equivalent", async ({ page }) => {
+  await page.setViewportSize({ width: 720, height: 450 });
+  await openStory(page);
+  const layout = await page.evaluate(() => {
+    const story = document.getElementById("story");
+    const action = story.querySelector(".story-actions").getBoundingClientRect();
+    const object = story.querySelector(".story-object__card").getBoundingClientRect();
+    return {
+      compact: story.classList.contains("story-mobile-ready"),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      actionRight: action.right,
+      objectRight: object.right,
+      viewportWidth: document.documentElement.clientWidth,
+    };
+  });
+  expect(layout.compact).toBe(true);
+  expect(layout.overflow).toBe(0);
+  expect(layout.actionRight).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.objectRight).toBeLessThanOrEqual(layout.viewportWidth);
+});
+
+test("live 200-percent zoom crossing reconfigures the story without hidden chapters", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const storyState = () => page.evaluate(() => {
+    const story = document.getElementById("story");
+    return {
+      ready: story.classList.contains("story-ready"),
+      mobileReady: story.classList.contains("story-mobile-ready"),
+      hiddenActs: [...story.querySelectorAll(":scope > .act")]
+        .filter((act) => act.getAttribute("aria-hidden") === "true").length,
+      storyTriggers: window.ScrollTrigger.getAll()
+        .filter((trigger) => trigger.trigger?.matches?.(".story .act")).length,
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+
+  expect(await storyState()).toMatchObject({
+    ready: true,
+    mobileReady: false,
+    hiddenActs: 5,
+    storyTriggers: 6,
+    overflow: 0,
+  });
+
+  await page.setViewportSize({ width: 720, height: 900 });
+  await page.waitForTimeout(500);
+  expect(await storyState()).toMatchObject({
+    ready: false,
+    mobileReady: true,
+    hiddenActs: 0,
+    storyTriggers: 0,
+    overflow: 0,
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(500);
+  expect(await storyState()).toMatchObject({
+    ready: true,
+    mobileReady: false,
+    hiddenActs: 5,
+    storyTriggers: 6,
+    overflow: 0,
+  });
+});
+
+test("desktop story stays inside a controlled-scroll frame budget", async ({ page }, testInfo) => {
+  // Three 9.4-second measurement samples leave too little setup/teardown headroom
+  // under Playwright's 30-second default on shared CI runners.
+  test.setTimeout(45_000);
+  const testStartedAt = Date.now();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+
+  const samples = await page.evaluate(async ({ sampleCount, sweepDuration, idleDuration }) => {
+    const story = document.getElementById("story");
+    const startY = story.offsetTop;
+    const endY = startY + story.offsetHeight - innerHeight;
+    const wait = (duration) => new Promise((resolve) => setTimeout(resolve, duration));
+
+    async function collectFrameDeltas(duration) {
+      const frameDeltas = [];
+      await new Promise((resolve) => {
+        let startedAt = 0;
+        let previous = 0;
+        function idleFrame(now) {
+          if (!startedAt) {
+            startedAt = now;
+            previous = now;
+          } else {
+            frameDeltas.push(now - previous);
+            previous = now;
+          }
+          if (now - startedAt < duration) requestAnimationFrame(idleFrame);
+          else resolve();
+        }
+        requestAnimationFrame(idleFrame);
+      });
+      return frameDeltas;
+    }
+
+    const results = [];
+    for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex += 1) {
+      scrollTo(0, startY);
+      window.ScrollTrigger.update();
+      await wait(400);
+      const idleDeltas = await collectFrameDeltas(idleDuration);
+      const deltas = [];
+      const longTasks = [];
+      let observer = null;
+
+      if ("PerformanceObserver" in window
+        && PerformanceObserver.supportedEntryTypes?.includes("longtask")) {
+        observer = new PerformanceObserver((list) => {
+          longTasks.push(...list.getEntries().map((entry) => entry.duration));
+        });
+        observer.observe({ type: "longtask" });
+      }
+
+      await new Promise((resolve) => {
+        let startedAt = 0;
+        let previous = 0;
+        function frame(now) {
+          if (!startedAt) {
+            startedAt = now;
+            previous = now;
+          } else {
+            deltas.push(now - previous);
+            previous = now;
+          }
+          const progress = Math.min(1, (now - startedAt) / sweepDuration);
+          scrollTo(0, startY + (endY - startY) * progress);
+          if (progress < 1) requestAnimationFrame(frame);
+          else resolve();
+        }
+        requestAnimationFrame(frame);
+      });
+      await wait(0);
+      longTasks.push(...(observer?.takeRecords() || []).map((entry) => entry.duration));
+      observer?.disconnect();
+
+      const sorted = deltas.slice().sort((a, b) => a - b);
+      const idleSorted = idleDeltas.slice().sort((a, b) => a - b);
+      const percentile = (fraction) => sorted[Math.min(
+        sorted.length - 1,
+        Math.floor(sorted.length * fraction),
+      )];
+      const idleAverage = idleDeltas.reduce((sum, value) => sum + value, 0) / idleDeltas.length;
+      const idleP95 = idleSorted[Math.min(idleSorted.length - 1, Math.floor(idleSorted.length * .95))];
+      const average = deltas.reduce((sum, value) => sum + value, 0) / deltas.length;
+      const p95 = percentile(.95);
+      const p99 = percentile(.99);
+      results.push({
+        sample: sampleIndex + 1,
+        frames: deltas.length,
+        frameCoverage: deltas.length / (sweepDuration / idleAverage),
+        idleAverage,
+        idleP95,
+        average,
+        p95,
+        p95BaselineMultiple: p95 / idleP95,
+        p99,
+        p99BaselineMultiple: p99 / idleP95,
+        max: sorted.at(-1),
+        over20: deltas.filter((value) => value > 20).length,
+        longTasks: longTasks.length,
+      });
+    }
+    return results;
+  }, {
+    sampleCount: STORY_PERFORMANCE_SAMPLE_COUNT,
+    sweepDuration: 7000,
+    idleDuration: 2000,
+  });
+
+  const evaluation = evaluateStoryPerformanceSamples(samples);
+  console.log("story-performance", JSON.stringify({ samples, evaluation }));
+  const diagnosticHeadroomMs = testInfo.timeout - (Date.now() - testStartedAt) - 2500;
+  const diagnosticTimeoutMs = Math.min(6000, diagnosticHeadroomMs);
+  const diagnosticWorkMs = Math.max(750, diagnosticTimeoutMs - 1200);
+  await diagnoseStoryPerformanceFailure({
+    evaluation,
+    deadlineMs: diagnosticWorkMs,
+    collect: (signal) => diagnosticHeadroomMs >= 3000
+      ? collectStoryPerformanceDiagnostic(page, {
+        durationMs: Math.min(2000, diagnosticHeadroomMs - 1500),
+        timeoutMs: diagnosticWorkMs,
+        signal,
+      })
+      : Promise.resolve({
+        diagnosticVersion: 1,
+        skipped: "insufficient_test_headroom",
+        remainingMs: Math.max(0, Math.round(diagnosticHeadroomMs)),
+      }),
+  });
+  expect(evaluation.pass, JSON.stringify({ samples, evaluation })).toBe(true);
+});
+
+test("failed-budget diagnostics profile a separate scroll without changing gate authority", async ({ page }) => {
+  test.setTimeout(20_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  const syntheticFailedEvaluation = {
+    pass: false,
+    passingSamples: 1,
+    requiredPassingSamples: 2,
+    failures: [{ metric: "sampleQuorum", actual: 1, budget: 2, direction: "minimum" }],
+  };
+  const messages = [];
+
+  const result = await diagnoseStoryPerformanceFailure({
+    evaluation: syntheticFailedEvaluation,
+    collect: (signal) => collectStoryPerformanceDiagnostic(page, {
+      durationMs: 750,
+      timeoutMs: 8000,
+      signal,
+    }),
+    log: (...parts) => messages.push(parts.join(" ")),
+  });
+
+  expect(result.evaluation).toBe(syntheticFailedEvaluation);
+  expect(result.evaluation.pass).toBe(false);
+  expect(result.diagnostic.error).toBeUndefined();
+  expect(result.diagnostic.durationMs).toBe(750);
+  expect(result.diagnostic.host.cpuCount).toBeGreaterThan(0);
+  expect(result.diagnostic.browser.product).toBeTruthy();
+  expect(Object.keys(result.diagnostic.performanceMetricDelta)).toContain("TaskDuration");
+  expect(result.diagnostic.performanceMetricDelta.TaskDuration).toBeGreaterThan(0);
+  expect(Object.keys(result.diagnostic.trace).length).toBeGreaterThan(0);
+  expect(messages).toHaveLength(1);
+  expect(messages[0]).toContain("story-performance-diagnostic");
+});
+
+test("an active diagnostic cancellation terminates scrolling and releases the page", async ({ page }) => {
+  test.setTimeout(15_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  const scrollBeforeDiagnostic = await page.evaluate(() => scrollY);
+  const controller = new AbortController();
+  const collecting = collectStoryPerformanceDiagnostic(page, {
+    durationMs: 5000,
+    timeoutMs: 8000,
+    signal: controller.signal,
+  });
+  const observedCollection = collecting.then(
+    () => ({ error: null }),
+    (error) => ({ error }),
+  );
+
+  await expect.poll(
+    () => page.evaluate(() => scrollY),
+    { timeout: 3000, intervals: [10, 25, 50, 100] },
+  ).toBeGreaterThan(scrollBeforeDiagnostic);
+  controller.abort(new Error("controlled active diagnostic timeout"));
+  const { error } = await observedCollection;
+
+  expect(error?.message).toBe("controlled active diagnostic timeout");
+  const scrollAtReturn = await page.evaluate(() => scrollY);
+  expect(scrollAtReturn).toBeGreaterThan(scrollBeforeDiagnostic);
+  await page.waitForTimeout(150);
+  expect(await page.evaluate(() => scrollY)).toBe(scrollAtReturn);
+  expect(await page.evaluate(() => 2 + 2)).toBe(4);
+  const freshSession = await page.context().newCDPSession(page);
+  await expect(freshSession.send("Performance.getMetrics")).resolves.toHaveProperty("metrics");
+  await freshSession.detach();
+});

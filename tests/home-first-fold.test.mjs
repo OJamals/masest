@@ -93,8 +93,8 @@ test("homepage keeps a primary action visible on short mobile", async () => {
             label === text;
         });
         return {
-          hasPrimary: visibleInFold(".hero-ctas a", "Shop CRHD"),
-          hasTrial: visibleInFold(".hero-ctas a", "Try it"),
+          hasPrimary: visibleInFold(".story-actions a", "Shop CRHD"),
+          hasTrial: visibleInFold(".story-actions a", "Try it"),
           visibleShortcuts: [...document.querySelectorAll(".story-shortcuts a")].filter((el) => {
             const rect = el.getBoundingClientRect();
             const style = getComputedStyle(el);
@@ -108,6 +108,59 @@ test("homepage keeps a primary action visible on short mobile", async () => {
       assert.equal(result.hasTrial, true, "short mobile should keep the trial path visible");
       assert.equal(result.visibleShortcuts, 0, "short mobile should hide the secondary shortcut rail");
       assert.equal(result.overflow, false, "short mobile should not create horizontal overflow");
+    } finally {
+      await browser.close();
+    }
+  });
+});
+
+test("homepage first scene keeps the persistent object clear of compact iPad copy", async () => {
+  await withServer(async () => {
+    const browser = await launchTestBrowser();
+    const page = await browser.newPage({
+      // Playwright's iPad (gen 11) CSS width; height matches the reported crop.
+      viewport: { width: 656, height: 683 },
+      deviceScaleFactor: 2,
+      reducedMotion: "no-preference",
+    });
+
+    try {
+      await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
+      await page.waitForFunction(() => (
+        document.getElementById("story")?.classList.contains("story-mobile-ready")
+      ));
+      const result = await page.evaluate(async () => {
+        const act = document.querySelector('.story .act[data-act="1"]');
+        act.scrollIntoView({ block: "center" });
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return {
+            left: Math.round(box.left),
+            right: Math.round(box.right),
+            top: Math.round(box.top),
+            bottom: Math.round(box.bottom),
+            width: Math.round(box.width),
+          };
+        };
+        const copy = rect('.story .act[data-act="1"] .act-content');
+        const object = rect(".story-object__card");
+        return {
+          copy,
+          object,
+          sceneEnvelope: Math.max(copy.right, object.right) - Math.min(copy.left, object.left),
+          mobileReady: document.getElementById("story").classList.contains("story-mobile-ready"),
+          overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+        };
+      });
+
+      assert.equal(result.mobileReady, true, JSON.stringify(result));
+      assert.ok(result.sceneEnvelope >= 656 * 0.75, JSON.stringify(result));
+      assert.ok(result.copy.top >= result.object.bottom + 16, JSON.stringify(result));
+      assert.ok(result.copy.width >= 250, JSON.stringify(result));
+      assert.ok(result.object.width >= 560, JSON.stringify(result));
+      assert.ok(result.object.right <= 656, JSON.stringify(result));
+      assert.equal(result.overflow, false, JSON.stringify(result));
     } finally {
       await browser.close();
     }

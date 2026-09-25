@@ -12,8 +12,10 @@ test("package exposes one-command build and verification scripts", () => {
     "tools/focus-visible-a11y.spec.mjs",
     "tools/service-tabs-a11y.spec.mjs",
     "tools/site-audit-regressions.spec.mjs",
+    "tools/story-hmis-visual.spec.mjs",
     "tools/update-content-regressions.spec.mjs",
   ];
+  const storyPerformanceTitle = "desktop story stays inside a controlled-scroll frame budget";
   const workspaceSpecs = [
     "tools/admin-nav-state.spec.mjs",
     "tools/admin-responsive.spec.mjs",
@@ -44,12 +46,12 @@ test("package exposes one-command build and verification scripts", () => {
   );
   assert.equal(
     scripts["qa:ui-critical:interaction"],
-    `playwright test ${criticalUiSpecs.join(" ")} --reporter=line`,
+    `playwright test ${criticalUiSpecs.join(" ")} --grep-invert="${storyPerformanceTitle}" --reporter=line`,
   );
-  // The performance gate is a whole spec now, not one grep'd test inside the story suite.
+  // Preserve homepage vitals and run the restored story cadence gate in isolation.
   assert.equal(
     scripts["qa:ui-critical:performance"],
-    "playwright test tools/homepage-vitals.spec.mjs --workers=1 --retries=0 --reporter=line",
+    `playwright test tools/homepage-vitals.spec.mjs --workers=1 --retries=0 --reporter=line && playwright test tools/story-hmis-visual.spec.mjs --grep="${storyPerformanceTitle}" --workers=1 --retries=0 --reporter=line`,
   );
   assert.doesNotMatch(scripts["qa:ui-critical:interaction"], /tools\/\*\.spec/);
   assert.ok(

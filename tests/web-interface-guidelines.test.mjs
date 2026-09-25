@@ -166,7 +166,7 @@ test("progress copy uses the ellipsis character", () => {
   }
 });
 
-test("every shipped page states its h1 on the shared type scale", () => {
+test("every shipped page gives its h1 an explicit typography treatment", () => {
   /* Ten pages shipped a bare <h1> and so rendered at the browser's 32px default while
    * eleven others rendered 72-80px from .display — a 2.5x spread with cart, checkout and
    * order-confirmed, the three highest-stakes pages on the site, sitting at the bottom of
@@ -188,6 +188,13 @@ test("every shipped page states its h1 on the shared type scale", () => {
     const html = read(file);
     for (const tag of html.match(/<h1[^>]*>/g) || []) {
       if (/class="[^"]*\b(display|headline|sr-only)\b/.test(tag)) continue;
+      // The restored scrollybook keeps its historical scene typography. Require
+      // its stylesheet and explicit size so this cannot excuse an unstyled h1.
+      if (file === "index.html" && /class="[^"]*\bact-h\b/.test(tag)) {
+        assert.match(html, /href="css\/story\.css\?v=/);
+        assert.match(read("css/story.css"), /\.story \.act-h\s*\{[^}]*font-size:\s*clamp\(/);
+        continue;
+      }
       offenders.push(`${file}: ${tag}`);
     }
   }

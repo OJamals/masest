@@ -11,10 +11,13 @@
 <meta property="og:description" content="Clean scale, rust, grease, grime, and odor without relying on harsh acids, caustics, or solvents.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MASEST VertKleen">
+<link rel="preconnect" href="https://media.masest.co">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20260915a">
 <link rel="stylesheet" href="css/navigation.css?v=20260915a">
 <link rel="stylesheet" href="css/components.css?v=20260915a">
+<link rel="stylesheet" href="css/story.css?v=20260915a">
+<link rel="preload" as="image" href="https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp?v=20260911a" fetchpriority="high">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/">
 <meta property="og:url" content="https://masest.co/">
@@ -27,7 +30,7 @@
 <!-- Reserves the nav's height so chrome.js can swap it in without shoving the
      full-viewport story down ~59px on first paint (CLS). Dark to match the
      story backdrop = no white flash before the real nav renders. -->
-<div id="nav-reserve" aria-hidden="true"></div>
+<div id="nav-reserve" aria-hidden="true" style="height:59px;background:#0b0d12"></div>
 <noscript><style>#nav-reserve{display:none}</style></noscript>
 <a class="skip-link" href="#main">Skip to content</a>
 
@@ -44,31 +47,208 @@
 </noscript>
 
 <main id="main">
-  <!-- ============================================================
-       HERO: the page's h1 and its two primary actions. Text-led on purpose —
-       the homepage used to open with a 177KB photograph as its LCP element,
-       which cost 2.4s on a throttled phone. Proof now lives on /proof.
-       ============================================================ -->
-  <section class="hero-split">
-    <div class="wrap">
-      <span class="eyebrow">VertKleen &rsaquo; Industrial cleaning chemistry</span>
-      <h1 class="display" id="homeHeroTitle">Industrial strength. Better chemistry.</h1>
-      <p class="subhead">VertKleen attacks scale, rust, grease, oxidation, and organic buildup on industrial equipment&mdash;without building the job around the acids, caustics, and solvents crews traditionally reach for.</p>
-      <!-- CTAs sit above the fact list so both stay inside a 390x700 fold. -->
-      <div class="hero-ctas">
-        <a class="btn btn-primary" href="products/crhd" aria-label="Shop VertKleen CRHD">Shop CRHD</a>
-        <a class="btn btn-ghost" href="contact?type=sample&amp;product=VertKleen%20CRHD" aria-label="Try VertKleen CRHD on my cleaning job">Try it</a>
-      </div>
-      <ul class="ind-hero-facts" aria-label="What VertKleen is built to do">
-        <li><span>Strength</span><strong>Industrial strength. Better chemistry.</strong></li>
-        <li><span>Outperform</span><strong>Built to outperform traditional cleaners.</strong></li>
-        <li><span>Rating</span><strong>Industrial results. HMIS 0-0-0.</strong></li>
-        <li><span>Cost</span><strong>Less expensive by the finished job.</strong></li>
-        <li><span>Range</span><strong>The right strength for the soil.</strong></li>
-        <li><a href="proof">See the field results <span aria-hidden="true">&rarr;</span></a></li>
-      </ul>
+<!-- ============================================================
+     PROOF: six true before/after field comparisons.
+     GSAP ScrollTrigger maps scroll progress to each reveal on desktop.
+     Native range input keeps every comparison directly draggable.
+     ============================================================ -->
+<div class="story" id="story" data-active-scene="kitchen-grease" role="region" aria-label="Six VertKleen before and after field results">
+<script>/* Apply desktop pinning before first paint. story.js removes this
+  class when motion is reduced or GSAP is unavailable. */
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches &&
+      matchMedia('(min-width: 761px)').matches)
+    document.getElementById('story').classList.add('story-ready');</script>
+
+  <a class="story-skip" href="#storySummary">Skip comparisons <span>View all six results</span></a>
+
+  <nav class="story-actions" aria-label="Active VertKleen result actions">
+    <span class="story-actions__match"><small>For kitchen grease</small><b>VertKleen CRHD</b></span>
+    <a class="story-actions__shop" href="products/crhd" aria-label="Shop VertKleen CRHD">Shop CRHD</a>
+    <a class="story-actions__trial" href="contact?type=sample&amp;product=VertKleen%20CRHD" aria-label="Try VertKleen CRHD on my cleaning job">Try it</a>
+  </nav>
+
+  <nav class="story-rail" aria-label="Before and after field results">
+    <div class="rail-inner">
+      <a class="rail-btn" href="#story-scene-1" aria-current="step"><b>01</b><span>Strength</span></a>
+      <a class="rail-btn" href="#story-scene-2"><b>02</b><span>Outperform</span></a>
+      <a class="rail-btn" href="#story-scene-3"><b>03</b><span>HMIS 0-0-0</span></a>
+      <a class="rail-btn" href="#story-scene-4"><b>04</b><span>Lower cost</span></a>
+      <a class="rail-btn" href="#story-scene-5"><b>05</b><span>Right formula</span></a>
+      <a class="rail-btn" href="#story-scene-6"><b>06</b><span>Prove it</span></a>
     </div>
+  </nav>
+
+  <div class="story-object">
+    <div class="story-object__card" role="group" aria-labelledby="storyObjectTitle storyObjectDetail">
+      <div class="story-object__media">
+        <img class="story-object__before" src="https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp?v=20260911a" alt="" fetchpriority="high" decoding="async" width="1200" height="1017">
+        <div class="story-object__after">
+          <img src="https://media.masest.co/site/img/proof/story/kitchen-grease-after-aligned-202609.webp" alt="" fetchpriority="low" decoding="async" width="1200" height="1017">
+        </div>
+        <span class="story-object__label story-object__label--before">Before</span>
+        <span class="story-object__label story-object__label--after">After</span>
+        <span class="story-object__divider" aria-hidden="true"></span>
+        <span class="story-object__status" aria-live="polite">Baked-on grease to exposed steel</span>
+        <span class="sr-only" id="storyCompareLabel">Reveal cleaned result</span>
+        <input class="story-object__range" type="range" name="storyComparisonReveal" min="0" max="100" value="50" step="1" aria-labelledby="storyCompareLabel storyObjectTitle" aria-valuetext="50% after image revealed">
+      </div>
+      <div class="story-object__footer">
+        <div class="story-object__identity">
+          <small id="storyObjectTitle">Commercial-kitchen grease</small>
+          <b id="storyObjectDetail">Baked-on residue to exposed stainless</b>
+        </div>
+        <div class="story-object__product">
+          <img src="https://media.masest.co/site/img/products/crhd-food-beverage-studio-chip.webp" alt="" fetchpriority="low" decoding="async" width="180" height="240">
+          <span><small>Documented cleaner</small><b>VertKleen CRHD</b></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="act" id="story-scene-1" data-act="1" data-scene="kitchen-grease"
+    data-before-src="https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp?v=20260911a" data-before-width="1200" data-before-height="1017" data-before-position="50% 50%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/kitchen-grease-after-aligned-202609.webp" data-after-width="1200" data-after-height="1017" data-after-position="50% 50%" data-after-scale="1" data-after-rotate="0"
+    data-object-title="Commercial-kitchen grease" data-object-detail="Baked-on residue to exposed stainless" data-status="Baked-on grease to exposed steel" data-action-context="For kitchen grease"
+    data-product-name="VertKleen CRHD" data-product-short="CRHD" data-product-href="products/crhd" data-trial-href="contact?type=sample&amp;product=VertKleen%20CRHD"
+    data-product-src="https://media.masest.co/site/img/products/crhd-food-beverage-studio-chip.webp" data-product-width="180" data-product-height="240" aria-labelledby="storyAct1Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">01 &middot; Industrial cleaning strength</span>
+        <h1 class="act-h" id="storyAct1Title" data-at="0">Industrial strength. Better chemistry.</h1>
+        <p class="act-p" data-at="0.10">VertKleen attacks scale, rust, grease, oxidation, and organic buildup on industrial equipment&mdash;without building the job around the acids, caustics, and solvents crews traditionally reach for.</p>
+        <aside class="story-job-note" data-at="0.28" aria-label="Photo proof: commercial kitchen grease">
+          <span class="story-job-note__label">Photo proof &middot; VertKleen CRHD</span>
+          <p><b>Kitchen grease.</b> Baked-on residue to exposed stainless. Read the surface, not the exposure. Follow the lower seam and the grease line across both frames.</p>
+          <a href="proof#commercial-kitchen-crhd">View kitchen result <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        </aside>
+      </div>
+    </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp?v=20260911a" alt="Commercial-kitchen surface before CRHD cleaning" width="1200" height="1017"><img src="https://media.masest.co/site/img/proof/story/kitchen-grease-after-aligned-202609.webp" alt="Commercial-kitchen surface after CRHD cleaning" width="1200" height="1017"></figure></noscript>
   </section>
+
+  <section class="act" id="story-scene-2" data-act="2" data-scene="cip-vessel"
+    data-before-src="https://media.masest.co/site/img/proof/story/cip-vessel-before-aligned-202609.webp" data-before-width="1200" data-before-height="1017" data-before-position="50% 50%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/cip-vessel-after-aligned-202609.webp" data-after-width="1200" data-after-height="1017" data-after-position="50% 50%" data-after-scale="1" data-after-rotate="0"
+    data-object-title="CIP vessel residue" data-object-detail="Bottom residue to reflective stainless" data-status="Vessel residue removed" data-action-context="For CIP residue"
+    data-product-name="VertKleen CR" data-product-short="CR" data-product-href="products/cr" data-trial-href="contact?type=sample&amp;product=VertKleen%20CR"
+    data-product-src="https://media.masest.co/site/img/products/cip-cr-studio-chip.webp" data-product-width="180" data-product-height="240" aria-labelledby="storyAct2Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">02 &middot; More effective</span>
+        <h2 class="act-h" id="storyAct2Title" data-at="0">Built to outperform traditional cleaners.</h2>
+        <p class="act-p" data-at="0.10">Measure the finished surface: more soil removed, fewer repeat passes, a cleaner rinse, and faster return to service. Run the same job side by side and compare.</p>
+        <aside class="story-job-note" data-at="0.28" aria-label="Photo proof: CIP vessel residue">
+          <span class="story-job-note__label">Photo proof &middot; VertKleen CR</span>
+          <p><b>CIP vessel.</b> Same vessel geometry: CR removes the organic residue field and returns the interior to reflective steel.</p>
+          <a href="proof#brewery-cip-trials">View brewery CIP evidence <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        </aside>
+      </div>
+    </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/cip-vessel-before-aligned-202609.webp" alt="CIP vessel before VertKleen CR cleaning" width="1200" height="1017"><img src="https://media.masest.co/site/img/proof/story/cip-vessel-after-aligned-202609.webp" alt="CIP vessel after VertKleen CR cleaning" width="1200" height="1017"></figure></noscript>
+  </section>
+
+  <section class="act" id="story-scene-3" data-act="3" data-scene="labelle-fermenter"
+    data-before-src="https://media.masest.co/site/img/proof/story/labelle-fermenter-before-aligned-202609.webp" data-before-width="1200" data-before-height="1017" data-before-position="50% 50%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/labelle-fermenter-after-aligned-202609.webp" data-after-width="1200" data-after-height="1017" data-after-position="50% 50%" data-after-scale="1" data-after-rotate="0"
+    data-object-title="LaBelle fermenter ring" data-object-detail="Brown wall ring to clean stainless" data-status="Fermenter ring removed" data-action-context="For brewery residue"
+    data-product-name="VertKleen CR" data-product-short="CR" data-product-href="products/cr" data-trial-href="contact?type=sample&amp;product=VertKleen%20CR"
+    data-product-src="https://media.masest.co/site/img/products/cip-cr-studio-chip.webp" data-product-width="180" data-product-height="240" aria-labelledby="storyAct3Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">03 &middot; HMIS 0-0-0</span>
+        <h2 class="act-h" id="storyAct3Title" data-at="0">Industrial results. HMIS 0-0-0.</h2>
+        <p class="act-p" data-at="0.10">Every VertKleen product MASEST offers is rated 0-0-0 for health, flammability, and physical hazard. Check the current label and SDS, then use the PPE and controls the task requires.</p>
+        <aside class="story-job-note" data-at="0.28" aria-label="Photo proof: LaBelle fermenter ring">
+          <span class="story-job-note__label">Photo proof &middot; VertKleen CR</span>
+          <p><b>LaBelle fermenter.</b> Geometry stays recognizable: the vessel curve and port remain fixed while the brown ring disappears. Drag across the ring to compare.</p>
+          <a href="proof#brewery-cip-trials">View brewery cleaning record <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        </aside>
+      </div>
+    </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/labelle-fermenter-before-aligned-202609.webp" alt="LaBelle fermenter ring before VertKleen CR cleaning" width="1200" height="1017"><img src="https://media.masest.co/site/img/proof/story/labelle-fermenter-after-aligned-202609.webp" alt="LaBelle fermenter after VertKleen CR cleaning" width="1200" height="1017"></figure></noscript>
+  </section>
+
+  <section class="act" id="story-scene-4" data-act="4" data-scene="shower-track"
+    data-before-src="https://media.masest.co/site/img/proof/story/shower-track-before-aligned-202609.webp" data-before-width="1200" data-before-height="1017" data-before-position="50% 50%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/shower-track-after-aligned-202609.webp" data-after-width="1200" data-after-height="1017" data-after-position="50% 50%" data-after-scale="1" data-after-rotate="0"
+    data-object-title="Shower-track calcium" data-object-detail="Orange mineral line to clear track" data-status="Calcium line removed" data-action-context="For calcium buildup"
+    data-product-name="VertKleen Descaler" data-product-short="Descaler" data-product-href="products/descaler" data-trial-href="contact?type=sample&amp;product=VertKleen%20Descaler"
+    data-product-src="https://media.masest.co/site/img/products/descaler-studio-chip.webp" data-product-width="180" data-product-height="240" aria-labelledby="storyAct4Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">04 &middot; Lower whole-job cost</span>
+        <h2 class="act-h" id="storyAct4Title" data-at="0">Less expensive by the finished job.</h2>
+        <p class="act-p" data-at="0.10">Concentrated product and fewer repeat passes can reduce chemical, labor, water, waste, and downtime. Compare the full job&mdash;not one gallon on a shelf.</p>
+        <aside class="story-job-note" data-at="0.28" aria-label="Photo proof: shower-track calcium">
+          <span class="story-job-note__label">Photo proof &middot; VertKleen Descaler</span>
+          <p><b>Shower track.</b> The same glass edge and lower track stay aligned while Descaler clears the concentrated orange calcium line.</p>
+          <a href="products/descaler">View VertKleen Descaler <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        </aside>
+      </div>
+    </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/shower-track-before-aligned-202609.webp" alt="Shower track before VertKleen Descaler cleaning" width="1200" height="1017"><img src="https://media.masest.co/site/img/proof/story/shower-track-after-aligned-202609.webp" alt="Shower track after VertKleen Descaler cleaning" width="1200" height="1017"></figure></noscript>
+  </section>
+
+  <section class="act" id="story-scene-5" data-act="5" data-scene="airboat-panel"
+    data-before-src="https://media.masest.co/site/img/proof/story/airboat-panel-before-aligned-202609.webp" data-before-width="1200" data-before-height="1017" data-before-position="50% 50%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/airboat-panel-after-aligned-202609.webp" data-after-width="1200" data-after-height="1017" data-after-position="50% 50%" data-after-scale="1" data-after-rotate="0"
+    data-object-title="Airboat aluminum panel" data-object-detail="Oxidized panel to brighter aluminum" data-status="Aluminum finish restored" data-action-context="For oxidized aluminum"
+    data-product-name="VertKleen AlumiBrite" data-product-short="AlumiBrite" data-product-href="products/alumibrite" data-trial-href="contact?type=sample&amp;product=VertKleen%20AlumiBrite"
+    data-product-src="https://media.masest.co/site/img/products/alumibrite-studio-chip.webp" data-product-width="180" data-product-height="240" aria-labelledby="storyAct5Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">05 &middot; Purpose-built range</span>
+        <h2 class="act-h" id="storyAct5Title" data-at="0">The right strength for the soil.</h2>
+        <p class="act-p" data-at="0.10">Choose a focused formula for minerals, rust, grease, organics, oxidation, or fouled water equipment. One HMIS 0-0-0 line can replace a shelf of harsher chemistry.</p>
+        <aside class="story-job-note" data-at="0.28" aria-label="Photo proof: airboat aluminum">
+          <span class="story-job-note__label">Photo proof &middot; VertKleen AlumiBrite</span>
+          <p><b>Airboat panel.</b> Follow fixed hardware: the top fasteners and right edge anchor the brighter aluminum finish.</p>
+          <a href="proof#airboat-alumibrite">View airboat restoration <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        </aside>
+      </div>
+    </div>
+    <noscript><figure class="story-fallback-pair"><img src="https://media.masest.co/site/img/proof/story/airboat-panel-before-aligned-202609.webp" alt="Airboat aluminum panel before VertKleen AlumiBrite treatment" width="1200" height="1017"><img src="https://media.masest.co/site/img/proof/story/airboat-panel-after-aligned-202609.webp" alt="Airboat aluminum panel after VertKleen AlumiBrite treatment" width="1200" height="1017"></figure></noscript>
+  </section>
+
+  <section class="act" id="story-scene-6" data-act="6" data-scene="pool-cartridge"
+    data-before-src="https://media.masest.co/site/img/proof/story/pool-cartridge-before-aligned-202609.webp" data-before-width="1200" data-before-height="1017" data-before-position="50% 50%" data-before-scale="1"
+    data-after-src="https://media.masest.co/site/img/proof/story/pool-cartridge-after-aligned-202609.webp" data-after-width="1200" data-after-height="1017" data-after-position="50% 50%" data-after-scale="1" data-after-rotate="0"
+    data-object-title="Pool cartridge filter" data-object-detail="Dark fouling to clean pleats" data-status="Filter pleats visibly cleaner" data-action-context="For mineral-loaded filters"
+    data-product-name="VertKleen HCR" data-product-short="HCR" data-product-href="products/hcr" data-trial-href="contact?type=sample&amp;product=VertKleen%20HCR"
+    data-product-src="https://media.masest.co/site/img/products/cip-hcr-studio-chip.webp" data-product-width="180" data-product-height="240" aria-labelledby="storyAct6Title">
+    <div class="stage">
+      <div class="act-content">
+        <span class="kicker">06 &middot; Prove the switch</span>
+        <h2 class="act-h" id="storyAct6Title" data-at="0">Put both cleaners on the same job.</h2>
+        <p class="act-p" data-at="0.10">Match the surface, soil, dilution, time, and tools. Then count passes, water, labor, and downtime. Keep the cleaner that produces the better result for less.</p>
+        <aside class="story-job-note" data-at="0.28" aria-label="Photo proof: pool cartridge filter">
+          <span class="story-job-note__label">Photo proof &middot; VertKleen HCR</span>
+          <p><b>Pool cartridge.</b> The cap, bands, and pleat pattern stay registered while HCR clears the dark mineral fouling.</p>
+          <a href="docs/sds/vertkleen-hcr-pool-filter.pdf">View pool-filter field note <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+        </aside>
+      </div>
+    </div>
+    <noscript><figure class="story-fallback-pair story-fallback-pair--pool"><img src="https://media.masest.co/site/img/proof/story/pool-cartridge-before-aligned-202609.webp" alt="Pool cartridge filter before VertKleen HCR cleaning" width="1200" height="1017"><img src="https://media.masest.co/site/img/proof/story/pool-cartridge-after-aligned-202609.webp" alt="Pool cartridge filter after VertKleen HCR cleaning" width="1200" height="1017"></figure></noscript>
+  </section>
+
+</div>
+
+<section class="story-summary" id="storySummary" aria-labelledby="storySummaryTitle" tabindex="-1">
+  <div class="wrap">
+    <div class="story-summary__head">
+      <span>Photo proof index</span>
+      <h2 id="storySummaryTitle">Six jobs. One performance standard.</h2>
+    </div>
+    <ol>
+      <li><b>Kitchen grease.</b> CRHD</li>
+      <li><b>CIP vessel.</b> CR</li>
+      <li><b>Fermenter ring.</b> CR</li>
+      <li><b>Shower track.</b> Descaler</li>
+      <li><b>Airboat panel.</b> AlumiBrite</li>
+      <li><b>Pool cartridge.</b> HCR</li>
+    </ol>
+  </div>
+</section>
 
 <section class="replacement-guide" id="compareAllCleaners" aria-labelledby="replacementGuideTitle">
   <div class="wrap">
@@ -299,6 +479,15 @@
 
 <script type="module" src="js/main.js?v=20260915a"></script>
 <script src="js/track.js" defer></script>
+<!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). ONLY the desktop story
+     uses it -- below 761px story.js runs initCompactStory(), which never touches gsap -- so
+     these are media-gated preloads rather than unconditional scripts: a phone downloaded
+     48KB it could never execute, in flight from 379ms, straight into the LCP window.
+     story.js appends the real <script> tags when it takes the desktop path; the preload has
+     them in cache by then. It still degrades to the static story if they fail to load. -->
+<link rel="preload" as="script" href="vendor/gsap/gsap.min.js" media="(min-width: 761px)">
+<link rel="preload" as="script" href="vendor/gsap/ScrollTrigger.min.js" media="(min-width: 761px)">
+<script src="js/story.js?v=20260915a" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {

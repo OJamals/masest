@@ -62,6 +62,6 @@ test('checkout keeps address rationale and mobile escape/trust cues', () => {
 });
 
 test('homepage keeps the industrial-strength thesis headline intact', () => {
-  assert.match(home, /<h1 class="display" id="homeHeroTitle"[^>]*>Industrial strength\. Better chemistry\.<\/h1>/);
+  assert.match(home, /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial strength\. Better chemistry\.<\/h1>/);
   assert.doesNotMatch(home, /Industrial strength[\s\S]{0,80}<br/);
 });

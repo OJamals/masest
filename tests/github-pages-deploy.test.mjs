@@ -16,7 +16,7 @@ test("OJamals main pushes verify before deploying the existing Pages project", (
 
   assert.ok(refreshStep >= 0 && refreshStep < verifyStep, "production snapshots must refresh before verification");
   assert.ok(verifyStep >= 0, "workflow must retain the full verification gate");
-  assert.ok(performanceJob > verifyStep, "story performance must remain an isolated job");
+  assert.ok(performanceJob > verifyStep, "homepage vitals and story performance must remain an isolated job");
   assert.equal(deployJob, -1, "production deploy must reuse the verified job workspace");
   assert.ok(deployStep > verifyStep && deployStep < performanceJob, "the verified dist must deploy only after core verification");
   assert.match(workflow, /verify:\s+needs: \[web_vitals\]/);

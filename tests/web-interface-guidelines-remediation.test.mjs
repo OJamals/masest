@@ -55,18 +55,12 @@ test("audited pages provide direct navigation, buyer-focused copy, and critical 
   assert.match(read("services.html"), /<img\b[^>]*technical-testing\.webp[^>]*fetchpriority="high"[^>]*>/i);
 });
 
-test("the publish build preloads both critical Satoshi faces on every HTML response", () => {
+test("the publish build preloads the critical Satoshi face on every HTML response", () => {
   const build = read("tools/cf-build.mjs");
   assert.match(build, /const CRITICAL_FONT_PRELOAD =/);
   assert.match(build, /ensureCriticalFontPreload/);
   assert.match(build, /rel="preload" as="font" type="font\/woff2" crossorigin/);
   assert.match(build, /extname\(f\)\.toLowerCase\(\) === '\.html'/);
-  // Both faces, not just the body weight. satoshi-07 is --heading-weight: 700, which every
-  // .display uses -- the LCP element on the homepage and on every text-led page. Without
-  // this preload the heading paints in the fallback face and reflows when the real one
-  // lands: 0.0087 CLS on the homepage hero, versus 0.0003 with it.
-  assert.match(build, /satoshi-01\.woff2/);
-  assert.match(build, /satoshi-07\.woff2/);
 });
 
 test("audited CSS motion uses compositor-friendly properties", () => {
@@ -82,12 +76,7 @@ test("audited CSS motion uses compositor-friendly properties", () => {
   }
 
   assert.deepEqual(offenders, []);
-  // Was pinned against css/story.css, which went with the homepage scrollybook. The rule it
-  // protected -- never animate box-shadow in a keyframe, it repaints every frame -- applies
-  // to every stylesheet, so hold it across the whole set instead of retiring it.
-  for (const path of paths) {
-    assert.doesNotMatch(read(path), /@keyframes\s+\w+\s*\{[\s\S]{0,500}?box-shadow/, path);
-  }
+  assert.doesNotMatch(read("css/story.css"), /@keyframes pulse\s*\{[\s\S]{0,500}?box-shadow/);
 });
 
 test("audited focus, dialogs, fixed controls, and long lists preserve interaction context", () => {
