@@ -689,7 +689,7 @@ function productDescription(id, product) {
 }
 
 function productMetaDescription(id, product) {
-  const sentence = productDescription(id, product);
+  const sentence = PRODUCT_CATALOG_COPY[id]?.meta_description || productDescription(id, product);
   if (sentence.length <= 155) return sentence;
   return `${sentence.slice(0, 152).replace(/\s+\S*$/, "")}…`;
 }
@@ -802,7 +802,7 @@ function productPage(id, product, reviewsSnapshot) {
   const applicationMedia = applicationImage
     ? `<figure class="product-application-media">
         <img src="../${attr(product.application_image)}" alt="${attr(applicationImage.alt)}" width="${applicationImage.width}" height="${applicationImage.height}" loading="lazy" decoding="async">
-        <figcaption><b>Built for real work</b><span>A look at the kind of cleaning job this product is made to handle.</span></figcaption>
+        <figcaption><b>${text(product.application_title || "Built for real work")}</b><span>${text(product.application_caption || "A look at the kind of cleaning job this product is made to handle.")}</span></figcaption>
       </figure>`
     : "";
   const uses = (product.uses || copy.fits || []).map((item) => `<li>${text(item)}</li>`).join("\n");

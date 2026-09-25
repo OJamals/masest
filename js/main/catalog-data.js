@@ -134,16 +134,18 @@ export const PRODUCTS = {
   purgo: {
     name: "Purgo",
     cat: "water",
-    replaces: "Conventional odor-control and organic-buildup treatments",
+    replaces: "Conventional surface cleaners and odor-control treatments",
     hmis: "0-0-0",
- icon: "ph-shield-plus",
+    icon: "ph-shield-plus",
     image: "img/products/purgo-studio.webp",
     application_image: "img/representative/applications/purgo-controlled-drain-maintenance-v1.webp",
+    application_title: "Facility cleaning & drain care",
+    application_caption: "Surface cleaning and odor control for locker rooms, restrooms, and maintenance areas.",
     uses: [
-      "Water treatment and odor control",
-      "Organic-buildup control in towers, drains, and process water",
-      "Occupied-campus water-treatment programs",
-      "Recurring treatment backed by testing and monitoring"
+      "Facility surfaces: floors, counters, sinks, and waste containers",
+      "Gyms, locker rooms, restrooms, and fleet interiors",
+      "Odor-causing bacteria control on food- and non-food-contact surfaces",
+      "Drains, cooling towers, and water-system odor and fouling control"
     ],
     docs: [
       { label: "Safety Data Sheet (SDS)", file: "docs/sds/vertkleen-purgo-sds.pdf" },
@@ -510,15 +512,16 @@ export const PRODUCT_CATALOG_COPY = {
     sample_cta: "Try a free WaterSafe60 sample"
   },
   purgo: {
-    job: "Organic buildup and recurring odor",
-    platform: "VertKleen odor control",
-    summary: "Go after the odor-causing buildup in drains, wet areas, and water systems.",
-    mechanism: "Purgo works on odor-causing organic residue instead of masking the smell with fragrance.",
-    operator_advantage: "Treat the source, track the change, and build a routine that keeps the odor from coming back quickly.",
-    quote_cta: "Find the source of my odor problem",
-    fits: ["drains", "wet zones", "water programs", "odor-source maintenance"],
-    proof: "Antimicrobial certification, persistence testing, and practical use guidance",
-    sample_cta: "Try a free Purgo sample"
+    job: "Surface cleaning and odor control",
+    platform: "VertKleen antimicrobial surface care",
+    summary: "Clean hard surfaces and control odor-causing bacteria in facilities, gyms, locker rooms, and fleet interiors.",
+    meta_description: "Purgo concentrate cleans hard surfaces and controls odor-causing bacteria in facilities, gyms, locker rooms, and fleet interiors.",
+    mechanism: "Purgo targets odor-causing bacteria with a colorless, non-staining formula for everyday surface care.",
+    operator_advantage: "Concentrated value for daily surface care and dedicated water-system maintenance.",
+    quote_cta: "Plan my Purgo cleaning program",
+    fits: ["facility surfaces", "gyms and locker rooms", "fleet interiors", "drains and water systems"],
+    proof: "Product documentation, laboratory reports, and application guidance",
+    sample_cta: "Request a free Purgo sample"
   },
   dbnpa: {
     job: "Low-dose tower-treatment component",

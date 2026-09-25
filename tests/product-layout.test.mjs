@@ -152,7 +152,9 @@ test("product pages show job scenes outside proof", () => {
       new RegExp(`/img/representative/applications/${filename.replaceAll(".", "\\.")}`),
       `${id} should render its approved representative scene`,
     );
-    assert.match(figure, /<b>Built for real work<\/b>/);
+    assert.match(figure, id === "purgo"
+      ? /<b>Facility cleaning &amp; drain care<\/b>/
+      : /<b>Built for real work<\/b>/);
     assert.doesNotMatch(figure, /proof|evidence/i);
   }
 });
@@ -451,7 +453,7 @@ test("all public products route quote actions by buyer job", () => {
     neutral: "Test Neutral on my surface",
     multiwash: "Try MultiWash on my facility",
     watersafe60: "Build my water-treatment plan",
-    purgo: "Find the source of my odor problem",
+    purgo: "Plan my Purgo cleaning program",
     lam3: "Test LAM3 on my exterior",
     alumibrite: "Test AlumiBrite on my aluminum",
     torque: "Try Torque on my vehicle or boat",
@@ -494,7 +496,7 @@ test("specialty product pages explain their fit in plain language", () => {
     ["purgo", "lam3", "alumibrite", "torque"]
       .map((id) => [id, readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8")]),
   );
-  assert.match(pages.purgo, /works on odor-causing organic residue instead of masking the smell/i);
+  assert.match(pages.purgo, /targets odor-causing bacteria with a colorless, non-staining formula/i);
   assert.match(pages.lam3, /stays wet longer so it can work into organic growth and staining/i);
   assert.match(pages.alumibrite, /loosens oxide and mineral film, and brings back a cleaner, brighter finish/i);
   assert.match(pages.torque, /loosens road film, salt, grime, and bugs, then leaves a clean, polished finish/i);
