@@ -318,6 +318,7 @@ export async function collectStoryPerformanceDiagnostic(page, {
     await withAbort(pageSession.send("Performance.enable", { timeDomain: "timeTicks" }), signal);
     const metricsBefore = await withAbort(pageSession.send("Performance.getMetrics"), signal);
     const browserVersion = await optional(() => withAbort(browserSession.send("Browser.getVersion"), signal));
+    const browserCommandLine = await optional(() => withAbort(browserSession.send("Browser.getBrowserCommandLine"), signal));
     const systemInfo = await optional(() => withAbort(browserSession.send("SystemInfo.getInfo"), signal));
     const processBefore = await optional(() => withAbort(browserSession.send("SystemInfo.getProcessInfo"), signal));
 
@@ -405,6 +406,8 @@ export async function collectStoryPerformanceDiagnostic(page, {
         product: storyDiagnosticBrowserProduct(page, browserVersion),
         jsVersion: browserVersion?.jsVersion || null,
         userAgent: browserVersion?.userAgent?.slice(0, 180) || null,
+        renderingFlags: (browserCommandLine?.arguments || [])
+          .filter((argument) => /^--(?:disable-gpu(?:-compositing)?|use-gl|use-angle|headless)(?:=|$)/.test(argument)),
       },
       gpu: {
         devices: (gpu.devices || []).slice(0, 4).map((device) => ({
@@ -416,6 +419,7 @@ export async function collectStoryPerformanceDiagnostic(page, {
         glRenderer: gpu.auxAttributes?.glRenderer?.slice(0, 160) || null,
         glVendor: gpu.auxAttributes?.glVendor?.slice(0, 120) || null,
         sandboxed: gpu.auxAttributes?.sandboxed ?? null,
+        gpuCompositing: gpu.featureStatus?.gpu_compositing || null,
       },
       performanceMetricDelta: metricDelta(metricsBefore.metrics, metricsAfter.metrics),
       processes: Object.fromEntries(Object.entries(processes).sort(([left], [right]) => left.localeCompare(right))
