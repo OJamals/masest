@@ -289,7 +289,15 @@ test("preloaded scene media fades out before its source swaps and fades back in"
     });
 
     window.__MASESTStory.render(sceneId, .5);
-    await new Promise((resolve) => window.setTimeout(resolve, 500));
+    // Slow compositors can still be painting the fade after 500 ms. Observe the
+    // actual settled state while preserving the fade ordering assertions below.
+    const deadline = performance.now() + 5000;
+    while (performance.now() < deadline) {
+      if (new URL(before.currentSrc || before.src).pathname === beforePath
+        && !card.classList.contains("is-swapping")
+        && Number(getComputedStyle(before).opacity) === 1) break;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
     observer.disconnect();
 
     const swapStart = events.find((event) => event.type === "card-class" && event.swapping);
