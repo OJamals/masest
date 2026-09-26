@@ -7,6 +7,7 @@ import { renderContentRedirects } from '../tools/content-redirects.mjs';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8');
 const config = JSON.parse(read('data/content-redirects.json'));
+const comparisonConfig = { redirects: config.redirects.filter(({ to }) => to.startsWith('/comparisons/')) };
 const pageExists = (pathname) => existsSync(new URL(`${pathname.slice(1)}.html`, root));
 
 /**
@@ -25,7 +26,7 @@ const DUPLICATE_COMPARISON_SLUGS = [
 ];
 
 test('every duplicate comparison topic redirects its blog URL to the canonical page', () => {
-  const emitted = renderContentRedirects(config, { exists: pageExists });
+  const emitted = renderContentRedirects(comparisonConfig, { exists: pageExists });
   assert.equal(
     emitted,
     `${DUPLICATE_COMPARISON_SLUGS
@@ -71,14 +72,14 @@ test('redirect sources still resolve to a page, and that is the point', () => {
   // (https://developers.cloudflare.com/pages/configuration/redirects/), verified live on
   // /industries/schools-universities -> 301 -> /industries/education. Do not "fix" this
   // test by deleting the source pages.
-  for (const { from, to } of config.redirects) {
+  for (const { from, to } of comparisonConfig.redirects) {
     assert.equal(pageExists(from), true, `${from}: source page is missing`);
     assert.equal(pageExists(to.split('#')[0]), true, `${to}: redirect target is missing`);
   }
 });
 
 test('the canonical target owns the topic and the retired source does not fight it', () => {
-  for (const { from, to } of config.redirects) {
+  for (const { from, to } of comparisonConfig.redirects) {
     const target = read(`${to.split('#')[0].slice(1)}.html`);
     assert.match(
       target,
@@ -174,7 +175,7 @@ test('a redirect never lands the reader on less than it took away', () => {
 });
 
 test('every carried body renders, rather than shipping raw markdown', () => {
-  for (const { to } of config.redirects) {
+  for (const { to } of comparisonConfig.redirects) {
     const markup = read(`${to.split('#')[0].slice(1)}.html`);
     const main = markup.match(/<main[\s\S]*?<\/main>/i)[0];
     assert.doesNotMatch(main, /\[\[/, `${to}: an unrendered [[binding]] reached the page`);
@@ -190,7 +191,7 @@ test('a canonical page carries at least the structured data of the page it retir
   // while emitting only WebPage would have made the page canonical and its schema poorer in
   // the same change. Article, not BlogPosting: a product comparison on a /comparisons route
   // is not a blog post.
-  for (const { to } of config.redirects) {
+  for (const { to } of comparisonConfig.redirects) {
     const markup = read(`${to.split('#')[0].slice(1)}.html`);
     const blocks = [...markup.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
     assert.ok(blocks.length, `${to}: no JSON-LD at all`);
@@ -218,4 +219,19 @@ test('a canonical page carries at least the structured data of the page it retir
     const urls = crumbs.itemListElement.map((item) => item.item);
     assert.equal(new Set(urls).size, urls.length, `${to}: breadcrumb repeats a URL`);
   }
+});
+
+test('historical nested navigation URLs redirect to existing root pages without intercepting blog posts', () => {
+  const emitted = renderContentRedirects(config, { exists: pageExists });
+  for (const page of ['contact', 'products', 'proof', 'industries', 'services', 'privacy', 'resources', 'terms', 'programs', 'about', 'cart']) {
+    assert.ok(emitted.includes(`/blog/${page} /${page} 301\n`));
+    assert.equal(pageExists(`/blog/${page}`), false, 'do not retire a real article through a navigation repair');
+  }
+  assert.ok(emitted.includes('/blog/account.html /account 301\n'));
+  assert.throws(() => renderContentRedirects({ redirects: [
+    { from: '/blog/account.html/other', to: '/account', reason: 'invalid nested extension' },
+  ] }), /invalid path/);
+  assert.throws(() => renderContentRedirects({ redirects: [
+    { from: '/blog/account.html', to: '/account.html', reason: 'destination must be canonical' },
+  ] }), /invalid path/);
 });

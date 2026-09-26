@@ -1,4 +1,4 @@
-/* SQ-17: /product.html?sku=<id> is a legacy URL shape (old inbound links,
+/* SQ-17: /product.html?sku=<id> and /product?id=<id> are legacy URL shapes (old inbound links,
  * bookmarks, anything still indexed under it) from before the catalog moved to
  * /products/<id> routes. There is no product.html file any more, so every hit
  * on it 404s — this redirects it to the live route instead of losing that
@@ -15,7 +15,7 @@ const ROUTE_BY_LEGACY_SKU = new Map([["cr-hd", "crhd"]]);
 
 export function onRequestGet(context) {
   const url = new URL(context.request.url);
-  const sku = (url.searchParams.get("sku") || "").trim().toLowerCase();
+  const sku = (url.searchParams.get("sku") || url.searchParams.get("id") || "").trim().toLowerCase();
 
   // No sku at all: the old page had no catalog identity to redirect from, so
   // send the visitor to the catalog rather than a dead end.
@@ -33,3 +33,6 @@ export function onRequestGet(context) {
   const route = ROUTE_BY_LEGACY_SKU.get(sku) || sku;
   return Response.redirect(new URL(`/products/${route}`, url.origin).toString(), 301);
 }
+
+// Link checkers and crawlers must see the same destination as a browser GET.
+export const onRequestHead = onRequestGet;

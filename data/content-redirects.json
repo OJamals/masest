@@ -3,7 +3,7 @@
     "Repo-owned 301 map for retired content URLs. Emitted into dist/_redirects by",
     "tools/cf-build.mjs alongside the industries redirects.",
     "",
-    "Unlike the industries redirects, the `from` paths here DO still resolve to a static",
+    "The comparison `from` paths here still resolve to a static",
     "file in dist/. That is deliberate and it works: Cloudflare Pages applies _redirects",
     "'regardless of whether or not an asset matches the incoming request'",
     "(https://developers.cloudflare.com/pages/configuration/redirects/). Verified live on",
@@ -12,7 +12,9 @@
     "Blog bodies are Supabase-authoritative (see tools/publish-blog-ci.mjs), so a blog post",
     "cannot be retired by deleting it from the repo. Redirecting it is the only durable",
     "mechanism, and the five comparison slugs below are additionally pinned against removal",
-    "by PROTECTED_COMPARISON_SLUGS in that same file."
+    "by PROTECTED_COMPARISON_SLUGS in that same file.",
+    "The historical nested navigation entries repair relative URLs reported as 404 in",
+    "Search Console on 2026-09-26. Their source pages never existed."
   ],
   "redirects": [
     {
@@ -39,6 +41,66 @@
       "from": "/blog/vertkleen-hcr-vs-clr",
       "to": "/comparisons/vertkleen-hcr-vs-clr",
       "reason": "duplicate-comparison canonical consolidation, ruled 2026-09-10"
+    },
+    {
+      "from": "/blog/contact",
+      "to": "/contact",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/products",
+      "to": "/products",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/proof",
+      "to": "/proof",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/industries",
+      "to": "/industries",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/services",
+      "to": "/services",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/privacy",
+      "to": "/privacy",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/resources",
+      "to": "/resources",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/terms",
+      "to": "/terms",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/programs",
+      "to": "/programs",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/about",
+      "to": "/about",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/cart",
+      "to": "/cart",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
+    },
+    {
+      "from": "/blog/account.html",
+      "to": "/account",
+      "reason": "historical relative navigation URL reported as 404 in Search Console"
     }
   ]
 }

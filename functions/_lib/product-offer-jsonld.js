@@ -1,4 +1,16 @@
 const SELLER = { "@type": "Organization", name: "MASEST Consulting LLC" };
+// Published online-order terms at /shipping-returns. Quoted configurations are
+// excluded by buildProductOffers; their negotiated terms must not inherit this.
+const RETURN_POLICY = {
+  "@type": "MerchantReturnPolicy",
+  applicableCountry: "US",
+  returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+  merchantReturnDays: 30,
+  returnMethod: "https://schema.org/ReturnByMail",
+  returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+  itemCondition: "https://schema.org/NewCondition",
+  merchantReturnLink: "https://masest.co/shipping-returns",
+};
 
 function isProduct(node) {
   const type = node?.["@type"];
@@ -48,6 +60,7 @@ export function buildProductOffers({ productSku, pageUrl, pricing, market = "ind
       itemCondition: "https://schema.org/NewCondition",
       url: pageUrl,
       seller: SELLER,
+      hasMerchantReturnPolicy: { ...RETURN_POLICY },
     }));
 }
 

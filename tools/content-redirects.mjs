@@ -10,8 +10,9 @@
  *
  * The two differ in one invariant that matters. An industries redirect requires its
  * source file to be GONE — the industries test asserts `existsSync(from.html) ===
- * false`. A content redirect's source file is still present, because blog bodies are
- * Supabase-authoritative and cannot be retired from the repo. Cloudflare Pages applies
+ * false`. Consolidated blog source files remain present, because blog bodies are
+ * Supabase-authoritative and cannot be retired from the repo. Legacy malformed
+ * navigation URLs never had source files. Cloudflare Pages applies
  * _redirects "regardless of whether or not an asset matches the incoming request", so
  * the 301 still wins. Do not copy the stale-page assertion into this module's tests.
  */
@@ -23,7 +24,7 @@ const fragmentPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const ALLOWED_STATUS = new Set([301, 308]);
 
-function parsePath(value, label) {
+function parsePath(value, label, { legacyHtml = false } = {}) {
   if (typeof value !== 'string' || !value.startsWith('/')) {
     throw new Error(`${label}: must be a root-absolute path, got ${JSON.stringify(value)}`);
   }
@@ -37,7 +38,7 @@ function parsePath(value, label) {
   if (rest.length) {
     throw new Error(`${label}: more than one '#' in ${value}`);
   }
-  const segments = pathname.split('/');
+  const segments = (legacyHtml ? pathname.replace(/\.html$/, '') : pathname).split('/');
   if (!segments.length || segments.some((segment) => !segmentPattern.test(segment))) {
     throw new Error(`${label}: invalid path ${value}`);
   }
@@ -68,7 +69,7 @@ export function renderContentRedirects(config, { exists } = {}) {
 
   for (const entry of entries) {
     const { from, to, status = 301, reason } = entry ?? {};
-    const source = parsePath(from, 'redirect source');
+    const source = parsePath(from, 'redirect source', { legacyHtml: true });
     const target = parsePath(to, `${from}: redirect target`);
 
     if (source.fragment !== undefined) {

@@ -11,6 +11,17 @@ const PRODUCT_HTML = `<!doctype html><html><head>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"MASEST Consulting LLC"},{"@type":"Product","name":"VertKleen HCR","sku":"VK-HCR","url":"https://masest.co/products/hcr"}]}</script>
 </head><body>HCR</body></html>`;
 
+const EXPECTED_RETURN_POLICY = {
+  "@type": "MerchantReturnPolicy",
+  applicableCountry: "US",
+  returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+  merchantReturnDays: 30,
+  returnMethod: "https://schema.org/ReturnByMail",
+  returnFees: "https://schema.org/ReturnFeesCustomerResponsibility",
+  itemCondition: "https://schema.org/NewCondition",
+  merchantReturnLink: "https://masest.co/shipping-returns",
+};
+
 const PRICING = {
   currency: "usd",
   variants: [
@@ -113,6 +124,7 @@ test("buildProductOffers emits active buy variants with CMS prices and stock-awa
       itemCondition: "https://schema.org/NewCondition",
       url: "https://masest.co/products/hcr",
       seller: { "@type": "Organization", name: "MASEST Consulting LLC" },
+      hasMerchantReturnPolicy: EXPECTED_RETURN_POLICY,
     },
     {
       "@type": "Offer",
@@ -124,6 +136,7 @@ test("buildProductOffers emits active buy variants with CMS prices and stock-awa
       itemCondition: "https://schema.org/NewCondition",
       url: "https://masest.co/products/hcr",
       seller: { "@type": "Organization", name: "MASEST Consulting LLC" },
+      hasMerchantReturnPolicy: EXPECTED_RETURN_POLICY,
     },
     {
       "@type": "Offer",
@@ -135,6 +148,7 @@ test("buildProductOffers emits active buy variants with CMS prices and stock-awa
       itemCondition: "https://schema.org/NewCondition",
       url: "https://masest.co/products/hcr",
       seller: { "@type": "Organization", name: "MASEST Consulting LLC" },
+      hasMerchantReturnPolicy: EXPECTED_RETURN_POLICY,
     },
   ]);
 });
@@ -173,6 +187,7 @@ test("injectProductOffers adds the CMS offers to the existing Product node", () 
 
   assert.equal(product.offers.length, 3);
   assert.equal(product.offers[0].sku, "VK-HCR-1G");
+  assert.deepEqual(product.offers[0].hasMerchantReturnPolicy, EXPECTED_RETURN_POLICY);
   assert.equal(product.name, "VertKleen HCR");
 });
 
