@@ -14,10 +14,10 @@
 <meta property="og:site_name" content="MASEST VertKleen">
 <link rel="preconnect" href="https://media.masest.co">
 <link rel="stylesheet" href="/vendor/phosphor/style.css">
-<link rel="stylesheet" href="/css/style.css?v=20260929b">
-<link rel="stylesheet" href="/css/navigation.css?v=20260929b">
-<link rel="stylesheet" href="/css/components.css?v=20260929b">
-<link rel="stylesheet" href="/css/story.css?v=20260929b">
+<link rel="stylesheet" href="/css/style.css?v=20260929c">
+<link rel="stylesheet" href="/css/navigation.css?v=20260929c">
+<link rel="stylesheet" href="/css/components.css?v=20260929c">
+<link rel="stylesheet" href="/css/story.css?v=20260929c">
 <link rel="preload" as="image" href="https://media.masest.co/site/img/proof/story/kitchen-grease-before-aligned-202609.webp?v=20260911a" fetchpriority="high">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/">
@@ -478,7 +478,7 @@
 </section>
 </main>
 
-<script type="module" src="/js/main.js?v=20260929b"></script>
+<script type="module" src="/js/main.js?v=20260929c"></script>
 <script src="/js/track.js" defer></script>
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). ONLY the desktop story
      uses it -- below 761px story.js runs initCompactStory(), which never touches gsap -- so
@@ -488,7 +488,7 @@
      them in cache by then. It still degrades to the static story if they fail to load. -->
 <link rel="preload" as="script" href="/vendor/gsap/gsap.min.js" media="(min-width: 761px)">
 <link rel="preload" as="script" href="/vendor/gsap/ScrollTrigger.min.js" media="(min-width: 761px)">
-<script src="/js/story.js?v=20260929b" defer></script>
+<script src="/js/story.js?v=20260929c" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {

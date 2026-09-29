@@ -1,5 +1,5 @@
 /* MASEST - first-party pageview + funnel-event beacon. Privacy-light: random per-session id,
- * no cookies, no PII. Include site-wide with <script src="js/track.js?v=20260929b" defer></script>.
+ * no cookies, no PII. Include site-wide with <script src="js/track.js?v=20260929c" defer></script>.
  * Exposes window.mtrack(event) for funnel events and window.masestUtm() for forms.
  * Silently no-ops if the /api/track function isn't deployed. */
 (function () {

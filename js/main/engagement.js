@@ -4,9 +4,9 @@ import {
   parseRequestContext,
   requestContextNotes,
   requestContextVolume,
-} from "../request-context.js?v=20260929b";
-import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929b";
-import { normalizeRequestPhone } from "../request-phone.js?v=20260929b";
+} from "../request-context.js?v=20260929c";
+import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929c";
+import { normalizeRequestPhone } from "../request-phone.js?v=20260929c";
 
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {
@@ -415,15 +415,15 @@ function initQuoteCaptcha(form) {
   const sitekey = window.MASEST_TURNSTILE_SITEKEY;
   const render = () => {
     try {
-      window.turnstile.ready(() => {
-        widgetId = window.turnstile.render(widget, {
-          sitekey, action: "contact", size: "compact", appearance: "interaction-only", theme: "auto",
-          callback: (value) => { token = value; message(""); },
-          "before-interactive-callback": () => message("Complete the verification above before sending your request."),
-          "error-callback": unavailable,
-          "expired-callback": reset,
-          "timeout-callback": reset,
-        });
+      // The async script's load event is the readiness signal. Turnstile rejects
+      // ready() when its script has async/defer attributes.
+      widgetId = window.turnstile.render(widget, {
+        sitekey, action: "contact", size: "compact", appearance: "interaction-only", theme: "auto",
+        callback: (value) => { token = value; message(""); },
+        "before-interactive-callback": () => message("Complete the verification above before sending your request."),
+        "error-callback": unavailable,
+        "expired-callback": reset,
+        "timeout-callback": reset,
       });
     } catch { unavailable(); }
   };

@@ -1,7 +1,7 @@
 /* Industry product blocks, lightbox, and image fallback helpers. */
 
-import { PRODUCTS } from "./catalog-data.js?v=20260929b";
-import { productCard } from "./commerce-ui.js?v=20260929b";
+import { PRODUCTS } from "./catalog-data.js?v=20260929c";
+import { productCard } from "./commerce-ui.js?v=20260929c";
 
 export function initIndustryProducts() {
   document.querySelectorAll("[data-ind-products]").forEach((box) => {

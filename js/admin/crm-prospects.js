@@ -1,7 +1,7 @@
 // Pre-account Prospect surface for the integrated CRM workspace. Prospect
 // Organizations stay separate from customer Companies until explicitly linked.
-import { esc, delegate, confirmDialog, toast } from '../util.js?v=20260929b';
-import { createCrmProspectAccount, renderProspectChannels } from './crm-prospect-account.js?v=20260929b';
+import { esc, delegate, confirmDialog, toast } from '../util.js?v=20260929c';
+import { createCrmProspectAccount, renderProspectChannels } from './crm-prospect-account.js?v=20260929c';
 
 const STATUSES = [
   ['', 'All stages'], ['new', 'New'], ['researching', 'Researching'],

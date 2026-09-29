@@ -192,7 +192,7 @@ async function routeProductionContact(page, base, scriptFails = false) {
   await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js*', route => scriptFails ? route.abort() : route.fulfill({
     contentType: 'application/javascript', body: `
       window.turnstile = {
-        ready(callback) { callback(); },
+        ready() { throw new Error('Remove async/defer before using turnstile.ready()'); },
         render(container, options) {
           // Model the documented challenge dimensions, including its visible state.
           const challenge = document.createElement('div');
