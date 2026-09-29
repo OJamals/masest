@@ -1,0 +1,47 @@
+{
+  "format_version": 1,
+  "prepared_on": "2026-09-29",
+  "publication_state": "published_in_canonical_cms",
+  "instructions": "Merge each approved revision into the current canonical CMS entry. Recheck its version and preserve unrelated fields. The Markdown file supplies payload.body. Mirror title into entry.title and payload.title. These are review artifacts, not generated-site inputs. Do not save an existing published entry as draft: that removes it from the next public snapshot.",
+  "entries": [
+    {
+      "type": "blog_post",
+      "locale": "en",
+      "slug": "how-to-descale-heat-exchanger",
+      "initial_observed_version": 6,
+      "observed_version": 7,
+      "body_file": "how-to-descale-heat-exchanger.md",
+      "title": "Heat exchanger descaling: methods and product selection",
+      "retained_search_title": "How to descale a heat exchanger | MASEST VertKleen",
+      "payload_patch": {
+        "excerpt": "Plan heat exchanger descaling around deposits, materials, and equipment limits. Compare HCR, CR, and CR HD, then request application guidance."
+      }
+    },
+    {
+      "type": "blog_post",
+      "locale": "en",
+      "slug": "commercial-kitchen-degreasing-guide",
+      "initial_observed_version": 3,
+      "observed_version": 4,
+      "body_file": "commercial-kitchen-degreasing-guide.md",
+      "title": "Commercial kitchen degreasing: surfaces and product guide",
+      "retained_search_title": "Commercial kitchen degreasing guide | MASEST VertKleen",
+      "payload_patch": {
+        "excerpt": "Match kitchen degreasers to grease, surfaces, and cleaning methods. Build a closing-shift plan with the right rinse and food-contact sanitation steps."
+      }
+    },
+    {
+      "type": "blog_post",
+      "locale": "en",
+      "slug": "commercial-gym-cleaning-checklist",
+      "initial_observed_version": 3,
+      "observed_version": 4,
+      "body_file": "commercial-gym-cleaning-checklist.md",
+      "title": "Commercial gym cleaning checklist: daily and weekly tasks",
+      "retained_search_title": "Commercial gym cleaning checklist | MASEST VertKleen",
+      "payload_patch": {
+        "excerpt": "A daily and weekly gym cleaning checklist for equipment, floors, and showers, with distinct guidance for cleaning, odor treatment, and disinfection."
+      }
+    }
+  ]
+}
