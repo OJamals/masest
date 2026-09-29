@@ -4,9 +4,9 @@ import {
   parseRequestContext,
   requestContextNotes,
   requestContextVolume,
-} from "../request-context.js?v=20260929a";
-import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929a";
-import { normalizeRequestPhone } from "../request-phone.js?v=20260929a";
+} from "../request-context.js?v=20260929b";
+import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929b";
+import { normalizeRequestPhone } from "../request-phone.js?v=20260929b";
 
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {
@@ -382,9 +382,76 @@ export function initMarineProductSelector() {
   applyJob(readJob());
 }
 
+function initQuoteCaptcha(form) {
+  if (["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {
+    return { token: () => "", ready: () => true, reset() {} };
+  }
+  const widget = document.createElement("div");
+  widget.id = "quoteCaptcha";
+  const status = document.createElement("p");
+  status.className = "form-note";
+  status.id = "quoteCaptchaStatus";
+  status.setAttribute("role", "status");
+  status.tabIndex = -1;
+  status.hidden = true;
+  form.querySelector(".quote-form-footer").before(widget, status);
+  let token = "";
+  let widgetId = null;
+  const message = (text) => {
+    status.textContent = text;
+    status.hidden = !text;
+  };
+  const unavailable = () => {
+    token = "";
+    message("Verification could not load. Please reload this page and try again.");
+    return true;
+  };
+  const reset = () => {
+    token = "";
+    if (widgetId !== null) {
+      try { window.turnstile.reset(widgetId); } catch { unavailable(); }
+    }
+  };
+  const sitekey = window.MASEST_TURNSTILE_SITEKEY;
+  const render = () => {
+    try {
+      window.turnstile.ready(() => {
+        widgetId = window.turnstile.render(widget, {
+          sitekey, action: "contact", size: "flexible", theme: "auto",
+          callback: (value) => { token = value; message(""); },
+          "error-callback": unavailable,
+          "expired-callback": reset,
+          "timeout-callback": reset,
+        });
+      });
+    } catch { unavailable(); }
+  };
+  if (!sitekey) unavailable();
+  else if (window.turnstile) render();
+  else {
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.onload = render;
+    script.onerror = unavailable;
+    document.head.append(script);
+  }
+  return {
+    token: () => token,
+    ready() {
+      if (token) return true;
+      if (!status.textContent) message("Complete the verification above before sending your request.");
+      status.focus();
+      return false;
+    },
+    reset,
+  };
+}
+
 export function initQuoteForm() {
   const form = document.getElementById("quoteForm");
   if (!form) return;
+  const captcha = initQuoteCaptcha(form);
   const params = new URLSearchParams(location.search);
   const customerChatAttempt = params.getAll("source").includes("customer_chat");
   const requestContext = customerChatAttempt ? parseRequestContext(params) : null;
@@ -623,6 +690,7 @@ export function initQuoteForm() {
     e.preventDefault();
     const bad = validate();
     if (bad) { bad.focus(); bad.scrollIntoView({ behavior: smoothPref(), block: "center" }); return; }
+    if (!captcha.ready()) return;
 
     const data = new FormData(form);
     data.set('contact_preference', requestMode === 'call' ? 'phone' : 'email');
@@ -643,7 +711,9 @@ export function initQuoteForm() {
       message: "Notes", source: "Source"
     };
     const lines = [];
-    for (const [k, v] of data.entries()) if (String(v).trim()) lines.push((labels[k] || k) + ": " + v);
+    for (const [k, v] of data.entries()) {
+      if (!["cf-turnstile-response", "submission_id"].includes(k) && String(v).trim()) lines.push((labels[k] || k) + ": " + v);
+    }
     const reqLabel = (data.get("type") || "quote").replace(/^./, c => c.toUpperCase());
     const callback = requestMode === 'call';
     const subject = callback ? "Call requested: " + data.get('phone')
@@ -682,12 +752,15 @@ export function initQuoteForm() {
       if (edit) edit.onclick = () => {
         ok.style.display = "none";
         form.style.display = "";
+        captcha.reset();
         if (submit) { submit.disabled = false; submit.textContent = submitLabel; }
         (callback ? callbackPhone : document.getElementById('fEmail')).focus();
       };
     };
 
+    if (captcha.token()) data.set("cf-turnstile-response", captcha.token());
     submitRequest(form, data)
+      .finally(() => captcha.reset())
       .then((result) => showOutcome(!result.fallbackOnly))
       .catch(() => showOutcome(false));
   });

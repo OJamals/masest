@@ -183,3 +183,89 @@ test('email path accepts email alone and failed callback preserves number with h
     assert.equal(await page.locator('#fCallbackPhone').evaluate(el => el === document.activeElement), true);
   });
 });
+
+async function routeProductionContact(page, base, scriptFails = false) {
+  await page.route('https://masest.test/**', async route => {
+    const url = new URL(route.request().url());
+    await route.fulfill({ response: await route.fetch({ url: `${base}${url.pathname}${url.search}` }) });
+  });
+  await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js*', route => scriptFails ? route.abort() : route.fulfill({
+    contentType: 'application/javascript', body: `
+      window.turnstile = {
+        ready(callback) { callback(); },
+        render(container, options) {
+          window.quoteCaptchaTest = { options, resets: [] };
+          return 'contact-widget';
+        },
+        reset(id) { window.quoteCaptchaTest.resets.push(id); }
+      };
+    `,
+  }));
+}
+
+test('production contact sends fresh CAPTCHA tokens for both choices and keeps tokens out of fallback email', async () => {
+  await withPage(async (page, base) => {
+    const browserErrors = [];
+    page.on('pageerror', error => browserErrors.push(error.message));
+    page.on('console', message => { if (message.type() === 'error') browserErrors.push(message.text()); });
+    await routeProductionContact(page, base);
+    const sent = [];
+    let status = 503;
+    await page.route('https://masest.test/api/quote', async route => {
+      sent.push(route.request().postData());
+      await route.fulfill({ status, contentType: 'application/json', body: status === 201
+        ? JSON.stringify({ ok: true, durable: true, quote_id: quoteId }) : '{"error":"intake_unavailable"}' });
+    });
+    for (const mode of ['call', 'email']) {
+      status = 503;
+      await page.goto('https://masest.test/contact?type=private-label');
+      await page.waitForFunction(() => Boolean(window.quoteCaptchaTest), null, { timeout: 5000 }).catch(async error => {
+        throw new Error(`${error.message}: ${JSON.stringify({ browserErrors, status: await page.locator('#quoteCaptchaStatus').textContent() })}`);
+      });
+      if (mode === 'call') await page.locator('#fCallbackPhone').fill('8135550123');
+      else {
+        await page.getByRole('button', { name: /Add request details/ }).click();
+        await page.locator('#fEmail').fill('buyer@example.com');
+      }
+      const submit = page.getByRole('button', { name: mode === 'call' ? 'Request my call' : 'Send for an email reply', exact: true });
+      const start = sent.length;
+      await submit.click();
+      assert.equal(sent.length, start);
+      assert.match(await page.locator('#quoteCaptchaStatus').textContent(), /Complete the verification/);
+      assert.equal(await page.evaluate(() => window.quoteCaptchaTest.options.action), 'contact');
+      await page.evaluate(() => window.quoteCaptchaTest.options.callback('test-token-one'));
+      await submit.click();
+      await page.getByRole('heading', { name: 'Almost there: send the request.' }).waitFor();
+      assert.equal(sent.length, start + 1);
+      assert.match(sent.at(-1), /name="cf-turnstile-response"[\s\S]*test-token-one/);
+      assert.doesNotMatch(await page.locator('#mailtoFallback').getAttribute('href'), /test-token|cf-turnstile-response/);
+      assert.deepEqual(await page.evaluate(() => window.quoteCaptchaTest.resets), ['contact-widget']);
+      await page.getByRole('button', { name: 'Edit my request' }).click();
+      await submit.click();
+      assert.equal(sent.length, start + 1);
+      await page.evaluate(() => window.quoteCaptchaTest.options.callback('test-token-two'));
+      status = 201;
+      await submit.click();
+      await page.getByRole('heading', { name: mode === 'call' ? 'Call requested.' : 'Request received.', exact: true }).waitFor();
+      assert.equal(sent.length, start + 2);
+      assert.match(sent.at(-1), /test-token-two/);
+      assert.doesNotMatch(sent.at(-1), /test-token-one/);
+    }
+  });
+});
+
+test('production contact retains entered details and prevents sending when CAPTCHA cannot load', async () => {
+  await withPage(async (page, base) => {
+    await routeProductionContact(page, base, true);
+    let requests = 0;
+    await page.route('https://masest.test/api/quote', route => { requests++; return route.abort(); });
+    await page.goto('https://masest.test/contact');
+    await page.locator('#fCallbackPhone').fill('8135550123');
+    await page.locator('#quoteCaptchaStatus').filter({ hasText: 'Verification could not load' }).waitFor();
+    await page.getByRole('button', { name: 'Request my call', exact: true }).click();
+    assert.equal(requests, 0);
+    assert.equal(await page.locator('#fCallbackPhone').inputValue(), '8135550123');
+    assert.equal(await page.locator('#quoteForm').isVisible(), true);
+    assert.equal(await page.locator('#formSuccess').isVisible(), false);
+  });
+});

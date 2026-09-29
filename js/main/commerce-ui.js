@@ -1,9 +1,9 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260929a";
-import { smoothPref } from "./engagement.js?v=20260929a";
-import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260929a";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260929a";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260929b";
+import { smoothPref } from "./engagement.js?v=20260929b";
+import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260929b";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260929b";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
