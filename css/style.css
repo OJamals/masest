@@ -1046,6 +1046,7 @@ no dots) ---------- */
 }
 .request-mode-fields { min-width: 0; border: 0; margin: 0; padding: 0; }
 .request-mode-chooser { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); margin-bottom: var(--s6); }
+.request-mode-chooser[hidden] { display: none; }
 .request-mode-choice { display: grid; gap: var(--s2); padding: var(--s5); border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel); color: var(--ink); text-align: left; cursor: pointer; }
 .request-mode-choice strong { font-size: var(--fs-body); }
 .request-mode-choice span { font-size: var(--fs-caption); color: var(--muted); line-height: 1.5; }

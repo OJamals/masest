@@ -203,6 +203,24 @@ async function routeProductionContact(page, base, scriptFails = false) {
   }));
 }
 
+test('contact choices stay hidden until request handlers are ready during navigation', async () => {
+  await withPage(async (page, base) => {
+    let releaseMain;
+    const mainReady = new Promise(resolve => { releaseMain = resolve; });
+    await page.route('**/js/main.js*', async route => { await mainReady; await route.continue(); });
+    await page.goto(`${base}/contact?type=private-label`, { waitUntil: 'commit' });
+    await page.locator('#requestModeChooser').waitFor({ state: 'attached' });
+    await page.waitForFunction(() => Array.from(document.styleSheets).some(sheet => sheet.href?.includes('/css/style.css')));
+    try {
+      assert.equal(await page.getByRole('button', { name: /Add request details/ }).isVisible(), false);
+    } finally { releaseMain(); }
+    await page.locator('#requestModeChooser').waitFor({ state: 'visible' });
+    await page.getByRole('button', { name: /Add request details/ }).click();
+    await page.locator('#requestDetails').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#requestCall').isVisible(), false);
+  });
+});
+
 test('production contact sends fresh CAPTCHA tokens for both choices and keeps tokens out of fallback email', async () => {
   await withPage(async (page, base) => {
     const browserErrors = [];
