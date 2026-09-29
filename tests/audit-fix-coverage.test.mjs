@@ -61,7 +61,8 @@ test('checkout keeps address rationale and mobile escape/trust cues', () => {
   assert.match(mobile, /\.checkout-secure\s*\{[^}]*font-size:/);
 });
 
-test('homepage keeps the industrial-strength thesis headline intact', () => {
-  assert.match(home, /<h1 class="act-h" id="storyAct1Title"[^>]*>Industrial strength\. Better chemistry\.<\/h1>/);
-  assert.doesNotMatch(home, /Industrial strength[\s\S]{0,80}<br/);
+test('homepage makes industrial cleaning and the two buyer routes explicit', () => {
+  assert.match(home, /Industrial cleaning products/);
+  assert.match(home, /href="contact\?type=private-label"/);
+  assert.match(home, /href="products">Shop VertKleen/);
 });

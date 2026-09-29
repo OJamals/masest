@@ -456,7 +456,7 @@ test("mobile service-category guide reaches decision content without redundant h
   expect(layout.bodyWidth).toBeLessThanOrEqual(layout.viewportWidth);
   expect(layout.decisionTop).toBeLessThanOrEqual(790);
   await expect.poll(() => configResponses).toContainEqual({
-    url: `${BASE_URL}/js/config.js?v=20260928a`,
+    url: `${BASE_URL}/js/config.js?v=20260929a`,
     status: 200,
   });
   await expect(page.getByRole("link", { name: "Request water analysis" })).toHaveAttribute("href", /contact\?type=services/);
@@ -649,12 +649,16 @@ test("quote request starts as a short lead form and reveals product details prog
       })
       .map((node) => node.name));
 
-  expect(visibleRequiredNames).toEqual(["name", "company", "email", "message"]);
+  expect(visibleRequiredNames).toEqual(["phone"]);
   await expect(page.getByRole("button", { name: /add request details/i })).toBeVisible();
   await expect(page.locator("#fVolume")).toBeHidden();
   await expect(page.locator("#quoteTaskDetails")).toBeHidden();
 
   await page.getByRole("button", { name: /add request details/i }).click();
+  await expect(page.locator('#fEmail')).toBeVisible();
+  await expect(page.locator('#fMessage')).toBeVisible();
+  await expect(page.locator('#fVolume')).toBeHidden();
+  await page.locator('#requestExtraDetails > summary').click();
   await expect(page.locator("#fVolume")).toBeVisible();
   await expect(page.locator("#quoteTaskDetails")).toBeVisible();
 });
@@ -808,7 +812,7 @@ test("mobile industry detail pages keep quote and chemical-map actions", async (
   await expect(bar.getByRole("link", { name: /get a quote/i })).toHaveAttribute("href", /type=quote/);
 });
 
-test("mobile hamburger menu centers use-case trigger and exposes child links", async ({ page }) => {
+test("mobile hamburger menu centers Applications and exposes child links", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/industries/plumbing.html`, { waitUntil: "domcontentloaded" });
   const burger = page.locator("#navBurger");
@@ -821,11 +825,12 @@ test("mobile hamburger menu centers use-case trigger and exposes child links", a
   );
   expect(topLevelColors).not.toContain("rgb(255, 255, 255)");
 
-  await page.locator(".nav-group summary").click();
+  const applicationMenu = page.locator('.nav-group').filter({ hasText: 'Applications' });
+  await applicationMenu.locator('summary').click();
   await expect(nav.getByRole("link", { name: "Industries" })).toHaveAttribute("href", "../industries");
   await expect(nav.getByRole("link", { name: "Results" })).toHaveAttribute("href", "../proof");
 
-  const labelDelta = await page.locator(".nav-group summary").evaluate((node) => {
+  const labelDelta = await applicationMenu.locator('summary').evaluate((node) => {
     const label = node.querySelector(".nav-group-label");
     if (!label) return Number.POSITIVE_INFINITY;
     const labelRect = label.getBoundingClientRect();
@@ -839,12 +844,13 @@ test("mobile hamburger menu centers use-case trigger and exposes child links", a
   await expect(burger).toBeFocused();
 });
 
-test("desktop use-case dropdown fits both labels inside the panel", async ({ page }) => {
+test("desktop Applications dropdown fits its labels and retains keyboard focus during scroll", async ({ page }) => {
   await page.setViewportSize({ width: 1140, height: 408 });
   await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
-  await page.locator(".nav-group summary").click();
+  const applicationMenu = page.locator('.nav-group').filter({ hasText: 'Applications' });
+  await applicationMenu.locator('summary').click();
 
-  const fit = await page.locator(".nav-group .nav-menu").evaluate((menu) => {
+  const fit = await applicationMenu.locator('.nav-menu').evaluate((menu) => {
     const menuBox = menu.getBoundingClientRect();
     const links = [...menu.querySelectorAll("a")].map((link) => {
       const linkBox = link.getBoundingClientRect();
@@ -868,12 +874,14 @@ test("desktop use-case dropdown fits both labels inside the panel", async ({ pag
   }
 
   await page.keyboard.press("Escape");
-  await expect(page.locator(".nav-group")).not.toHaveJSProperty("open", true);
+  await expect(applicationMenu).not.toHaveJSProperty("open", true);
 
-  await page.locator(".nav-group summary").click();
-  await expect(page.locator(".nav-group")).toHaveJSProperty("open", true);
+  await applicationMenu.locator('summary').click();
+  await expect(applicationMenu).toHaveJSProperty("open", true);
   await page.mouse.wheel(0, 240);
-  await expect(page.locator(".nav-group")).not.toHaveJSProperty("open", true);
+  await expect(applicationMenu).toHaveJSProperty("open", true);
+  await page.locator('main h1').click();
+  await expect(applicationMenu).not.toHaveJSProperty("open", true);
 });
 
 test("mobile home uses original conversion controls without the quick-action switcher", async ({ page }) => {
@@ -900,10 +908,10 @@ test("proof image sets use stable media slots", async ({ page }) => {
     {
       pagePath: "index.html",
       viewport: { width: 1440, height: 900 },
-      cardSelector: ".proof-grid .proof-card",
-      mediaSelector: ":scope > figure",
-      expectedAspectRatio: 16 / 10,
-      label: "home proof cards",
+      cardSelector: ".home-proof__photos figure",
+      mediaSelector: ":scope > img",
+      expectedAspectRatio: 1.55,
+      label: "home field-result photos",
     },
     {
       pagePath: "proof.html",
@@ -981,9 +989,9 @@ test("clicking a proof image opens a visible full-size lightbox", async ({ page 
     contentType: "image/svg+xml",
     body: '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400"></svg>',
   }));
-  await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE_URL}/proof.html`, { waitUntil: "networkidle" });
 
-  await page.locator(".proof-card img").first().dispatchEvent("click");
+  await page.locator(".case-card img").first().dispatchEvent("click");
   await expect(page.locator("#lightbox")).toBeVisible();
   await page.locator("#lightbox .lb-img").evaluate((node) => node.decode());
 
@@ -1054,19 +1062,21 @@ test("visible content images reserve dimensions on key buyer pages", async ({ pa
   }
 });
 
-test("scroll reveal sections become visible on long buyer pages", async ({ page }) => {
+test("buyer-page sections stay visible after scrolling", async ({ page }) => {
   const cases = [
     {
       pagePath: "index.html",
       viewport: { width: 1440, height: 1000 },
-      selector: ".section-head.reveal",
-      label: "home post-story section",
+      selector: ".home-proof",
+      label: "home field result",
+      alwaysVisible: true,
     },
     {
       pagePath: "index.html",
       viewport: { width: 390, height: 844 },
-      selector: ".why-col.reveal",
-      label: "home mobile benefit card",
+      selector: ".home-support__grid article",
+      label: "home mobile support card",
+      alwaysVisible: true,
     },
     {
       pagePath: "products.html",
@@ -1138,10 +1148,12 @@ test("scroll reveal sections become visible on long buyer pages", async ({ page 
       window.scrollTo(0, Math.max(0, top - Math.round(window.innerHeight * 0.65)));
       root.style.scrollBehavior = previousScrollBehavior;
     });
-    await expect.poll(
-      () => section.evaluate((node) => node.classList.contains("in")),
-      { message: `${item.label} should receive reveal class` },
-    ).toBe(true);
+    if (!item.alwaysVisible) {
+      await expect.poll(
+        () => section.evaluate((node) => node.classList.contains("in")),
+        { message: `${item.label} should receive reveal class` },
+      ).toBe(true);
+    }
     await expect.poll(
       () => section.evaluate((node) => Number(getComputedStyle(node).opacity)),
       { message: `${item.label} opacity` },

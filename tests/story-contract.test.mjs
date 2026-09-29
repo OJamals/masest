@@ -3,114 +3,12 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-const home = read("index.html");
 const storyCss = read("css/story.css");
 const storyJs = read("js/story.js");
 const storyVisualSpec = read("tools/story-hmis-visual.spec.mjs");
 const storyPerformanceBudget = read("tools/story-performance-budget.mjs");
-const story = home.match(/<div class="story" id="story"[\s\S]*?<\/div>\s*<section class="story-summary/)?.[0] || "";
-const guide = home.match(/<section class="replacement-guide"[\s\S]*?<\/section>/)?.[0] || "";
-const acts = [...story.matchAll(/<section class="act[^"]*"[^>]*data-act="(\d+)"[^>]*data-scene="([^"]+)"/g)];
 
-test("homepage story uses six named field-result scenes", () => {
-  assert.ok(story, "expected homepage story");
-  assert.deepEqual(acts.map((match) => [match[1], match[2]]), [
-    ["1", "kitchen-grease"],
-    ["2", "cip-vessel"],
-    ["3", "labelle-fermenter"],
-    ["4", "shower-track"],
-    ["5", "airboat-panel"],
-    ["6", "pool-cartridge"],
-  ]);
-  assert.equal((story.match(/class="rail-btn"/g) || []).length, 6);
-  assert.doesNotMatch(story, /data-act="7"/);
-});
-
-test("one persistent comparator carries each true pair and active product", () => {
-  assert.equal((story.match(/class="story-object"/g) || []).length, 1);
-  assert.match(story, /class="story-object__range" type="range" name="storyComparisonReveal" min="0" max="100" value="50"/);
-  assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-before-aligned-202609\.webp/);
-  assert.match(story, /media\.masest\.co\/site\/img\/proof\/story\/kitchen-grease-after-aligned-202609\.webp/);
-  // -chip: the product badge renders into a 28x42 box, so the story uses a 180x240
-  // variant rather than the 900x1200 packshot the industry pages show at full size.
-  assert.match(story, /media\.masest\.co\/site\/img\/products\/crhd-food-beverage-studio-chip\.webp/);
-  assert.match(story, /Commercial-kitchen grease/);
-  assert.match(story, /VertKleen CRHD/);
-  assert.doesNotMatch(story, /AI[- ]generated|digitally reconstructed|synthetic (?:image|photo|visual|imagery)/i);
-  assert.doesNotMatch(story, /story-object__method/);
-  assert.match(story, /story-object__label--before[^>]*>Before</);
-  assert.match(story, /story-object__label--after[^>]*>After</);
-  assert.equal((story.match(/data-before-src="https:\/\/media\.masest\.co\/site\/img\/proof\/story\//g) || []).length, 6);
-  assert.equal((story.match(/data-after-src="https:\/\/media\.masest\.co\/site\/img\/proof\/story\//g) || []).length, 6);
-  assert.doesNotMatch(story, /supabase\.co\/storage\/v1\/object/i);
-});
-
-test("primary story carries the product thesis while every job stays a secondary proof note", () => {
-  const thesis = [
-    "Industrial strength. Better chemistry.",
-    "Built to outperform traditional cleaners.",
-    "Industrial results. HMIS 0-0-0.",
-    "Less expensive by the finished job.",
-    "The right strength for the soil.",
-    "Put both cleaners on the same job.",
-  ];
-
-  assert.equal((story.match(/class="story-job-note"/g) || []).length, 6);
-  for (let act = 1; act <= 6; act += 1) {
-    const scene = story.match(new RegExp(`<section class="act[^"]*"[^>]*data-act="${act}"[\\s\\S]*?<\\/section>`))?.[0] || "";
-    assert.ok(scene.includes(thesis[act - 1]), `scene ${act} must carry its primary thesis`);
-    assert.ok(scene.indexOf('class="act-p"') < scene.indexOf('class="story-job-note"'));
-  }
-
-  assert.match(story, /more soil removed, fewer repeat passes/i);
-  assert.match(story, /Every VertKleen product MASEST offers is rated 0-0-0/i);
-  assert.match(story, /chemical, labor, water, waste, and downtime/i);
-  assert.doesNotMatch(story, /class="proof-stats"|class="story-evidence"|class="story-ctas"/);
-});
-
-test("first scene keeps the real aligned kitchen result inside its proof note", () => {
-  const actOne = story.match(/<section class="act[^"]*"[^>]*data-act="1"[\s\S]*?<\/section>/)?.[0] || "";
-
-  assert.match(actOne, /class="story-job-note"/);
-  assert.match(actOne, /Baked-on residue to exposed stainless/i);
-  assert.match(actOne, /Follow the lower seam and the grease line/i);
-  assert.match(actOne, /href="proof#commercial-kitchen-crhd"/);
-  assert.doesNotMatch(actOne, /story-shortcuts|reel-slide/);
-});
-
-test("all six scenes identify product, alignment cue, and evidence route", () => {
-  const expectations = [
-    ["1", "VertKleen CRHD", "lower seam", "proof#commercial-kitchen-crhd"],
-    ["2", "VertKleen CR", "Same vessel", "proof#brewery-cip-trials"],
-    ["3", "VertKleen CR", "vessel curve and port", "proof#brewery-cip-trials"],
-    ["4", "VertKleen Descaler", "glass edge", "products/descaler"],
-    ["5", "VertKleen AlumiBrite", "top fasteners", "proof#airboat-alumibrite"],
-    ["6", "VertKleen HCR", "cap, bands, and pleat pattern stay registered", "docs/sds/vertkleen-hcr-pool-filter.pdf"],
-  ];
-  for (const [act, product, cue, href] of expectations) {
-    const scene = story.match(new RegExp(`<section class="act[^"]*"[^>]*data-act="${act}"[\\s\\S]*?<\\/section>`))?.[0] || "";
-    assert.match(scene, new RegExp(product));
-    assert.match(scene, new RegExp(cue, "i"));
-    assert.match(scene, new RegExp(`href="${href}"`));
-  }
-
-  assert.ok(guide, "expected full comparison guide below the story");
-  assert.equal((guide.match(/class="ledger-row"/g) || []).length, 4);
-  for (const product of ["hcr", "cr", "purgo", "neutral"]) {
-    assert.match(guide, new RegExp(`href="products/${product}"`));
-  }
-});
-
-test("homepage result copy directs comparison to geometry, not exposure", () => {
-  assert.doesNotMatch(
-    story,
-    /field notes say|job notes say|this field job|on this field job|MASEST matched|previous attempt|one job from diagnosis/i
-  );
-  assert.match(story, /Read the surface, not the exposure/);
-  assert.match(story, /Geometry stays recognizable/);
-  assert.match(story, /Follow fixed hardware/);
-});
-
+// Legacy engine contracts remain until its consumers and tooling are retired.
 test("story reveal uses a scroll-driven and draggable wipe, not a contrast crossfade", () => {
   assert.match(storyCss, /--story-reveal:\s*8%/);
   assert.match(storyCss, /clip-path:\s*inset\(0 0 0 calc\(100% - var\(--story-reveal\)\)\)/);

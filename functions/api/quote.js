@@ -8,12 +8,13 @@ import {
   readBoundedJson,
 } from '../_lib/request-body.js';
 import { verifyTurnstile } from '../_lib/turnstile.js';
-import { QUOTE_TASK_DETAILS } from '../../js/quote-task-details.js';
+import { QUOTE_TASK_DETAILS, PRIVATE_LABEL_DETAILS } from '../../js/quote-task-details.js';
+import { normalizeRequestPhone } from '../../js/request-phone.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TASK_FIELD_LIMITS = Object.fromEntries(
-  QUOTE_TASK_DETAILS.map(({ name, limit }) => [name, limit]),
+  [...QUOTE_TASK_DETAILS, ...PRIVATE_LABEL_DETAILS].map(({ name, limit }) => [name, limit]),
 );
 
 
@@ -50,6 +51,8 @@ function pipelineStageForType(type) {
 }
 
 function nextStepForType(type) {
+  if (type === 'callback') return 'Matthew to call the provided number and confirm the request scope.';
+  if (type === 'private-label') return 'Confirm product fit, branding, quantity, packaging, delivery location, and private-label quote scope.';
   if (type === 'sample') return 'Confirm sample fit, ship-to address, and trial follow-up.';
   if (type === 'program') return 'Confirm current chemical inventory, pilot scope, training, and supply needs.';
   return null;
@@ -139,10 +142,26 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   if (String(fields._gotcha || '').trim()) return json(200, { ok: true });
   normalizeTaskDetails(fields);
 
+  const type = normalizeRequestType(fields.type);
+  const callback = type === 'callback';
+  if (callback) {
+    const phone = normalizeRequestPhone(fields.phone);
+    if (!phone) return json(400, { error: 'valid_phone_required' });
+    const topic = String(fields.request_topic || 'quote');
+    const topics = ['quote', 'private-label', 'audit', 'program', 'sample', 'technical', 'distributor', 'government'];
+    // Phone-only callbacks must not retain inactive form details or opt into email.
+    for (const key of Object.keys(fields)) {
+      if (!['type', 'phone', 'product', 'submission_id', 'cf-turnstile-response'].includes(key)) delete fields[key];
+    }
+    fields.phone = phone;
+    fields.request_topic = topics.includes(topic) ? topic : 'quote';
+    if (fields.product) fields.product = String(fields.product).trim().slice(0, 240);
+  }
+  fields.contact_preference = callback ? 'phone' : 'email';
   const name = String(fields.name || '').trim();
   const email = String(fields.email || '').trim();
   const company = String(fields.company || '').trim();
-  if (!name || !EMAIL_RE.test(email)) return json(400, { error: 'invalid_input' });
+  if (!callback && !EMAIL_RE.test(email)) return json(400, { error: 'invalid_input' });
 
   const token = fields['cf-turnstile-response'];
   const secret = env.TURNSTILE_SECRET || env.MASEST_TURNSTILE_SECRET;
@@ -157,8 +176,7 @@ export async function handleQuote({ request, env }, dependencies = {}) {
   const intakeId = String(fields.submission_id || '').trim();
   if (!UUID.test(intakeId)) return json(400, { error: 'submission_id_required' });
 
-  const type = normalizeRequestType(fields.type);
-  const marketingConsent = checked(fields.marketing_email_enabled);
+  const marketingConsent = !callback && checked(fields.marketing_email_enabled);
   fields.marketing_email_enabled = marketingConsent;
   const payload = { ...fields };
   delete payload._gotcha;
@@ -176,13 +194,15 @@ export async function handleQuote({ request, env }, dependencies = {}) {
     : (fields.product || null);
   const row = {
     type,
-    name,
-    email,
-    company,
+    name: name || null,
+    email: email || null,
+    company: company || null,
     phone: fields.phone || null,
     product,
     industry: fields.industry || null,
-    location: fields.location || fields.ship_to || null,
+    location: type === 'private-label'
+      ? (fields.private_label_destination || fields.location || null)
+      : (fields.location || fields.ship_to || null),
     message: fields.message || null,
     payload,
     source: 'contact',

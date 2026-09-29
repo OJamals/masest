@@ -34,9 +34,8 @@ test('proof series uses twelve unique email-compatible R2 images and no Supabase
   }
 });
 
-test('one canonical registry keeps homepage scenes and email proof data aligned', async () => {
+test('one canonical registry keeps email proof data aligned with dedicated proof destinations', async () => {
   const registry = JSON.parse(await readFile(new URL('../data/story-scenes.json', import.meta.url), 'utf8'));
-  const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const emailSource = await readFile(new URL('../functions/_lib/scrolly-marketing-emails.js', import.meta.url), 'utf8');
 
   assert.equal(registry.version, 1);
@@ -45,18 +44,11 @@ test('one canonical registry keeps homepage scenes and email proof data aligned'
   assert.doesNotMatch(emailSource, /-aligned-202609\.(?:webp|jpg)/);
 
   for (const scene of registry.scenes) {
-    const start = homepage.indexOf(`id="${scene.anchor}"`);
-    const next = homepage.indexOf(`id="story-scene-${scene.sequence + 1}"`, start);
-    const section = homepage.slice(start, next < 0 ? homepage.length : next);
     const campaign = findScrollyMarketingEmail(scene.id);
-    const webBefore = `/site/img/proof/story/${scene.proof.slug}-before-aligned-202609.webp`;
-    const webAfter = `/site/img/proof/story/${scene.proof.slug}-after-aligned-202609.webp`;
 
-    assert.ok(start >= 0, `${scene.id} missing homepage anchor`);
-    assert.ok(section.includes(scene.heading), `${scene.id} heading drifted`);
-    assert.ok(section.includes(`data-product-name="${scene.productName}"`), `${scene.id} product drifted`);
-    assert.ok(section.includes(webBefore), `${scene.id} before image drifted`);
-    assert.ok(section.includes(webAfter), `${scene.id} after image drifted`);
+    assert.ok(scene.proofAnchor, `${scene.id} needs a dedicated proof destination`);
+    const destination = new URL(campaign.evidenceUrl);
+    assert.equal(destination.pathname + destination.hash, `/proof#${scene.proofAnchor}`);
     assert.equal(campaign.sequence, scene.sequence);
     assert.equal(campaign.heading, scene.heading);
     assert.equal(campaign.proof.label, scene.proof.label);

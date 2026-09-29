@@ -5,16 +5,20 @@
 // helpers are injected; esc/delegate/money/confirmDialog/dateTime come from util.js and
 // the dirty-edit helpers from edits.js. The CRM activity panel (Timeline/Tasks/Notes,
 // slice 1) is reused inside the drawer via createCrmPanel — no js/admin.js change needed.
-import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260928a';
-import { captureDirty, restoreDirty } from './edits.js?v=20260928a';
-import { createCrmPanel } from './crm.js?v=20260928a';
-import { createSavedViews } from './saved-views.js?v=20260928a';
-import { QUOTE_TASK_DETAILS } from '../quote-task-details.js?v=20260928a';
+import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260929a';
+import { captureDirty, restoreDirty } from './edits.js?v=20260929a';
+import { createCrmPanel } from './crm.js?v=20260929a';
+import { createSavedViews } from './saved-views.js?v=20260929a';
+import { QUOTE_TASK_DETAILS, PRIVATE_LABEL_DETAILS } from '../quote-task-details.js?v=20260929a';
+import { normalizeRequestPhone } from '../request-phone.js?v=20260929a';
 
 const REQUEST_DETAIL_FIELDS = [
+  ['request_topic', 'Request topic'],
+  ['contact_preference', 'Preferred reply'],
   ['samples', 'Sample products'],
   ['ship_to', 'Ship-to'],
   ...QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label]),
+  ...PRIVATE_LABEL_DETAILS.map(({ name, label }) => [name, label]),
 ];
 
 function payloadValues(value) {
@@ -29,6 +33,16 @@ export function requestDetailsHtml(quote) {
     return values.length ? `<span><b>${label}</b>${esc(values.join(', '))}</span>` : '';
   }).filter(Boolean).join('');
   return rows ? `<div class="quote-request-summary">${rows}</div>` : '';
+}
+
+export function quoteContactLabel(quote) {
+  return quote.company || quote.name || quote.email || quote.phone || 'New request';
+}
+
+export function quoteContactActions(quote) {
+  const phone = normalizeRequestPhone(quote.phone);
+  return `${phone ? `<a class="btn btn-ghost btn-sm" href="tel:${esc(phone.replace(/[^+\d]/g, ''))}">Call ${esc(phone)}</a>` : ''}
+    ${quote.email ? `<a class="btn btn-ghost btn-sm" href="mailto:${esc(quote.email)}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>` : ''}`;
 }
 
 // Buyer-facing wording for each offer state, mirroring functions/_lib/quote-lifecycle.js.
@@ -273,7 +287,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     const due = q.due_at ? new Date(q.due_at).getTime() : null;
     const overdue = due && !['won', 'lost'].includes(q.pipeline_stage) && due <= Date.now();
     return `<div class="pipe-card${stale}" data-card-id="${id}" draggable="true" tabindex="0" role="listitem">
-      <div class="pipe-card-title">${esc(q.company || q.name || q.email || 'Lead')}</div>
+      <div class="pipe-card-title">${esc(quoteContactLabel(q))}</div>
       <div class="pipe-card-meta">
         <b>${fmtMoney(q.deal_value)}</b>
         ${statusBadge(q.priority || 'normal')}
@@ -282,7 +296,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         ${overdue ? '<span class="badge badge-warning">Overdue</span>' : ''}
         ${stale ? '<span class="badge badge-warning">Stale</span>' : ''}
       </div>
-      <select class="adm-select" name="pipeline_stage" data-card-stage="${id}" aria-label="Move ${esc(q.company || q.name || 'lead')} to stage">
+      <select class="adm-select" name="pipeline_stage" data-card-stage="${id}" aria-label="Move ${esc(quoteContactLabel(q))} to stage">
         ${STAGES.map((s) => `<option value="${s}"${s === (q.pipeline_stage || 'new') ? ' selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}
       </select>
     </div>`;
@@ -381,9 +395,9 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       <label>Follow-up due <input class="adm-input" name="follow_up_due" data-d-due type="datetime-local" value="${esc(dueValue)}"></label>
       <label>Notes <textarea class="adm-textarea" name="quote_notes" data-d-notes>${esc(q.notes || '')}</textarea></label>
       <div class="adm-tools" style="justify-content:flex-end;flex-wrap:wrap">
-        ${q.email ? `<a class="btn btn-ghost btn-sm" href="mailto:${esc(q.email)}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>` : ''}
+        ${quoteContactActions(q)}
         <button class="btn btn-ghost btn-sm" data-drawer-snooze type="button">Snooze 2d</button>
-        <button class="btn btn-ghost btn-sm" data-drawer-followup type="button">Send follow-up</button>
+        ${q.email ? '<button class="btn btn-ghost btn-sm" data-drawer-followup type="button">Send follow-up</button>' : ''}
         <button class="btn btn-primary btn-sm" data-drawer-save type="button">Save</button>
       </div>
       ${q.source === 'requisition' ? `
@@ -629,7 +643,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     dlg.setAttribute('data-quote-drawer', '');
     dlg.innerHTML = `<div class="adm-drawer-inner">
       <div class="adm-tools" style="justify-content:space-between;align-items:start">
-        <div><h2 style="margin:0">${esc(quote.company || quote.name || quote.email || 'Lead')}</h2>
+        <div><h2 style="margin:0">${esc(quoteContactLabel(quote))}</h2>
         <p class="muted" style="margin:2px 0 0">${esc(quote.type || 'quote')} · ${esc(quote.status || 'new')} · ${esc(STAGE_LABELS[quote.pipeline_stage || 'new'])}</p></div>
         <button class="btn btn-ghost btn-sm" data-drawer-close type="button" aria-label="Close">✕</button>
       </div>
@@ -733,7 +747,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
         <details class="quote-item">
           <summary>
             <label class="q-check-wrap"><input type="checkbox" class="q-check" name="selected_quote" value="${id}" aria-label="Select lead"></label>
-            <b>${esc(quote.company || quote.name || quote.email)}</b>
+            <b>${esc(quoteContactLabel(quote))}</b>
             ${axisBadge('Stage', quote.pipeline_stage || 'new', STAGE_LABELS[quote.pipeline_stage] || STAGE_LABELS.new)}
             ${axisBadge('Status', quote.status || 'new', quote.status || 'new')}
             ${axisBadge('Priority', quote.priority || 'normal', quote.priority || 'normal')}
@@ -747,7 +761,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
             <select class="adm-select adm-select-sm" name="pipeline_stage" data-quote-stage="${id}" data-capability="admin.write" aria-label="Stage">
               ${STAGES.map((s) => `<option value="${s}" ${s === (quote.pipeline_stage || 'new') ? 'selected' : ''}>${STAGE_LABELS[s]}</option>`).join('')}
             </select>
-            <a class="btn btn-ghost btn-sm" href="mailto:${esc(quote.email || '')}?subject=${encodeURIComponent('MASEST quote request')}">Email</a>
+            ${quoteContactActions(quote)}
           </div>
         </details>
       `;

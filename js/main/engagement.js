@@ -4,8 +4,9 @@ import {
   parseRequestContext,
   requestContextNotes,
   requestContextVolume,
-} from "../request-context.js?v=20260928a";
-import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS } from "../quote-task-details.js?v=20260928a";
+} from "../request-context.js?v=20260929a";
+import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929a";
+import { normalizeRequestPhone } from "../request-phone.js?v=20260929a";
 
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {
@@ -482,74 +483,67 @@ export function initQuoteForm() {
     strong.textContent = `${requestLabel} for ${String(pre).slice(0, 120)}.`;
     contextSummary.replaceChildren(
       strong,
-      document.createTextNode(" The product is preselected below. Review or edit it before sending."),
+      document.createTextNode(" We’ll include this with your request."),
     );
     contextSummary.hidden = false;
   }
 
   // ── Adaptive request type: the chooser swaps which field set is required/shown ──
   const leadMessage = form.querySelector('[name="message"]');
-  if (leadMessage) leadMessage.required = true;
+  if (leadMessage) leadMessage.required = false;
   const typeInput = form.querySelector('[name="type"]');
   const groups = [...form.querySelectorAll("[data-intent-group]")];
   const choices = [...form.querySelectorAll(".cta-choice")];
-  const INTENTS = ["quote", "audit", "program", "sample", "technical", "distributor"];
+  const INTENTS = ["quote", "private-label", "audit", "program", "sample", "technical", "distributor", "government"];
+  const privateCopy = [
+    [document.querySelector('.contact-hero h1'), 'Let’s talk private label.'],
+    [document.querySelector('.contact-hero .subhead'), 'Leave your number for a call about private labeling, or send a few details for an email reply.'],
+  ].filter(([element]) => element).map(([element, copy]) => ({ element, copy, original: element.textContent }));
+  const messagePlaceholder = leadMessage?.placeholder;
   const TASK_DETAIL_INTENTS = new Set(QUOTE_TASK_DETAIL_INTENTS);
   const taskDetails = document.getElementById("quoteTaskDetails");
-  let hasTaskDetailPrefill = false;
   QUOTE_TASK_DETAILS.forEach(({ id, name: key }) => {
     const input = document.getElementById(id);
     const value = customerChatAttempt ? "" : params.get(key);
     if (!input || !value) return;
     input.value = value.slice(0, input.maxLength > 0 ? input.maxLength : value.length);
-    hasTaskDetailPrefill = true;
   });
   let activeIntent = INTENTS.includes(params.get("type")) ? params.get("type") : "quote";
-  let advancedOpen = false;
-  // Only shared optional fields and quote extras live behind the toggle. Fields
-  // that belong to a chosen intent (audit/sample/distributor) are that intent's
-  // core ask — hiding them behind "request details" left those intents with
-  // an empty form (and let a sample request submit with zero products).
-  const advancedIds = ["fPhone", "fIndustry", "fLocation", "fProduct", "fVolume", "fTimeline"];
-  const advancedFields = advancedIds.map(id => document.getElementById(id)?.closest(".field")).filter(Boolean);
-  const advancedButton = document.createElement("button");
-  advancedButton.type = "button";
-  advancedButton.className = "btn btn-secondary quote-advanced-toggle";
-  advancedButton.setAttribute("aria-expanded", "false");
-  advancedButton.textContent = "Add request details";
-  advancedFields[0]?.before(advancedButton);
   const syncTaskDetails = () => {
     if (!taskDetails) return;
     const useful = TASK_DETAIL_INTENTS.has(activeIntent);
-    taskDetails.hidden = !(advancedOpen && useful);
+    taskDetails.hidden = !useful;
     taskDetails.querySelectorAll("input, textarea, select").forEach(el => {
       el.disabled = !useful;
     });
   };
-  const setAdvancedOpen = open => {
-    advancedOpen = open;
-    advancedButton.setAttribute("aria-expanded", open ? "true" : "false");
-    advancedButton.textContent = open ? "Hide request details" : "Add request details";
-    advancedFields.forEach(field => { field.hidden = !open; });
-    advancedIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.required = false;
-      el.removeAttribute("data-req");
-    });
-    syncTaskDetails();
-  };
-  if (advancedFields.length) {
-    setAdvancedOpen(false);
-    advancedButton.addEventListener("click", () => setAdvancedOpen(advancedButton.getAttribute("aria-expanded") !== "true"));
-    const productTaskAttempt = Boolean(pre) && TASK_DETAIL_INTENTS.has(params.get("type") || "quote");
-    if (requestContext || productTaskAttempt || volumeParam || hasTaskDetailPrefill) setAdvancedOpen(true);
+  const detailsFields = document.getElementById('requestDetails');
+  const callFields = document.getElementById('requestCall');
+  const callbackPhone = document.getElementById('fCallbackPhone');
+  const topicInput = document.getElementById('fRequestTopic');
+  const modeChoices = [...form.querySelectorAll('[data-request-mode]')];
+  const submitButton = form.querySelector('[type="submit"]');
+  let requestMode = 'call';
+  function applyRequestMode(mode, focus = false) {
+    requestMode = mode === 'details' ? 'details' : 'call';
+    const call = requestMode === 'call';
+    detailsFields.hidden = call;
+    detailsFields.disabled = call;
+    callFields.hidden = !call;
+    callFields.disabled = !call;
+    typeInput.value = call ? 'callback' : activeIntent;
+    topicInput.value = activeIntent;
+    submitButton.textContent = call ? 'Request my call' : 'Send for an email reply';
+    modeChoices.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.requestMode === requestMode)));
+    if (focus) (call ? callbackPhone : document.getElementById('fEmail')).focus();
   }
+  document.getElementById('requestModeChooser').hidden = false;
+  modeChoices.forEach(button => button.addEventListener('click', () => applyRequestMode(button.dataset.requestMode, true)));
 
   function applyIntent(intent) {
     if (!INTENTS.includes(intent)) intent = "quote";
     activeIntent = intent;
-    if (typeInput) typeInput.value = intent;
+    document.body.dataset.requestIntent = intent;
     choices.forEach(b => {
       const on = b.dataset.intent === intent;
       b.classList.toggle("active", on);
@@ -558,16 +552,28 @@ export function initQuoteForm() {
     groups.forEach(g => {
       const on = g.dataset.intentGroup === intent;
       g.hidden = !on;
-      g.querySelectorAll("[data-req]").forEach(el => { el.required = on; if (!on) setErr(el, ""); });
+      g.querySelectorAll('input, textarea, select').forEach(el => {
+        el.disabled = !on;
+        el.required = false;
+        setErr(el, '');
+      });
     });
+    const privateLabel = intent === 'private-label';
+    privateCopy.forEach(({ element, copy, original }) => { element.textContent = privateLabel ? copy : original; });
+    if (leadMessage) {
+      leadMessage.setAttribute('aria-required', 'false');
+      leadMessage.placeholder = privateLabel ? 'Optional product interest, logo or label questions, and timing…' : messagePlaceholder;
+      setErr(leadMessage, '');
+    }
     syncTaskDetails();
+    applyRequestMode(requestMode);
   }
   choices.forEach(b => b.addEventListener("click", () => applyIntent(b.dataset.intent)));
   // Initial intent: a chooser type (?type or a prior set value) wins; otherwise default to quote
   // while preserving non-chooser types (technical/government) on the hidden input.
   const reqType = params.get("type") || (typeInput ? typeInput.value : "");
   if (INTENTS.includes(reqType)) applyIntent(reqType);
-  else { applyIntent("quote"); if (typeInput && reqType) typeInput.value = reqType; }
+  else applyIntent("quote");
 
   // Inline validation: per-field messages instead of browser bubbles only
   form.setAttribute("novalidate", "");
@@ -601,30 +607,14 @@ export function initQuoteForm() {
   function validate() {
     let firstBad = null;
     form.querySelectorAll("input, select, textarea").forEach(el => {
-      if (el.closest("[data-intent-group][hidden]")) { setErr(el, ""); return; }
+      if (el.matches(':disabled') || el.closest("[data-intent-group][hidden]")) { setErr(el, ""); return; }
       let text = "";
       if (el.required && !el.value.trim()) text = "This field is required.";
       else if (el.type === "email" && el.value && !el.checkValidity()) text = "Enter a valid email address.";
+      else if (el === callbackPhone && !normalizeRequestPhone(el.value)) text = "Enter a valid phone number, including country code if outside the US.";
       setErr(el, text);
       if (text && !firstBad) firstBad = el;
     });
-    const sampleGroup = form.querySelector('[data-intent-group="sample"]');
-    if (sampleGroup && !sampleGroup.hidden) {
-      const picks = sampleGroup.querySelectorAll('input[name="samples"]:checked').length;
-      const hint = document.getElementById("sampleHint");
-      const sampleFieldset = sampleGroup.querySelector("fieldset");
-      const minPicks = preSampleBox ? 1 : 3;
-      const okPicks = picks >= minPicks && picks <= 5;
-      if (okPicks) sampleFieldset.removeAttribute("aria-invalid");
-      else sampleFieldset.setAttribute("aria-invalid", "true");
-      if (hint) {
-        hint.textContent = okPicks
-          ? (preSampleBox && picks === 1 ? "Product sample selected." : "3 to 5 products selected.")
-          : (preSampleBox ? "Select 1 to 5 products (you have " + picks + ")." : "Select 3 to 5 products (you have " + picks + ").");
-        hint.classList.toggle("err", !okPicks);
-      }
-      if (!okPicks && !firstBad) firstBad = sampleGroup.querySelector('input[name="samples"]');
-    }
     return firstBad;
   }
   form.addEventListener("input", e => setErr(e.target, ""));
@@ -635,8 +625,11 @@ export function initQuoteForm() {
     if (bad) { bad.focus(); bad.scrollIntoView({ behavior: smoothPref(), block: "center" }); return; }
 
     const data = new FormData(form);
+    data.set('contact_preference', requestMode === 'call' ? 'phone' : 'email');
+    if (pre && !data.get('product')) data.set('product', pre.slice(0, 240));
     const labels = {
       name: "Name", company: "Company", email: "Email", phone: "Phone", type: "Request type",
+      request_topic: "Request topic", contact_preference: "Preferred reply",
       product: "Product", industry: "Industry", volume: "Volume", location: "Location",
       timeline: "Timeline", system: "System / asset", audit_timeframe: "Preferred timeframe",
       samples: "Sample products", ship_to: "Ship-to address", company_type: "Company type",
@@ -646,12 +639,15 @@ export function initQuoteForm() {
       preferred_packs: "Preferred packs", current_vendor: "Current supplier or program",
       program_services: "Program services",
       ...Object.fromEntries(QUOTE_TASK_DETAILS.map(({ name, label }) => [name, label])),
+      ...Object.fromEntries(PRIVATE_LABEL_DETAILS.map(({ name, label }) => [name, label])),
       message: "Notes", source: "Source"
     };
     const lines = [];
     for (const [k, v] of data.entries()) if (String(v).trim()) lines.push((labels[k] || k) + ": " + v);
     const reqLabel = (data.get("type") || "quote").replace(/^./, c => c.toUpperCase());
-    const subject = reqLabel + " request: " + (data.get("product") || data.get("industry") || "VertKleen") + " (" + (data.get("company") || data.get("name")) + ")";
+    const callback = requestMode === 'call';
+    const subject = callback ? "Call requested: " + data.get('phone')
+      : reqLabel + " request: " + (data.get("product") || data.get("industry") || "VertKleen");
     const mailto = "mailto:" + SALES_EMAIL +
       "?subject=" + encodeURIComponent(subject) +
       "&body=" + encodeURIComponent(lines.join("\n"));
@@ -671,11 +667,12 @@ export function initQuoteForm() {
       const title = document.getElementById("formSuccessTitle");
       const copy = document.getElementById("formSuccessCopy");
       const mail = document.getElementById("mailtoFallback");
-      if (title) title.textContent = accepted ? "Request received." : "Almost there: send the request.";
+      if (title) title.textContent = accepted ? (callback ? "Call requested." : "Request received.") : "Almost there: send the request.";
       if (copy) {
-        copy.innerHTML = accepted
-          ? "MASEST received your request. The right person will review it and follow up directly."
-          : 'We couldn’t submit automatically. Use the prepared email link below, then hit send in your email app. If your device blocks email links, email <a href="mailto:matthew@masest.co" style="font-weight:700;color:var(--accent-ink)">matthew@masest.co</a> or call <a href="tel:+18134063852" style="font-weight:700;color:var(--accent-ink)">(813) 406-3852</a>.';
+        if (accepted) copy.textContent = callback
+          ? `Your call request is saved. Matthew will follow up at ${data.get('phone')}.`
+          : 'Your request is saved. Matthew will follow up by email.';
+        else copy.innerHTML = 'We couldn’t submit automatically. Use the prepared email link below, then hit send in your email app. If your device blocks email links, email <a href="mailto:matthew@masest.co" style="font-weight:700;color:var(--accent-ink)">matthew@masest.co</a> or call <a href="tel:+18134063852" style="font-weight:700;color:var(--accent-ink)">(813) 406-3852</a>.';
       }
       if (mail) mail.hidden = accepted;
       ok.style.display = "block";
@@ -686,7 +683,7 @@ export function initQuoteForm() {
         ok.style.display = "none";
         form.style.display = "";
         if (submit) { submit.disabled = false; submit.textContent = submitLabel; }
-        form.querySelector("input, select, textarea").focus();
+        (callback ? callbackPhone : document.getElementById('fEmail')).focus();
       };
     };
 

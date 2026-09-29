@@ -148,8 +148,9 @@ test("all pages load shared main as a module", () => {
   assert.deepEqual(offenders, []);
 });
 
-test("inline home page uses the module compatibility surface", () => {
+test("home page uses the shared module entry without legacy inline catalog rendering", () => {
   const main = read("js/main.js");
   assert.match(main, /window\.MASESTMain\s*=\s*\{\s*initReveal,\s*productCard,\s*\}/);
-  assert.match(read("index.html"), /const \{ initReveal, productCard \} = window\.MASESTMain/);
+  assert.match(read("index.html"), /type="module" src="js\/main\.js\?v=/);
+  assert.doesNotMatch(read("index.html"), /window\.MASESTMain/);
 });

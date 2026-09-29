@@ -36,13 +36,14 @@ test("contact form pre-fills quote message from cart handoff", async ({ page }) 
   await page.goto(`${BASE_URL}/contact.html?type=quote&email=buyer%40example.com&message=${encodeURIComponent(message)}`, {
     waitUntil: "networkidle",
   });
+  await page.getByRole('button', { name: /Add request details/ }).click();
 
   await expect(page.locator('[name="type"]')).toHaveValue("quote");
   await expect(page.locator("#fEmail")).toHaveValue("buyer@example.com");
   await expect(page.locator('[name="message"]')).toHaveValue(message);
 });
 
-test("product quote handoff lands on the visible prefilled product", async ({ page }) => {
+test("product quote handoff keeps product context beside the contact choices", async ({ page }) => {
   await page.goto(`${BASE_URL}/products/descaler.html`, { waitUntil: "networkidle" });
   await expect(page.getByRole("link", { name: "Test my mineral buildup" })).toHaveAttribute("href", /#quoteForm$/);
   await expect(page.getByRole("link", { name: "Try a free Descaler sample" })).toHaveAttribute("href", /#quoteForm$/);
@@ -52,9 +53,9 @@ test("product quote handoff lands on the visible prefilled product", async ({ pa
     { waitUntil: "networkidle" },
   );
 
-  await expect(page.locator("#fProduct")).toBeVisible();
+  await expect(page.locator("#fProduct")).toBeHidden();
   await expect(page.locator("#fProduct")).toHaveValue("VertKleen Descaler");
-  await expect(page.locator(".quote-advanced-toggle")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator('#fCallbackPhone')).toBeVisible();
   await expect(page.locator("#quoteContextSummary")).toBeVisible();
   await expect(page.locator("#quoteContextSummary")).toContainText("Quote request for VertKleen Descaler.");
 
@@ -92,7 +93,9 @@ test("customer chat context stays visible, editable, and submits only its allowe
   await page.goto(`${BASE_URL}/contact.html?${params}`, { waitUntil: "networkidle" });
 
   await expect(page.locator("#quoteContextSummary")).toBeVisible();
-  await expect(page.locator("#quoteContextSummary")).toContainText("Product, cart volume, and notes are prefilled");
+  await expect(page.locator("#quoteContextSummary")).toContainText("Your product request is included");
+  await page.getByRole('button', { name: /Add request details/ }).click();
+  await page.locator('#requestExtraDetails > summary').click();
   await expect(page.locator("#fProduct")).toBeVisible();
   await expect(page.locator("#fProduct")).toHaveValue("hcr");
   await expect(page.locator("#fVolume")).toHaveValue("3 units across 2 cart items");

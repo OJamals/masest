@@ -26,6 +26,7 @@
 @media (min-width: 821px) {
   .nav-group > .nav-menu {
     min-width: 184px;
+    width: max-content;
   }
 
   .nav-group > .nav-menu a {

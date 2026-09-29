@@ -99,11 +99,11 @@ test("contact page exposes all six public request types", () => {
   assert.match(contact, /<option>Data Centers<\/option>/);
   const marketingControl = contact.match(/<input id="fMarketingEmail"[^>]*>/)?.[0];
   assert.ok(marketingControl, "contact form should expose the marketing consent control");
-  assert.match(marketingControl, /\bchecked\b/, "email updates should be selected by default");
+  assert.doesNotMatch(marketingControl, /\bchecked\b/, "marketing updates require a separate opt-in");
   assert.match(contact, /Unsubscribe anytime\./);
 });
 
-test("quote form defaults to email updates and respects an unchecked option", async () => {
+test("quote form keeps marketing optional and honors an explicit opt-in", async () => {
   await withServer(async () => {
     const browser = await launchTestBrowser();
     const requests = [];
@@ -118,8 +118,9 @@ test("quote form defaults to email updates and respects an unchecked option", as
         });
       });
       await page.goto(`${BASE_URL}/contact.html?type=quote`, { waitUntil: "load" });
-      assert.equal(await page.locator("#fMarketingEmail").isChecked(), true, "email updates should start checked");
-      await page.locator("#fMarketingEmail").uncheck();
+      await page.getByRole('button', { name: /Add request details/ }).click();
+      await page.locator('#requestExtraDetails > summary').click();
+      assert.equal(await page.locator("#fMarketingEmail").isChecked(), false, "marketing stays optional");
       await page.fill("#fName", "Opt-in Buyer");
       await page.fill("#fCompany", "Opt-in Company");
       await page.fill("#fEmail", "opt-in@example.com");
@@ -129,7 +130,10 @@ test("quote form defaults to email updates and respects an unchecked option", as
       assert.equal(hasMultipartField(requests[0], "marketing_email_enabled", "on"), false);
 
       await page.goto(`${BASE_URL}/contact.html?type=quote`, { waitUntil: "load" });
-      assert.equal(await page.locator("#fMarketingEmail").isChecked(), true);
+      await page.getByRole('button', { name: /Add request details/ }).click();
+      await page.locator('#requestExtraDetails > summary').click();
+      assert.equal(await page.locator("#fMarketingEmail").isChecked(), false);
+      await page.locator("#fMarketingEmail").check();
       await page.fill("#fName", "Opt-in Buyer");
       await page.fill("#fCompany", "Opt-in Company");
       await page.fill("#fEmail", "opt-in@example.com");
@@ -212,7 +216,8 @@ test("contact form posts all six public request types to quote intake", async ()
         await page.goto(`${BASE_URL}/contact.html?type=${flow.intent}&industry=Data%20Centers`, { waitUntil: "load" });
         const taskDetails = page.locator("#quoteTaskDetails");
         assert.equal(await taskDetails.isVisible(), false, `${flow.intent} task details should start hidden`);
-        await page.getByRole("button", { name: "Add request details" }).click();
+        await page.getByRole("button", { name: /Add request details/ }).click();
+        await page.locator('#requestExtraDetails > summary').click();
         assert.equal(
           await taskDetails.isVisible(),
           ["quote", "audit", "sample"].includes(flow.intent),
@@ -279,10 +284,12 @@ test("task economics and operating boundaries survive URL prefill, editing, and 
         `${BASE_URL}/contact.html?type=audit&product=CR%20HD%20vs%20Simple%20Green`,
         { waitUntil: "load" },
       );
+      await page.getByRole('button', { name: /Add request details/ }).click();
+      await page.locator('#requestExtraDetails > summary').click();
       assert.equal(
         await page.locator("#quoteTaskDetails").isVisible(),
         true,
-        "comparison audit CTA should disclose cost-per-task inputs",
+        "optional project details preserve comparison inputs",
       );
       assert.match(
         await page.inputValue("#fMessage"),
@@ -303,6 +310,8 @@ test("task economics and operating boundaries survive URL prefill, editing, and 
         reopening_criteria: "Supervisor inspection and release",
       });
       await page.goto(`${BASE_URL}/contact.html?${query}`, { waitUntil: "load" });
+      await page.getByRole('button', { name: /Add request details/ }).click();
+      await page.locator('#requestExtraDetails > summary').click();
 
       assert.equal(await page.locator("#quoteTaskDetails").isVisible(), true);
       assert.equal(await page.inputValue("#fCurrentChemical"), "Current cleaner");
@@ -376,6 +385,8 @@ test("product-prefilled sample requests can submit one requested product", async
         });
       });
       await page.goto(`${BASE_URL}/contact.html?type=sample&product=VertKleen%20CR2`, { waitUntil: "domcontentloaded" });
+      await page.getByRole('button', { name: /Add request details/ }).click();
+      await page.locator('#requestExtraDetails > summary').click();
       await expectPoll(async () => page.getByLabel("VertKleen CR2", { exact: true }).isChecked());
       await page.fill("#fName", "Sample Buyer");
       await page.fill("#fCompany", "Sample Company");

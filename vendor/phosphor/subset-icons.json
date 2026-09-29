@@ -1,8 +1,8 @@
 {
   "generated": "run tools/subset-phosphor.mjs to refresh",
-  "count": 260,
-  "usedCount": 151,
-  "bufferCount": 109,
+  "count": 259,
+  "usedCount": 147,
+  "bufferCount": 112,
   "icons": [
     {
       "name": "address-book",
@@ -112,7 +112,7 @@
     {
       "name": "boat",
       "cp": "E786",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "bookmark",
@@ -337,7 +337,7 @@
     {
       "name": "crane-tower",
       "cp": "ED49",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "credit-card",
@@ -472,7 +472,7 @@
     {
       "name": "first-aid-kit",
       "cp": "E570",
-      "src": "used"
+      "src": "buffer"
     },
     {
       "name": "fish",
@@ -753,11 +753,6 @@
       "name": "medal",
       "cp": "E320",
       "src": "buffer"
-    },
-    {
-      "name": "medal-military",
-      "cp": "ECFC",
-      "src": "used"
     },
     {
       "name": "megaphone",

@@ -172,6 +172,7 @@ const PUBLIC = {
   "products.html": { loc: "/products", priority: "0.9", changefreq: "weekly", jsonld: [ORG] },
   "services.html": { loc: "/services", priority: "0.8", changefreq: "monthly", jsonld: [ORG] },
   "programs.html": { loc: "/programs", priority: "0.8", changefreq: "monthly", jsonld: [ORG] },
+  "private-label.html": { loc: "/private-label", priority: "0.8", changefreq: "monthly", jsonld: [ORG] },
   "proof.html": { loc: "/proof", priority: "0.7", changefreq: "monthly", jsonld: [ORG] },
   "resources.html": { loc: "/resources", priority: "0.6", changefreq: "monthly", jsonld: [ORG] },
   "blog.html": { loc: "/blog", priority: "0.7", changefreq: "weekly", jsonld: [{ "@type": "Blog", name: "MASEST VertKleen Blog", url: `${BASE}/blog`, publisher: ORG }] },
@@ -965,7 +966,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   ${contentPageMount(`products/${id}`)}
 </main>
 <script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
-<script type="module" src="../js/reviews.js?v=20260928a"></script>
+<script type="module" src="../js/reviews.js?v=20260929a"></script>
 <script src="../js/track.js?v=${MAIN_VERSION}" defer></script>
 </body>
 </html>

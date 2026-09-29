@@ -115,7 +115,7 @@ function wireDocumentDownloadCapture() {
 }
 
 export function renderChrome({
-  authModule = "/js/auth.js?v=20260928a",
+  authModule = "/js/auth.js?v=20260929a",
   resolveSession = false,
 } = {}) {
   initCmpTableLabels();
@@ -128,19 +128,23 @@ export function renderChrome({
   const isProductDetail = /\/products\/[^/]+(?:\.html)?$/.test(location.pathname);
   const links = [
     { href: "products", label: "Products" },
-    { href: "services", label: "Services" },
-    { href: "programs", label: "Programs" },
+    { href: "private-label", label: "Private Label" },
     {
       key: "useCases",
       label: "Applications",
       children: [
+        { href: "industries/hvac-water", label: "HVAC & Water Systems" },
         { href: "industries", label: "Industries" },
-        { href: "proof", label: "Results" }
+        { href: "services", label: "Services" },
+        { href: "programs", label: "Programs" }
       ]
     },
-    { href: "resources", label: "SDS & Resources" },
-    { href: "blog", label: "Blog" },
-    { href: "about", label: "About" }
+    { href: "proof", label: "Results" },
+    { key: "resources", label: "Resources", children: [
+      { href: "resources", label: "SDS & Resources" },
+      { href: "blog", label: "Blog" },
+      { href: "about", label: "About" }
+    ] }
   ];
   const isActive = (href) => {
     if (page === href) return true;
@@ -173,7 +177,7 @@ export function renderChrome({
   nav.className = story || document.body.dataset.nav === "dark" ? "nav over-dark" : "nav";
   nav.innerHTML = `
     <div class="nav-inner">
-      <a class="nav-logo" href="${homeHref}" aria-label="MASEST home"><img class="logo-image logo-ink" src="/img/masest-logo-ink.png" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="/img/masest-logo.png" alt="" aria-hidden="true" width="469" height="585"></a>
+      <a class="nav-logo" href="${homeHref}" aria-label="MASEST home"><img class="logo-image logo-ink" src="/img/masest-logo-ink.png" srcset="/img/masest-logo-nav-ink.png 76w, /img/masest-logo-ink.png 192w" sizes="(max-width: 820px) 35px, 38px" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="/img/masest-logo.png" srcset="/img/masest-logo-nav.png 76w, /img/masest-logo.png 192w" sizes="(max-width: 820px) 35px, 38px" alt="" aria-hidden="true" width="469" height="585"></a>
       <nav class="nav-links" id="navLinks" aria-label="Primary">
         ${links.map(navItem).join("")}
       </nav>
@@ -288,7 +292,7 @@ export function renderChrome({
   document.addEventListener("cart:updated", updateCartCount);
   document.addEventListener("masest:cart", updateCartCount);
   // Account control stays neutral while auth resolves, then becomes Sign in or the account dropdown.
-  import("/js/account-nav.js?v=20260928a").then((m) => (
+  import("/js/account-nav.js?v=20260929a").then((m) => (
     m.initAccountNav && m.initAccountNav({ nav, root, authModule, resolveSession })
   )).catch(() => {});
   const setMenuOpen = open => {
@@ -331,7 +335,9 @@ export function renderChrome({
     scrollRAF = 0;
     nav.classList.toggle("scrolled", window.scrollY > 8);
     nav.classList.toggle("over-dark", useDarkNav || (story && story.getBoundingClientRect().bottom > 66));
-    if (!navLinks.classList.contains("open")) closeNavGroups();
+    // Keyboard focus can scroll the page while opening a menu. Keep that menu
+    // available until focus leaves it, a link is chosen, or Escape is pressed.
+    if (!navLinks.classList.contains("open") && !navLinks.contains(document.activeElement)) closeNavGroups();
   };
   const onScroll = () => { if (!scrollRAF) scrollRAF = requestAnimationFrame(applyScroll); };
   applyScroll();
@@ -428,9 +434,9 @@ export function renderChrome({
     window.__masestIntegrations = true;
     window.MASEST = Object.assign(window.MASEST || {}, { chatRoot: root, authModule });
     const cfg = document.createElement("script");
-    cfg.src = `${root}js/config.js?v=20260928a`;
+    cfg.src = `${root}js/config.js?v=20260929a`;
     cfg.onload = () => {
-      ["integrations.js?v=20260928a", "customer-chat.js?v=20260928a"].forEach((src) => {
+      ["integrations.js?v=20260929a", "customer-chat.js?v=20260929a"].forEach((src) => {
         const mod = document.createElement("script");
         mod.type = "module";
         mod.src = `${root}js/${src}`;

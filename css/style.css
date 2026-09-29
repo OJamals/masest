@@ -614,6 +614,9 @@ scoped to the hero */
 }
 .contact-hero-copy { min-width: 0; }
 .contact-hero-copy .subhead { max-width: 58ch; }
+body .hero-split.contact-hero { padding-block: var(--s7); }
+.contact-hero .contact-hero-grid { grid-template-columns: 1fr; }
+.contact-hero-copy .display { font-size: clamp(36px, 5vw, 56px); max-width: 24ch; }
 .contact-hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1041,8 +1044,20 @@ no dots) ---------- */
 @media (prefers-reduced-motion: reduce) {
   .resource-disclosure summary::after { transition: none; }
 }
-.quote-advanced-toggle {
-  align-self: end;
+.request-mode-fields { min-width: 0; border: 0; margin: 0; padding: 0; }
+.request-mode-chooser { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); margin-bottom: var(--s6); }
+.request-mode-choice { display: grid; gap: var(--s2); padding: var(--s5); border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel); color: var(--ink); text-align: left; cursor: pointer; }
+.request-mode-choice strong { font-size: var(--fs-body); }
+.request-mode-choice span { font-size: var(--fs-caption); color: var(--muted); line-height: 1.5; }
+.request-mode-choice[aria-pressed="true"] { border-color: var(--accent-ink); outline: 1px solid var(--accent-ink); outline-offset: -2px; background: var(--accent-soft); }
+.request-mode-choice:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
+.request-extra-details { margin-top: var(--s5); }
+.request-extra-details > summary { padding: var(--s3) 0; color: var(--muted); cursor: pointer; }
+.request-extra-details[open] > summary { margin-bottom: var(--s4); }
+.request-extra-details .quote-marketing-option { margin-top: var(--s5); }
+@media (max-width: 460px) {
+  .request-mode-chooser { grid-template-columns: 1fr; }
+  .request-mode-choice { padding: var(--s4); }
 }
 .quote-task-details {
   margin: var(--s5) 0 0;
@@ -1993,7 +2008,7 @@ so no-JS / hidden-tab renders stay visible */
 }
 
 .contact-card a {
-  display: block;
+  display: flex;
   color: var(--ink);
   font-weight: 700;
   margin-top: var(--s2);
@@ -3428,12 +3443,13 @@ or quote flow structure. */
 }
 
 .proof-filter,
-.contact-card a,
 .eyebrow a {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
 }
+
+.contact-card a { min-height: 44px; align-items: center; }
 
 .rail-btn {
   min-height: 44px;

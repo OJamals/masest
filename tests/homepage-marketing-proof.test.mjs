@@ -1,67 +1,61 @@
-import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import test from "node:test";
+import assert from 'node:assert/strict';
+import { readFileSync, existsSync, statSync } from 'node:fs';
+import test from 'node:test';
+import { parse } from 'parse5';
 
-const home = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-const storyCss = readFileSync(new URL("../css/story.css", import.meta.url), "utf8");
+const root = new URL('../', import.meta.url);
+const home = readFileSync(new URL('index.html', root), 'utf8');
+const privateLabel = readFileSync(new URL('private-label.html', root), 'utf8');
+const elements = [];
+function walk(node) {
+  if (node.tagName) elements.push(node);
+  for (const child of node.childNodes || []) walk(child);
+}
+const attr = (node, key) => node.attrs?.find(a => a.name === key)?.value;
 
-test("homepage puts real-job proof before product education and catalog browsing", () => {
-  const proof = home.indexOf('<section class="proof-section');
-  const education = home.indexOf("Find the cleaner that replaces yours.");
-  const catalog = home.indexOf("The VertKleen line, by the job it replaces.");
-
-  assert.ok(proof > 0, "expected proof section");
-  assert.ok(education > 0, "expected the cleaner-matching block");
-  assert.ok(proof < education, "real-job proof should precede product education");
-  assert.ok(proof < catalog, "real-job proof should precede catalog browsing");
-});
-
-test("homepage grounds specific performance claims in a direct evidence path", () => {
-  assert.match(
-    home,
-    /up to 280&times; less corrosion[\s\S]{0,240}href="blog\/descaling-without-acid"[^>]*>Read the corrosion test summary<\/a>/,
-  );
-});
-
-test("homepage retains owner-confirmed global reach in the trust strip", () => {
-  const trustStrip = home.match(/<div class="trust-strip">[\s\S]*?<\/div>\s*<\/div>/)?.[0];
-
-  assert.ok(trustStrip, "expected trust strip");
-  assert.match(trustStrip, /href="about"[^>]*>Used in 50\+ countries<\/a>/);
-  assert.match(trustStrip, /domestic \+ international support/);
-});
-
-test("homepage does not repeat the story's matching and trial process below the fold", () => {
-  assert.doesNotMatch(home, /Protect equipment without punishing the crew\./);
-  assert.doesNotMatch(home, /A simple path to a better cleaner\./);
-  assert.equal((home.match(/Find the cleaner that replaces yours\./g) || []).length, 1);
-});
-
-/* SQ-09: the homepage used to argue "pick the product that matches your soil"
-   in two consecutive blocks before the catalog — one sorted by soil type, one
-   by the incumbent chemical — then restate it in the catalog subhead. They are
-   now a single block. This pins the merge: one matching block, carrying all
-   three replacement routes, so the pair cannot quietly grow back. */
-test("homepage states the cleaner-matching argument once, covering all three routes", () => {
-  assert.doesNotMatch(home, /Different messes need different cleaners\./);
-  assert.doesNotMatch(home, /Start with the cleaner you want to replace\./);
-
-  const matcher = home.match(/<h2 class="headline">Find the cleaner that replaces yours\.<\/h2>[\s\S]*?<\/section>/)?.[0];
-  assert.ok(matcher, "expected a single cleaner-matching section");
-  assert.equal((matcher.match(/class="why-col reveal"/g) || []).length, 3);
-  for (const route of ['href="products#cat-descale"', 'href="products#cat-degrease"', 'href="programs"']) {
-    assert.ok(matcher.includes(route), `matching block should keep the ${route} route`);
+test('both landing pages have semantic labels and valid local destinations', () => {
+  for (const html of [home, privateLabel]) {
+    elements.length = 0;
+    walk(parse(html));
+    const ids = new Set(elements.map(n => attr(n, 'id')).filter(Boolean));
+    assert.equal(elements.filter(n => n.tagName === 'h1').length, 1);
+    assert.equal(ids.size, elements.filter(n => attr(n, 'id')).length);
+    for (const n of elements) {
+      for (const id of (attr(n, 'aria-labelledby') || '').split(/\s+/).filter(Boolean)) assert.ok(ids.has(id), id);
+      if (n.tagName !== 'a') continue;
+      const href = attr(n, 'href');
+      if (href.startsWith('#')) { assert.ok(ids.has(href.slice(1)), href); continue; }
+      const url = new URL(href, 'https://masest.co/');
+      if (url.origin !== 'https://masest.co') continue;
+      const path = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+      assert.ok([path, path + '.html', path + '/index.html'].some(p => existsSync(new URL(p, root))), href);
+    }
   }
 });
 
-test("homepage trust strip balances its four proof points", () => {
-  assert.equal((home.match(/<div class="trust-strip">[\s\S]*?<\/div>\s*<\/div>/g) || []).length, 1);
-  assert.match(
-    storyCss,
-    /\.trust-strip \.trust-cols\s*{\s*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/,
-  );
-  assert.match(
-    storyCss,
-    /@media \(max-width:\s*720px\)[\s\S]*?\.trust-strip \.trust-cols\s*{\s*grid-template-columns:\s*1fr 1fr/,
-  );
+test('homepage leads to scoped field evidence before product selection and technical guidance', () => {
+  assert.ok(home.indexOf('id="results"') < home.indexOf('id="find-cleaner"'));
+  assert.ok(home.indexOf('id="results"') < home.indexOf('id="support"'));
+  assert.match(home, /36-hour CLR attempt.*30 minutes/s);
+  assert.match(home, /One documented job\. Results depend/);
+  assert.match(home, /href="blog\/hcr-brevard-hvac-rust-case-study"/);
+  assert.match(home, /href="industries\/hvac-water"/);
+  assert.match(home, /href="resources"/);
+  assert.doesNotMatch(home + privateLabel, /non-toxic|safe for all|water-based|Purgo N|Fusion/);
+});
+
+test('hero delivery stays small while field photographs remain lazy and labeled', () => {
+  elements.length = 0;
+  walk(parse(home));
+  const images = elements.filter(n => n.tagName === 'img');
+  assert.equal(images.length, 3);
+  for (const img of images) {
+    assert.ok(attr(img, 'alt'));
+    assert.ok(Number(attr(img, 'width')) > 0 && Number(attr(img, 'height')) > 0);
+    assert.ok(existsSync(new URL(attr(img, 'src'), root)));
+  }
+  assert.match(attr(images[0], 'alt'), /illustration/);
+  assert.equal(attr(images[0], 'fetchpriority'), 'high');
+  assert.ok(statSync(new URL(attr(images[0], 'src'), root)).size < 250000);
+  for (const img of images.slice(1)) assert.equal(attr(img, 'loading'), 'lazy');
 });

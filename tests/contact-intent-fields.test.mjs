@@ -5,22 +5,11 @@ import { readFile } from "node:fs/promises";
 const engagement = await readFile(new URL("../js/main/engagement.js", import.meta.url), "utf8");
 const contact = await readFile(new URL("../contact.html", import.meta.url), "utf8");
 
-// Regression: the "Add request details" toggle used to swallow the intent
-// groups — it force-hid the Sample Kit picker (a sample request could submit
-// with zero products) and stripped data-req off audit/distributor core fields.
-test("request-details toggle governs only shared + quote extras, never intent groups", () => {
-  const idsMatch = engagement.match(/const advancedIds = \[([^\]]+)\]/);
-  assert.ok(idsMatch, "advancedIds list exists");
-  const ids = [...idsMatch[1].matchAll(/"(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(ids, ["fPhone", "fIndustry", "fLocation", "fProduct", "fVolume", "fTimeline"]);
-  assert.ok(!engagement.includes("progressiveSampleGroup"), "sample group is not toggled by the request-details button");
-});
-
-test("intent-core fields keep their data-req so applyIntent can require them", () => {
+test("project details remain available without becoming mandatory for initial contact", () => {
   for (const id of ["fSystem", "fProgramAssets", "fPilotSize", "fShipTo", "fCompanyType", "fTerritory"]) {
     const tag = contact.match(new RegExp(`<(?:input|select|textarea)[^>]*id="${id}"[^>]*>`));
     assert.ok(tag, `${id} present`);
-    assert.match(tag[0], /data-req/, `${id} keeps data-req`);
+    assert.doesNotMatch(tag[0], /required|data-req/, `${id} remains optional`);
   }
 });
 
@@ -81,9 +70,9 @@ test("the quote form's consent block ships with the rules that lay it out", asyn
   );
   const css = styles.join("\n");
 
-  const footer = contact.slice(contact.indexOf('class="quote-form-footer"'));
-  const block = footer.slice(0, footer.indexOf("</form>"));
-  assert.ok(block.includes("quote-marketing-option"), "consent label should still be in the footer");
+  const controls = contact.slice(contact.indexOf('<label class="form-note quote-marketing-option"'));
+  const block = controls.slice(0, controls.indexOf("</form>"));
+  assert.ok(block.includes("quote-form-footer"), "consent disclosure precedes the separated submit footer");
 
   const classes = [...block.matchAll(/class="([^"]+)"/g)]
     .flatMap(([, list]) => list.split(/\s+/))

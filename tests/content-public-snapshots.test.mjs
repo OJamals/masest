@@ -127,7 +127,7 @@ test("core public pages expose generic CMS page-section slots", () => {
 
 test("CMS page-section slots render before final quote CTAs", () => {
   const pages = [
-    ["index.html", "block-dark on-dark cta-band"],
+    ["index.html", "home-close home-section"],
     ["about.html", "block-dark on-dark cta-band"],
     ["industries.html", "section class=\"block-dark\""],
     ["products.html", "product-job-router block-dark on-dark"],

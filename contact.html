@@ -8,9 +8,9 @@
 <meta name="theme-color" content="#fafbfc">
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
-<link rel="stylesheet" href="css/style.css?v=20260925a">
-<link rel="stylesheet" href="css/navigation.css?v=20260925a">
-<link rel="stylesheet" href="css/components.css?v=20260925a">
+<link rel="stylesheet" href="css/style.css?v=20260929a">
+<link rel="stylesheet" href="css/navigation.css?v=20260929a">
+<link rel="stylesheet" href="css/components.css?v=20260929a">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/contact">
 <meta property="og:title" content="Contact MASEST | VertKleen Product Help">
@@ -44,15 +44,9 @@
   <section class="hero-split contact-hero">
     <div class="wrap contact-hero-grid">
       <div class="contact-hero-copy">
-        <h1 class="display">Tell us what you need to clean.</h1>
-        <p class="subhead">Share the buildup, surface, cleaner you use now, and result you want. You’ll get the matching VertKleen product, a suggested starting mix, and a plan for the first test.</p>
-        <div class="contact-hero-actions">
-          <a class="btn btn-primary" href="#quoteForm">Find my VertKleen product</a>
-        </div>
+        <h1 class="display">Let’s talk.</h1>
+        <p class="subhead">Questions about VertKleen, pricing, or your own branded product line? Leave your number for a call, or get a reply by email.</p>
       </div>
-      <figure class="contact-hero-media">
-        <img src="img/site/scenes/contact-site-assessment.webp" alt="Maintenance-chemical shelf, pipe samples, valve, and water sample" width="1200" height="800" decoding="async" fetchpriority="high">
-      </figure>
     </div>
   </section>
 
@@ -61,14 +55,39 @@
       <form onsubmit="return false" class="form-card" id="quoteForm" data-endpoint="/api/quote">
         <input type="hidden" name="type" id="fType" value="quote">
         <input type="hidden" name="source" id="fSource" disabled>
-        <p class="form-note" id="quoteContextSummary" role="status" hidden><strong>Context carried from customer chat.</strong> Product, cart volume, and notes are prefilled below. Review or edit them before sending.</p>
+        <p class="form-note" id="quoteContextSummary" role="status" hidden><strong>Your product request is included.</strong> We’ll pick up from the details you already shared.</p>
         <div aria-hidden="true" class="sr-only">
           <label for="fGotcha">Leave this field empty</label>
           <input id="fGotcha" name="_gotcha" type="text" tabindex="-1" autocomplete="off">
         </div>
 
+        <div class="request-mode-chooser" id="requestModeChooser" role="group" aria-label="How would you like to get started?" hidden>
+          <button type="button" class="request-mode-choice" data-request-mode="call" aria-pressed="false" aria-controls="requestCall"><strong>Request a call</strong><span>Just leave your phone number.</span></button>
+          <button type="button" class="request-mode-choice" data-request-mode="details" aria-pressed="false" aria-controls="requestDetails"><strong>Add request details</strong><span>Prefer email? We’ll reply to your inbox.</span></button>
+        </div>
+
+        <fieldset class="request-mode-fields" id="requestCall" hidden disabled>
+          <legend class="sr-only">Request a call</legend>
+          <input type="hidden" id="fRequestTopic" name="request_topic">
+          <div class="field">
+            <label for="fCallbackPhone">Phone number *</label>
+            <input id="fCallbackPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="40" placeholder="(813) 555-0123…" aria-describedby="callbackPhoneHint" required>
+            <p class="form-note" id="callbackPhoneHint">Matthew from MASEST will call about your request. Include your country code if outside the US.</p>
+          </div>
+        </fieldset>
+
+        <fieldset class="request-mode-fields" id="requestDetails">
+          <legend class="sr-only">Request details</legend>
+          <div class="field"><label for="fEmail">Email address *</label><input id="fEmail" name="email" type="email" autocomplete="email" spellcheck="false" placeholder="you@company.com…" required></div>
+          <div class="field u-mt-18">
+            <label for="fMessage">What can we help with? <span class="form-note">(optional)</span></label>
+            <textarea id="fMessage" name="message" rows="3" placeholder="A product, a quote, private labeling, or a cleaning question…"></textarea>
+          </div>
+          <details class="request-extra-details" id="requestExtraDetails">
+            <summary>More project details (optional)</summary>
         <div class="cta-chooser contact-intent" role="group" aria-label="What do you need?">
           <button type="button" class="cta-choice active" data-intent="quote" aria-pressed="true"><i class="ph ph-tag" aria-hidden="true"></i> Quote</button>
+          <button type="button" class="cta-choice" data-intent="private-label" aria-pressed="false"><i class="ph ph-tag" aria-hidden="true"></i> Private Label</button>
           <button type="button" class="cta-choice" data-intent="audit" aria-pressed="false"><i class="ph ph-clipboard-text" aria-hidden="true"></i> Replace a Cleaner</button>
           <button type="button" class="cta-choice" data-intent="program" aria-pressed="false"><i class="ph ph-buildings" aria-hidden="true"></i> Program</button>
           <button type="button" class="cta-choice" data-intent="sample" aria-pressed="false"><i class="ph ph-package" aria-hidden="true"></i> Sample Kit</button>
@@ -77,9 +96,8 @@
         </div>
 
         <div class="field-grid">
-          <div class="field"><label for="fName">Full Name *</label><input id="fName" name="name" type="text" autocomplete="name" placeholder="First and last name…" required></div>
-          <div class="field"><label for="fCompany">Company *</label><input id="fCompany" name="company" type="text" autocomplete="organization" placeholder="Company name…" required></div>
-          <div class="field"><label for="fEmail">Email *</label><input id="fEmail" name="email" type="email" autocomplete="email" spellcheck="false" placeholder="you@company.com…" required></div>
+          <div class="field"><label for="fName">Name</label><input id="fName" name="name" type="text" autocomplete="name" placeholder="First and last name…"></div>
+          <div class="field"><label for="fCompany">Company</label><input id="fCompany" name="company" type="text" autocomplete="organization" placeholder="Company name…"></div>
           <div class="field"><label for="fPhone">Phone</label><input id="fPhone" name="phone" type="tel" autocomplete="tel" placeholder="(813) 555-0123…"></div>
 
           <div class="field">
@@ -172,8 +190,18 @@
           </div>
         </div>
 
+        <div data-intent-group="private-label" hidden>
+          <p class="form-note">Share whatever you know. We can work out product fit, quantities, and packaging together.</p>
+          <div class="field-grid">
+            <div class="field"><label for="fPrivateApplication">Application or product needed</label><textarea id="fPrivateApplication" name="private_label_application" rows="3" maxlength="800" placeholder="Who will use it, what needs cleaning, and the surface or equipment…" disabled></textarea></div>
+            <div class="field"><label for="fPrivateQuantity">Approximate quantity</label><input id="fPrivateQuantity" name="private_label_quantity" type="text" maxlength="160" autocomplete="off" placeholder="Amount, order frequency, or not sure yet…" disabled></div>
+            <div class="field"><label for="fPrivatePackaging">Packaging preference</label><input id="fPrivatePackaging" name="private_label_packaging" type="text" maxlength="160" autocomplete="off" placeholder="Preferred container size, or not sure yet…" disabled></div>
+            <div class="field"><label for="fPrivateDestination">Delivery location</label><input id="fPrivateDestination" name="private_label_destination" type="text" maxlength="240" autocomplete="shipping address-level2" placeholder="City, state or region, and country…" disabled></div>
+          </div>
+        </div>
+
         <div class="field-grid" data-intent-group="audit" hidden>
-          <div class="field"><label for="fSystem">What are you cleaning? *</label><input id="fSystem" name="system" type="text" autocomplete="off" placeholder="Cooling tower, brewery line, fleet wash bay…" data-req></div>
+          <div class="field"><label for="fSystem">What are you cleaning?</label><input id="fSystem" name="system" type="text" autocomplete="off" placeholder="Cooling tower, brewery line, fleet wash bay…"></div>
           <div class="field">
             <label for="fAuditWhen">When would you like to start?</label>
             <select id="fAuditWhen" name="audit_timeframe">
@@ -187,10 +215,10 @@
 
         <div data-intent-group="program" hidden>
           <div class="field-grid">
-            <div class="field"><label for="fProgramAssets">Sites, vehicles, or technicians *</label><textarea id="fProgramAssets" name="program_assets" rows="3" maxlength="500" placeholder="12 service vehicles, 3 branches, 28 technicians…" data-req></textarea></div>
+            <div class="field"><label for="fProgramAssets">Sites, vehicles, or technicians</label><textarea id="fProgramAssets" name="program_assets" rows="3" maxlength="500" placeholder="12 service vehicles, 3 branches, 28 technicians…"></textarea></div>
             <div class="field">
-              <label for="fPilotSize">First pilot scope *</label>
-              <select id="fPilotSize" name="pilot_size" data-req>
+              <label for="fPilotSize">First pilot scope</label>
+              <select id="fPilotSize" name="pilot_size">
                 <option value="">Select pilot scope</option>
                 <option>1 site, vehicle, or crew</option>
                 <option>2-5 sites, vehicles, or crews</option>
@@ -228,7 +256,7 @@
 
         <div data-intent-group="sample" hidden>
           <fieldset class="field sample-fieldset" aria-describedby="sampleHint">
-            <legend>Choose products to sample *</legend>
+            <legend>Products you’re interested in sampling</legend>
             <div class="sample-picker">
               <label><input type="checkbox" name="samples" value="VertKleen CR"> VertKleen CR</label>
               <label><input type="checkbox" name="samples" value="VertKleen CR2"> VertKleen CR2</label>
@@ -246,15 +274,15 @@
               <label><input type="checkbox" name="samples" value="WaterSafe60"> WaterSafe60</label>
               <label><input type="checkbox" name="samples" value="Purgo"> Purgo</label>
             </div>
-            <p class="sample-hint" id="sampleHint" aria-live="polite">Select 3 to 5 products, or one product from a product page.</p>
+            <p class="sample-hint" id="sampleHint">Choose any products you have in mind. We’ll confirm sample options with you.</p>
           </fieldset>
-          <div class="field u-mt-14"><label for="fShipTo">Ship-to address *</label><textarea id="fShipTo" name="ship_to" rows="3" placeholder="Facility name, street, city, state, ZIP…" data-req></textarea></div>
+          <div class="field u-mt-14"><label for="fShipTo">Ship-to address</label><textarea id="fShipTo" name="ship_to" rows="3" placeholder="Facility name, street, city, state, ZIP…"></textarea></div>
         </div>
 
         <div class="field-grid" data-intent-group="distributor" hidden>
           <div class="field">
-            <label for="fCompanyType">Company type *</label>
-            <select id="fCompanyType" name="company_type" data-req>
+            <label for="fCompanyType">Company type</label>
+            <select id="fCompanyType" name="company_type">
               <option value="">Select company type</option>
               <option>Building service contractor (BSC)</option>
               <option>Distributor / reseller</option>
@@ -262,7 +290,7 @@
               <option>Other</option>
             </select>
           </div>
-          <div class="field"><label for="fTerritory">Territory / region *</label><input id="fTerritory" name="territory" type="text" autocomplete="off" placeholder="Southeast US, Caribbean…" data-req></div>
+          <div class="field"><label for="fTerritory">Territory / region</label><input id="fTerritory" name="territory" type="text" autocomplete="off" placeholder="Southeast US, Caribbean…"></div>
         </div>
 
         <fieldset class="quote-task-details" id="quoteTaskDetails" hidden>
@@ -281,20 +309,18 @@
           </div>
         </fieldset>
 
-        <div class="field u-mt-18">
-          <label for="fMessage">Tell us about the cleaning job *</label>
-          <textarea id="fMessage" name="message" rows="5" aria-required="true" placeholder="Share the buildup, surface, current cleaner, and result you want…"></textarea>
-        </div>
-
-        <div class="quote-form-footer">
           <label class="form-note quote-marketing-option" for="fMarketingEmail">
-            <input id="fMarketingEmail" name="marketing_email_enabled" type="checkbox" checked aria-describedby="quoteMarketingFootnote">
+            <input id="fMarketingEmail" name="marketing_email_enabled" type="checkbox" aria-describedby="quoteMarketingFootnote">
             <span>Email me practical VertKleen product proof, field comparisons, and occasional offers.<sup aria-hidden="true">*</sup></span>
           </label>
-          <button class="btn btn-primary u-cta-wide" type="submit">Send my cleaning job</button>
+          <p class="form-note" id="quoteMarketingFootnote"><span aria-hidden="true">*</span> Optional emails. Unsubscribe anytime.</p>
+          </details>
+        </fieldset>
+
+        <div class="quote-form-footer">
+          <button class="btn btn-primary u-cta-wide" type="submit">Send request</button>
           <div class="quote-form-footnotes">
             <p class="form-note">Your information goes only to the MASEST sales team, never sold or shared.</p>
-            <p class="form-note" id="quoteMarketingFootnote"><span aria-hidden="true">*</span> Optional emails. Unsubscribe anytime.</p>
           </div>
         </div>
       </form>
@@ -311,53 +337,19 @@
       <aside class="contact-cards">
         <div class="contact-card">
           <i class="ph ph-envelope-simple" aria-hidden="true"></i>
-          <h2>Sales</h2>
-          <p>Matt Seedial, COO</p>
+          <h2>Prefer to reach us directly?</h2>
+          <p>Matthew Seedial, COO</p>
           <a href="tel:+18134063852">(813) 406-3852</a>
           <a href="mailto:matthew@masest.co">matthew@masest.co</a>
         </div>
-        <div class="contact-card">
-          <i class="ph ph-wrench" aria-hidden="true"></i>
-          <h2>Product help</h2>
-          <p>Mike Seedial, Technical Director</p>
-          <a href="tel:+18134517565">(813) 451-7565</a>
-          <a href="mailto:mseedial@masest.co">mseedial@masest.co</a>
-        </div>
-        <div class="contact-card">
-          <i class="ph ph-seal-check" aria-hidden="true"></i>
-          <h2>Government Purchasing</h2>
-          <p>Help with government quotes, vendor registration, bids, and product documents.</p>
-        </div>
       </aside>
-    </div>
-  </section>
-
-  <section class="section-slim" aria-label="What happens after you request">
-    <div class="wrap">
-      <div class="quote-assurance">
-        <div>
-          <span>1</span>
-          <b>We understand the job.</b>
-          <p>What needs to come off, what it is stuck to, and what your team uses now.</p>
-        </div>
-        <div>
-          <span>2</span>
-          <b>We match the product.</b>
-          <p>Why it fits, real-job results, product files, and the right pack size.</p>
-        </div>
-        <div>
-          <span>3</span>
-          <b>You get a clear next step.</b>
-          <p>Buy a small pack, try a free sample, compare it with your current cleaner, or get bulk pricing.</p>
-        </div>
-      </div>
     </div>
   </section>
 
 <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="contact" data-cms-region="body"></div>
 </main>
 
-<script type="module" src="js/main.js?v=20260928a"></script>
-<script src="js/track.js?v=20260928a" defer></script>
+<script type="module" src="js/main.js?v=20260929a"></script>
+<script src="js/track.js?v=20260929a" defer></script>
 </body>
 </html>

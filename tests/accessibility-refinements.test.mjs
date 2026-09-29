@@ -10,13 +10,12 @@ test('password recovery mode moves focus only when the visible pane changes', ()
   assert.match(src, /if \(modeChanged\) requestAnimationFrame\(\(\) => \$\(on \? "newPassword" : "liEmail"\)\?\.focus\(\)\);/);
 });
 
-test('sample selection errors are associated with the checkbox group', () => {
+test('optional sample preferences retain an accessible group and hint', () => {
   const html = read('contact.html');
   const js = read('js/main/engagement.js');
   assert.match(html, /<fieldset class="field sample-fieldset" aria-describedby="sampleHint">/);
-  assert.match(html, /id="sampleHint" aria-live="polite"/);
-  assert.match(js, /sampleFieldset\.setAttribute\("aria-invalid", "true"\)/);
-  assert.match(js, /sampleFieldset\.removeAttribute\("aria-invalid"\)/);
+  assert.match(html, /id="sampleHint">Choose any products/);
+  assert.doesNotMatch(js, /const minPicks/);
 });
 
 test('live preview does not announce the full document on every render', () => {

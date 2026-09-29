@@ -46,13 +46,15 @@ test("company identity has one legal owner, domain, sales route, and confirmed p
   });
   assert.doesNotMatch(org.description, /HMIS|safe|non[- ]toxic|certif/i);
 
-  for (const file of ["about.html", "contact.html"]) {
+  for (const file of ["about.html"]) {
     const html = read(file);
     for (const contact of COMPANY_IDENTITY.named_contacts) {
       assert.match(html, new RegExp(contact.email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
       assert.match(html, new RegExp(contact.phone_display.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
   }
+  assert.match(read('contact.html'), /mailto:matthew@masest\.co/);
+  assert.match(read('contact.html'), /tel:\+18134063852/);
 });
 
 test("all generated organization schema uses the controlled neutral identity", () => {

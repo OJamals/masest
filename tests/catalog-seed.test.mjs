@@ -68,19 +68,10 @@ const SERVICE_PACKAGE_NAMES = [
 ];
 
 test("public catalog counts match the canonical product order", () => {
-  // SQ-15: the four-chip "15 products / real job results / small packs online /
-  // bulk quotes" row (which is where the <span><b>15</b> products</span> this
-  // used to check lived) is gone — it restated catalog metadata a buyer was
-  // about to see directly below, and was most of what pushed the hero past a
-  // headline-plus-one-line. The count still can't drift silently: it's pinned
-  // in the meta description and on the homepage stat.
   const count = String(CATALOG_ORDER.length);
-  const products = readSite("products.html");
-  assert.match(products, new RegExp(`content="Shop ${count} VertKleen cleaners`));
-  assert.match(
-    readSite("index.html"),
-    new RegExp(`<div class="big">${count}</div><div class="lbl">Buyable VertKleen products</div>`),
-  );
+  assert.match(readSite("products.html"), new RegExp(`content="Shop ${count} VertKleen cleaners`));
+  // The landing page routes to the canonical catalog without duplicating its count.
+  assert.match(readSite("index.html"), /href="products">Shop VertKleen/);
 });
 
 test("CR60 publication hold removes public commerce while retaining authoritative pricing", () => {

@@ -4,23 +4,12 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("home page opens directly into the verified field-job scrolly story", () => {
+test("homepage uses the approved stable unveiling with documented proof", () => {
   const html = read("index.html");
-  const css = read("css/style.css");
-
-  assert.doesNotMatch(html, /premium-story-hero/, "home should not include the rejected premium intro scene");
-  assert.doesNotMatch(html, /replacement-console/, "home should not include the rejected replacement console scene");
-  assert.doesNotMatch(html, /home-quick-actions/, "home should not show the removed quick-action switcher");
-  assert.match(html, /<div class="story" id="story"/, "home should open directly into the field-job story");
-  assert.equal((html.match(/class="story-object"/g) || []).length, 1, "story should keep one persistent visual object");
-  assert.deepEqual(
-    [...html.matchAll(/data-scene="(kitchen-grease|cip-vessel|labelle-fermenter|shower-track|airboat-panel|pool-cartridge)"/g)].map((match) => match[1]),
-    ["kitchen-grease", "cip-vessel", "labelle-fermenter", "shower-track", "airboat-panel", "pool-cartridge"],
-  );
-  assert.match(html, /class="story-object__range" type="range"/);
-  assert.doesNotMatch(html, /supabase\.co\/storage\/v1\/object/i);
-  assert.doesNotMatch(css, /\.premium-story-hero\b/, "removed intro scene should not leave active styling behind");
-  assert.doesNotMatch(css, /\.replacement-console\b/, "removed replacement console should not leave active styling behind");
+  assert.match(html, /class="home-unveiling"/);
+  assert.match(html, /id="results"/);
+  assert.match(html, /hcr-brevard-hvac-rust-case-study/);
+  assert.doesNotMatch(html, /premium-story-hero|replacement-console|home-quick-actions|class="story-object"|id="story"/);
 });
 
 test("product listing exposes proof-led premium commerce cards", () => {

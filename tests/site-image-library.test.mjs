@@ -32,9 +32,9 @@ const APPROVED_REPRESENTATIVE_IMAGES = [
 ];
 const PUBLIC_TEXT_EXTENSIONS = new Set([".css", ".html", ".js", ".json", ".xml"]);
 const PUBLIC_SOURCE_DENY = [
-  /^(?:functions|cloudflare|supabase|tools|tests|factory|artifacts|node_modules|dist|tmp)(?:\/|$)/,
+  /^(?:functions|cloudflare|supabase|tools|tests|factory|artifacts|node_modules|dist|tmp|graft)(?:\/|$)/,
   /^(?:audit-[^/]+|audits?|masest\.co-audit)(?:\/|$)/,
-  /^(?:\.github|\.vscode|docs\/research)(?:\/|$)/,
+  /^(?:\.github|\.vscode|docs\/research|docs\/reviews)(?:\/|$)/,
   /^data\/(?:company-identity|approved-label-release|public-document-review|update-media-review|update-bundle-review|industry-applications)\.json$/,
   /^data\/(?:catalog|products)\.seed\.json$/,
   /^data\/vertkleen-website-publish-2026-v4\.1\.json$/,

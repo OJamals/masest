@@ -25,16 +25,13 @@ test("mobile discovery opens directly on the catalog without redundant routing c
   assert.doesNotMatch(products, />CIP food pricing<\/a>/i);
 });
 
-test("request page leads into the form before process reassurance", () => {
+test("request page leads straight into two contact choices", () => {
   const contact = read("contact.html");
   const css = read("css/style.css");
-  const start = contact.indexOf('href="#quoteForm">Find my VertKleen product');
   const form = contact.indexOf('id="quoteForm"');
-  const assurance = contact.indexOf('class="quote-assurance"');
-
-  assert.ok(start > 0, "contact hero should link directly to the request form");
-  assert.ok(form > start, "request form should follow the hero CTA");
-  assert.ok(assurance > form, "process reassurance should follow the form instead of blocking it");
+  assert.ok(form > contact.indexOf('<h1'), "request form should follow the short page introduction");
+  assert.ok(contact.indexOf('id="requestModeChooser"') > form);
+  assert.doesNotMatch(contact, /class="quote-assurance"/, "the initial contact page should stay focused");
   assert.match(css, /#quoteForm\s*{[^}]*scroll-margin-top:\s*74px;/s, "form anchor should clear the sticky header");
 });
 
@@ -69,23 +66,13 @@ test("static product hero exposes buying context before long copy", () => {
   assert.match(product, /class="product-back-link"[^>]*>Browse all cleaners<\/a>/);
 });
 
-test("animated homepage copy keeps stable accessible names", () => {
+test("homepage copy and actions retain stable accessible names", () => {
   const home = read("index.html");
-
-  assert.match(home, /<section class="act"[^>]*aria-labelledby="storyAct1Title">/);
-  // The accessible name is the h1's text content, so assert on that rather than on raw
-  // markup — inline typographic spans (e.g. .no-break) must not count as a copy change.
-  const headline = home.match(/<h1 class="act-h" id="storyAct1Title"[^>]*>([\s\S]*?)<\/h1>/)?.[1];
-  assert.equal(
-    String(headline).replace(/<[^>]+>/g, "").replace(/&rsquo;/g, "’"),
-    "Industrial strength. Better chemistry.",
-  );
-  assert.match(home, /aria-label="Shop VertKleen CRHD"/);
-  assert.match(home, /aria-label="Try VertKleen CRHD on my cleaning job"/);
-  assert.doesNotMatch(home, /starting candidate|trial candidate|Candidate only after|path to approval/i);
-  assert.match(home, /Break down and rinse away/);
-  assert.match(home, /Whole-job cost/);
-  assert.doesNotMatch(home, /class="cmp-table cmp-jobs"/);
+  assert.match(home, /aria-labelledby="home-title"/);
+  assert.match(home, /<h1 class="display" id="home-title">Your team\.<br><span[^>]*>Your brand\.<\/span><\/h1>/);
+  assert.match(home, /Request a private-label quote/);
+  assert.match(home, /Shop VertKleen/);
+  assert.doesNotMatch(home, /data-act=|class="cmp-table cmp-jobs"/);
 });
 
 test("CIP pricing label stays consistent across entry, detail, and resource surfaces", () => {

@@ -10,6 +10,8 @@ const ROOT_PATH = ROOT.pathname;
 const EXPECTED_LOGOS = [
   "/img/masest-logo.png",
   "/img/masest-logo-ink.png",
+  "/img/masest-logo-nav.png",
+  "/img/masest-logo-nav-ink.png",
 ];
 
 function sourceFiles(directory = ROOT_PATH) {
@@ -69,7 +71,7 @@ test("shared chrome renders decoded, named logos on root and nested routes", asy
         ]) {
           const failedLogoResponses = [];
           const onResponse = (response) => {
-            if (/\/img\/masest-logo(?:-ink)?\.png(?:$|\?)/.test(response.url()) && !response.ok()) {
+            if (/\/img\/masest-logo(?:-nav)?(?:-ink)?\.png(?:$|\?)/.test(response.url()) && !response.ok()) {
               failedLogoResponses.push(`${response.status()} ${response.url()}`);
             }
           };

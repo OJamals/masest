@@ -41,12 +41,12 @@ test("homepage static preview does not call unavailable api functions", async ()
       });
 
       await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
-      await page.locator(".proof-section").scrollIntoViewIfNeeded();
+      await page.locator(".home-proof").scrollIntoViewIfNeeded();
       await page.waitForTimeout(500);
 
       assert.deepEqual(badApiResponses, []);
       assert.deepEqual(consoleErrors, []);
-      const proofImages = await page.locator(".proof-grid .proof-card img").evaluateAll(images =>
+      const proofImages = await page.locator(".home-proof__photos img").evaluateAll(images =>
         images.map(image => ({
           src: image.currentSrc,
           complete: image.complete,

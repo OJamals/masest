@@ -1,168 +1,65 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-import { launchTestBrowser, startStaticTestServer } from "../tools/test-static-server.mjs";
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { launchTestBrowser, startStaticTestServer } from '../tools/test-static-server.mjs';
 
-let BASE_URL = "";
-
-async function withServer(fn) {
-  const staticSite = await startStaticTestServer(new URL("..", import.meta.url));
-  BASE_URL = staticSite.baseUrl;
+test('landing pages keep buyer actions visible and layouts within each viewport', async () => {
+  const server = await startStaticTestServer(new URL('../', import.meta.url));
+  const browser = await launchTestBrowser();
   try {
-    await fn();
-  } finally {
-    await staticSite.close();
-  }
-}
-
-test("homepage first fold prioritizes replacement and trial without duplicate shortcuts", async () => {
-  await withServer(async () => {
-    const browser = await launchTestBrowser();
-    const page = await browser.newPage({
-      viewport: { width: 1440, height: 1000 },
-      reducedMotion: "reduce",
-    });
-
-    try {
-      await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(300);
-      const result = await page.evaluate(() => {
-        const isVisible = (el) => {
-          const rect = el.getBoundingClientRect();
-          const style = getComputedStyle(el);
-          return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
-        };
-        const ctas = [...document.querySelectorAll("a, button")]
-          .filter(isVisible)
-          .map((el) => {
-            const rect = el.getBoundingClientRect();
-            return {
-              text: (el.innerText || el.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim(),
-              top: rect.top,
-              bottom: rect.bottom,
-            };
-          })
-          .filter((item) => item.bottom <= window.innerHeight);
-
-        return {
-          ctas,
-          shortcuts: [...document.querySelectorAll(".story-shortcuts a")]
-            .filter(isVisible)
-            .map((el) => {
-              const rect = el.getBoundingClientRect();
-              return {
-                text: (el.innerText || "").replace(/\s+/g, " ").trim(),
-                href: el.getAttribute("href"),
-                bottom: rect.bottom,
-              };
-            }),
-          hasScrollCue: !!document.querySelector(".scroll-cue"),
-        };
-      });
-
-      assert.equal(result.hasScrollCue, false, "first fold should not include a decorative scroll cue");
-      assert.ok(result.ctas.some((cta) => cta.text === "Shop CRHD"), "matched product CTA should be visible in the first fold");
-      assert.ok(result.ctas.some((cta) => cta.text === "Try it"), "trial CTA should be visible in the first fold");
-      assert.deepEqual(result.shortcuts, [], "first fold should not repeat replacement actions in a shortcut rail");
-    } finally {
-      await browser.close();
-    }
-  });
-});
-
-test("homepage keeps a primary action visible on short mobile", async () => {
-  await withServer(async () => {
-    const browser = await launchTestBrowser();
-    const page = await browser.newPage({
-      viewport: { width: 390, height: 700 },
-      reducedMotion: "reduce",
-    });
-
-    try {
-      await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(300);
-      const result = await page.evaluate(() => {
-        const visibleInFold = (selector, text) => [...document.querySelectorAll(selector)].some((el) => {
-          const rect = el.getBoundingClientRect();
-          const style = getComputedStyle(el);
-          const label = (el.innerText || el.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim();
-          return rect.width > 0 &&
-            rect.height > 0 &&
-            rect.bottom <= window.innerHeight &&
-            style.display !== "none" &&
-            style.visibility !== "hidden" &&
-            label === text;
+    for (const width of [320, 768, 1024, 1440]) {
+      const page = await browser.newPage({ viewport: { width, height: width === 320 ? 568 : 900 }, reducedMotion: 'reduce' });
+      for (const path of ['/', '/private-label']) {
+        await page.goto(server.baseUrl + path);
+        await page.locator('.nav').waitFor();
+        await page.evaluate(() => document.fonts.ready);
+        const dimensions = await page.evaluate(() => {
+          const cta = document.querySelector('.home-hero .home-button').getBoundingClientRect();
+          return { scroll: document.documentElement.scrollWidth, width: innerWidth, height: innerHeight, top: cta.top, bottom: cta.bottom };
         });
-        return {
-          hasPrimary: visibleInFold(".story-actions a", "Shop CRHD"),
-          hasTrial: visibleInFold(".story-actions a", "Try it"),
-          visibleShortcuts: [...document.querySelectorAll(".story-shortcuts a")].filter((el) => {
-            const rect = el.getBoundingClientRect();
-            const style = getComputedStyle(el);
-            return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
-          }).length,
-          overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
-        };
-      });
-
-      assert.equal(result.hasPrimary, true, "short mobile should keep the primary product path visible");
-      assert.equal(result.hasTrial, true, "short mobile should keep the trial path visible");
-      assert.equal(result.visibleShortcuts, 0, "short mobile should hide the secondary shortcut rail");
-      assert.equal(result.overflow, false, "short mobile should not create horizontal overflow");
-    } finally {
-      await browser.close();
+        assert.ok(dimensions.scroll <= width + 1, `${path} overflows at ${width}px`);
+        assert.ok(dimensions.top >= 0 && dimensions.bottom <= dimensions.height, `${path} CTA below fold at ${width}px: ${dimensions.bottom}`);
+        assert.equal(await page.locator('h1').count(), 1);
+        assert.equal(await page.locator('.brand-wordmark, .home-wordmark').count(), 0);
+        assert.equal(await page.locator('.nav-logo .logo-grad').evaluate(el => Math.round(el.getBoundingClientRect().height)), width <= 820 ? 44 : 48);
+      }
+      await page.close();
     }
-  });
+  } finally { await browser.close(); await server.close(); }
 });
 
-test("homepage first scene keeps the persistent object clear of compact iPad copy", async () => {
-  await withServer(async () => {
-    const browser = await launchTestBrowser();
-    const page = await browser.newPage({
-      // Playwright's iPad (gen 11) CSS width; height matches the reported crop.
-      viewport: { width: 656, height: 683 },
-      deviceScaleFactor: 2,
-      reducedMotion: "no-preference",
-    });
+test('homepage keyboard navigation exposes skip link, private label, and HVAC menu entry', async () => {
+  const server = await startStaticTestServer(new URL('../', import.meta.url));
+  const browser = await launchTestBrowser();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    await page.goto(server.baseUrl);
+    await page.locator('.nav').waitFor();
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator('.skip-link').evaluate(el => el === document.activeElement), true);
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(() => location.hash), '#main');
+    const applications = page.locator('.nav-group').filter({ hasText: 'Applications' }).locator('summary');
+    await applications.focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).waitFor({ state: 'visible' });
+    assert.equal(await page.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), true);
+    await page.keyboard.press('Escape');
+    await page.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await page.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), false);
+    await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'Private Label', exact: true }).click();
+    assert.equal(new URL(page.url()).pathname, '/private-label');
+  } finally { await browser.close(); await server.close(); }
+});
 
-    try {
-      await page.goto(`${BASE_URL}/index.html`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => (
-        document.getElementById("story")?.classList.contains("story-mobile-ready")
-      ));
-      const result = await page.evaluate(async () => {
-        const act = document.querySelector('.story .act[data-act="1"]');
-        act.scrollIntoView({ block: "center" });
-        await new Promise((resolve) => setTimeout(resolve, 350));
-        const rect = (selector) => {
-          const box = document.querySelector(selector).getBoundingClientRect();
-          return {
-            left: Math.round(box.left),
-            right: Math.round(box.right),
-            top: Math.round(box.top),
-            bottom: Math.round(box.bottom),
-            width: Math.round(box.width),
-          };
-        };
-        const copy = rect('.story .act[data-act="1"] .act-content');
-        const object = rect(".story-object__card");
-        return {
-          copy,
-          object,
-          sceneEnvelope: Math.max(copy.right, object.right) - Math.min(copy.left, object.left),
-          mobileReady: document.getElementById("story").classList.contains("story-mobile-ready"),
-          overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
-        };
-      });
-
-      assert.equal(result.mobileReady, true, JSON.stringify(result));
-      assert.ok(result.sceneEnvelope >= 656 * 0.75, JSON.stringify(result));
-      assert.ok(result.copy.top >= result.object.bottom + 16, JSON.stringify(result));
-      assert.ok(result.copy.width >= 250, JSON.stringify(result));
-      assert.ok(result.object.width >= 560, JSON.stringify(result));
-      assert.ok(result.object.right <= 656, JSON.stringify(result));
-      assert.equal(result.overflow, false, JSON.stringify(result));
-    } finally {
-      await browser.close();
-    }
-  });
+test('homepage retains both buying routes and readable proof without JavaScript', async () => {
+  const server = await startStaticTestServer(new URL('../', import.meta.url));
+  const browser = await launchTestBrowser();
+  try {
+    const page = await browser.newPage({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+    await page.goto(server.baseUrl);
+    assert.equal(await page.locator('.home-hero').getByRole('link', { name: 'Request a private-label quote' }).isVisible(), true);
+    assert.equal(await page.locator('.home-hero').getByRole('link', { name: 'Shop VertKleen' }).isVisible(), true);
+    assert.equal(await page.getByRole('link', { name: 'Read the field record' }).isVisible(), true);
+    assert.equal(await page.locator('.nojs-nav').getByRole('link', { name: 'Private Label', exact: true }).isVisible(), true);
+  } finally { await browser.close(); await server.close(); }
 });

@@ -11,3 +11,10 @@ export const QUOTE_TASK_DETAILS = Object.freeze([
 ]);
 
 export const QUOTE_TASK_DETAIL_INTENTS = Object.freeze(['quote', 'audit', 'sample']);
+
+export const PRIVATE_LABEL_DETAILS = Object.freeze([
+  { id: 'fPrivateApplication', name: 'private_label_application', label: 'Private-label application', limit: 800 },
+  { id: 'fPrivateQuantity', name: 'private_label_quantity', label: 'Estimated private-label quantity', limit: 160 },
+  { id: 'fPrivatePackaging', name: 'private_label_packaging', label: 'Packaging preference', limit: 160 },
+  { id: 'fPrivateDestination', name: 'private_label_destination', label: 'Delivery location', limit: 240 },
+]);

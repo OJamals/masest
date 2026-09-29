@@ -85,6 +85,12 @@ test.afterAll(async () => {
 });
 
 async function openStory(page) {
+  // Retained engine coverage uses the archived markup at its original URL so
+  // relative runtime imports and fragment navigation keep their real behavior.
+  await page.route(`${BASE_URL}/index.html`, route => route.fulfill({
+    path: new URL('./fixtures/legacy-story.fixture', import.meta.url).pathname,
+    contentType: 'text/html',
+  }));
   const errors = [];
   page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
   page.on("response", (response) => {
@@ -872,6 +878,10 @@ test("no-JS mode keeps all six chapters, pairs, and actions readable", async ({ 
   await mediaIsolation.install(context);
   const page = await context.newPage();
   try {
+    await page.route(`${BASE_URL}/index.html`, route => route.fulfill({
+      path: new URL('./fixtures/legacy-story.fixture', import.meta.url).pathname,
+      contentType: 'text/html',
+    }));
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
     const state = await page.evaluate(() => {
       const story = document.getElementById("story");

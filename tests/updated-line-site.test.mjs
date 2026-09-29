@@ -18,8 +18,8 @@ test("site presents one program portfolio without exposing account-specific mate
 
   assert.match(chrome, /href:\s*"programs",\s*label:\s*"Programs"/);
   assert.doesNotMatch(chrome, /Water Programs/);
-  assert.match(home, /Replace the shelf\. Train the crew\. Keep every route supplied\./);
-  assert.match(home, /contact\?type=program/);
+  assert.match(home, /Private-label supply/);
+  assert.match(home, /contact\?type=private-label/);
   assert.match(programs, /Chemical consolidation/);
   assert.match(programs, /Private-label supply/);
   assert.match(programs, /Pilot rollout/);
@@ -40,7 +40,7 @@ test("program intake captures fleet, pilot, supply, and training context", () =>
   for (const id of ["fProgramAssets", "fPilotSize"]) {
     const field = contact.match(new RegExp(`<(?:input|select|textarea)[^>]*id="${id}"[^>]*>`));
     assert.ok(field, `${id} present`);
-    assert.match(field[0], /data-req/, `${id} required only for program intent`);
+    assert.doesNotMatch(field[0], /data-req|required/, `${id} optional for initial program contact`);
   }
   for (const name of ["current_sku_count", "monthly_usage", "preferred_packs", "current_vendor", "program_services"]) {
     assert.match(contact, new RegExp(`name="${name}"`), `${name} captured`);

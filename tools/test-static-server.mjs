@@ -55,7 +55,11 @@ export async function startStaticTestServer(rootDirectory) {
       return;
     }
 
-    const file = resolve(root, `.${pathname === "/" ? "/index.html" : pathname}`);
+    // Match Pages' extensionless public routes so local tests can follow the
+    // same links as customers instead of rewriting every href to .html.
+    const publicPath = pathname === "/" ? "/index.html"
+      : (!extname(pathname) && !pathname.startsWith('/api/') ? `${pathname}.html` : pathname);
+    const file = resolve(root, `.${publicPath}`);
     if (!file.startsWith(`${root}${sep}`)) {
       response.writeHead(403).end("forbidden");
       return;

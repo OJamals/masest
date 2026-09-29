@@ -1,7 +1,21 @@
 {
   "version": 1,
-  "count": 307,
+  "count": 312,
   "assets": [
+    {
+      "storage_path": "/img/home/vertkleen-unveiling-hero-v5.webp",
+      "public_url": "/img/home/vertkleen-unveiling-hero-v5.webp",
+      "filename": "vertkleen-unveiling-hero-v5.webp",
+      "alt": "Studio illustration of VertKleen CR, HCR, and Purgo product branding",
+      "width": 1679,
+      "height": 937,
+      "byte_size": 151998,
+      "sha256": "f2579f1a2ee68064b813c0d98803af1d2eea807478a1b1f3e9e238925418f24d",
+      "mime_type": "image/webp",
+      "category": "home",
+      "status": "available",
+      "source": "site"
+    },
     {
       "storage_path": "/img/before-after/brewery-tank-after-202609.webp",
       "public_url": "/img/before-after/brewery-tank-after-202609.webp",
@@ -4297,6 +4311,62 @@
       "sha256": "c33342ce274f6ff783b595d036e3209502f8465a1fb38913955fc1486ca30d53",
       "mime_type": "image/webp",
       "category": "proof",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/home/vertkleen-unveiling-hero-v5-480.webp",
+      "public_url": "/img/home/vertkleen-unveiling-hero-v5-480.webp",
+      "filename": "vertkleen-unveiling-hero-v5-480.webp",
+      "alt": "Studio illustration of VertKleen CR, HCR, and Purgo product branding",
+      "width": 480,
+      "height": 268,
+      "byte_size": 25608,
+      "sha256": "1f428ca1fe4a0719bbdfffa78364d1c3bcbb0e0103fd195e9476fdd61a89d8a9",
+      "mime_type": "image/webp",
+      "category": "home",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/home/vertkleen-unveiling-hero-v5-960.webp",
+      "public_url": "/img/home/vertkleen-unveiling-hero-v5-960.webp",
+      "filename": "vertkleen-unveiling-hero-v5-960.webp",
+      "alt": "Studio illustration of VertKleen CR, HCR, and Purgo product branding",
+      "width": 960,
+      "height": 536,
+      "byte_size": 75020,
+      "sha256": "7642b7eacd3da0f0b092b2ab2dcbba74daf2068008f31c45fee51c5e0f23c1c8",
+      "mime_type": "image/webp",
+      "category": "home",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/masest-logo-nav.png",
+      "public_url": "/img/masest-logo-nav.png",
+      "filename": "masest-logo-nav.png",
+      "alt": "MASEST gradient logo",
+      "width": 76,
+      "height": 95,
+      "byte_size": 10707,
+      "sha256": "99336a2e3e23314f927a16d2d99c1e65bd732041d531c8fbbb3f74435ffd8e07",
+      "mime_type": "image/png",
+      "category": "brand",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/masest-logo-nav-ink.png",
+      "public_url": "/img/masest-logo-nav-ink.png",
+      "filename": "masest-logo-nav-ink.png",
+      "alt": "MASEST dark ink logo",
+      "width": 76,
+      "height": 95,
+      "byte_size": 7207,
+      "sha256": "7d1a73196fb34d5eca4ec62c967c1a355c510cfd6bd27996dee637b4d2e965c2",
+      "mime_type": "image/png",
+      "category": "brand",
       "status": "available",
       "source": "site"
     }

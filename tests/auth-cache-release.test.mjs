@@ -4,24 +4,22 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
-const RELEASE = "20260928a";
-const CHAT_RELEASE = "20260928a";
-const MAIN_RELEASE = "20260928a";
-const ADMIN_RELEASE = "20260928a";
-const ADMIN_PAGE_RELEASE = "20260928a";
-const ADMIN_ACCOUNTS_RELEASE = "20260928a";
-const ADMIN_WORKFLOW_RELEASE = "20260928a";
-const ADMIN_CHROME_RELEASE = "20260928a";
+const RELEASE = "20260929a";
+const CHAT_RELEASE = "20260929a";
+const MAIN_RELEASE = "20260929a";
+const ADMIN_RELEASE = "20260929a";
+const ADMIN_PAGE_RELEASE = "20260929a";
+const ADMIN_ACCOUNTS_RELEASE = "20260929a";
+const ADMIN_WORKFLOW_RELEASE = "20260929a";
+const ADMIN_CHROME_RELEASE = "20260929a";
 const CHROME_RELEASE = MAIN_RELEASE;
-const ACCOUNT_NAV_RELEASE = "20260928a";
-const CUSTOMER_CHAT_RELEASE = "20260928a";
-const CUSTOMER_CHAT_STYLE_RELEASE = "20260925a";
-const CONTENT_RELEASE = "20260928a";
-const STORY_RELEASE = "20260928a";
-const STORY_STYLE_RELEASE = "20260925a";
-const PUBLIC_SUPPORT_RELEASE = "20260928a";
-const ADMIN_SUPPORT_RELEASE = "20260928a";
-const ADMIN_SUPPORT_STYLE_RELEASE = "20260925a";
+const ACCOUNT_NAV_RELEASE = "20260929a";
+const CUSTOMER_CHAT_RELEASE = "20260929a";
+const CUSTOMER_CHAT_STYLE_RELEASE = "20260929a";
+const CONTENT_RELEASE = "20260929a";
+const PUBLIC_SUPPORT_RELEASE = "20260929a";
+const ADMIN_SUPPORT_RELEASE = "20260929a";
+const ADMIN_SUPPORT_STYLE_RELEASE = "20260929a";
 const MAIN_RELEASE_OVERRIDES = new Map();
 
 function filesUnder(path) {
@@ -91,8 +89,8 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/admin-support.js"), new RegExp(`admin-support\\.css\\?v=${ADMIN_SUPPORT_STYLE_RELEASE}`));
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("products/hcr.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
-  assert.match(read("index.html"), new RegExp(`story\\.css\\?v=${STORY_STYLE_RELEASE}`));
-  assert.match(read("index.html"), new RegExp(`story\\.js\\?v=${STORY_RELEASE}`));
+  assert.match(read("index.html"), new RegExp(`main\\.js\\?v=${RELEASE}`));
+  assert.doesNotMatch(read("index.html"), /story\.(?:css|js)\?v=/);
 });
 
 test("segment pricing entrypoints and pricing-data importers share the public release", () => {
