@@ -1,0 +1,93 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+import test from 'node:test';
+
+const track = readFileSync(new URL('../js/track.js', import.meta.url), 'utf8');
+const confirmation = readFileSync(new URL('../order-confirmed.html', import.meta.url), 'utf8')
+  .match(/<script>\s*([\s\S]*?)<\/script>/)[1];
+const storage = () => {
+  const values = new Map();
+  return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: (key) => values.delete(key) };
+};
+
+function tracking({ sessionStorage = storage(), referrer = '', pathname = '/', search = '', accepted = true } = {}) {
+  const blobs = [];
+  const fallbacks = [];
+  const window = {};
+  runInNewContext(track, {
+    window, sessionStorage, document: { referrer },
+    location: { hostname: 'masest.co', pathname, search },
+    crypto: { randomUUID: () => 'session-id' }, URL, URLSearchParams, Blob,
+    navigator: { sendBeacon: (_url, blob) => { if (accepted) blobs.push(blob); return accepted; } },
+    fetch: async (_url, init) => { fallbacks.push(JSON.parse(init.body)); return { ok: true }; },
+  });
+  return { window, sessionStorage, fallbacks, packets: async () => Promise.all(blobs.map(async (blob) => JSON.parse(await blob.text()))) };
+}
+
+test('entry referrer survives internal navigation and strips URL secrets', async () => {
+  const first = tracking({ referrer: 'https://www.google.com/search?q=private&email=person%40example.com' });
+  const next = tracking({ sessionStorage: first.sessionStorage, referrer: 'https://masest.co/products/hcr?token=secret', pathname: '/contact', search: '?session_id=secret' });
+  next.window.mtrack('quote_submit', { dedupe_key: 'quote-id', request_type: 'sample' });
+  const packets = [...await first.packets(), ...await next.packets()];
+  assert.ok(packets.every((packet) => packet.referrer === 'https://www.google.com'));
+  assert.equal(packets[2].path, '/contact#request_type=sample');
+  assert.doesNotMatch(JSON.stringify(packets), /private|person|secret|quote-id/);
+});
+
+test('repeat acknowledgement of one quote emits once; different quote emits separately', async () => {
+  const first = tracking();
+  first.window.mtrack('quote_submit', { dedupe_key: 'one' });
+  first.window.mtrack('quote_submit', { dedupe_key: 'one' });
+  const next = tracking({ sessionStorage: first.sessionStorage });
+  next.window.mtrack('quote_submit', { dedupe_key: 'one' });
+  next.window.mtrack('quote_submit', { dedupe_key: 'two' });
+  const packets = [...await first.packets(), ...await next.packets()];
+  assert.equal(packets.filter((packet) => packet.event === 'quote_submit').length, 2);
+  assert.equal(packets.filter((packet) => packet.event === 'pageview').length, 2);
+});
+
+test('rejected sendBeacon queue falls back to fetch, preserving attribution', () => {
+  const result = tracking({ accepted: false, search: '?utm_source=partner&utm_medium=email' });
+  result.window.mtrack('quote_submit', { dedupe_key: 'one' });
+  result.window.mtrack('quote_submit', { dedupe_key: 'one' });
+  assert.equal(result.fallbacks.length, 2);
+  assert.equal(result.fallbacks[1].utm.utm_source, 'partner');
+});
+
+async function confirm(order, sessionStorage = storage(), search = '?session_id=cs_example') {
+  const events = [];
+  const nodes = {};
+  runInNewContext(confirmation, {
+    location: { search }, URLSearchParams, Intl,
+    document: { getElementById: (id) => nodes[id] ||= {}, querySelectorAll: () => [] },
+    localStorage: storage(), sessionStorage,
+    window: { mtrack: (event) => events.push(event) },
+    fetch: async () => ({ ok: true, json: async () => order }),
+  });
+  await new Promise(setImmediate);
+  return { events, nodes, sessionStorage };
+}
+
+test('only explicit live paid Checkout Sessions emit confirmation events', async () => {
+  for (const order of [
+    { payment_status: 'unpaid', live_mode: true },
+    { payment_status: 'paid', live_mode: false },
+    { payment_status: 'paid' },
+    { live_mode: true },
+    { payment_status: 'no_payment_required', live_mode: true },
+  ]) assert.deepEqual((await confirm(order)).events, []);
+  assert.deepEqual((await confirm({ payment_status: 'paid', live_mode: true })).events, ['order_confirmed']);
+});
+
+test('unpaid return does not consume the later paid confirmation; reload deduplicates', async () => {
+  const first = await confirm({ payment_status: 'unpaid', live_mode: true });
+  assert.match(first.nodes.sessionSummary.textContent, /payment is processing/);
+  const paid = await confirm({ payment_status: 'paid', live_mode: true }, first.sessionStorage);
+  assert.deepEqual(paid.events, ['order_confirmed']);
+  assert.deepEqual((await confirm({ payment_status: 'paid', live_mode: true }, first.sessionStorage)).events, []);
+});
+
+test('direct confirmation-page visit never emits a paid event', async () => {
+  assert.deepEqual((await confirm({ payment_status: 'paid', live_mode: true }, storage(), '')).events, []);
+});

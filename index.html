@@ -477,8 +477,8 @@
 </section>
 </main>
 
-<script type="module" src="js/main.js?v=20260925a"></script>
-<script src="js/track.js" defer></script>
+<script type="module" src="js/main.js?v=20260928a"></script>
+<script src="js/track.js?v=20260928a" defer></script>
 <!-- Scroll engine: GSAP ScrollTrigger (native scroll, no Lenis). ONLY the desktop story
      uses it -- below 761px story.js runs initCompactStory(), which never touches gsap -- so
      these are media-gated preloads rather than unconditional scripts: a phone downloaded
@@ -487,7 +487,7 @@
      them in cache by then. It still degrades to the static story if they fail to load. -->
 <link rel="preload" as="script" href="vendor/gsap/gsap.min.js" media="(min-width: 761px)">
 <link rel="preload" as="script" href="vendor/gsap/ScrollTrigger.min.js" media="(min-width: 761px)">
-<script src="js/story.js?v=20260925a" defer></script>
+<script src="js/story.js?v=20260928a" defer></script>
 <script type="module">
 const { initReveal, productCard } = window.MASESTMain;
 document.addEventListener("DOMContentLoaded", () => {

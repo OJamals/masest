@@ -4,8 +4,8 @@ import {
   parseRequestContext,
   requestContextNotes,
   requestContextVolume,
-} from "../request-context.js?v=20260925a";
-import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS } from "../quote-task-details.js?v=20260925a";
+} from "../request-context.js?v=20260928a";
+import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS } from "../quote-task-details.js?v=20260928a";
 
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {
@@ -83,6 +83,7 @@ async function submitRequest(form, data) {
     try {
       if (typeof window.mtrack === "function") {
         window.mtrack("quote_submit", {
+          dedupe_key: acknowledgement.quote_id,
           request_type: data.get("type"),
           industry: data.get("industry"),
           product: data.get("product"),

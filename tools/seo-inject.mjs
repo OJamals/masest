@@ -965,8 +965,8 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   ${contentPageMount(`products/${id}`)}
 </main>
 <script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
-<script type="module" src="../js/reviews.js?v=20260925a"></script>
-<script src="../js/track.js" defer></script>
+<script type="module" src="../js/reviews.js?v=20260928a"></script>
+<script src="../js/track.js?v=${MAIN_VERSION}" defer></script>
 </body>
 </html>
 `;
@@ -1212,7 +1212,7 @@ ${jsonLd(serviceCategorySchema(category, items))}
   </section>
 </main>
 <script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
-<script src="../js/track.js" defer></script>
+<script src="../js/track.js?v=${MAIN_VERSION}" defer></script>
 </body>
 </html>
 `;

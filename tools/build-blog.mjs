@@ -385,7 +385,7 @@ function postPage(post, all) {
   </article>
 </main>
 <script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
-<script src="../js/track.js" defer></script>
+<script src="../js/track.js?v=${MAIN_VERSION}" defer></script>
 </body>
 </html>
 `;
@@ -521,7 +521,7 @@ ${cards}
 </main>
 <script type="module" src="js/main.js?v=${MAIN_VERSION}"></script>
 <script type="module" src="js/blog-index.js?v=${MAIN_VERSION}"></script>
-<script src="js/track.js" defer></script>
+<script src="js/track.js?v=${MAIN_VERSION}" defer></script>
 </body>
 </html>
 `;

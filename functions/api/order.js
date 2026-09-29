@@ -62,6 +62,7 @@ export async function onRequestGet({ request, env }) {
       total_tax: (s.total_details?.amount_tax ?? 0) / 100,
       shipping_service: String(s.metadata?.shipping_service_code || '').trim() || null,
       payment_status: s.payment_status,
+      live_mode: s.livemode === true,
       lines,
     });
   } catch {

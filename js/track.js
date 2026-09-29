@@ -1,17 +1,29 @@
 /* MASEST - first-party pageview + funnel-event beacon. Privacy-light: random per-session id,
- * no cookies, no PII. Include site-wide with <script src="js/track.js" defer></script>.
+ * no cookies, no PII. Include site-wide with <script src="js/track.js?v=20260928a" defer></script>.
  * Exposes window.mtrack(event) for funnel events and window.masestUtm() for forms.
  * Silently no-ops if the /api/track function isn't deployed. */
 (function () {
   try {
     if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname)) return;
-    var VKEY = 'masest_vid', UKEY = 'masest_utm';
+    var VKEY = 'masest_vid', UKEY = 'masest_utm', RKEY = 'masest_referrer';
 
     var vid = sessionStorage.getItem(VKEY);
     if (!vid) {
       vid = (crypto && crypto.randomUUID) ? crypto.randomUUID()
         : String(Date.now()) + Math.round(Math.random() * 1e9);
       sessionStorage.setItem(VKEY, vid);
+    }
+
+    // Preserve the entry referrer across internal navigation. Store only the origin:
+    // external URLs can contain email addresses, search terms, and capability tokens.
+    var referrer = sessionStorage.getItem(RKEY);
+    if (referrer === null) {
+      referrer = '';
+      try {
+        var ref = new URL(document.referrer);
+        if (/^https?:$/.test(ref.protocol) && ref.hostname !== 'masest.co' && !ref.hostname.endsWith('.masest.co')) referrer = ref.origin;
+      } catch (e) { /* direct or unavailable referrer */ }
+      sessionStorage.setItem(RKEY, referrer);
     }
 
     // First-touch UTM: capture from the URL once per session, then reuse for every beacon.
@@ -49,20 +61,27 @@
 
     function beacon(event, detail) {
       try {
+        // Durable quote IDs are used only for local retry deduplication, never sent.
+        var dedupeKey = detail && detail.dedupe_key ? 'masest_event:' + cleanPart(event, 40) + ':' + cleanPart(detail.dedupe_key, 128) : '';
+        if (dedupeKey && sessionStorage.getItem(dedupeKey)) return;
         var payload = JSON.stringify({
           // Query strings can contain checkout capabilities, auth codes, unsubscribe
           // tokens, or email addresses. Attribution is captured separately above.
           path: location.pathname + eventContext(detail),
-          referrer: document.referrer || '',
+          referrer: referrer,
           visitor: vid,
           event: cleanPart(event || 'pageview', 40),
           utm: utm,
         });
         if (navigator.sendBeacon) {
-          navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }));
-        } else {
-          fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(function () {});
+          if (navigator.sendBeacon('/api/track', new Blob([payload], { type: 'application/json' }))) {
+            if (dedupeKey) sessionStorage.setItem(dedupeKey, '1');
+            return;
+          }
         }
+        // sendBeacon can reject a full queue; fetch is the fallback in that case too.
+        fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true }).catch(function () {});
+        if (dedupeKey) sessionStorage.setItem(dedupeKey, '1');
       } catch (e) { /* never affect the page */ }
     }
 

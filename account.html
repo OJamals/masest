@@ -185,7 +185,7 @@
 </main>
 
 <script src="js/config.js"></script>
-<script type="module" src="js/main.js?v=20260925a"></script>
+<script type="module" src="js/main.js?v=20260928a"></script>
 
 <!-- Tab toggle: classic script so it works without modules / before auth loads -->
 <script>
@@ -221,7 +221,7 @@
 
 <!-- Auth wiring: module imports the Supabase helper -->
 <script type="module">
-  import { register, login, logout, me, completeRegistration, resendConfirmation, resetPasswordForEmail, updatePassword, onPasswordRecovery } from "./js/auth.js?v=20260925a";
+  import { register, login, logout, me, completeRegistration, resendConfirmation, resetPasswordForEmail, updatePassword, onPasswordRecovery } from "./js/auth.js?v=20260928a";
 
   const $ = (id) => document.getElementById(id);
   const authBox = $("acctAuth");

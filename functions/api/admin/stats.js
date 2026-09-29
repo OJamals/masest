@@ -5,8 +5,9 @@ import { cached } from '../../_lib/cache.js';
 import { orderLifecycle } from '../../_lib/order-lifecycle.js';
 import { staffAccessSummary } from '../../_lib/authz.js';
 import { summarizeAutomationRuns, automationAttentionCount } from '../../_lib/automation-runs.js';
+import { loadTrafficWindow, trafficMetrics } from '../../_lib/traffic-metrics.js';
 
-// Count queries + a 1000-row scan per load; result is org-wide, so cache it
+// Count queries + bounded order/traffic scans per load; result is org-wide, so cache it
 // briefly (no-op until RATE_KV is bound). Staff auth runs BEFORE the cache lookup.
 const STATS_TTL_SEC = 60;
 
@@ -21,7 +22,7 @@ export async function onRequestGet({ request, env }) {
   if (!staff) return json(403, { error: 'forbidden' });
 
   const sb = adminClient(env);
-  const payload = await cached(env, 'cache:admin:stats:v2', STATS_TTL_SEC, () => computeStats(sb));
+  const payload = await cached(env, 'cache:admin:stats:v3', STATS_TTL_SEC, () => computeStats(sb));
   // Role data must be attached AFTER the org-wide cache lookup. Putting it in the
   // cached payload could leak an owner's capabilities into another staff session.
   return json(200, { ...payload, staff_context: staffAccessSummary(role, user.email) });
@@ -97,11 +98,7 @@ async function computeStats(sb) {
     approvedCompanies,
     suspendedCompanies,
     unreadMessages,
-    views7d,
-    uniqueVisitors7d,
-    quoteSubmits7d,
-    checkoutStarts7d,
-    orderConfirms7d,
+    trafficWindow,
     buyCount,
     quoteCount,
     overdueQuoteFollowups,
@@ -117,11 +114,7 @@ async function computeStats(sb) {
     count('companies', (q) => q.eq('status', 'approved')),
     count('companies', (q) => q.eq('status', 'suspended')),
     count('messages', (q) => q.eq('sender_role', 'buyer').eq('read_by_staff', false)),
-    count('page_views', (q) => q.gte('created_at', since(7))),
-    count('page_views', (q) => q.gte('created_at', since(7)).not('visitor', 'is', null)),
-    count('page_views', (q) => q.eq('event', 'quote_submit').gte('created_at', since(7))),
-    count('page_views', (q) => q.eq('event', 'checkout_start').gte('created_at', since(7))),
-    count('page_views', (q) => q.eq('event', 'order_confirmed').gte('created_at', since(7))),
+    loadTrafficWindow(sb, since(7), nowIso).catch(() => null),
     count('products', (q) => q.eq('mode', 'buy').eq('active', true)),
     count('products', (q) => q.eq('mode', 'quote').eq('active', true)),
     count('quotes', (q) => q.lte('due_at', nowIso).neq('status', 'closed').neq('status', 'spam')),
@@ -135,6 +128,13 @@ async function computeStats(sb) {
     // not doing its job and nothing else would have said so.
     count('content_entries', (q) => q.eq('status', 'scheduled').lte('scheduled_at', nowIso)),
   ]);
+
+  const traffic = trafficMetrics(trafficWindow?.rows || []);
+  const views7d = traffic.pageviews.length;
+  const uniqueVisitors7d = traffic.unique;
+  const quoteSubmits7d = traffic.counts.quote_submit || 0;
+  const checkoutStarts7d = traffic.counts.checkout_start || 0;
+  const orderConfirms7d = traffic.counts.order_confirmed || 0;
 
   const byStatus = recentOrders.reduce((m, order) => {
     m[order.status] = (m[order.status] || 0) + 1;
@@ -197,6 +197,10 @@ async function computeStats(sb) {
     inactive: inactiveProducts,
   };
   const analytics = {
+    available: trafficWindow !== null,
+    truncated: trafficWindow?.truncated || false,
+    measurement_basis: 'browser_events',
+    unique_basis: 'session_ids_with_pageviews',
     views_7d: views7d,
     unique_visitors_7d: uniqueVisitors7d,
     quote_submits_7d: quoteSubmits7d,

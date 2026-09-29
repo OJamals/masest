@@ -2,7 +2,7 @@
 // Self-contained: no shared admin state, self-fetches /api/admin/traffic. Shared
 // primitives ($, api, admSkeleton, pct) are injected so this module stays a pure
 // function of its dependencies.
-import { esc } from '../util.js?v=20260914a';
+import { esc } from '../util.js?v=20260928a';
 
 export function createTrafficRenderer({ $, api, admSkeleton, pct }) {
   function renderTrafficFunnel(funnel = []) {
@@ -13,15 +13,15 @@ export function createTrafficRenderer({ $, api, admSkeleton, pct }) {
   }
 
   function renderTrafficCampaigns(topCampaigns = []) {
-    if (!topCampaigns.length) return '<div class="adm-card"><h2>Campaigns</h2><p class="muted">No UTM campaigns recorded.</p></div>';
-    return `<div class="adm-card"><h2>Campaigns</h2><table class="adm-mini-table"><tbody>${topCampaigns.map((row) => `
+    if (!topCampaigns.length) return '<div class="adm-card"><h2>Acquisition</h2><p class="muted">No attribution recorded.</p></div>';
+    return `<div class="adm-card"><h2>Acquisition</h2><table class="adm-mini-table"><tbody>${topCampaigns.map((row) => `
       <tr><td>${esc(row.key)}</td><td class="num">${esc(row.count)}</td></tr>
     `).join('')}</tbody></table></div>`;
   }
 
   function renderTrafficDays(byDay = []) {
     if (!byDay.length) return '<div class="adm-card"><h2>Daily trend</h2><p class="muted">No daily rows.</p></div>';
-    return `<div class="adm-card"><h2>Daily trend</h2><table class="adm-mini-table"><thead><tr><th>Day</th><th>Views</th><th>Unique</th><th>Conversion events</th></tr></thead><tbody>${byDay.map((row) => `
+    return `<div class="adm-card"><h2>Daily trend</h2><table class="adm-mini-table"><thead><tr><th>Day</th><th>Views</th><th>Session IDs</th><th>Conversion events</th></tr></thead><tbody>${byDay.map((row) => `
       <tr><td>${esc(row.day)}</td><td class="num">${esc(row.pageviews ?? row.count ?? 0)}</td><td class="num">${esc(row.unique || 0)}</td><td class="num">${esc(row.conversion_events || 0)}</td></tr>
     `).join('')}</tbody></table></div>`;
   }
@@ -41,9 +41,11 @@ export function createTrafficRenderer({ $, api, admSkeleton, pct }) {
         return;
       }
       box.innerHTML = `<div class="adm-traffic-report">
+        <p class="muted">Browser activity only. Session IDs are not verified people; repeat events and internal visits may be included. Confirm leads in Quotes and payments in Orders.</p>
+        ${data.truncated ? `<p class="adm-status" data-state="err">Partial window: showing ${esc(data.total)} events. Totals and rates do not cover the full period.</p>` : ''}
         <div class="adm-grid">
           <div class="adm-card adm-stat"><i class="ph ph-eye" aria-hidden="true"></i><b>${esc(data.total)}</b><span class="muted">Tracked events</span></div>
-          <div class="adm-card adm-stat"><i class="ph ph-users-three" aria-hidden="true"></i><b>${esc(data.unique)}</b><span class="muted">Known visitors</span></div>
+          <div class="adm-card adm-stat"><i class="ph ph-users-three" aria-hidden="true"></i><b>${esc(data.unique)}</b><span class="muted">Session IDs with pageviews</span></div>
           <div class="adm-card adm-stat"><i class="ph ph-arrow-square-out" aria-hidden="true"></i><b>${esc((data.events || []).find((row) => row.key === 'quote_submit')?.count || 0)}</b><span class="muted">Quote submits</span></div>
           <div class="adm-card adm-stat"><i class="ph ph-shopping-cart" aria-hidden="true"></i><b>${esc((data.events || []).find((row) => row.key === 'checkout_start')?.count || 0)}</b><span class="muted">Checkout starts</span></div>
         </div>

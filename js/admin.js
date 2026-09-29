@@ -1,12 +1,12 @@
 /* MASEST staff admin console. */
-import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260914a';
-import { esc, safeUrl, moneyDisplay, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260914a';
-import { editKey } from './admin/edits.js?v=20260914a';
-import { createFeatureLoader } from './admin/feature-loader.js?v=20260914a';
-import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260914a';
-import { renderAdminChrome, setAdminChromeSession } from './admin/chrome.js?v=20260914a';
-import { createAdminSessionLifecycle, createSessionPeerChannel } from './admin/session.js?v=20260914a';
-import { createAdminSearch } from './admin/search.js?v=20260914a';
+import { login, logout, api, apiBlob, getToken } from './auth.js?v=20260928a';
+import { esc, safeUrl, moneyDisplay, wireTablist, rovingTabindex, linkTabsToPanels, delegate, confirmDialog } from './util.js?v=20260928a';
+import { editKey } from './admin/edits.js?v=20260928a';
+import { createFeatureLoader } from './admin/feature-loader.js?v=20260928a';
+import { applyCapabilityUi, normalizeStaffContext, staffRoleLabel } from './admin/permissions.js?v=20260928a';
+import { renderAdminChrome, setAdminChromeSession } from './admin/chrome.js?v=20260928a';
+import { createAdminSessionLifecycle, createSessionPeerChannel } from './admin/session.js?v=20260928a';
+import { createAdminSearch } from './admin/search.js?v=20260928a';
 
 const $ = (id) => document.getElementById(id);
 
@@ -542,6 +542,8 @@ function renderOpsSummary(stats = {}) {
  const catalog = stats.catalog_health || {};
  const analytics = stats.analytics || {};
  const content = stats.content || {};
+ const analyticsValue = (value, format = fmtInt) => analytics.available === false
+   ? 'Unavailable' : `${format(value)}${analytics.truncated ? ' (partial)' : ''}`;
  // Third element routes the number into the workspace that owns the work:
  // { tab, control?, value? } sets that queue's own filter on arrival. A number
  // with no honest filter still routes to its workspace rather than dead-ending.
@@ -578,9 +580,9 @@ function renderOpsSummary(stats = {}) {
  ['Catalog + analytics', [
  ['Buy SKUs', fmtInt(catalog.buy), { tab: 'products' }],
  ['Low stock', fmtInt(catalog.low_stock), { tab: 'products' }],
- ['Views (7d)', fmtInt(stats.traffic?.views_7d), { tab: 'analytics' }],
- ['7d quote submits', fmtInt(analytics.quote_submits_7d), { tab: 'analytics' }],
- ['Quote rate', pct(analytics.quote_conversion_rate), { tab: 'analytics' }],
+ ['Views (7d)', analyticsValue(stats.traffic?.views_7d), { tab: 'analytics' }],
+ ['Quote events (7d)', analyticsValue(analytics.quote_submits_7d), { tab: 'analytics' }],
+ ['Quote event rate', analyticsValue(analytics.quote_conversion_rate, pct), { tab: 'analytics' }],
  ]],
  ];
  const row = ([label, value, route]) => {
@@ -619,7 +621,7 @@ async function downloadCsv(url, filename, statusId) {
 // Reports & exports card (#96). Bound once — the overview tab re-renders on each visit.
 let reportsWired = false;
 function wireReports() {
-  void import('./admin/stripe.js?v=20260914a').then(({ wireStripePayouts, renderStripePayouts }) => {
+  void import('./admin/stripe.js?v=20260928a').then(({ wireStripePayouts, renderStripePayouts }) => {
     wireStripePayouts();
     return renderStripePayouts();
   }).catch(() => {
@@ -700,8 +702,8 @@ let supportEntry = {};
 const featureLoader = createFeatureLoader({
   analytics: async () => {
     const [{ createTrafficRenderer }, { createSeoAudit }] = await Promise.all([
-      import('./admin/traffic.js?v=20260914a'),
-      import('./admin/seo.js?v=20260914a'),
+      import('./admin/traffic.js?v=20260928a'),
+      import('./admin/seo.js?v=20260928a'),
     ]);
     const renderTraffic = createTrafficRenderer({ $, api, admSkeleton, pct });
     const runSeoAudit = createSeoAudit({ $, state });
@@ -711,11 +713,11 @@ const featureLoader = createFeatureLoader({
     };
   },
   integrations: async () => {
-    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260914a');
-    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260914a');
-    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260914a');
-    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260914a');
-    const { createAutomationCard } = await import('./admin/automation.js?v=20260914a');
+    const { connectQbo, disconnectQbo, renderQboStatus, runQboSync } = await import('./admin/qbo.js?v=20260928a');
+    const { renderShipStationStatus, wireShipStationStatus } = await import('./admin/shipstation.js?v=20260928a');
+    const { renderStripeStatus } = await import('./admin/stripe.js?v=20260928a');
+    const { renderIntegrationHealth, wireIntegrationHealth } = await import('./admin/integration-health.js?v=20260928a');
+    const { createAutomationCard } = await import('./admin/automation.js?v=20260928a');
     const { renderAutomation } = createAutomationCard({ $, api, admSkeleton });
     return {
       wire() {
@@ -736,7 +738,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   orders: async () => {
-    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260914a');
+    const { ORDER_STATUSES, NEEDS_FULFILLMENT, createOrdersTab } = await import('./admin/orders.js?v=20260928a');
     const { renderOrders, wireOrders } = createOrdersTab({
       $, api, apiBlob, state, message, admSkeleton, admEmpty, statusBadge, admListPager, refreshStats,
       onMessageCustomer: ({ companyId, orderId, userId }) => showSupportConsole({
@@ -772,8 +774,8 @@ const featureLoader = createFeatureLoader({
   },
   companies: async () => {
     const [{ createCompaniesTab }, { createCrmPanel }] = await Promise.all([
-      import('./admin/companies.js?v=20260914a'),
-      import('./admin/crm.js?v=20260914a'),
+      import('./admin/companies.js?v=20260928a'),
+      import('./admin/crm.js?v=20260928a'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const { renderCompanies, wireCompanies, openCompanyDetail, applyAcctView } = createCompaniesTab({
@@ -814,10 +816,10 @@ const featureLoader = createFeatureLoader({
       { createInventoryCard },
       { createCouponsCard },
     ] = await Promise.all([
-      import('./admin/products.js?v=20260914a'),
-      import('./admin/pricing.js?v=20260914a'),
-      import('./admin/inventory.js?v=20260914a'),
-      import('./admin/coupons.js?v=20260914a'),
+      import('./admin/products.js?v=20260928a'),
+      import('./admin/pricing.js?v=20260928a'),
+      import('./admin/inventory.js?v=20260928a'),
+      import('./admin/coupons.js?v=20260928a'),
     ]);
     const { renderProducts, wireProductForm, wireVariantForm, wireProducts } = createProductsTab({
       $, api, state, message, admSkeleton, admEmpty,
@@ -857,7 +859,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   content: async () => {
-    const { createContentTab } = await import('./admin/content.js?v=20260914a');
+    const { createContentTab } = await import('./admin/content.js?v=20260928a');
     const { renderContent, renderBlog, wireContent, wireBlog, confirmSubviewChange } = createContentTab({
       $, api, state, admSkeleton, admEmpty,
     });
@@ -899,7 +901,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   support: async () => {
-    const { createThreadsTab } = await import('./admin/threads.js?v=20260914a');
+    const { createThreadsTab } = await import('./admin/threads.js?v=20260928a');
     const { renderThreads, wireThreads, openThread, openNewChat, openConsole, openSettings } = createThreadsTab({
       api,
       state,
@@ -920,7 +922,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   quotes: async () => {
-    const { createQuotesTab } = await import('./admin/quotes.js?v=20260914a');
+    const { createQuotesTab } = await import('./admin/quotes.js?v=20260928a');
     const { renderQuotePipeline, wireQuotes, openQuoteById } = createQuotesTab({
       $, api, state, message, admSkeleton, admEmpty, statusBadge, badge, admListPager,
     });
@@ -941,7 +943,7 @@ const featureLoader = createFeatureLoader({
     };
   },
   reviews: async () => {
-    const { createReviewsTab } = await import('./admin/reviews.js?v=20260914a');
+    const { createReviewsTab } = await import('./admin/reviews.js?v=20260928a');
     const {
       renderReviews,
       wireReviews,
@@ -961,8 +963,8 @@ const featureLoader = createFeatureLoader({
   },
   newsletter: async () => {
     const [{ createNewsletterTab }, { createOffersTab }] = await Promise.all([
-      import('./admin/newsletter.js?v=20260914a'),
-      import('./admin/offers.js?v=20260914a'),
+      import('./admin/newsletter.js?v=20260928a'),
+      import('./admin/offers.js?v=20260928a'),
     ]);
     const { renderNewsletter, wireNewsletter } = createNewsletterTab({
       $, api, state, message, admSkeleton, admEmpty, badge,
@@ -984,8 +986,8 @@ const featureLoader = createFeatureLoader({
   },
   crm: async () => {
     const [{ createCrmWorkspace }, { createCrmPanel }] = await Promise.all([
-      import('./admin/crm-workspace.js?v=20260914a'),
-      import('./admin/crm.js?v=20260914a'),
+      import('./admin/crm-workspace.js?v=20260928a'),
+      import('./admin/crm.js?v=20260928a'),
     ]);
     const crm = createCrmPanel({ $, api, admSkeleton, admEmpty });
     const openSubject = (type, id, label) => {
