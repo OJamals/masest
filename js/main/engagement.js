@@ -417,8 +417,9 @@ function initQuoteCaptcha(form) {
     try {
       window.turnstile.ready(() => {
         widgetId = window.turnstile.render(widget, {
-          sitekey, action: "contact", size: "flexible", theme: "auto",
+          sitekey, action: "contact", size: "compact", appearance: "interaction-only", theme: "auto",
           callback: (value) => { token = value; message(""); },
+          "before-interactive-callback": () => message("Complete the verification above before sending your request."),
           "error-callback": unavailable,
           "expired-callback": reset,
           "timeout-callback": reset,
@@ -440,7 +441,7 @@ function initQuoteCaptcha(form) {
     token: () => token,
     ready() {
       if (token) return true;
-      if (!status.textContent) message("Complete the verification above before sending your request.");
+      if (!status.textContent) message("Verification is still running. Please wait a moment, then try again.");
       status.focus();
       return false;
     },

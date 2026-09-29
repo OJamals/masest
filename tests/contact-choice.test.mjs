@@ -194,6 +194,11 @@ async function routeProductionContact(page, base, scriptFails = false) {
       window.turnstile = {
         ready(callback) { callback(); },
         render(container, options) {
+          // Model the documented challenge dimensions, including its visible state.
+          const challenge = document.createElement('div');
+          challenge.style.width = options.size === 'compact' ? '150px' : '300px';
+          challenge.style.height = options.size === 'compact' ? '140px' : '65px';
+          container.append(challenge);
           window.quoteCaptchaTest = { options, resets: [] };
           return 'contact-widget';
         },
@@ -236,10 +241,12 @@ test('production contact sends fresh CAPTCHA tokens for both choices and keeps t
     });
     for (const mode of ['call', 'email']) {
       status = 503;
+      await page.setViewportSize({ width: mode === 'call' ? 320 : 1024, height: 900 });
       await page.goto('https://masest.test/contact?type=private-label');
       await page.waitForFunction(() => Boolean(window.quoteCaptchaTest), null, { timeout: 5000 }).catch(async error => {
         throw new Error(`${error.message}: ${JSON.stringify({ browserErrors, status: await page.locator('#quoteCaptchaStatus').textContent() })}`);
       });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       if (mode === 'call') await page.locator('#fCallbackPhone').fill('8135550123');
       else {
         await page.getByRole('button', { name: /Add request details/ }).click();
@@ -249,7 +256,7 @@ test('production contact sends fresh CAPTCHA tokens for both choices and keeps t
       const start = sent.length;
       await submit.click();
       assert.equal(sent.length, start);
-      assert.match(await page.locator('#quoteCaptchaStatus').textContent(), /Complete the verification/);
+      assert.match(await page.locator('#quoteCaptchaStatus').textContent(), /Verification is still running/);
       assert.equal(await page.evaluate(() => window.quoteCaptchaTest.options.action), 'contact');
       await page.evaluate(() => window.quoteCaptchaTest.options.callback('test-token-one'));
       await submit.click();
