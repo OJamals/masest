@@ -370,7 +370,8 @@ test("broad service search progressively reveals every result", async ({ page })
   await expect(more).toHaveAccessibleName("Show 15 more services");
   await expect(more).toHaveAttribute("aria-expanded", "false");
   const moreBox = await more.boundingBox();
-  expect(moreBox?.height, "service result disclosure target height").toBeGreaterThanOrEqual(44);
+  // Chromium can report 43.99976px for a 44px target during a fractional transform.
+  expect(moreBox?.height, "service result disclosure target height").toBeGreaterThanOrEqual(44 - 0.001);
 
   await more.click();
   await expect(results.locator(".service-card:visible")).toHaveCount(23);
