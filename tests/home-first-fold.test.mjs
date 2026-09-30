@@ -57,9 +57,73 @@ test('homepage retains both buying routes and readable proof without JavaScript'
   try {
     const page = await browser.newPage({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
     await page.goto(server.baseUrl);
-    assert.equal(await page.locator('.home-hero').getByRole('link', { name: 'Request a private-label quote' }).isVisible(), true);
-    assert.equal(await page.locator('.home-hero').getByRole('link', { name: 'Shop VertKleen' }).isVisible(), true);
+    assert.equal(await page.locator('.home-hero').getByRole('link', { name: 'Explore products' }).isVisible(), true);
+    assert.equal(await page.locator('.home-hero').getByRole('link', { name: 'Help me choose' }).isVisible(), true);
+    assert.equal(await page.locator('.home-private-option').getByRole('link', { name: 'Explore private label' }).isVisible(), true);
     assert.equal(await page.getByRole('link', { name: 'Read the field record' }).isVisible(), true);
     assert.equal(await page.locator('.nojs-nav').getByRole('link', { name: 'Private Label', exact: true }).isVisible(), true);
+  } finally { await browser.close(); await server.close(); }
+});
+
+test('homepage job choices precede field proof and private label stays directly discoverable', async () => {
+  const server = await startStaticTestServer(new URL('../', import.meta.url));
+  const browser = await launchTestBrowser();
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(server.baseUrl);
+    await page.locator('.nav').waitFor();
+    const sections = await page.locator('main > section').evaluateAll(nodes => nodes.map(node => node.id));
+    assert.ok(sections.indexOf('find-cleaner') < sections.indexOf('results'));
+    assert.equal(await page.locator('#find-cleaner .home-job').count(), 4);
+    const primary = page.getByRole('navigation', { name: 'Primary', exact: true });
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    assert.equal(await primary.getByRole('link', { name: 'Private Label', exact: true }).isVisible(), true);
+    assert.equal(await page.locator('.home-buying').getByRole('link', { name: /Need bulk supply/ }).getAttribute('href'), 'contact?type=quote&message=Please%20help%20me%20plan%20bulk%20VertKleen%20supply.#quoteForm');
+  } finally { await browser.close(); await server.close(); }
+});
+
+test('homepage product advice carries selection context into email and callback requests', async () => {
+  const server = await startStaticTestServer(new URL('../', import.meta.url));
+  const browser = await launchTestBrowser();
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(server.baseUrl);
+    await page.getByRole('link', { name: 'Help me choose', exact: true }).click();
+    await page.getByRole('button', { name: 'Add request details' }).waitFor({ state: 'visible' });
+    assert.equal(new URL(page.url()).searchParams.get('type'), 'quote');
+    assert.equal(await page.locator('#fMessage').inputValue(), 'Help me choose a VertKleen cleaner for my application.');
+    await page.getByRole('button', { name: 'Add request details' }).click();
+    assert.equal(await page.locator('#fType').inputValue(), 'quote');
+    await page.locator('#requestExtraDetails > summary').click();
+    assert.equal(await page.getByRole('button', { name: 'Quote', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.getByRole('button', { name: 'Replace a Cleaner', exact: true }).getAttribute('aria-pressed'), 'false');
+    await page.getByRole('button', { name: 'Request a call' }).click();
+    assert.equal(await page.locator('#fType').inputValue(), 'callback');
+    assert.equal(await page.locator('#fRequestTopic').inputValue(), 'quote');
+    await page.getByRole('button', { name: 'Add request details' }).click();
+    assert.equal(await page.locator('#fMessage').inputValue(), 'Help me choose a VertKleen cleaner for my application.');
+  } finally { await browser.close(); await server.close(); }
+});
+
+test('homepage tracking reports one privacy-limited event per mouse or keyboard choice', async () => {
+  const server = await startStaticTestServer(new URL('../', import.meta.url));
+  const browser = await launchTestBrowser();
+  try {
+    const events = [];
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await page.exposeFunction('recordHomeEvent', (event, detail) => events.push({ event, detail }));
+    await page.addInitScript(() => { window.mtrack = (event, detail) => window.recordHomeEvent(event, detail); });
+    await page.goto(server.baseUrl);
+    await page.locator('.home-hero .home-button i').click();
+    assert.equal(new URL(page.url()).pathname, '/products');
+    await page.goto(server.baseUrl);
+    const advice = page.getByRole('link', { name: 'Help me choose', exact: true });
+    await advice.focus();
+    await page.keyboard.press('Enter');
+    await page.waitForURL('**/contact?type=quote&message=*');
+    assert.deepEqual(events.filter(({ event }) => event.startsWith('home_')), [
+      { event: 'home_product_click', detail: { source: 'home_hero_products' } },
+      { event: 'home_advice_click', detail: { source: 'home_hero_advice', request_type: 'quote' } },
+    ]);
   } finally { await browser.close(); await server.close(); }
 });

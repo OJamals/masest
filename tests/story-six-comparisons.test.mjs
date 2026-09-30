@@ -23,9 +23,9 @@ const expectedAssets = expectedScenes.flatMap(([, scene]) => [
 const alignedWidth = 1200;
 const alignedHeight = 1017;
 
-test("lead-first homepage does not mount the retired story engine", () => {
+test("product-first homepage does not mount the retired story engine", () => {
   assert.match(home, /<section class="home-hero"/);
-  assert.match(home, /Request a private-label quote/);
+  assert.match(home, /Explore products/);
   assert.doesNotMatch(home, /id="story"|js\/story\.js/);
 });
 

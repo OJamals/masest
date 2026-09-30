@@ -44,6 +44,10 @@
 .home-routes, .home-private { background: #fff; color: #11171a; }
 .home-route-grid, .home-private__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; }
 .home-route-grid { margin-top: 40px; }
+.home-private-option { padding-block: 36px; background: #fff; color: #11171a; border-top: 1px solid #d5dde0; }
+.home-private-option > .home-wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px 40px; }
+.home-unveiling .home-private-option h2 { font-size: 24px; letter-spacing: -.025em; }
+.home-private-option p { max-width: 60ch; margin-top: 10px; color: #515d64; line-height: 1.6; }
 .home-route-grid article { border-top: 1px solid #d5dde0; padding-top: 28px; }
 .home-route-grid .home-kicker { margin-bottom: 12px; }
 .home-route-grid h3 { font-size: 32px; letter-spacing: -.035em; }
@@ -102,6 +106,8 @@
 .home-job:hover i { transform: translateX(5px); }
 .home-job p { margin-top: 18px; font-size: 16px; line-height: 1.5; color: #596268; }
 .home-job:hover h3 { color: #075b64; }
+.home-buying { max-width: 70ch; margin-top: 24px; color: #515d64; font-size: 15px; line-height: 1.6; }
+.home-buying a { color: #075b64; text-decoration: underline; text-underline-offset: 3px; }
 .home-proof { color: #f5f8f9; background: #0b171b; }
 .home-proof .home-kicker { color: #8ed4d9; }
 .home-proof__heading { display: grid; grid-template-columns: 1.2fr .8fr; gap: 80px; align-items: end; }

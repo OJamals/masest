@@ -33,8 +33,8 @@ test('both landing pages have semantic labels and valid local destinations', () 
   }
 });
 
-test('homepage leads to scoped field evidence before product selection and technical guidance', () => {
-  assert.ok(home.indexOf('id="results"') < home.indexOf('id="find-cleaner"'));
+test('homepage presents product selection before scoped field evidence and technical guidance', () => {
+  assert.ok(home.indexOf('id="find-cleaner"') < home.indexOf('id="results"'));
   assert.ok(home.indexOf('id="results"') < home.indexOf('id="support"'));
   assert.match(home, /36-hour CLR attempt.*30 minutes/s);
   assert.match(home, /One documented job\. Results depend/);
