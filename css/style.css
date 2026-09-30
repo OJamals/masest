@@ -4972,6 +4972,10 @@ body .page-hero .product-shot {
   font-size: clamp(2.4rem, 4.6vw, 3.55rem);
 }
 
+.product-detail-hero .hero-grid > * {
+  min-width: 0;
+}
+
 .product-detail-hero .subhead {
   max-width: 54ch;
   line-height: 1.48;
@@ -4988,6 +4992,35 @@ body .page-hero .product-shot {
   max-height: min(58vh, 520px);
   object-fit: contain;
 }
+
+.product-detail-page .product-hero-caption {
+  max-width: 42ch;
+  margin-top: var(--s3);
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  text-align: center;
+}
+
+.product-detail-page .product-hero-summary {
+  display: block;
+  padding: clamp(24px, 3vw, 40px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: linear-gradient(145deg, var(--panel), rgba(51, 121, 128, .09));
+}
+
+.product-hero-summary figcaption {
+  margin-top: var(--s4);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.product-hero-summary p { margin-block: var(--s4) var(--s6); }
+.product-hero-summary dl { margin: 0; }
+.product-hero-summary dl > div { padding-block: var(--s4); border-top: 1px solid var(--line); }
+.product-hero-summary dt { color: var(--accent-ink); font-size: 1.25rem; font-weight: 800; }
+.product-hero-summary dd { margin: var(--s1) 0 0; color: var(--muted); font-size: var(--fs-small); }
 
 .product-detail-hero .hero-ctas {
   gap: var(--s3);
@@ -9110,6 +9143,37 @@ body.product-detail-page main > section.product-static-section {
 
 .product-static-panel .table-scroll {
   max-width: 100%;
+}
+
+.product-static-panel h2[id],
+h2[id^="product-result-"] {
+  scroll-margin-top: 5rem;
+}
+
+.product-reference-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--s4) 0;
+  font-size: var(--fs-small);
+}
+.product-reference-table caption {
+  padding-bottom: var(--s3);
+  color: var(--muted);
+  text-align: left;
+}
+.product-reference-table :is(th, td) {
+  padding: var(--s3);
+  border-bottom: 1px solid var(--line-ink);
+  text-align: left;
+}
+.product-reference-table :is(th, td):last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.product-brightening-table tbody tr:first-child {
+  color: var(--accent);
+  background: var(--surface-soft);
+  font-weight: 700;
 }
 
 .product-static-panel .table-scroll .cmp-table {

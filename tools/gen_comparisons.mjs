@@ -239,56 +239,56 @@ Review [HCR](/products/hcr), [technical documents](/resources), and [descaling p
   {
     slug: "cr-hd-vs-simple-green",
     datePublished: "2026-07-09",
-    dateModified: "2026-09-10",
-    body: `## Simple Green is familiar. CR HD is built for the harder shift.
+    dateModified: "2026-09-25",
+    body: `## Put CR HD on your toughest recurring grease job
 
-Simple Green Industrial is a broad cleaner and degreaser, and it earned that position honestly. Its published directions span full strength through 1:10.
+Simple Green Industrial is a broad cleaner and degreaser. Its current directions list full strength through 10 parts water for heavy soil, 10–30 parts water for medium soil, and 30 or more parts water for light soil. Its industrial product page identifies the current formula as butyl-free, solvent-free, and EPA Safer Choice certified.
 
-[CR HD](/products/crhd) is aimed somewhere narrower and heavier: oil, grease, carbon, and tracked shop soil, with a dilution range wide enough that one concentrate covers equipment, floors, and glass.
+[CR HD](/products/crhd) tackles petroleum oils, grease, food fats, and tracked shop soil. Its general label gives 40:1 for floors, 30:1 for general cleaning, 10:1 for degreasing, and 3:1 for heavy degreasing. It is a high-detergency, high-foam concentrate with a separate Low Foam option for equipment that needs foam control.
 
-Both statements are true at once, which is why this comparison is usually argued badly. The question isn't which cleaner is better. It's which one matches the dirtiest thing you clean regularly — because that job sets your whole shelf.
+Choose a recurring job that your team can measure: the same greasy floor area, equipment panel, or batch of parts. Use each product's directions and compare the finished surface, concentrate consumed, crew time, and rinse work.
 
-## Why does active percentage decide the shelf?
+## Concentrate value shows up in the finished job
 
-CR HD is a 50% degreaser. Simple Green Industrial runs 15% active.
+Dilution is useful when the diluted product still reaches the finish your crew needs. CR HD's label spans everyday floor cleaning through heavy degreasing, so a team can adjust the mix as the soil changes while working from one familiar product.
 
-Follow what that does downstream. A high-active concentrate can be cut hard for light work and still perform, so one bottle stretches across tasks. A lower-active product has less room to give away, so in practice it gets used at or near full strength — and anything beyond its range needs a different product entirely.
+Active-ingredient percentage alone cannot predict grease removal. The kind of soil, surface, formulation, water, agitation, and contact time all affect the result. Measure how much concentrate actually goes into the successful cleaning cycle instead of choosing a winner from a percentage on a sales sheet.
 
-That's the mechanism behind a long shelf. Not preference, not procurement laziness. Arithmetic.
+That also gives purchasing a useful quantity: concentrate used per completed job. Multiply it by your current delivered price and add the crew's time, rinse water, and recovery work. The resulting comparison is specific to your facility.
 
-The added capacity shows up most clearly where the current cleaner needs repeated application, long scrubbing, or a nearly neat mix to reach an acceptable finish. If that describes your worst job, the comparison is already decided. If it doesn't, it honestly may not be.
+CR HD is worth testing where the current process needs repeated application or long scrubbing. Start with one difficult area and one routine area. A successful replacement should handle the hard job while remaining practical for the work your team does every day.
 
 CR HD wets through oily film, releases it from the surface, and helps carry the loosened soil away — the release step being the one that saves the scrubbing.
 
 | Decision | CR HD | Simple Green Industrial |
 | --- | --- | --- |
 | Best fit | Heavy industrial grease, oil, carbon, and mixed facility soil | General cleaning and degreasing |
-| Dilution strategy | Match a broad range to the job | Full strength to 1:10 by published task |
+| Dilution strategy | Label: 40:1 floors, 30:1 general, 10:1 degreasing, 3:1 heavy | Heavy: full strength–10 parts water; medium: 10–30; light: 30+ |
 | HMIS | 0-0-0 | See current Simple Green SDS |
-| Transport | Non-hazmat | Confirm for the selected product and pack |
+| Transport | Non-DOT-regulated | Non-DOT-regulated in current US SDS |
 | Buying measure | Cost per completed job | Cost per completed job |
 
 [[card:title=See Simple Green Industrial Cleaner & Degreaser|href=https://simplegreen.com/industrial/products/industrial-cleaner-degreaser/|image=/img/blog/comparisons/cr-hd-vs-simple-green-split.webp|alt=VertKleen CR HD container beside Simple Green Industrial Cleaner and Degreaser|width=1448|height=1086]]
 
-## Three distribution centers ran the experiment
+## Used across three distribution centers
 
-Walmart distribution centers DC-8851, DC-7023, and DC-6099 replaced Simple Green with CR HD.
+MASEST's customer assessment identifies Walmart distribution centers DC-8851, DC-7023, and DC-6099 as CR HD customers using it as a replacement for Simple Green.
 
-The same concentrate then served workshops, Crown Forklift and Plug Power equipment, parts, kitchens, floors, drains, windows, and glass. That's the consolidation claim tested under a mixed industrial workload rather than argued on a spec sheet.
+The report describes cleaning workshops, forklifts, parts, kitchens, floors, and windows. That breadth makes CR HD a practical candidate for reducing the number of general-purpose cleaners a facility stocks.
 
-Three sites matter more than one. A single building can be an unusual building — odd water, unusual soil, one persuasive maintenance lead. Three agreeing is harder to explain away.
+This is a customer-use record. It does not provide timed side-by-side trials or a measured savings percentage. Use the application list to select relevant jobs for your own comparison.
 
-The [full three-site case study](/blog/cr-hd-walmart-distribution-center-case-study) covers what each area actually demanded.
+The [distribution-center assessment](/proof#distribution-center-assessment) summarizes that use. The [CR HD product page](/products/crhd#product-result-crhd) also shows the original before-and-after photographs from a Fort Lauderdale commercial kitchen.
 
 ## Where Simple Green is still the right answer
 
 This section exists because a comparison without one isn't a comparison.
 
-If your heaviest recurring job is light-to-moderate facility soil, a 50% degreaser is capacity you'll pay for and dilute away. Familiarity has real value too — a crew that already knows a product's behaviour makes fewer mistakes with it than with a better product they've just met. That's not sentiment. Errors cost rework, and rework is the most expensive line in the whole comparison.
+If your current cleaner reliably reaches the required finish with an efficient dilution and reasonable crew time, you already have a useful baseline. Compare CR HD against those measured results. Familiarity also matters: clear mixing instructions and a manageable changeover help a new product deliver its intended value.
 
 And if your operation genuinely needs specialist chemistry in one area, consolidation doesn't remove that bottle. It removes the three general-purpose ones around it.
 
-So the honest test is narrow: does your hardest routine job currently need repeat passes or a nearly neat mix? If yes, the case for more capacity is strong. If no, you're comparing on price and habit, and habit usually deserves to win.
+Prioritize the jobs with repeat passes, persistent oily film, or long scrub times. Keep an effective specialist cleaner where a particular finish or piece of equipment needs it. Consolidate only the jobs that the trial shows CR HD can handle well.
 
 ## What about scrubbers and parts washers?
 
@@ -304,7 +304,7 @@ So split the question. Open surfaces and manual application are one test. Recirc
 
 Badly-run switches fail on dilution, not on chemistry.
 
-A crew that's spent years with a 15%-active product has calibrated their hands to it. Give them a 50% concentrate and the first instinct is to mix it the way they always have — which wastes product, leaves residue on glass, and produces exactly the complaint that kills a rollout in week one. The product didn't fail. The habit did.
+A crew accustomed to one product may instinctively use its mixing method for another. Start the changeover with CR HD's own label and clearly marked working bottles. A stronger mix than the task needs wastes concentrate and can add rinsing; an overly weak mix adds brushing and repeat work.
 
 Three things prevent it.
 
@@ -316,11 +316,11 @@ The one thing not to do is switch everything on a Monday across every area at on
 
 ## The logistics gain is the one purchasing notices
 
-CR HD is HMIS 0-0-0, ships non-hazmat, and adds no product-specific PPE or ventilation requirement for routine use.
+CR HD is HMIS 0-0-0, non-flammable, zero-VOC, and non-DOT-regulated for shipping. The current US Simple Green Industrial SDS also describes non-regulated transport, so hazardous-material shipping alone does not distinguish these two products.
 
 Crews still use the protection the task demands — oily soil, pressure equipment, traffic, and wastewater don't care what the container is rated. That's unchanged and shouldn't be softened.
 
-What changes sits upstream of the work. Receiving, storage, branch transfers, training, and day-to-day handling all get shorter, and for a multi-site operator that administrative flattening frequently outweighs the per-gallon difference. It's also the part that never appears in a side-by-side product comparison, because it isn't a property of the product — it's a property of owning fewer of them.
+Where a successful trial allows you to stock fewer cleaners, receiving, storage, branch transfers, and training can become simpler. Count those changes if they occur at your site. Use the latest product SDS and task requirements to set handling, ventilation, and recovery procedures.
 
 ## Compare on completed-job cost, not per gallon
 
@@ -333,7 +333,7 @@ Calculate mixed product used, application and scrub time, rinse water, repeat pa
 | Term | Why it moves the answer |
 | --- | --- |
 | Working dilution | Converts list price into cost per bucket |
-| Repeat passes | A second pass doubles labour, not chemical |
+| Repeat passes | More passes add crew time and may consume more solution |
 | Scrub time | Usually the largest line, almost never measured |
 | Rinse water and cleanup | Real, recurring, and easy to forget |
 | Time back to service | On a dock or a line, this dwarfs the rest |
@@ -346,9 +346,11 @@ Extra capacity sometimes pays for itself there rather than on the jobs you alrea
 
 Other [documented results](/proof) show the same pattern across different soils.
 
-Run it on your four worst recurring jobs, not on a demo panel. And run both products under identical conditions, or the result tells you about the test rather than the products.
+Run it on your four hardest recurring jobs. Keep the surface, soil, and acceptance standard comparable, while following each product's own mixing and application directions.
 
-[Order a CR HD sample](/contact?type=sample&product=CR%20HD#quoteForm) for the job that currently takes the most passes.`,
+Product references: [current Simple Green Industrial directions](https://simplegreen.com/industrial/products/industrial-cleaner-degreaser/), [US SDS, October 2025](https://cdn.simplegreen.com/downloads/SDS_EN-US_SimpleGreenIndustrialCleanerDegreaser.pdf), and [CR HD label and application guidance](/products/crhd#product-dilution-crhd).
+
+[Order a CR HD sample](/contact?type=sample&product=VertKleen%20CR%20HD#quoteForm) for the job that currently takes the most passes.`,
     title: "CR HD vs Simple Green",
     seoTitle: "CR HD vs Simple Green: Degreasers",
     description: "Compare VertKleen CR HD with Simple Green for heavy grease, repeat passes, rinsing, crew time, and total cleaning cost.",
@@ -359,18 +361,18 @@ Run it on your four worst recurring jobs, not on a demo panel. And run both prod
     productHref: "../products/crhd",
     competitor: "Simple Green Industrial",
     vkPrices: [{ vsku: "CRHD-25G", tier: "retail", gallons: 2.5 }],
-    marketMath: "$66-$184 / 5 gal = $13.20-$36.80/gal",
+    marketMath: "Use your current supplier quote",
     priceNote: "Pack price matters, but product use, repeat passes, water, labor, cleanup, and downtime decide the real cost.",
     swapCurrent: "Simple Green / Zep / butyl degreasers",
     swapJob: "Heavy-duty degreasing",
     swapUse: "VertKleen CR HD for warehouse floors, forklifts, kitchens, drains, parts, and heavy oil.",
     proofTitle: "Compare it on your hardest grease job",
     proof: "Tell us what you clean today, how much product and time it takes, and what a good finish looks like. We will help you set up a fair side-by-side test.",
-    proofHref: "../contact?type=audit&product=CR%20HD%20vs%20Simple%20Green",
+    proofHref: "../contact?type=audit&product=VertKleen%20CR%20HD&message=Help%20me%20compare%20CR%20HD%20with%20Simple%20Green%20on%20my%20cleaning%20job.#quoteForm",
     proofCta: "Plan my comparison",
     image: "../img/comparisons/cr-hd-vs-simple-green-split.webp",
     imageAlt: "VertKleen CR HD and Simple Green Industrial cleaner containers side by side",
-    ctaProduct: "CR HD vs Simple Green",
+    ctaProduct: "VertKleen CR HD",
     ctaLabel: "Try CR HD on my grease job",
     decision: "A general cleaner may need repeat passes on heavy oil and grease. Clean equal areas, then compare product, brushing, passes, water, labor, and leftover film."
   },
@@ -382,7 +384,7 @@ Run it on your four worst recurring jobs, not on a demo panel. And run both prod
 
 Wet & Forget and VertKleen LAM3 both use time instead of aggressive pressure, but they serve different operating needs.
 
-Wet & Forget is designed for gradual weather-assisted stain removal. LAM3 gives contractors a long-working formula for moss, algae, lichen, mold, and mildew across mixed exterior surfaces.
+Wet & Forget is designed for gradual weather-assisted stain removal. LAM3 gives contractors spray-and-leave or brush-and-rinse methods for moss, algae, lichen, mold, and mildew staining across compatible exterior surfaces.
 
 ## What Wet & Forget publishes
 
@@ -394,7 +396,7 @@ The company says visible results may take days to months. That can fit propertie
 
 ## LAM3 gives crews more control over the treatment
 
-LAM3 directions call for 1:5 on heavy staining and 1:10 on lighter staining.
+The general LAM3 label prints 5:1 for heavy staining and 10:1 for light staining. Confirm the water-and-product recipe for your package before mixing.
 
 Apply with a low-pressure sprayer or brush and leave the treatment to work. Visible change can begin within one or two weeks, with maximum results developing over as long as a month.
 
@@ -406,15 +408,15 @@ LAM3 contains no acid, caustic, solvent, bleach, quat, or peroxide. It is pH neu
 
 It is designed for pavers, wood, stucco, siding, metal, aluminum, paint, concrete, brick, glass, tile, and roofing materials.
 
-Routine use adds no product-specific PPE or ventilation requirement. Access, spray equipment, weather, runoff, biological soil, and the surface still determine the job controls.
+Follow the product directions and SDS. Plan access, spray equipment, weather, runoff, and surface compatibility for the actual job.
 
-## A brighter property over two weeks
+## See a real concrete-cleaning result
 
-MASEST has a LAM3 and Purgo result on a painted exterior column with visible improvement after two weeks.
+The supplied LAM3 before-and-after photographs show visibly reduced dark buildup on an exterior concrete edge.
 
-The same-angle progress view matters because this kind of treatment keeps working after the crew leaves.
+The source photographs do not record dilution or elapsed time. Use the visible result to plan a representative trial, then record those conditions on your own job.
 
-The [property grout and moss result](/proof#property-grout-moss) also paired CR for ground-in dirt with LAM3 for longer-working exterior treatment.
+See the [LAM3 concrete result](/products/lam3#product-result-lam3) and choose a method for your surface and finish schedule.
 
 ## Price the area that reaches the promised finish
 
@@ -424,9 +426,9 @@ Calculate mixed gallons, application labor, access, return visits, rinse work, a
 
 That completed-area cost tells a contractor which method creates the better margin.
 
-Explore [LAM3](/products/lam3), the [low-pressure cleaning guide](/blog/how-to-remove-moss-algae-without-pressure-washing), and [exterior results](/proof#property-grout-moss).
+Explore [LAM3](/products/lam3) and its [concrete before-and-after photographs](/products/lam3#product-result-lam3).
 
-[Order LAM3 or request project pricing](/contact?type=quote&product=LAM3%20vs%20Wet%20%26%20Forget).`,
+[Order LAM3 or request project pricing](/contact?type=quote&product=VertKleen%20LAM3#quoteForm).`,
     title: "LAM3 vs Wet & Forget",
     seoTitle: "LAM3 vs Wet & Forget: Finished-Area Guide",
     description: "Compare VertKleen LAM3 against Wet & Forget for moss, algae, mold, mildew, and exterior stain removal.",
@@ -437,16 +439,17 @@ Explore [LAM3](/products/lam3), the [low-pressure cleaning guide](/blog/how-to-r
     productHref: "../products/lam3",
     competitor: "Wet & Forget",
     vkPrices: [{ vsku: "LAM3-25G", tier: "retail", gallons: 2.5 }],
-    marketMath: "$34.00/gal",
+    marketMath: "Use your current supplier quote and package size",
     priceNote: "Compare pack price with coverage, application time, repeat visits, water, cleanup, and how long the result lasts.",
     swapCurrent: "Wet & Forget / bleach roof cleaners",
     swapJob: "Exterior moss, algae, mold, mildew, lichen, and stain removal",
     swapUse: "VertKleen LAM3 for spray-and-walk-away exterior biological staining.",
     proofTitle: "See a real exterior result",
-    proof: "Before-and-after photos show CR and LAM3 lifting ground-in grime, outdoor growth, and dark grout stains from hardscape.",
+    proof: "Original LAM3 field photographs show visibly reduced dark buildup on an exterior concrete edge.",
+    proofHref: "../products/lam3#product-result-lam3",
     image: "../img/blog/comparisons/lam3-vs-wet-forget-split.webp",
     imageAlt: "VertKleen LAM3 and Wet and Forget Outdoor Concentrate containers side by side",
-    ctaProduct: "LAM3 vs Wet & Forget",
+    ctaProduct: "VertKleen LAM3",
     ctaLabel: "Price my exterior cleaning job",
     decision: "Judge the finished area, not the concentrate price. Use the same surface, stain, weather, application method, working time, and final inspection for both products."
   },

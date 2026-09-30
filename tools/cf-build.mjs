@@ -86,6 +86,8 @@ function unresolvedLocalImageReferences(content) {
 
 // Anything matching a deny pattern is kept out of the published static root.
 const DENY = [
+  // Local agent configuration must never become public site assets.
+  /^\.(?:grok|dsh)(\/|$)/, /^\.(?:mcp\.json|ignore)$/,
   /^functions\//, /^cloudflare\//, /^supabase\//, /^tools\//, /^tests\//, /^factory\//, /^artifacts\//, /^node_modules(\/|$)/,
   /^dist\//, /^tmp\//, /^graft\//, /^prototypes\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
   /^\.github\//, /^\.vscode\//, /^docs\/research\//, /^docs\/reviews\//,

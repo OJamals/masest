@@ -64,6 +64,56 @@ test("product quote handoff keeps product context beside the contact choices", a
   expect(formTop).toBeLessThan(900);
 });
 
+test("CIP and HVAC HCR quote and sample links submit their distinct product names", async ({ page }) => {
+  const submissions = [];
+  await page.route("**/api/quote", async (route) => {
+    submissions.push(route.request().postData() || "");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, durable: true, quote_id: "44444444-4444-4444-8444-444444444444" }),
+    });
+  });
+  const submittedField = (body, name) => body?.match(new RegExp(`name="${name}"\\r?\\n\\r?\\n([^\\r\\n]*)`))?.[1];
+
+  for (const [slug, label] of [["hcr", "VertKleen CIP HCR"], ["hcr-t16", "VertKleen HVAC HCR"]]) {
+    await page.goto(`${BASE_URL}/products/${slug}.html`, { waitUntil: "networkidle" });
+    const href = await page.locator('a.btn-secondary[href*="contact?type=quote"]').first().getAttribute("href");
+    const destination = new URL(href, page.url());
+    expect(destination.searchParams.get("product")).toBe(label);
+    destination.pathname = "/contact.html";
+    await page.goto(destination.href, { waitUntil: "networkidle" });
+    await expect(page.locator("#fProduct")).toHaveValue(label);
+    await page.getByRole("button", { name: /Add request details/ }).click();
+    await page.locator("#requestExtraDetails > summary").click();
+    await page.locator("#fName").fill("Channel Buyer");
+    await page.locator("#fCompany").fill("Example Co");
+    await page.locator("#fEmail").fill("channel@example.com");
+    await page.locator('#quoteForm [type="submit"]').click();
+    await expect(page.locator("#formSuccess")).toBeVisible();
+    expect(submittedField(submissions.at(-1), "product")).toBe(label);
+
+    await page.goto(`${BASE_URL}/products/${slug}.html`, { waitUntil: "networkidle" });
+    const sampleHref = await page.locator('a.btn-ghost[href*="contact?type=sample"]').first().getAttribute("href");
+    const sampleDestination = new URL(sampleHref, page.url());
+    expect(sampleDestination.searchParams.get("product")).toBe(label);
+    sampleDestination.pathname = "/contact.html";
+    await page.goto(sampleDestination.href, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /Add request details/ }).click();
+    await page.locator("#requestExtraDetails > summary").click();
+    await expect(page.locator(`input[name="samples"][value="${label}"]`)).toBeChecked();
+    await page.locator("#fName").fill("Channel Buyer");
+    await page.locator("#fCompany").fill("Example Co");
+    await page.locator("#fEmail").fill("channel@example.com");
+    await page.locator("#fShipTo").fill("Example Facility, 1 Main St, Tampa FL 33602");
+    await page.locator('#quoteForm [type="submit"]').click();
+    await expect(page.locator("#formSuccess")).toBeVisible();
+    expect(submittedField(submissions.at(-1), "product")).toBe(label);
+    expect(submittedField(submissions.at(-1), "samples")).toBe(label);
+  }
+  expect(submissions).toHaveLength(4);
+});
+
 test("superseded bundles publish no ordering handoff", async ({ page }) => {
   await page.goto(`${BASE_URL}/products.html`, { waitUntil: "networkidle" });
   await expect(page.locator("[data-bundle-sku]")).toHaveCount(0);

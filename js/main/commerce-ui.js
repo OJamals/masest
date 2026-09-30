@@ -1,9 +1,9 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260929d";
-import { smoothPref } from "./engagement.js?v=20260929d";
-import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260929d";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260929d";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20260929e";
+import { smoothPref } from "./engagement.js?v=20260929e";
+import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260929e";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20260929e";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -20,8 +20,7 @@ export function productCard(id, heroCard = false, eager = false) {
     ? `<a class="prod-media" href="/products/${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="${mediaLoading}"${mediaPriority} ${imageDimsAttr(p.image)}></a>`
     : "";
   return `
-  <div class="prod-card${heroCard ? " hero-card" : ""} reveal">
-    ${media}
+  <div class="prod-card${heroCard ? " hero-card" : ""} reveal">${media ? `\n    ${media}` : ""}
     <div class="prod-top"><i class="ph ${p.icon}" aria-hidden="true"></i>${badge}</div>
     <span class="catalog-type">${catalog.job || p.replaces}</span>
     <h3>${p.name}</h3>
@@ -489,6 +488,8 @@ function isPosterFallback(src) {
 function commerceMediaFor(id) {
   const row = commerceRowFor(id);
   const p = PRODUCTS[id];
+  // Keep withdrawn label artwork out of hydrated product media as well.
+  if (p?.image_review_pending) return { src: "", alt: "" };
   const src = row?.image_url || p?.image || "";
   return {
     src: isPosterFallback(src) ? "" : src,

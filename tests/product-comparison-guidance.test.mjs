@@ -26,7 +26,7 @@ test("relevant product routes expose crawlable comparison guidance", () => {
     assert.deepEqual(productComparisonSlugs(html), expected, `${id}: comparison links`);
 
     if (!expected.length) {
-      assert.doesNotMatch(html, /product-comparison-panel/);
+      assert.doesNotMatch(html, new RegExp(`aria-labelledby="product-comparisons-${id}"`));
       continue;
     }
 
@@ -54,7 +54,7 @@ test("relevant product routes expose crawlable comparison guidance", () => {
 test("comparison guidance offers decision context without replacing purchase actions", () => {
   for (const id of EXPECTED.keys()) {
     const html = read(`products/${id}.html`);
-    const panel = html.match(/<article class="product-static-panel product-comparison-panel"[\s\S]*?<\/article>/)?.[0] || "";
+    const panel = html.match(new RegExp(`<article[^>]*aria-labelledby="product-comparisons-${id}"[\\s\\S]*?<\\/article>`))?.[0] || "";
 
     assert.match(panel, /Compare before you switch\./);
     assert.match(panel, /labor/i);

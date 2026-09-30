@@ -168,10 +168,16 @@ test("approved representative scenes use managed-image paths", () => {
     asset.storage_path.startsWith("/img/representative/applications/")
   );
 
-  assert.deepEqual(
-    representativeAssets.map((asset) => asset.filename).sort(),
-    [...APPROVED_REPRESENTATIVE_IMAGES].sort(),
-  );
+  const registered = new Set(representativeAssets.map((asset) => asset.filename));
+  for (const filename of APPROVED_REPRESENTATIVE_IMAGES) {
+    assert.ok(registered.has(filename), `${filename} must remain in the managed library`);
+  }
+  const publishedPaths = new Set(publishedLocalImagePaths());
+  for (const asset of representativeAssets) {
+    if (!APPROVED_REPRESENTATIVE_IMAGES.includes(asset.filename)) {
+      assert.ok(!publishedPaths.has(asset.public_url), `${asset.filename} is held from publication`);
+    }
+  }
   for (const asset of representativeAssets) {
     assert.match(asset.alt, /^Representative /);
     assert.equal(asset.category, "representative");

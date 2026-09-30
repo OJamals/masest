@@ -15,7 +15,7 @@
       "active": true,
       "public_visible": true,
       "sort": 1,
-      "description": "Caustic replacement for yeast, protein, fat, and organic film in brewery lines, kegs, and tanks",
+      "description": "50% caustic soda replacement for brewery CIP: removes krausen, yeast, protein, and fat, then rinses with water without a separate neutralizing step",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -31,7 +31,7 @@
       "active": true,
       "public_visible": true,
       "sort": 2,
-      "description": "Concentrated caustic replacement for HVAC drains, equipment, grease, and organic buildup",
+      "description": "60% caustic soda replacement for grease and organic buildup in HVAC drains, condensate pans, and compatible facility equipment",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -47,7 +47,7 @@
       "active": true,
       "public_visible": true,
       "sort": 3,
-      "description": "Acid replacement for beer stone, scale, and rust in brewery cleaning cycles",
+      "description": "Non-fuming synthetic-acid cleaner for beer stone, mineral scale, and rust in brewery tanks, kegs, lines, and heat exchangers",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -63,7 +63,7 @@
       "active": true,
       "public_visible": true,
       "sort": 4,
-      "description": "Bulk acid replacement for calcium, scale, and rust in HVAC systems and equipment",
+      "description": "Non-fuming hydrochloric-acid replacement for calcium, mineral scale, and rust in HVAC equipment, available in small packs and bulk supply",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -79,7 +79,7 @@
       "active": true,
       "public_visible": true,
       "sort": 5,
-      "description": "Fume-free alternative to hydrochloric acid for coils, towers, pumps, and loops",
+      "description": "Non-fuming mineral-scale remover with detergents for coils, pumps, heat exchangers, and isolated water-side circuits",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -95,7 +95,7 @@
       "active": true,
       "public_visible": true,
       "sort": 6,
-      "description": "High-strength industrial degreaser for heavy oil, grease, floors, equipment, and parts",
+      "description": "High-detergency, high-foam concentrate for heavy grease, petroleum oils, food fats, floors, equipment, and parts",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -111,7 +111,7 @@
       "active": true,
       "public_visible": true,
       "sort": 7,
-      "description": "Low-foam industrial degreaser for scrubbers, parts washers, and recirculating equipment",
+      "description": "Low-foam concentrate for grease and hydraulic oil in parts washers, wash cabinets, and floor-cleaning equipment",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -127,7 +127,7 @@
       "active": true,
       "public_visible": true,
       "sort": 8,
-      "description": "pH-7 degreaser when surfaces, seals, or finishes get a vote",
+      "description": "Near-neutral, solvent-free concentrate for grease and oil on equipment, finished surfaces, vehicles, and shop floors",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -143,7 +143,7 @@
       "active": true,
       "public_visible": true,
       "sort": 9,
-      "description": "One-bottle facility cleaner for wet zones, exteriors, and daily mess",
+      "description": "Concentrated non-caustic, solvent-free cleaner and deodorizer for facility surfaces and exterior wash programs",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -159,7 +159,7 @@
       "active": true,
       "public_visible": true,
       "sort": 10,
-      "description": "Spray-and-walk-away remover for lichen, algae, moss, and mold",
+      "description": "Bleach-, quat-, and peroxide-free exterior stain remover with spray-and-leave or brush-and-rinse methods",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -191,7 +191,7 @@
       "active": true,
       "public_visible": true,
       "sort": 12,
-      "description": "HF/HCl-free aluminum cleaner that removes oxidation and restores a brighter finish",
+      "description": "SynTech aluminum cleaner and brightener for oxidized truck tanks, trailers, wheels, and marine aluminum, without HF or HCl",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -207,7 +207,7 @@
       "active": true,
       "public_visible": true,
       "sort": 13,
-      "description": "Wash, wax, done - vehicle and marine gloss in one pass",
+      "description": "Concentrated vehicle and marine wash and wax that removes road film, diesel soot, salt, and bugs while leaving an anti-stick finish",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -223,7 +223,7 @@
       "active": true,
       "public_visible": true,
       "sort": 14,
-      "description": "Specialty acid replacement for stubborn rust, scale, and hard mineral deposits",
+      "description": "Synthetic sulfuric acid replacement for process-water pH reduction, with non-fuming chemistry and application-specific dosing support",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {
@@ -239,7 +239,7 @@
       "active": true,
       "public_visible": true,
       "sort": 15,
-      "description": "Heavy-metal-free scale and corrosion control with NSF/ANSI/CAN 60 certification",
+      "description": "NSF/ANSI/CAN 60 certified water treatment for pH adjustment, scale and corrosion control, offline descaling, and well rehabilitation",
       "source": "VertKleen Website Pricing WebDev workbook 2026-07-07"
     },
     {

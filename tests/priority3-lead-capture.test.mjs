@@ -23,6 +23,8 @@ const SAMPLE_PRODUCTS = [
   "VertKleen CR",
   "VertKleen CR2",
   "VertKleen HCR",
+  "VertKleen CIP HCR",
+  "VertKleen HVAC HCR",
   "VertKleen HCR - 16+ Tote Program",
   "VertKleen Descaler",
   "VertKleen CR HD",

@@ -695,6 +695,90 @@ function productMetaDescription(id, product) {
   return `${sentence.slice(0, 152).replace(/\s+\S*$/, "")}…`;
 }
 
+function productApplicationPanels(id) {
+  const copy = PRODUCT_CATALOG_COPY[id] || {};
+  const comparison = copy.brightening_comparison;
+  const performance = copy.performance_comparison;
+  const dilution = copy.dilution_guide;
+  const guide = copy.application_guide;
+  const profile = copy.technical_profile;
+  const reference = copy.manufacturer_reference;
+  const certification = copy.certification;
+  let referenceDocumentAttrs = "";
+  if (reference?.source_url.startsWith("../docs/")) {
+    const document = currentDocument(reference.source_url.slice(3), "product");
+    if (!document || documentSurfaceMode(document, "product") !== "download") {
+      throw new Error(`Reference document is not a public download for ${id}`);
+    }
+    referenceDocumentAttrs = ` data-document-id="${attr(document.document_id)}" data-document-revision="${attr(documentRevision(document, DOCUMENT_REVIEW.document_control))}" data-document-effective="${attr(documentEffectiveDate(document, DOCUMENT_REVIEW.document_control))}" data-document-skus="${attr(document.skus.join(" "))}" data-document-name="${attr(documentAnalyticsName(document))}" data-document-download`;
+  }
+  return [
+    certification && `<article class="product-static-panel product-comparison-panel" aria-labelledby="product-certification-${attr(id)}">
+        <div>
+          <h2 id="product-certification-${attr(id)}">${text(certification.heading)}</h2>
+          <p>${text(certification.intro)}</p>
+          <p><a href="${attr(certification.source_url)}" target="_blank" rel="noopener">${text(certification.source_label)}</a></p>
+        </div>
+        <ul class="spec-list">${certification.facts.map(([title, body]) => `<li><b>${text(title)}</b><span>${text(body)}</span></li>`).join("")}</ul>
+      </article>`,
+    ...(copy.application_modes || []).map((mode, index) => `<article class="product-static-panel" aria-labelledby="product-mode-${attr(id)}-${index + 1}">
+        <h2 id="product-mode-${attr(id)}-${index + 1}">${text(mode.heading)}</h2>
+        <p>${text(mode.intro)}</p>
+        <ul class="spec-list">${mode.facts.map(([title, body]) => `<li><b>${text(title)}</b><span>${text(body)}</span></li>`).join("")}</ul>
+      </article>`),
+    comparison && `<article class="product-static-panel" aria-labelledby="product-brightening-${attr(id)}">
+        <h2 id="product-brightening-${attr(id)}">${text(comparison.heading)}</h2>
+        <p>${text(comparison.intro)}</p>
+        <div class="table-scroll"><table class="product-reference-table product-brightening-table">
+          <caption>EMS aluminum brightening comparison</caption>
+          <thead><tr><th scope="col">Cleaner</th><th scope="col">Score</th></tr></thead>
+          <tbody>${comparison.rows.map(([name, score]) => `<tr><th scope="row">${text(name)}</th><td>${text(score)}</td></tr>`).join("")}</tbody>
+        </table></div>
+        <p>${text(comparison.note)}</p>
+        <p><a href="${attr(comparison.source_url)}" target="_blank" rel="noopener">${text(comparison.source_label)}</a></p>
+      </article>`,
+    performance && `<article class="product-static-panel" aria-labelledby="product-performance-${attr(id)}">
+        <h2 id="product-performance-${attr(id)}">${text(performance.heading)}</h2>
+        <p>${text(performance.intro)}</p>
+        <div class="table-scroll"><table class="product-reference-table">
+          <caption>${text(performance.caption)}</caption>
+          <thead><tr>${performance.columns.map((column) => `<th scope="col">${text(column)}</th>`).join("")}</tr></thead>
+          <tbody>${performance.rows.map(([name, result]) => `<tr><th scope="row">${text(name)}</th><td>${text(result)}</td></tr>`).join("")}</tbody>
+        </table></div>
+        <p>${text(performance.note)}</p>
+        <p><a href="${attr(performance.source_url)}"${/^https?:\/\//.test(performance.source_url) ? ' target="_blank" rel="noopener"' : ""}>${text(performance.source_label)}</a></p>
+      </article>`,
+    dilution && `<article class="product-static-panel" aria-labelledby="product-dilution-${attr(id)}">
+        <h2 id="product-dilution-${attr(id)}">${text(dilution.heading)}</h2>
+        <p>${text(dilution.intro)}</p>
+        <div class="table-scroll"><table class="product-reference-table">
+          <caption>${text(dilution.caption || `${PRODUCTS[id].name} label dilutions`)}</caption>
+          <thead><tr><th scope="col">${text(dilution.column_labels?.[0] || "Vehicle condition")}</th><th scope="col">${text(dilution.column_labels?.[1] || "Label dilution")}</th></tr></thead>
+          <tbody>${dilution.rows.map(([condition, ratio]) => `<tr><th scope="row">${text(condition)}</th><td>${text(ratio)}</td></tr>`).join("")}</tbody>
+        </table></div>
+        <p>${text(dilution.note)}</p>
+      </article>`,
+    guide && `<article class="product-static-panel" aria-labelledby="product-application-${attr(id)}">
+        <h2 id="product-application-${attr(id)}">${text(guide.heading)}</h2>
+        <ol class="spec-list">${guide.steps.map(([title, body], index) => `<li><b>${index + 1}. ${text(title)}</b><span>${text(body)}</span></li>`).join("")}</ol>
+        <p><a href="../contact?type=quote&amp;product=${encodeURIComponent(PRODUCTS[id].name)}#quoteForm">Get application guidance and the latest SDS</a></p>
+      </article>`,
+    reference && `<article class="product-static-panel" aria-labelledby="product-reference-${attr(id)}">
+        <h2 id="product-reference-${attr(id)}">${text(reference.heading)}</h2>
+        <p>${text(reference.body)}</p>
+        <p><a href="${attr(reference.source_url)}"${referenceDocumentAttrs}${/^https?:\/\//.test(reference.source_url) ? ' target="_blank" rel="noopener"' : ""}>${text(reference.source_label)}</a></p>
+      </article>`,
+    profile && `<article class="product-static-panel product-comparison-panel" aria-labelledby="product-technical-${attr(id)}">
+        <div>
+          <h2 id="product-technical-${attr(id)}">${text(profile.heading)}</h2>
+          <p>${text(profile.intro || "Cleaning performance, handling, and environmental data from EMS.")}</p>
+          <p><a href="${attr(profile.source_url)}"${/^https?:\/\//.test(profile.source_url) ? ' target="_blank" rel="noopener"' : ""}>${text(profile.source_label || "Explore EMS technical data, studies & transport classifications (PDF)")}</a></p>
+        </div>
+        <ul class="spec-list">${profile.facts.map(([title, body]) => `<li><b>${text(title)}</b><span>${text(body)}</span></li>`).join("")}</ul>
+      </article>`,
+  ].filter(Boolean).join("\n");
+}
+
 function productComparisonPanel(id) {
   const comparisons = PRODUCT_COMPARISONS.get(id) || [];
   if (!comparisons.length) return "";
@@ -768,6 +852,17 @@ function productSchema(id, product, reviewsSnapshot) {
 
 function productPage(id, product, reviewsSnapshot) {
   const copy = PRODUCT_CATALOG_COPY[id] || {};
+  const handling = copy.handling_guide || {
+    eyebrow: "Before you clean",
+    intro: "Read the latest label and SDS, try a small area first, and follow the safety rules for your workplace.",
+    record: "Record the buildup, surface, dilution, temperature, contact time, agitation, and rinse result so repeat jobs can begin from the same tested settings.",
+    items: [
+      ["Read the directions", "Use the label made for this product and package."],
+      ["Check the surface", "Try a small, hidden area before cleaning the whole job."],
+      ["Follow workplace rules", "Use the PPE, ventilation, and rinse-water steps required at your site."],
+      ["Ask us", "Not sure where to start? MASEST can help with product choice and first-use planning."]
+    ]
+  };
   const marineProduct = MARINE_PRODUCT_NAMES_BY_BASE.get(id);
   if (marineProduct && !/^img\/products\/vertkleen-.+-marine-studio\.webp$/.test(marineProduct.image || "")) {
     throw new Error(`Missing final marine product image for ${id}`);
@@ -788,7 +883,13 @@ function productPage(id, product, reviewsSnapshot) {
   if (hasPhoto && !heroSize) throw new Error(`Missing CMS image metadata for /${product.image.replace(/^\/+/, "")}`);
   const heroMedia = hasPhoto
     ? `<figure class="product-hero-media reveal" data-commerce-media="${id}">
-        <img src="${attr(img)}" alt="${attr(product.name)} product photo" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async">
+        <img src="${attr(img)}" alt="${attr(product.name)} product photo" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async">${product.image_caption ? `\n        <figcaption class="product-hero-caption">${text(product.image_caption)}</figcaption>` : ""}
+      </figure>`
+    : copy.hero_summary ? `<figure class="product-hero-media product-hero-summary reveal" data-commerce-media="${id}">
+        <span class="eyebrow">${text(copy.hero_summary.eyebrow)}</span>
+        <figcaption>${text(product.name)}</figcaption>
+        <p>${text(copy.hero_summary.body)}</p>
+        <dl>${copy.hero_summary.facts.map(([value, label]) => `<div><dt>${text(value)}</dt><dd>${text(label)}</dd></div>`).join("")}</dl>
       </figure>`
     : `<figure class="product-hero-media media-fallback reveal" data-commerce-media="${id}">
         <span class="media-fallback-label">${text(product.name)}</span>
@@ -811,9 +912,36 @@ function productPage(id, product, reviewsSnapshot) {
     .map((spec) => `<li><b>${text(spec[1] || spec[0])}</b><span>${text(spec[2] || "")}</span></li>`)
     .join("\n");
   const proofRecords = productProofRecords(id);
+  const featuredResult = copy.featured_result
+    ? proofRecords.find((record) => record.slug === copy.featured_result)
+    : null;
+  if (copy.featured_result && !featuredResult) throw new Error(`Missing featured result for ${id}`);
+  const resultCopy = copy.featured_result_copy;
+  if (featuredResult && (!resultCopy?.heading || !resultCopy?.intro || !PRODUCTS[resultCopy.related_product])) {
+    throw new Error(`Missing featured result copy or related product for ${id}`);
+  }
+  const featuredMedia = copy.featured_result_media === false ? { image: "", image_after: "" } : {};
+  if (featuredResult && copy.featured_result_images) {
+    if (copy.featured_result_images.length !== 2) throw new Error(`Expected before/after images for ${id}`);
+    copy.featured_result_images.forEach((path, index) => {
+      const metadata = SITE_IMAGE_DIMENSIONS.get(`/${path}`);
+      if (!metadata) throw new Error(`Missing featured image metadata for ${path}`);
+      const key = index === 0 ? "image" : "image_after";
+      Object.assign(featuredMedia, { [key]: `/${path}`, [`${key}_w`]: metadata.width, [`${key}_h`]: metadata.height, [`${key}_alt`]: metadata.alt });
+    });
+  }
+  const featuredResultSection = featuredResult ? `
+  <section class="section-slim" aria-labelledby="product-result-${attr(id)}">
+    <div class="wrap">
+      <h2 id="product-result-${attr(id)}">${text(resultCopy.heading)}</h2>
+      <p>${text(resultCopy.intro)}</p>
+      ${proofRecordsHtml([{ ...featuredResult, ...featuredMedia }])}
+      <p><a href="../products/${attr(resultCopy.related_product)}">${text(resultCopy.related_label)}</a></p>
+    </div>
+  </section>` : "";
   const proofLinks = proofRecords
     .map((record) => (
-      `<li class="doc-file"><a href="../proof#${attr(record.slug)}"><span class="doc-file-copy">${text(record.title)}</span><span class="doc-pill">Result</span></a></li>`
+      `<li class="doc-file"><a href="../proof#${attr(record.slug)}"><span class="doc-file-copy">${text(record.title)}</span><span class="doc-pill">${text(copy.proof_badge || "Result")}</span></a></li>`
     ))
     .join("\n");
   // The hero asks for the purchase decision while the evidence for its strongest claim sits
@@ -823,7 +951,7 @@ function productPage(id, product, reviewsSnapshot) {
   // a plain link on its own line) — indentation matches its <span> siblings.
   const heroProof = proofRecords.length
     ? `
-          <a class="product-hero-proof" href="#records"><i class="ph ph-seal-check" aria-hidden="true"></i>See ${proofRecords.length} real job result${proofRecords.length === 1 ? "" : "s"}</a>`
+          <a class="product-hero-proof" href="#${attr(copy.certification ? `product-certification-${id}` : copy.proof_cta && featuredResult ? `product-result-${id}` : featuredResult?.slug || "records")}"><i class="ph ph-seal-check" aria-hidden="true"></i>${copy.certification ? "See certification &amp; use limits" : copy.proof_cta ? text(copy.proof_cta) : `See ${proofRecords.length} real job result${proofRecords.length === 1 ? "" : "s"}`}</a>`
     : "";
   const docs = (product.docs || [])
     .flatMap((doc) => {
@@ -837,7 +965,7 @@ function productPage(id, product, reviewsSnapshot) {
     })
     .join("\n");
   const backingSections = [
-    proofLinks && `<h3 id="records">Results</h3><ul class="product-fit-list">${proofLinks}</ul>`,
+    proofLinks && `<h3 id="records">${text(copy.proof_heading || "Results")}</h3><ul class="product-fit-list">${proofLinks}</ul>`,
     docs && `<h3>Labels & guides</h3><ul class="product-fit-list">${docs}</ul>`,
   ].filter(Boolean).join("\n        ");
   const procurement = QUOTE_ONLY_IDS.has(id)
@@ -936,24 +1064,21 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
         <h2>Why crews choose it.</h2>
         <ul class="spec-list">${specs}</ul>${backingSections ? `
         ${backingSections}` : ""}
-      </article>${comparisonPanel ? `
+      </article>${productApplicationPanels(id)}${comparisonPanel ? `
       ${comparisonPanel}` : ""}
     </div>
-  </section>
+  </section>${featuredResultSection}
   <section class="section-slim product-handling-section" aria-labelledby="product-handling-${id}">
     <div class="wrap">
       <article class="product-static-panel product-handling-panel">
         <div>
-          <span class="eyebrow">Before you clean</span>
+          <span class="eyebrow">${text(handling.eyebrow)}</span>
           <h2 id="product-handling-${id}">Use ${text(product.name)} with confidence.</h2>
-          <p>Read the latest label and SDS, try a small area first, and follow the safety rules for your workplace.</p>
-          <p>Record the buildup, surface, dilution, temperature, contact time, agitation, and rinse result so repeat jobs can begin from the same tested settings.</p>
+          <p>${text(handling.intro)}</p>
+          <p>${text(handling.record)}</p>
         </div>
         <ul class="product-handling-list">
-          <li><b>Read the directions</b><span>Use the label made for this product and package.</span></li>
-          <li><b>Check the surface</b><span>Try a small, hidden area before cleaning the whole job.</span></li>
-          <li><b>Follow workplace rules</b><span>Use the PPE, ventilation, and rinse-water steps required at your site.</span></li>
-          <li><b>Ask us</b><span>Not sure where to start? MASEST can help with product choice and first-use planning.</span></li>
+          ${handling.items.map(([title, body]) => `<li><b>${text(title)}</b><span>${text(body)}</span></li>`).join("\n          ")}
         </ul>
       </article>
     </div>
@@ -966,7 +1091,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   ${contentPageMount(`products/${id}`)}
 </main>
 <script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>
-<script type="module" src="../js/reviews.js?v=20260929d"></script>
+<script type="module" src="../js/reviews.js?v=20260929e"></script>
 <script src="../js/track.js?v=${MAIN_VERSION}" defer></script>
 </body>
 </html>

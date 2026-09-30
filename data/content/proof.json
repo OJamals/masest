@@ -237,6 +237,29 @@
       "seo": {}
     },
     {
+      "slug": "lam3-concrete-cleaning",
+      "title": "LAM3 concrete cleaning",
+      "kind": "facility",
+      "chips": [
+        "VertKleen LAM3"
+      ],
+      "image": "/img/before-after/moss-before.webp",
+      "result": "Supplied before-and-after photographs show visibly reduced dark buildup on an exterior concrete edge.",
+      "source": "Source: LAM3 photographic field record",
+      "eyebrow": "Exterior concrete · Result",
+      "image_h": 900,
+      "image_w": 1200,
+      "image_alt": "Dark buildup on a concrete edge before LAM3 cleaning",
+      "narrative": "The original LAM3 field photographs show the concrete edge beside the same white fixture. They document the visible finish; dilution, elapsed time, and weather were not recorded with this pair.",
+      "sort_order": 12,
+      "image_after": "/img/before-after/moss-after.webp",
+      "image_after_h": 900,
+      "image_after_w": 1200,
+      "image_after_alt": "Same concrete edge with visibly reduced staining after LAM3 cleaning",
+      "publication_scope": "Published result summary",
+      "seo": {}
+    },
+    {
       "slug": "neatfreaks-hood-degrease",
       "title": "Restaurant hood and floor degreasing",
       "kind": "food",
@@ -289,16 +312,16 @@
       "title": "Property-surface restoration",
       "kind": "facility",
       "chips": [
-        "VertKleen CR + LAM3"
+        "VertKleen CR"
       ],
       "image": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/grout-before.webp?v=20260617b",
-      "result": "VertKleen CR and LAM3 lifted embedded grime, biological buildup, and grout staining for a dramatic property-cleaning result.",
+      "result": "VertKleen CR lifted embedded grime, outdoor buildup, and grout staining in a residential property-cleaning project.",
       "source": "Source: field record",
       "eyebrow": "Property · Result",
       "image_h": 700,
       "image_w": 934,
       "image_alt": "Property surface before VertKleen cleaning",
-      "narrative": "Embedded grime, outdoor growth, and dark grout stains marked the property. CR lifted the ground-in grime while LAM3 stayed on the outdoor buildup longer, revealing cleaner hardscape and grout.",
+      "narrative": "The supplied property report identifies VertKleen CR for the grime, algae, and grout-cleaning work. It describes application, contact time, light brushing, and rinsing to reveal cleaner surfaces.",
       "sort_order": 11,
       "image_after": "https://mvfxzvkzcqmnwcoblvfc.supabase.co/storage/v1/object/public/content-assets/site/img/proof/cases/grout-after.webp?v=20260617b",
       "image_after_h": 882,

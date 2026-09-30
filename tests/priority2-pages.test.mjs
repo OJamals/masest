@@ -52,8 +52,8 @@ const tab4IndustryPages = [
 const comparisonPages = [
   ["comparisons/vertkleen-hcr-vs-clr.html", "VertKleen HCR vs CLR", "HCR vs CLR: Industrial Descaling", "HCR-25G", "CLR PRO MAX", "A real HCR job shows heavy rust and mineral scale"],
   ["comparisons/hcr-vs-rydlyme.html", "HCR vs RYDLYME", "HCR vs RYDLYME: System-Cost Guide", "HCR-25G", "$34.00-$48.60/gal", "A real HVAC job shows HCR releasing heavy rust and scale"],
-  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Degreasers", "CRHD-25G", "$13.20-$36.80/gal", "set up a fair side-by-side test"],
-  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "LAM3-25G", "$34.00/gal", "Before-and-after photos show CR and LAM3"],
+  ["comparisons/cr-hd-vs-simple-green.html", "CR HD vs Simple Green", "CR HD vs Simple Green: Degreasers", "CRHD-25G", "Use your current supplier quote", "set up a fair side-by-side test"],
+  ["comparisons/lam3-vs-wet-forget.html", "LAM3 vs Wet & Forget", "LAM3 vs Wet & Forget: Finished-Area Guide", "LAM3-25G", "Use your current supplier quote and package size", "Original LAM3 field photographs show visibly reduced dark buildup"],
   ["comparisons/beer-line-cleaner-cost-comparison.html", "Beer line cleaner cost comparison", "Brewery CIP: Full-Cycle Cost Guide", "CRCIP-25G", "$38.85/gal", "Brewlando Brewing field and lab results"],
 ];
 

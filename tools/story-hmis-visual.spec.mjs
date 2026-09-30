@@ -109,7 +109,7 @@ async function openStory(page) {
 
 async function scrollAct(page, actNumber, progress = .5) {
   await page.locator(`.story .act[data-act="${actNumber}"]`).evaluate((act, fraction) => {
-    if (innerWidth <= 760) {
+    if (innerWidth <= 720) {
       act.scrollIntoView({ block: "start" });
       return;
     }
@@ -284,6 +284,8 @@ test("preloaded scene media fades out before its source swaps and fades back in"
             type: "before-src",
             at: performance.now() - startedAt,
             path: new URL(before.src).pathname,
+            opacity: Number(getComputedStyle(before).opacity),
+            title: document.getElementById("storyObjectTitle").textContent,
           });
         }
       });
@@ -310,11 +312,11 @@ test("preloaded scene media fades out before its source swaps and fades back in"
     const sourceSwap = events.find((event) => (
       event.type === "before-src" && event.path === beforePath
     ));
-    const swapEnd = events.find((event) => (
+    // Event order remains precise when performance.now() gives adjacent
+    // mutations the same timestamp. Only a removal after the source swap counts.
+    const swapEnd = events.slice(events.indexOf(sourceSwap) + 1).find((event) => (
       event.type === "card-class"
       && !event.swapping
-      && swapStart
-      && event.at >= swapStart.at
     ));
     return {
       events,
@@ -322,6 +324,8 @@ test("preloaded scene media fades out before its source swaps and fades back in"
       fadeInStarted: Boolean(swapEnd && sourceSwap && swapEnd.at >= sourceSwap.at),
       finalPath: new URL(before.currentSrc || before.src).pathname,
       finalOpacity: Number(getComputedStyle(before).opacity),
+      opacityAtSwap: sourceSwap?.opacity,
+      titleAtSwap: sourceSwap?.title,
     };
   }, {
     sceneId: STORY_SCENES[1].id,
@@ -332,6 +336,94 @@ test("preloaded scene media fades out before its source swaps and fades back in"
   expect(handoff.fadeOutMs, JSON.stringify(handoff.events)).toBeGreaterThanOrEqual(140);
   expect(handoff.fadeInStarted, JSON.stringify(handoff.events)).toBe(true);
   expect(handoff.finalOpacity).toBe(1);
+  expect(handoff.opacityAtSwap).toBeLessThanOrEqual(.01);
+  expect(handoff.titleAtSwap).toBe("CIP vessel residue");
+});
+
+for (const reducedMotion of ["no-preference", "reduce"]) {
+  test(`comparison seam follows the exposed image and keyboard in ${reducedMotion} mode`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion });
+    await page.setViewportSize({ width: 656, height: 683 });
+    await openStory(page);
+    const range = page.locator(".story-object__range");
+    for (const value of [15, 85]) {
+      await range.fill(String(value));
+      const geometry = await page.locator(".story-object__media").evaluate((media) => {
+        const box = media.getBoundingClientRect();
+        const divider = media.querySelector(".story-object__divider").getBoundingClientRect();
+        const clip = getComputedStyle(media.querySelector(".story-object__after")).clipPath;
+        const leftInset = Number.parseFloat(clip.match(/inset\(0(?:px)? 0(?:px)? 0(?:px)? ([\d.]+)%\)/)?.[1]);
+        return { seam: (divider.x + divider.width / 2 - box.x) / box.width * 100, leftInset };
+      });
+      expect(geometry.leftInset).toBeCloseTo(100 - value, 1);
+      expect(geometry.seam).toBeCloseTo(geometry.leftInset, 1);
+      await expect(range).toHaveAttribute("aria-valuetext", `${value}% after image revealed`);
+    }
+    await range.focus();
+    await range.press("End");
+    await expect(range).toHaveValue("100");
+    await expect(range).toHaveAttribute("aria-valuetext", "100% after image revealed");
+    await range.press("Home");
+    await range.press("ArrowLeft");
+    await expect(range).toHaveValue("1");
+    await range.press("ArrowRight");
+    await expect(range).toHaveValue("0");
+    for (const modifier of ["altKey", "ctrlKey", "metaKey", "isComposing"]) {
+      const shortcut = await range.evaluate((input, modifier) => {
+        const event = new KeyboardEvent("keydown", {
+          key: "ArrowLeft", bubbles: true, cancelable: true, [modifier]: true,
+        });
+        input.dispatchEvent(event);
+        return { prevented: event.defaultPrevented, value: input.value };
+      }, modifier);
+      expect(shortcut).toEqual({ prevented: false, value: "0" });
+    }
+    const focus = await page.locator(".story-object__media").evaluate(media => getComputedStyle(media).outlineWidth);
+    expect(focus).toBe("3px");
+  });
+}
+
+test("slow scene media keeps its identity and cannot overwrite a newer chapter", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStory(page);
+  let release;
+  let requested;
+  const held = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { requested = resolve; });
+  await page.route("**/pool-cartridge-after-aligned-202609.webp*", async route => {
+    requested();
+    await held;
+    await route.fallback();
+  });
+  try {
+    await page.evaluate(() => window.__MASESTStory.render("pool-cartridge", .5));
+    await started;
+    await expect(page.locator("#storyObjectTitle")).toHaveText("Commercial-kitchen grease");
+    await expect(page.locator(".story-object__before")).toHaveCSS("opacity", "1");
+    await page.evaluate(() => window.__MASESTStory.render("labelle-fermenter", .5));
+    await expect(page.locator(".story-object__before")).toHaveAttribute("src", /labelle-fermenter-before/);
+    release();
+    await page.waitForTimeout(500);
+    await expect(page.locator(".story-object__before")).toHaveAttribute("src", /labelle-fermenter-before/);
+    await expect(page.locator("#storyObjectTitle")).toHaveText("LaBelle fermenter ring");
+  } finally {
+    release();
+  }
+});
+
+test("744px uses one consistent desktop scene and responsive layout", async ({ page }) => {
+  await page.setViewportSize({ width: 744, height: 900 });
+  await openStory(page);
+  await expect(page.locator("#story")).toHaveClass(/story-ready/);
+  await scrollAct(page, 2, .5);
+  const layout = await page.evaluate(() => {
+    const copy = document.querySelector('.act[data-act="2"] .act-content').getBoundingClientRect();
+    const card = document.querySelector('.story-object__card').getBoundingClientRect();
+    return { gap: card.left - copy.right, hidden: document.querySelectorAll('.act[aria-hidden="true"]').length, overflow: document.documentElement.scrollWidth - innerWidth };
+  });
+  expect(layout.gap).toBeGreaterThanOrEqual(24);
+  expect(layout.hidden).toBe(5);
+  expect(layout.overflow).toBe(0);
 });
 
 test("story requests only R2 media and preloads at most the next comparison", async ({ page }) => {
@@ -422,8 +514,9 @@ for (const viewport of [
     await page.mouse.up();
 
     const value = Number(await range.inputValue());
-    expect(value).toBeGreaterThan(70);
-    expect(value).toBeLessThan(90);
+    // After stays on the right: dragging its boundary right exposes less of it.
+    expect(value).toBeGreaterThan(10);
+    expect(value).toBeLessThan(30);
     await expect(range).toHaveAttribute("aria-valuetext", `${value}% after image revealed`);
     await expect.poll(() => page.locator(".story-object__media").evaluate((media) => (
       getComputedStyle(media).getPropertyValue("--story-reveal").trim()
@@ -460,18 +553,28 @@ test("desktop chapter rail keeps unclipped labels clear of step numbers", async 
   await page.setViewportSize({ width: 1440, height: 900 });
   await openStory(page);
 
-  const geometry = await page.locator('.rail-btn[aria-current="step"]').evaluate((button) => {
+  const activeButton = page.locator('.rail-btn[aria-current="step"]');
+  await expect(activeButton.locator("span")).toHaveCSS("opacity", "0");
+  await activeButton.hover();
+  await expect(activeButton.locator("span")).toHaveCSS("opacity", "1");
+  const geometry = await activeButton.evaluate((button) => {
     const number = button.querySelector("b");
     const label = button.querySelector("span");
     const buttonStyle = getComputedStyle(button);
     const labelStyle = getComputedStyle(label);
     const connectorStyle = getComputedStyle(button, "::before");
+    const numberBox = number.getBoundingClientRect();
+    const labelBox = label.getBoundingClientRect();
 
     return {
       buttonPosition: buttonStyle.position,
       connectorContent: connectorStyle.content,
-      numberRight: number.offsetLeft + number.offsetWidth,
-      labelLeft: label.offsetLeft,
+      numberTop: numberBox.top,
+      labelBottom: labelBox.bottom,
+      labelLeft: labelBox.left,
+      labelTop: labelBox.top,
+      labelRight: labelBox.right,
+      viewportWidth: innerWidth,
       labelOverflow: labelStyle.overflow,
       lineHeightRatio: Number.parseFloat(labelStyle.lineHeight) / Number.parseFloat(labelStyle.fontSize),
     };
@@ -479,9 +582,18 @@ test("desktop chapter rail keeps unclipped labels clear of step numbers", async 
 
   expect(geometry.buttonPosition, JSON.stringify(geometry)).toBe("relative");
   expect(geometry.connectorContent, JSON.stringify(geometry)).toBe("none");
-  expect(geometry.numberRight, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.labelLeft - 6);
+  expect(geometry.labelBottom, JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.numberTop - 6);
+  expect(geometry.labelLeft).toBeGreaterThanOrEqual(0);
+  expect(geometry.labelTop).toBeGreaterThanOrEqual(0);
+  expect(geometry.labelRight).toBeLessThanOrEqual(geometry.viewportWidth);
   expect(geometry.labelOverflow, JSON.stringify(geometry)).toBe("visible");
   expect(geometry.lineHeightRatio, JSON.stringify(geometry)).toBeGreaterThanOrEqual(1.2);
+  await page.mouse.move(1200, 100);
+  await activeButton.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(activeButton).toBeFocused();
+  await expect(activeButton.locator("span")).toHaveCSS("opacity", "1");
 });
 
 test("desktop chapter rail clears the active copy column", async ({ page }) => {
@@ -618,7 +730,7 @@ for (const width of [320, 390, 430]) {
         return { left: rect.left, right: rect.right, width: rect.width };
       });
       const status = story.querySelector(".story-object__status").getBoundingClientRect();
-      const range = story.querySelector(".story-object__range").getBoundingClientRect();
+      const media = story.querySelector(".story-object__media").getBoundingClientRect();
       return {
         ready: story.classList.contains("story-ready"),
         mobileReady: story.classList.contains("story-mobile-ready"),
@@ -626,7 +738,7 @@ for (const width of [320, 390, 430]) {
         viewportWidth,
         boxes,
         statusBottom: status.bottom,
-        rangeTop: range.top,
+        mediaBottom: media.bottom,
       };
     });
 
@@ -634,7 +746,7 @@ for (const width of [320, 390, 430]) {
     expect(layout.ready).toBe(false);
     expect(layout.mobileReady).toBe(true);
     expect(layout.overflow).toBe(0);
-    expect(layout.statusBottom, JSON.stringify(layout)).toBeLessThanOrEqual(layout.rangeTop + 1);
+    expect(layout.statusBottom, JSON.stringify(layout)).toBeLessThanOrEqual(layout.mediaBottom - 8);
     for (const box of layout.boxes) {
       expect(box.left, JSON.stringify(layout)).toBeGreaterThanOrEqual(-1);
       expect(box.right, JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewportWidth + 1);

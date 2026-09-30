@@ -34,9 +34,10 @@ test("product fuzzy search tolerates common typos and adjacent transpositions", 
   assert.equal(rankProductIds(CATALOG_ORDER, "descalre")[0], "descaler");
 
   const typoResults = rankProductIds(CATALOG_ORDER, "scle hvca");
+  assert.deepEqual(typoResults, rankProductIds(CATALOG_ORDER, "scale hvac"));
   assert.ok(typoResults.includes("hcr-t16"));
-  assert.ok(typoResults.includes("hcr"));
   assert.ok(typoResults.includes("descaler"));
+  assert.ok(!typoResults.includes("hcr"), "brewery CIP HCR is not an HVAC product");
 });
 
 test("product fuzzy search stays conservative for short and unrelated terms", () => {

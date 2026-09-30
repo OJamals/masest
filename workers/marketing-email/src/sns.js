@@ -151,6 +151,11 @@ function lifecycle(type, message) {
   if (type === 'DeliveryDelay') return ['deferred', false, null, message.deliveryDelay?.timestamp];
   if (type === 'Complaint') return ['complained', true, 'complaint', message.complaint?.timestamp];
   if (type === 'Bounce') {
+    // List-management opt-outs are not mailbox failures. SES labels these
+    // Permanent, but promoting them to a hard bounce blocks transactional mail.
+    if (message.bounce?.bounceSubType === 'UnsubscribedRecipient') {
+      return ['rejected', true, null, message.bounce?.timestamp];
+    }
     const permanent = String(message.bounce?.bounceType || '').toLowerCase() === 'permanent';
     return [permanent ? 'bounced' : 'failed', true, permanent ? 'bounce' : null, message.bounce?.timestamp];
   }

@@ -3,9 +3,11 @@
 // slice; sub-views are filled by later plans. Mirrors the createQuotesTab shape
 // (#36 per-tab split). Shared primitives ($, api, state, admSkeleton, admEmpty)
 // are injected; esc/delegate come from util.js.
-import { esc, delegate, dateTime as date } from '../util.js?v=20260929d';
-import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260929d';
-import { createCrmProspects } from './crm-prospects.js?v=20260929d';
+import { esc, delegate, dateTime as date } from '../util.js?v=20260929e';
+import { taskAssigneeFacets, filterTasksByAssignee } from './crm-task-filter.js?v=20260929e';
+import { createCrmProspects } from './crm-prospects.js?v=20260929e';
+import { createConnectedCrm } from './connected-crm.js?v=20260929e';
+import { createConnectedSales } from './connected-sales.js?v=20260929e';
 
 const DIR_ROLES = [
   ['', 'All roles'],
@@ -20,7 +22,9 @@ const DIR_ROLES = [
 ];
 
 export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, openSubject, admListPager, refreshStats }) {
-  const SUBTABS = [['tasks', 'Follow-ups'], ['contacts', 'People'], ['prospects', 'Prospects']];
+  const SUBTABS = [['tasks', 'Follow-ups'], ['contacts', 'People'], ['prospects', 'Prospects'], ['intake', 'CRM intake'], ['sales', 'Sales workspace']];
+  const connectedCrm = createConnectedCrm({ api });
+  const connectedSales = createConnectedSales({ api });
   const TASK_SCOPES = [['open', 'All open'], ['mine', 'Assigned to me'], ['overdue', 'Overdue']];
   const initialParams = new URLSearchParams(location.search);
   const initialView = initialParams.get('crm_view');
@@ -37,7 +41,7 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
   function syncWorkspaceUrl() {
     const params = new URLSearchParams(location.search);
     const values = {
-      crm_view: ['contacts', 'prospects'].includes(state.crmView) ? state.crmView : '',
+      crm_view: ['contacts', 'prospects', 'intake', 'sales'].includes(state.crmView) ? state.crmView : '',
       crm_task_scope: state.crmTaskScope && state.crmTaskScope !== 'open' ? state.crmTaskScope : '',
       crm_task_assignee: state.crmTaskAssignee || '',
       crm_q: state.crmContactQ || '',
@@ -296,6 +300,8 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
   }
 
   function showView(view) {
+    viewLoadId += 1;
+    portalLoadId += 1;
     state.crmView = view;
     syncWorkspaceUrl();
     const box = $('admCrm');
@@ -307,6 +313,8 @@ export function createCrmWorkspace({ $, api, state, admSkeleton, admEmpty, crm, 
     const body = box.querySelector('[data-crm-ws-body]');
     if (view === 'contacts') renderContacts(body);
     else if (view === 'prospects') prospects.render(body);
+    else if (view === 'intake') connectedCrm.render(body);
+    else if (view === 'sales') connectedSales.render(body);
     else renderTasks(body);
   }
 

@@ -136,6 +136,40 @@ test('SES delivery events normalize into provider-neutral lifecycle records', ()
   assert.equal(complaint.suppressionReason, 'complaint');
 });
 
+test('SES marketing opt-out rejection never creates an all-stream bounce suppression', async () => {
+  // SES reports list-management opt-outs as Permanent/UnsubscribedRecipient
+  // even though it never attempts delivery to the recipient's mail server.
+  const message = sesMessage('Bounce', {
+    bounce: {
+      bounceType: 'Permanent',
+      bounceSubType: 'UnsubscribedRecipient',
+      timestamp: '2026-09-25T12:07:37.960Z',
+      bouncedRecipients: [{
+        emailAddress: 'buyer@example.com',
+        action: 'failed',
+        status: '5.7.1',
+        diagnosticCode: 'Amazon SES did not send the message to this address because the contact has unsubscribed from receiving emails.',
+      }],
+    },
+  });
+  const applied = [];
+  const handler = createSesSnsHandler({
+    verifyEnvelope: async () => true,
+    applyLifecycle: async (_env, event) => applied.push(event),
+    applySubscription: async () => assert.fail('A rejection must not change consent'),
+  });
+  const response = await handler(new Request('https://worker.test/v1/ses/events', {
+    method: 'POST',
+    body: JSON.stringify({ ...BASE, Message: JSON.stringify(message) }),
+  }), { SES_SNS_TOPIC_ARN: TOPIC, AWS_SES_REGION: 'us-east-1' });
+  assert.equal(response.status, 200);
+  assert.equal(applied.length, 1);
+  assert.equal(applied[0].status, 'rejected');
+  assert.equal(applied[0].terminal, true);
+  assert.equal(applied[0].suppressionReason, null);
+  assert.equal(applied[0].occurredAt, '2026-09-25T12:07:37.960Z');
+});
+
 test('SES Subscription events become canonical consent updates', () => {
   const message = sesMessage('Subscription', {
     subscription: {

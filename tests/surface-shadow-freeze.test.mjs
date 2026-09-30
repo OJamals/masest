@@ -52,7 +52,6 @@ const ALLOWED = new Set([
   "0 1px 0 rgba(20, 24, 32, .02)",
   "0 1px 0 rgba(20,24,32,.02), 0 8px 24px -18px rgba(20,24,32,.3)",
   "0 1px 2px color-mix(in srgb, var(--ink) 10%, transparent)",
-  "0 1px 2px rgba(0, 0, 0, .44)",
   "0 1px 2px rgba(20,24,32,.18), 0 10px 22px -14px rgba(20,24,32,.42)",
   "0 1px 3px rgba(21,23,28,.26)",
   "0 20px 52px rgb(0 0 0 / 28%)",
@@ -63,10 +62,12 @@ const ALLOWED = new Set([
   "0 24px 80px rgba(20, 24, 32, .28)",
   "0 26px 74px rgba(9, 46, 52, .1)",
   "0 2px 10px rgba(0, 0, 0, .18)",
+  // Single-layer cast on the story comparison handle; shared cast tokens are
+  // light-surface shadows and disappear against this dark media background.
+  "0 2px 12px rgba(0, 0, 0, .24)",
   "0 2px 6px rgba(20,24,32,.20), 0 14px 28px -16px rgba(20,24,32,.46)",
   "0 34px 84px rgba(4, 50, 54, .09)",
   "0 34px 92px rgba(9, 46, 52, .16)",
-  "0 4px 18px rgba(0, 0, 0, .42)",
   "0 5px 15px rgba(0, 0, 0, .25)",
   "0 8px 24px color-mix(in srgb, var(--ink) 24%, transparent), 0 2px 5px color-mix(in srgb, var(--ink) 18%, transparent)",
   "0 8px 24px rgba(9, 46, 52, .12)",

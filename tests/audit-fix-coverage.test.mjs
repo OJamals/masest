@@ -36,8 +36,12 @@ test('cart registers the actual action row, not its non-overlapping padded card,
 });
 
 test('product detail purchase proof and primary buy action stay decision-adjacent', () => {
-  assert.match(product, /<a class="product-hero-proof" href="#records"[^>]*>[\s\S]*See 3 real job results<\/a>/);
-  assert.match(product, /id="records"/);
+  const factsAndBuy = product.match(
+    /<div class="product-hero-facts"[^>]*>[\s\S]*?<\/div>\s*(?:<!--[\s\S]*?-->\s*)?<div class="product-hero-buy">/,
+  )?.[0] || '';
+  assert.match(factsAndBuy, /<a class="product-hero-proof" href="#product-result-hcr"[^>]*>[\s\S]*See brewery cleaning results<\/a>/);
+  assert.match(product, /<h2 id="product-result-hcr">A proven pair for brewery buildup\.<\/h2>/);
+  assert.match(factsAndBuy, /<div class="product-hero-buy">/);
   assert.match(
     commerceSource,
     /variant === "button" \? "btn btn-primary btn-sm" : "shop-card-add"/,

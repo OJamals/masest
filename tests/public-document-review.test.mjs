@@ -22,6 +22,7 @@ import {
 } from "../tools/public-document-policy.mjs";
 import { proofCardHtml } from "../js/proof-records.js";
 import { STYLE_VERSION } from "../tools/static-release.mjs";
+import { CATALOG_ORDER, PRODUCTS } from "../js/main/catalog-data.js";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
@@ -269,36 +270,13 @@ test("approved public evidence surfaces expose no stale verification status", ()
   }
 });
 
-test("public surfaces use VertKleen without source-brand attribution", () => {
-  const rootHtml = readdirSync(root)
-    .filter((path) => path.endsWith(".html"));
-  const paths = [
-    ...rootHtml,
-    ...filesUnder("blog/").filter((path) => path.endsWith(".html")),
-    ...filesUnder("comparisons/").filter((path) => path.endsWith(".html")),
-    ...filesUnder("industries/").filter((path) => path.endsWith(".html")),
-    ...filesUnder("products/").filter((path) => path.endsWith(".html")),
-    "data/catalog.seed.json",
-    "data/products.seed.json",
-    "data/content/blog.json",
-    "data/content/proof.json",
-    "data/industry-applications.json",
-    "js/main/catalog-data.js",
-    "js/main/chrome.js",
-    "supabase/seed-proof-cards.sql",
-    "tools/build-blog.mjs",
-    "tools/gen_industries.mjs",
-    "tools/seo-inject.mjs",
-  ];
-
-  for (const path of paths) {
-    const source = read(path).replace(/"source"\s*:\s*"[^"]*"/g, "");
-    assert.doesNotMatch(source, /SynTech|SynClean/, `${path}: source-brand vocabulary`);
+test("product pages retain orderable identities alongside authorized EMS technology", () => {
+  // Owner authorized EMS source attribution and materials on 2026-09-25.
+  // Technology names explain the chemistry; catalog names identify what buyers order.
+  for (const id of CATALOG_ORDER) {
+    const heading = read(`products/${id}.html`).match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1];
+    assert.equal(heading, PRODUCTS[id].name, `${id}: canonical product identity`);
   }
-  const publicCopy = paths.map(read).join("\n");
-  assert.match(publicCopy, /VertKleen/);
-  assert.doesNotMatch(read("products/hcr.html"), /SynTech|SynClean/);
-  assert.doesNotMatch(read("products/cr.html"), /SynTech|SynClean/);
 });
 
 test("proof cards expose conversion records without approval-process copy", () => {

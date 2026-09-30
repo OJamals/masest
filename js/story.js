@@ -26,7 +26,7 @@
   var objectDetail = story.querySelector("#storyObjectDetail");
   var productImage = story.querySelector(".story-object__product img");
   var productName = story.querySelector(".story-object__product b");
-  var mediaQuery = window.matchMedia("(max-width: 760px)");
+  var mediaQuery = window.matchMedia("(max-width: 720px)");
   var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   var reduce = motionQuery.matches;
   var compact = mediaQuery.matches;
@@ -35,6 +35,8 @@
   var mediaRequest = 0;
   var teardownMode = function () {};
   var imageLoads = new Map();
+  var paintedReveal = null;
+  var announcedReveal = null;
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -115,10 +117,16 @@
     var load = new Promise(function (resolveLoad) {
       var image = new Image();
       image.decoding = "async";
-      image.onload = function () { resolveLoad(true); };
+      function decoded() {
+        if (!image.decode) { resolveLoad(true); return; }
+        image.decode().then(function () { resolveLoad(true); }, function () {
+          resolveLoad(image.complete && image.naturalWidth > 0);
+        });
+      }
+      image.onload = decoded;
       image.onerror = function () { resolveLoad(false); };
       image.src = src;
-      if (image.complete && image.naturalWidth) resolveLoad(true);
+      if (image.complete && image.naturalWidth) decoded();
     });
     imageLoads.set(src, load);
     return load;
@@ -159,7 +167,7 @@
     if (reduce) return Promise.resolve();
     return new Promise(function (resolveFade) {
       window.requestAnimationFrame(function () {
-        window.setTimeout(resolveFade, 180);
+        window.setTimeout(resolveFade, 220);
       });
     });
   }
@@ -169,15 +177,16 @@
     var config = st.config;
     var needsSwap = beforeImage.getAttribute("src") !== config.before.src
       || afterImage.getAttribute("src") !== config.after.src;
-    applySceneStyles(st);
-    applySceneMetadata(st);
-    objectCard.classList.toggle("is-swapping", needsSwap);
+    objectCard.classList.remove("is-swapping");
+    if (!needsSwap) {
+      applySceneStyles(st);
+      applySceneMetadata(st);
+    }
 
     Promise.all([
       preloadImage(config.before.src),
       preloadImage(config.after.src),
-      preloadImage(config.product.src),
-      needsSwap ? waitForSceneFade() : Promise.resolve()
+      preloadImage(config.product.src)
     ]).then(function (loaded) {
       if (request !== mediaRequest || activeState !== st) return;
       if (!loaded[0] || !loaded[1]) {
@@ -185,12 +194,19 @@
         objectCard.classList.add("has-media-error");
         return;
       }
-      setImage(beforeImage, config.before);
-      setImage(afterImage, config.after);
-      if (loaded[2]) setImage(productImage, config.product);
-      objectCard.classList.remove("has-media-error");
-      window.requestAnimationFrame(function () {
-        if (request === mediaRequest) objectCard.classList.remove("is-swapping");
+      if (needsSwap) objectCard.classList.add("is-swapping");
+      return (needsSwap ? waitForSceneFade() : Promise.resolve()).then(function () {
+        if (request !== mediaRequest || activeState !== st) return;
+        // Commit identity and geometry together, after the old pair is hidden.
+        applySceneStyles(st);
+        setImage(beforeImage, config.before);
+        setImage(afterImage, config.after);
+        if (loaded[2]) setImage(productImage, config.product);
+        applySceneMetadata(st);
+        objectCard.classList.remove("has-media-error");
+        window.requestAnimationFrame(function () {
+          if (request === mediaRequest) objectCard.classList.remove("is-swapping");
+        });
       });
     });
   }
@@ -233,10 +249,17 @@
   }
 
   function setReveal(value) {
-    var reveal = Math.round(clamp(number(value, 50), 0, 100));
-    comparisonMedia.style.setProperty("--story-reveal", reveal + "%");
-    comparisonRange.value = String(reveal);
-    comparisonRange.setAttribute("aria-valuetext", reveal + "% after image revealed");
+    var reveal = Math.round(clamp(number(value, 50), 0, 100) * 10) / 10;
+    var whole = Math.round(reveal);
+    if (paintedReveal !== reveal) {
+      comparisonMedia.style.setProperty("--story-reveal", reveal + "%");
+      paintedReveal = reveal;
+    }
+    if (announcedReveal !== whole) {
+      comparisonRange.value = String(whole);
+      comparisonRange.setAttribute("aria-valuetext", whole + "% after image revealed");
+      announcedReveal = whole;
+    }
   }
 
   function renderScene(st) {
@@ -250,10 +273,22 @@
     renderScene(activeState);
   });
 
+  comparisonRange.addEventListener("keydown", function (event) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+    // WebKit does not mirror native range arrow keys in RTL. Keep the handle
+    // moving in the pressed direction in every engine; Home/End stay native.
+    event.preventDefault();
+    comparisonRange.stepUp(event.key === "ArrowLeft" ? 1 : -1);
+    comparisonRange.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
   function restoreFocusable(element) {
     if (element.dataset.storyOriginalTabindex) {
-      element.setAttribute("tabindex", element.dataset.storyOriginalTabindex);
-    } else {
+      if (element.getAttribute("tabindex") !== element.dataset.storyOriginalTabindex) {
+        element.setAttribute("tabindex", element.dataset.storyOriginalTabindex);
+      }
+    } else if (element.hasAttribute("tabindex")) {
       element.removeAttribute("tabindex");
     }
   }
@@ -261,11 +296,12 @@
   function syncDesktopAccessibility(current) {
     states.forEach(function (st) {
       var visible = st === current;
-      st.act.setAttribute("aria-hidden", visible ? "false" : "true");
+      var hidden = visible ? "false" : "true";
+      if (st.act.getAttribute("aria-hidden") !== hidden) st.act.setAttribute("aria-hidden", hidden);
       st.focusables.forEach(function (element) {
         var revealed = st.p >= Number(element.dataset.storyRevealAt || 0);
         if (visible && revealed) restoreFocusable(element);
-        else element.setAttribute("tabindex", "-1");
+        else if (element.getAttribute("tabindex") !== "-1") element.setAttribute("tabindex", "-1");
       });
     });
   }
@@ -475,7 +511,7 @@
           trigger: st.act,
           start: "top center",
           end: "bottom center",
-          scrub: .24,
+          scrub: .18,
           invalidateOnRefresh: true,
           onEnter: function () { if (!disposed) activateState(st, true); },
           onEnterBack: function () { if (!disposed) activateState(st, true); }
@@ -498,8 +534,8 @@
         }
         timeline.fromTo(
           element,
-          { autoAlpha: 0, y: 18 },
-          { autoAlpha: 1, y: 0, duration: .18 },
+          { autoAlpha: 0, y: 12 },
+          { autoAlpha: 1, y: 0, duration: .16 },
           at
         );
       });
@@ -562,7 +598,7 @@
   }
 
   // GSAP is a DESKTOP-ONLY dependency: initDesktopStory is the only function that touches
-  // it. index.html preloads it under media="(min-width: 761px)", so on a phone it is never
+  // it. index.html preloads it under media="(min-width: 721px)", so on a phone it is never
   // fetched and this never runs; on a desktop the bytes are already in cache and appending
   // the tags executes them almost immediately. ScrollTrigger registers itself against gsap,
   // so the two must arrive in that order -- hence the chain rather than two parallel loads.

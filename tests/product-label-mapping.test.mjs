@@ -28,7 +28,7 @@ const expectedLabels = {
   },
   multiwash: {
     name: "VertKleen MultiWash",
-    image: "img/products/multiwash-gym-studio.webp",
+    image: "",
   },
   purgo: {
     name: "Purgo",
@@ -40,10 +40,14 @@ test("Products grid uses the real application labels and permitted jug images", 
   for (const [id, expected] of Object.entries(expectedLabels)) {
     assert.equal(PRODUCTS[id]?.name, expected.name, `${id} display name`);
     assert.equal(PRODUCTS[id]?.image, expected.image, `${id} product image`);
-    assert.ok(
-      managedImages.has(`/${expected.image}`),
-      `${expected.image} should be registered in CMS`,
-    );
+    if (expected.image) {
+      assert.ok(
+        managedImages.has(`/${expected.image}`),
+        `${expected.image} should be registered in CMS`,
+      );
+    } else {
+      assert.equal(PRODUCTS[id]?.image_review_pending, true, `${id} needs a reviewed package image`);
+    }
   }
 
   for (const id of CATALOG_ORDER) {

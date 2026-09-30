@@ -1,10 +1,10 @@
-import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260929d';
-import { catalogImageDimensions } from './main/catalog-data.js?v=20260929d';
+import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260929e';
+import { catalogImageDimensions } from './main/catalog-data.js?v=20260929e';
 import {
   createShippingRequestCoordinator,
   fetchShippingJson,
   shippingRequestSnapshot,
-} from './shipping-request.js?v=20260929d';
+} from './shipping-request.js?v=20260929e';
 
 const money = (amount, currency = 'usd') => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: String(currency).toUpperCase(),
@@ -293,9 +293,9 @@ function fillAddress(prefix, address) {
 async function boot() {
   const [cartModule, autocompleteModule, authModule, staffModule] = await Promise.all([
     import('./cart.js'),
-    import('./address-autocomplete.js?v=20260929d'),
-    import('./auth.js?v=20260929d'),
-    import('./staff-surface.js?v=20260929d'),
+    import('./address-autocomplete.js?v=20260929e'),
+    import('./auth.js?v=20260929e'),
+    import('./staff-surface.js?v=20260929e'),
   ]);
   const { acceptedQuoteContext, checkout, items } = cartModule;
   const { mountAddressAutocomplete } = autocompleteModule;

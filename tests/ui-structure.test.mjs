@@ -110,12 +110,13 @@ test("products page wires the catalog grid from product data", () => {
   assert.doesNotMatch(read("products.html"), /Request a Quote/);
 });
 
-test("generated product details include source-backed application media", () => {
+test("generated product details include source-backed application guidance", () => {
   const product = read("products/hcr.html");
 
-  assert.match(product, /class="product-application-media"/);
-  assert.match(product, /Built for real work/);
-  assert.match(product, /280× less corrosion/);
+  assert.match(product, /product-dilution-hcr/);
+  assert.match(product, /product-application-hcr/);
+  assert.match(product, /Carib Brewery laboratory report/);
+  assert.doesNotMatch(product, /class="product-application-media"/);
   assert.doesNotMatch(product, /Request a Quote/);
   assert.doesNotMatch(product, /type=distributor/);
 });

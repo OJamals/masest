@@ -4,10 +4,10 @@ import {
   parseRequestContext,
   requestContextNotes,
   requestContextVolume,
-} from "../request-context.js?v=20260929d";
-import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929d";
-import { normalizeRequestPhone } from "../request-phone.js?v=20260929d";
-import { normalizeLeadAttribution } from "../lead-attribution.js?v=20260929d";
+} from "../request-context.js?v=20260929e";
+import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929e";
+import { normalizeRequestPhone } from "../request-phone.js?v=20260929e";
+import { normalizeLeadAttribution } from "../lead-attribution.js?v=20260929e";
 
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {
@@ -463,7 +463,11 @@ export function initQuoteForm() {
   // Prefill from URL params (?product=, ?doc=). Links carry catalog names that can
   // drift from option text in spacing/suffixes ("CR HD" vs "CRHD", "… Program" vs
   // "… Program (DBNPA if specified)"), so fall back to a normalized prefix match.
-  const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  // Keep CIP and HVAC HCR distinct. The CR names map to existing form choices.
+  const norm = s => String(s)
+    .replace(/^VertKleen CIP CR$/i, "VertKleen CR")
+    .replace(/^VertKleen HVAC CR$/i, "VertKleen CR2")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "");
   const selectOption = (sel, wanted) => {
     if (!sel || !wanted) return false;
     const options = [...sel.options];

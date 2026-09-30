@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const home = read("index.html");
 const imageManifest = JSON.parse(read("data/content/site-images.json"));
 
 const expectedScenes = [
@@ -21,6 +22,12 @@ const expectedAssets = expectedScenes.flatMap(([, scene]) => [
 
 const alignedWidth = 1200;
 const alignedHeight = 1017;
+
+test("lead-first homepage does not mount the retired story engine", () => {
+  assert.match(home, /<section class="home-hero"/);
+  assert.match(home, /Request a private-label quote/);
+  assert.doesNotMatch(home, /id="story"|js\/story\.js/);
+});
 
 test("all twelve story frames stay in the site-image ledger for R2 byte verification", () => {
   const assets = new Map(imageManifest.assets.map((asset) => [asset.storage_path, asset]));

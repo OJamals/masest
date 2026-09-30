@@ -126,23 +126,10 @@ test("marine product routes expose final packshot context without label-document
 test("product pages show job scenes outside proof", () => {
   const applicationImages = {
     alumibrite: "alumibrite-aluminum-test-patch-v1.webp",
-    cr: "cip-cycle-skid-v1.webp",
-    cr2: "hvac-cr-drain-maintenance-v1.webp",
-    crhd: "cr-hd-degreasing-trial-v1.webp",
-    "cr-hd-low-foam": "cr-hd-low-foam-machine-wash-v1.webp",
-    descaler: "hvac-descaling-loop-v1.webp",
-    hcr: "cip-cycle-skid-v1.webp",
-    "hcr-t16": "hvac-descaling-loop-v1.webp",
-    lam3: "lam3-exterior-surface-trial-v1.webp",
-    multiwash: "multiwash-facility-floor-v1.webp",
-    neutral: "neutral-material-test-patch-v1.webp",
-    purgo: "purgo-controlled-drain-maintenance-v1.webp",
-    sar: "sar-application-engineering-v1.webp",
     torque: "torque-contained-fleet-wash-v1.webp",
-    watersafe60: "watersafe60-water-program-v1.webp",
   };
 
-  assert.deepEqual(Object.keys(applicationImages).sort(), [...CATALOG_ORDER].sort());
+  assert.deepEqual(Object.keys(applicationImages).sort(), CATALOG_ORDER.filter((id) => PRODUCTS[id].application_image).sort());
 
   for (const [id, filename] of Object.entries(applicationImages)) {
     const html = readProject(`products/${id}.html`);
@@ -152,9 +139,7 @@ test("product pages show job scenes outside proof", () => {
       new RegExp(`/img/representative/applications/${filename.replaceAll(".", "\\.")}`),
       `${id} should render its approved representative scene`,
     );
-    assert.match(figure, id === "purgo"
-      ? /<b>Facility cleaning &amp; drain care<\/b>/
-      : /<b>Built for real work<\/b>/);
+    assert.ok(figure.includes(`<b>${htmlText(PRODUCTS[id].application_title || "Built for real work")}</b>`));
     assert.doesNotMatch(figure, /proof|evidence/i);
   }
 });
@@ -443,9 +428,9 @@ test("all product pages explain platform science, operator advantage, and next a
 test("all public products route quote actions by buyer job", () => {
   const expected = {
     hcr: "Plan my brewery cleaning cycle",
-    "hcr-t16": "Price a bulk HVAC descaling job",
+    "hcr-t16": "Plan my HVAC descaling job",
     descaler: "Test my mineral buildup",
-    sar: "Match SAR to my buildup",
+    sar: "Plan my SAR dosing program",
     cr: "Plan my brewery wash cycle",
     cr2: "Plan my HVAC CR cleaning job",
     crhd: "Test CR HD on my toughest job",
@@ -468,12 +453,13 @@ test("all public products route quote actions by buyer job", () => {
 test("product pages deep-link only their own real-world results", () => {
   const expected = {
     hcr: ["brewery-cip-trials", "ddc-rust-test", "brevard-farm-hvac"],
+    "hcr-t16": ["brevard-farm-hvac"],
     cr: ["brewery-cip-trials", "cr-caustic-replacement"],
     descaler: ["fire-pump-descaler", "residential-ac-coil"],
     crhd: ["commercial-kitchen-crhd", "distribution-center-assessment"],
-    lam3: ["property-grout-moss"],
+    lam3: ["lam3-concrete-cleaning"],
     alumibrite: ["airboat-alumibrite"],
-    torque: ["airboat-alumibrite"],
+    torque: ["yellowfin-torque-wash"],
   };
   const resultSlugs = [...new Set(Object.values(expected).flat())];
   for (const id of CATALOG_ORDER) {
@@ -497,12 +483,12 @@ test("specialty product pages explain their fit in plain language", () => {
       .map((id) => [id, readFileSync(new URL(`products/${id}.html`, PROJECT_ROOT), "utf8")]),
   );
   assert.match(pages.purgo, /targets odor-causing bacteria with a colorless, non-staining formula/i);
-  assert.match(pages.lam3, /stays wet longer so it can work into organic growth and staining/i);
-  assert.match(pages.alumibrite, /loosens oxide and mineral film, and brings back a cleaner, brighter finish/i);
-  assert.match(pages.torque, /loosens road film, salt, grime, and bugs, then leaves a clean, polished finish/i);
+  assert.match(pages.lam3, /Choose spray-and-leave cleaning or brush and rinse/i);
+  assert.match(pages.alumibrite, /revealing the metal’s natural brightness without etching it to create the finish/i);
+  assert.match(pages.torque, /Rinsing distributes polymerized natural bean wax and the anti-stick coating/i);
   assert.doesNotMatch(
     Object.values(pages).join("\n"),
-    /Yellowfin|tourist airboat|landscape friendliness|material-friendly|microbial burden|general use|Brightening Index 90\.1/i,
+    /tourist airboat|landscape friendliness|material-friendly|microbial burden|general use|Brightening Index 90\.1/i,
   );
 });
 
@@ -515,7 +501,7 @@ test("catalog category controls filter the product grid", async () => {
 
       await page.click('.shop-chip[data-group="water"]');
       const water = await page.$$eval(".shop-card", (els) => els.map((e) => e.dataset.id));
-      assert.deepEqual(water, ["cr2", "purgo", "watersafe60"], "category chip should filter the grid");
+      assert.deepEqual(water, ["cr2", "purgo", "sar", "watersafe60"], "category chip should filter the grid");
 
       const glycolChip = await page.$('.shop-chip[data-group="glycol"]');
       assert.equal(glycolChip, null, "glycol chip should be removed from the confirmed price-list catalog");

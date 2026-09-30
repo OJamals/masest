@@ -36,6 +36,7 @@ blob-report/
 .codebase-memory/
 .headroom/
 .serena/
+/.dsh/
 
 # Loop Factory runtime output; specs remain versioned source contracts.
 /factory/prompts/
@@ -48,3 +49,6 @@ blob-report/
 .dolt/
 *.db
 .beads-credential-key
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

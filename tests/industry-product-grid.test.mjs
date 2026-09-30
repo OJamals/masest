@@ -4,6 +4,7 @@ import test from "node:test";
 
 import { attr, find, findAll, rawOf } from "../tools/html-query.mjs";
 import { industryProductCards, replaceIndustryProductGrid } from "../tools/industry-product-grid.mjs";
+import { PRODUCTS } from "../js/main/catalog-data.js";
 
 const root = new URL("../", import.meta.url);
 const read = (file) => readFileSync(new URL(file, root), "utf8");
@@ -66,7 +67,7 @@ test("industry product images resolve through the R2 media registry", () => {
     const grid = gridOf(read(`industries/${page}`));
     if (!grid) continue;
     const sources = findAll(grid.node, { tag: "img" }).map((img) => attr(img, "src"));
-    assert.ok(sources.length, `${page}: cards render no product image`);
+    assert.equal(sources.length, grid.ids.filter(id => PRODUCTS[id]?.image).length, `${page}: every available product image renders; withdrawn images stay absent`);
     for (const src of sources) {
       assert.match(src, /^\.\.\/img\//, `${page}: ${src} must stay relative to /industries/`);
       assert.ok(registered.has(src.replace(/^\.\./, "")), `${page}: ${src} is not in the R2 image registry`);

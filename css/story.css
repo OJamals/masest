@@ -6,6 +6,14 @@
  * Reduced motion / no library / no JS: complete readable document.
  */
 
+/* The sticky header sits above the story on first paint. An opaque surface
+   keeps the white document underneath from turning its dark glass gray. */
+body:has(#story) .nav.over-dark {
+  background: #0b0f11;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .story {
   --story-nav-h: 59px;
   --story-actions-h: 52px;
@@ -32,12 +40,12 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: .3;
+  opacity: .18;
   background-image:
     linear-gradient(rgba(255, 255, 255, .026) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, .026) 1px, transparent 1px);
   background-size: 64px 64px;
-  mask-image: linear-gradient(to right, #000, transparent 72%);
+  /* No full-story mask: keep this quiet texture inexpensive to composite. */
 }
 
 .story-skip {
@@ -195,7 +203,7 @@
   left: max(20px, calc((100vw - 1400px) / 2));
   display: grid;
   gap: var(--s2);
-  width: 76px;
+  width: 44px;
   transform: translateY(-50%);
   pointer-events: auto;
 }
@@ -203,10 +211,11 @@
 .rail-btn {
   position: relative;
   display: grid;
-  grid-template-columns: 20px minmax(0, 62px);
-  min-height: 32px;
+  grid-template-columns: 1fr;
+  min-height: 44px;
   align-items: center;
-  gap: var(--s2);
+  justify-items: center;
+  border-left: 2px solid transparent;
   color: #7f898a;
   font-size: var(--fs-caption);
   line-height: 1.25;
@@ -219,13 +228,19 @@
 }
 
 .rail-btn span {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
   overflow: visible;
-  max-width: 62px;
-  padding-block: 2px;
+  padding: var(--s2) var(--s3);
+  width: 88px;
+  border-radius: var(--r-xs);
+  background: var(--story-panel);
+  pointer-events: none;
   opacity: 0;
   font-weight: 700;
   line-height: 1.4;
-  white-space: nowrap;
+  white-space: normal;
   transition: opacity .2s var(--ease-out);
 }
 
@@ -234,8 +249,12 @@
   color:var(--on-accent);
 }
 
+.rail-btn[aria-current="step"] {
+  border-color: var(--story-accent-strong);
+}
+
 .rail-btn:hover span,
-.rail-btn[aria-current="step"] span {
+.rail-btn:focus-visible span {
   opacity: 1;
 }
 
@@ -264,7 +283,7 @@
   width: 100%;
   max-height: calc(100dvh - var(--story-nav-h) - 108px);
   border: 1px solid var(--story-line);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-card);
   background: #101719;
   box-shadow:
     0 18px 28px -22px rgba(0, 0, 0, .58),
@@ -307,7 +326,7 @@
 .story-object__before,
 .story-object__after img {
   object-fit: cover;
-  transition: opacity .18s var(--ease-out);
+  transition: opacity .22s var(--ease-out);
 }
 
 .story-object__before {
@@ -319,8 +338,8 @@
   z-index: 2;
   overflow: hidden;
   clip-path: inset(0 0 0 calc(100% - var(--story-reveal)));
-  transition: clip-path .14s linear;
-  will-change: clip-path;
+  /* GSAP already smooths scroll progress. A second transition causes lag
+     between the photograph, boundary, and direct pointer input. */
 }
 
 .story-object__after img {
@@ -330,7 +349,7 @@
 
 .story-object__card.is-swapping .story-object__before,
 .story-object__card.is-swapping .story-object__after img {
-  opacity: .34;
+  opacity: 0;
 }
 
 .story-object__media::after {
@@ -353,7 +372,7 @@
   padding: var(--s1) var(--s2);
   color:var(--on-accent);
   background: rgba(7, 11, 12, .8);
-  font-size: .58rem;
+  font-size: .65rem;
   font-weight: 800;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -373,14 +392,32 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--story-reveal);
+  left: calc(100% - var(--story-reveal));
   z-index: 6;
   width: 2px;
   opacity: .92;
   background:var(--surface);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .18);
   transform: translateX(-1px);
-  transition: left .14s linear;
+  pointer-events: none;
+}
+
+.story-object__divider::after {
+  content: "‹ ›";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 50%;
+  color: var(--story-ink);
+  background: rgba(11, 15, 17, .92);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .24);
+  font: 600 20px/1 system-ui, sans-serif;
+  transform: translate(-50%, -50%);
 }
 
 .story-object__scan {
@@ -453,7 +490,7 @@
 
 .story-object__status {
   position: absolute;
-  bottom: 52px;
+  bottom: 16px;
   left: 14px;
   z-index: 7;
   display: inline-flex;
@@ -474,16 +511,19 @@
 .story-object__range {
   appearance: none;
   position: absolute;
-  right: 12px;
-  bottom: 8px;
-  left: 12px;
+  top: 0;
+  right: -22px;
+  bottom: 0;
+  left: -22px;
   z-index: 9;
-  width: calc(100% - 24px);
-  height: 38px;
+  width: calc(100% + 44px);
+  height: 100%;
   margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
+  opacity: 0;
+  direction: rtl;
   cursor: ew-resize;
   pointer-events: auto;
   touch-action: pan-y;
@@ -491,43 +531,36 @@
 
 .story-object__range::-webkit-slider-runnable-track {
   height: 2px;
-  border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, .62);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .44);
 }
 
 .story-object__range::-webkit-slider-thumb {
   appearance: none;
-  width: 32px;
-  height: 32px;
-  margin-top: calc(-1 * var(--s4));
-  border:2px solid var(--on-accent);
-  border-radius: 50%;
-  background:
-    linear-gradient(90deg, transparent 44%, #0e1719 44% 48%, transparent 48% 52%, #0e1719 52% 56%, transparent 56%),
-    var(--story-accent-strong);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, .42);
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  margin-top: -21px;
+  border: 0;
 }
 
 .story-object__range::-moz-range-track {
   height: 2px;
-  border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, .62);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .44);
 }
 
 .story-object__range::-moz-range-thumb {
-  width: 28px;
-  height: 28px;
-  border:2px solid var(--on-accent);
-  border-radius: 50%;
-  background: var(--story-accent-strong);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, .42);
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  border: 0;
 }
 
-.story-object__range:focus-visible {
+.story-object__media:has(.story-object__range:focus-visible) {
   outline: 3px solid var(--story-accent-strong);
-  outline-offset: 3px;
+  outline-offset: -4px;
+}
+
+.story-object__media:has(.story-object__range:focus-visible) .story-object__divider::after {
+  color: #092e31;
+  background: var(--story-accent-strong);
 }
 
 .story-object__status::before {
@@ -641,21 +674,21 @@
 }
 
 .story .act-h {
-  max-width: 11ch;
+  max-width: 15ch;
   color:var(--on-accent);
-  font-size: clamp(2.5rem, 4.5vw, 4.9rem);
+  font-size: clamp(2.5rem, 4.05vw, 4.25rem);
   font-weight: var(--heading-weight);
-  letter-spacing: -.055em;
-  line-height: .98;
+  letter-spacing: -.04em;
+  line-height: 1.06;
   text-wrap: balance;
 }
 
 .act-p {
-  max-width: 49ch;
+  max-width: 46ch;
   margin-top: var(--s5);
   color: #c0c7c8;
   font-size: clamp(.98rem, 1.25vw, 1.16rem);
-  line-height: 1.58;
+  line-height: 1.65;
 }
 
 .story-job-note {
@@ -672,8 +705,8 @@
   display: block;
   color: var(--story-accent-strong);
   font-size: var(--fs-caption);
-  font-weight: 800;
-  letter-spacing: .1em;
+  font-weight: 700;
+  letter-spacing: .06em;
   text-transform: uppercase;
 }
 
@@ -710,8 +743,7 @@
 /* GSAP owns only opacity/translation. CSS owns all readable fallbacks. */
 .story.story-ready [data-at] {
   opacity: 0;
-  transform: translateY(18px);
-  will-change: opacity, transform;
+  transform: translateY(12px);
 }
 
 .story:not(.story-ready) .act {
@@ -724,12 +756,11 @@
 }
 
 /* Missing JS/library fallback: show both source frames instead of freezing on one. */
-.story:not(.story-ready):not(.story-mobile-ready) .story-object__after {
+.story:not(.story-ready):not(.story-mobile-ready) .story-object__media {
   --story-reveal: 50%;
 }
 
 .story:not(.story-ready):not(.story-mobile-ready) .story-object__divider {
-  left: 50%;
   opacity: .9;
 }
 
@@ -1031,7 +1062,6 @@
   .story::before {
     opacity: .2;
     background-size: 42px 42px;
-    mask-image: linear-gradient(to bottom, #000, transparent 42%);
   }
 
   .story-skip {
@@ -1124,7 +1154,7 @@
   .story-object__label {
     top: 8px;
     padding: var(--s1) var(--s2);
-    font-size: .5rem;
+    font-size: .6rem;
   }
 
   .story-object__label--before {
@@ -1151,7 +1181,7 @@
   }
 
   .story-object__status {
-    bottom: 47px;
+    bottom: 10px;
     left: 9px;
     max-width: calc(100% - 18px);
     min-height: 22px;
@@ -1217,10 +1247,10 @@
 
   .story-mobile-ready .act-content {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(12px);
     transition:
-      opacity .46s var(--ease-out),
-      transform .46s var(--ease-out);
+      opacity .32s var(--ease-out),
+      transform .32s var(--ease-out);
   }
 
   .story-mobile-ready .act.is-mobile-visible .act-content {
@@ -1234,9 +1264,9 @@
   }
 
   .story .act-h {
-    max-width: 13ch;
+    max-width: 16ch;
     font-size: clamp(2.1rem, 10.5vw, 3.1rem);
-    line-height: 1;
+    line-height: 1.06;
   }
 
   .act-p {
@@ -1380,7 +1410,7 @@
   .story-mobile-ready .stage {
     /* Match the capped visual and persistent controls instead of reserving
        an uncapped, width-sized image plus a fixed block of empty scroll. */
-    padding-top: calc(min(48.8vw, 26svh) + var(--story-nav-h) + var(--story-actions-h) + var(--s10));
+    padding-top: calc(min(48.8vw, 26svh) + var(--story-nav-h) + var(--story-actions-h) + var(--s12));
   }
 }
 
@@ -1449,17 +1479,12 @@
     transition: none !important;
   }
 
-  .story-object__after {
-    --story-reveal: 50%;
-  }
-
   .story-object__scan,
   .story-object__target {
     display: none;
   }
 
   .story-object__divider {
-    left: 50%;
     opacity: .9;
   }
 

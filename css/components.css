@@ -354,6 +354,32 @@ body:has(.about-router) .page-hero { padding-bottom: var(--s12); }
 .crm-field { display: grid; gap: var(--s1); min-width: 0; color: var(--muted); font-size: var(--fs-caption); font-weight: 700; }
 .crm-field .adm-input,
 .crm-field .adm-select { max-width: none; }
+.crm-intake { display: grid; gap: var(--s3); min-width: 0; }
+.crm-intake .crm-section-head { margin-bottom: 0; }
+.crm-intake [data-intake-import] { margin: 0; padding: var(--s4); }
+.crm-intake fieldset { display: grid; gap: var(--s3); min-width: 0; margin: 0; padding: 0; border: 0; }
+.crm-intake legend { margin-bottom: var(--s3); font-weight: 700; }
+.crm-intake p { margin: 0; }
+.crm-intake input { width: 100%; max-width: none; min-width: 0; }
+.crm-intake input[type="file"] { font: inherit; }
+.crm-intake-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2); align-items: end; }
+.crm-intake [data-intake-result]:empty { display: none; }
+.crm-intake [data-intake-file] { overflow-wrap: anywhere; }
+.crm-review-dialog { width: min(900px, calc(100vw - 32px)); margin: auto; }
+.crm-review-dialog .detail-dialog-body { min-width: 0; }
+.crm-review-header { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s3); margin-bottom: var(--s3); }
+.crm-review-header h2 { margin: 0; }
+.crm-review-header .detail-dialog-actions { margin: 0; flex-shrink: 0; }
+.crm-review-dialog [data-review-summary] details { margin: var(--s3) 0; }
+.crm-review-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); margin: var(--s3) 0; }
+.crm-review-fields dt { color: var(--muted); font-size: var(--fs-caption); }
+.crm-review-fields dd { margin: 0; overflow-wrap: anywhere; }
+.crm-review-record { padding: var(--s3); margin: var(--s3) 0; border: 1px solid var(--border); border-radius: var(--r-input); }
+.crm-review-record h4 { margin: 0 0 var(--s2); overflow-wrap: anywhere; }
+.crm-review-record p { overflow-wrap: anywhere; }
+.crm-review-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+.crm-review-dialog [data-review-summary] h3 { overflow-wrap: anywhere; }
+@media (max-width: 480px) { .crm-review-fields { grid-template-columns: minmax(0, 1fr); } }
 .crm-note-form textarea,
 .crm-task-form input { min-width: 0; }
 .crm-mini-options { grid-column: 1 / -1; color: var(--muted); font-size: var(--fs-caption); }

@@ -5,13 +5,13 @@
 // helpers are injected; esc/delegate/money/confirmDialog/dateTime come from util.js and
 // the dirty-edit helpers from edits.js. The CRM activity panel (Timeline/Tasks/Notes,
 // slice 1) is reused inside the drawer via createCrmPanel — no js/admin.js change needed.
-import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260929d';
-import { captureDirty, restoreDirty } from './edits.js?v=20260929d';
-import { createCrmPanel } from './crm.js?v=20260929d';
-import { createSavedViews } from './saved-views.js?v=20260929d';
-import { QUOTE_TASK_DETAILS, PRIVATE_LABEL_DETAILS } from '../quote-task-details.js?v=20260929d';
-import { normalizeRequestPhone } from '../request-phone.js?v=20260929d';
-import { leadAttribution, leadAcquisitionLabel } from '../lead-attribution.js?v=20260929d';
+import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260929e';
+import { captureDirty, restoreDirty } from './edits.js?v=20260929e';
+import { createCrmPanel } from './crm.js?v=20260929e';
+import { createSavedViews } from './saved-views.js?v=20260929e';
+import { QUOTE_TASK_DETAILS, PRIVATE_LABEL_DETAILS } from '../quote-task-details.js?v=20260929e';
+import { normalizeRequestPhone } from '../request-phone.js?v=20260929e';
+import { leadAttribution, leadAcquisitionLabel } from '../lead-attribution.js?v=20260929e';
 
 const REQUEST_DETAIL_FIELDS = [
   ['request_topic', 'Request topic'],

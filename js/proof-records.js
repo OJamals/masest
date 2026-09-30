@@ -1,4 +1,4 @@
-import { canonicalPublicImageUrl } from "./image-url.js?v=20260929d";
+import { canonicalPublicImageUrl } from "./image-url.js?v=20260929e";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -27,8 +27,7 @@ export function proofCardHtml(card) {
     ? `<div class="case-ba"><figure>${imageHtml}<figcaption>Before</figcaption></figure><figure>${afterHtml}<figcaption>After</figcaption></figure></div>`
     : imageHtml ? `<figure class="case-media">${imageHtml}</figure>` : "";
 
-  return `    <article id="${escapeHtml(card?.slug || "")}" class="case-card reveal" data-proof-card data-proof-kind="${escapeHtml(card?.kind || "all")}">
-      ${media}
+  return `    <article id="${escapeHtml(card?.slug || "")}" class="case-card reveal" data-proof-card data-proof-kind="${escapeHtml(card?.kind || "all")}">${media ? `\n      ${media}` : ""}
       <div class="case-body">
         <span class="case-eyebrow">${recordType}</span>
         <h3>${escapeHtml(card?.title || "VertKleen result")}</h3>

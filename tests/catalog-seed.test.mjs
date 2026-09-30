@@ -434,7 +434,12 @@ test("site copy respects documentation claim guardrails", () => {
   assert.doesNotMatch(publicClaimCopy, /SAM\.gov registered|procurement-ready/i);
   assert.doesNotMatch(publicClaimCopy, /drops the hazard rating to 0-0-0/i);
   assert.doesNotMatch(publicClaimCopy, /service with the building still occupied|turn maintenance into an evacuation|fewer HazCom headaches/i);
-  assert.doesNotMatch(publicClaimCopy, /Biodegrades in under 10 days|no toxic fuming/i);
+  assert.doesNotMatch(publicClaimCopy, /no toxic fuming/i);
+  // Exact-product labels may support a timed biodegradation claim. Keep it off
+  // broad company/catalog pages, where it would imply the whole range qualifies.
+  const broadPageCopy = ["index.html", "products.html", "industries.html", "about.html", "programs.html"]
+    .map(readSite).join("\n");
+  assert.doesNotMatch(broadPageCopy, /Biodegrades in under 10 days/i);
   assert.doesNotMatch(publicClaimCopy, /Engineering-reviewed ASHRAE 188 WMP|Legionella assessment and full injection system|quarterly Legionella|24\/7 response/i);
   assert.doesNotMatch(publicClaimCopy, /without acid fumes, a solvent storage cabinet, or hazmat freight|students and staff still on campus|without handling hydrochloric acid/i);
   assert.doesNotMatch(publicClaimCopy, /non-corrosive hydrochloric-acid replacement|Non-corrosive coil descaler|no harsh fumes around the water/i);

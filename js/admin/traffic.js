@@ -2,7 +2,7 @@
 // Self-contained: no shared admin state, self-fetches /api/admin/traffic. Shared
 // primitives ($, api, admSkeleton, pct) are injected so this module stays a pure
 // function of its dependencies.
-import { esc } from '../util.js?v=20260929d';
+import { esc } from '../util.js?v=20260929e';
 
 export function renderLeadAcquisition(data) {
   if (!data?.available) return '<section class="adm-card"><h2>Website inquiries · last 28 days</h2><p class="adm-status" data-state="err">Saved inquiry report unavailable. Reload to retry.</p></section>';

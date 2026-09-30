@@ -12,7 +12,7 @@ const storyPerformanceBudget = read("tools/story-performance-budget.mjs");
 test("story reveal uses a scroll-driven and draggable wipe, not a contrast crossfade", () => {
   assert.match(storyCss, /--story-reveal:\s*8%/);
   assert.match(storyCss, /clip-path:\s*inset\(0 0 0 calc\(100% - var\(--story-reveal\)\)\)/);
-  assert.match(storyCss, /\.story-object__divider\s*\{[^}]*left:\s*var\(--story-reveal\)/s);
+  assert.match(storyCss, /\.story-object__divider\s*\{[^}]*left:\s*calc\(100% - var\(--story-reveal\)\)/s);
   assert.match(storyCss, /rotate\(var\(--story-after-rotate\)\)/);
   assert.match(storyJs, /return 8 \+ clamp\(progress, 0, 1\) \* 84/);
   assert.match(storyJs, /comparisonRange\.addEventListener\("input"/);
