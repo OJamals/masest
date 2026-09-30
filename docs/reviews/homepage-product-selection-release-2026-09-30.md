@@ -31,6 +31,14 @@ Local release gates passed:
 
 CI, exact-commit Pages deployment, and live homepage verification are recorded in the release response after publication.
 
+The initial CI run and its retry exposed a pre-existing support-test clock race in
+two pagination/search checks: sampling `Date.now()` and then sending a separate
+`pauseAt` command could target the past on the slower runner. Both checks now
+install a fixed start time and pause at a fixed future instant before entering
+the pending search. Their assertions remain intact; no support application code
+changed. Ten repeats of each corrected check passed. The setup follows the
+[Playwright clock guidance](https://playwright.dev/docs/clock#consistent-time-and-timers).
+
 ## Deployment and rollback
 
 Production uses the existing GitHub Verify workflow: homepage performance checks, core verification, then Cloudflare Pages deployment of the exact main-branch commit to `masest-commerce`.

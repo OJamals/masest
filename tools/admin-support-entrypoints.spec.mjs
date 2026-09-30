@@ -632,7 +632,7 @@ test("cursor pagination deduplicates equal-time tickets and preserves server fil
   const calls = [];
   const secondId = "44444444-4444-4444-8444-444444444444";
   await boot(page);
-  await page.clock.install();
+  await page.clock.install({ time: new Date("2026-09-30T12:00:00Z") });
   await page.unroute("**/api/admin/messages**");
   await page.route("**/api/admin/messages**", (route) => {
     const url = new URL(route.request().url());
@@ -651,7 +651,8 @@ test("cursor pagination deduplicates equal-time tickets and preserves server fil
   });
   await page.goto(BASE_URL + "/admin.html#support");
   await expect(page.getByText("Unfiltered Acme ticket", { exact: true })).toBeVisible();
-  await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+  // A fixed future pause avoids racing a sampled Date.now() across protocol calls.
+  await page.clock.pauseAt(new Date("2026-09-30T12:01:00Z"));
   await page.locator("#siteSupportSearch").fill("Acme");
   await page.locator('[data-support-queue="waiting"]').click();
   await page.getByRole("button", { name: "Filters" }).click();
@@ -691,7 +692,7 @@ test("a pending new search turns Load more into a current-query first page", asy
   const calls = [];
   const secondId = "44444444-4444-4444-8444-444444444444";
   await boot(page);
-  await page.clock.install();
+  await page.clock.install({ time: new Date("2026-09-30T12:00:00Z") });
   await page.unroute("**/api/admin/messages**");
   await page.route("**/api/admin/messages**", (route) => {
     const url = new URL(route.request().url());
@@ -711,7 +712,8 @@ test("a pending new search turns Load more into a current-query first page", asy
   });
   await page.goto(BASE_URL + "/admin.html#support");
   await expect(page.getByText("Initial cursor ticket", { exact: true })).toBeVisible();
-  await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+  // Pause before entering the search so its debounce stays pending until Load more.
+  await page.clock.pauseAt(new Date("2026-09-30T12:01:00Z"));
   await page.locator("#siteSupportSearch").fill("Beta");
   await page.locator("[data-support-load-more]").click();
   await expect(page.getByText("Beta current-search ticket", { exact: true })).toBeVisible();
