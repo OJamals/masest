@@ -208,6 +208,62 @@ async function routeProductionContact(page, base, scriptFails = false) {
   }));
 }
 
+test('search entry attribution reaches durable intake through both contact choices', async () => {
+  await withPage(async (page, base) => {
+    await routeProductionContact(page, base);
+    await page.route('https://masest.test/api/track', route => route.fulfill({ status: 204 }));
+    const saved = [];
+    const intake = new Map();
+    let loseAcknowledgement = true;
+    const handler = createQuoteHandler({ ...dependencies, saveIntake: async (_sb, value) => {
+      const prior = intake.get(value.intakeId);
+      if (prior) {
+        assert.equal(value.fingerprint, prior.fingerprint);
+        return { quoteId, duplicate: true };
+      }
+      intake.set(value.intakeId, value);
+      saved.push(value);
+      return { quoteId };
+    } });
+    await page.route('https://masest.test/api/quote', async route => {
+      const response = await handler({ env: {}, request: new Request(route.request().url(), {
+        method: 'POST', headers: route.request().headers(), body: route.request().postDataBuffer(),
+      }) });
+      await route.fulfill({ status: loseAcknowledgement ? 503 : response.status, contentType: 'application/json',
+        body: loseAcknowledgement ? '{"error":"test_lost_acknowledgement"}' : await response.text() });
+    });
+    await page.goto('https://masest.test/blog/how-to-descale-heat-exchanger', { referer: 'https://www.google.com/search?q=private-token' });
+    await page.waitForFunction(() => typeof window.masestAttribution === 'function');
+    for (const mode of ['call', 'email']) {
+      loseAcknowledgement = true;
+      await page.goto('https://masest.test/contact?type=private-label');
+      await page.waitForFunction(() => Boolean(window.quoteCaptchaTest));
+      if (mode === 'call') await page.locator('#fCallbackPhone').fill('8135550123');
+      else {
+        await page.getByRole('button', { name: /Add request details/ }).click();
+        await page.locator('#fEmail').fill('buyer@example.com');
+      }
+      await page.evaluate(() => window.quoteCaptchaTest.options.callback('local-test-token'));
+      await page.getByRole('button', { name: mode === 'call' ? 'Request my call' : 'Send for an email reply', exact: true }).click();
+      await page.getByRole('heading', { name: 'Almost there: send the request.', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Edit my request' }).click();
+      await page.evaluate(() => {
+        // Model optional tracking becoming available between an uncertain commit and retry.
+        window.masestUtm = () => ({ utm_source: 'late campaign', utm_campaign: 'urgent distributor today' });
+        window.quoteCaptchaTest.options.callback('local-test-retry-token');
+      });
+      loseAcknowledgement = false;
+      await page.getByRole('button', { name: mode === 'call' ? 'Request my call' : 'Send for an email reply', exact: true }).click();
+      await page.getByRole('heading', { name: mode === 'call' ? 'Call requested.' : 'Request received.', exact: true }).waitFor();
+      assert.deepEqual(saved.at(-1).row.payload.attribution, {
+        version: 1, landing_path: '/blog/how-to-descale-heat-exchanger', referrer_origin: 'https://www.google.com',
+      });
+      assert.doesNotMatch(JSON.stringify(saved.at(-1).row.payload.attribution), /private-token|buyer|visitor/);
+    }
+    assert.equal(saved.length, 2);
+  });
+});
+
 test('contact choices stay hidden until request handlers are ready during navigation', async () => {
   await withPage(async (page, base) => {
     let releaseMain;

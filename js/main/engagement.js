@@ -4,9 +4,10 @@ import {
   parseRequestContext,
   requestContextNotes,
   requestContextVolume,
-} from "../request-context.js?v=20260929c";
-import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929c";
-import { normalizeRequestPhone } from "../request-phone.js?v=20260929c";
+} from "../request-context.js?v=20260929d";
+import { QUOTE_TASK_DETAILS, QUOTE_TASK_DETAIL_INTENTS, PRIVATE_LABEL_DETAILS } from "../quote-task-details.js?v=20260929d";
+import { normalizeRequestPhone } from "../request-phone.js?v=20260929d";
+import { normalizeLeadAttribution } from "../lead-attribution.js?v=20260929d";
 
 export function initBeforeAfter() {
   document.querySelectorAll("[data-ba]").forEach(ba => {
@@ -44,7 +45,7 @@ function quoteSubmissionId() {
 
 function attachSubmissionIdentity(form, data) {
   const signature = [...data.entries()]
-    .filter(([key]) => !["cf-turnstile-response", "submission_id"].includes(key))
+    .filter(([key]) => !["cf-turnstile-response", "submission_id", "attribution", "utm_source", "utm_medium", "utm_campaign"].includes(key))
     .map(([key, value]) => [key, String(value)])
     .sort(([ak, av], [bk, bv]) => ak.localeCompare(bk) || av.localeCompare(bv));
   const fingerprint = JSON.stringify(signature);
@@ -61,9 +62,11 @@ async function submitRequest(form, data) {
   // Attach first-touch UTM attribution to the submission (best-effort; stored in quotes.payload).
   try {
     if (typeof window.masestUtm === "function" && data instanceof FormData) {
-      const utm = window.masestUtm() || {};
-      Object.keys(utm).forEach((k) => { if (utm[k]) data.append(k, utm[k]); });
+      const utm = normalizeLeadAttribution(window.masestUtm()) || {};
+      ['utm_source', 'utm_medium', 'utm_campaign'].forEach((k) => { if (utm[k]) data.set(k, utm[k]); });
     }
+    const attribution = normalizeLeadAttribution(window.masestAttribution?.());
+    if (attribution) data.set("attribution", JSON.stringify(attribution));
   } catch (e) { /* attribution is best-effort */ }
   attachSubmissionIdentity(form, data);
   // Abort a hung endpoint so the user is never stranded on a disabled button.

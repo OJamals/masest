@@ -10,6 +10,7 @@ import {
 import { verifyTurnstile } from '../_lib/turnstile.js';
 import { QUOTE_TASK_DETAILS, PRIVATE_LABEL_DETAILS } from '../../js/quote-task-details.js';
 import { normalizeRequestPhone } from '../../js/request-phone.js';
+import { normalizeLeadAttribution } from '../../js/lead-attribution.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -90,27 +91,44 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
-async function quoteIntakeFingerprint(row) {
-  const bytes = new TextEncoder().encode(stableJson(row));
+async function quoteIntakeFingerprint(row, legacy = false) {
+  // Optional attribution can arrive late or be blocked. It must not split one retry
+  // into a second lead or conflict with the same submission from an older browser.
+  const payload = { ...row.payload };
+  delete payload.attribution;
+  const fingerprintRow = { ...row, payload };
+  if (legacy) {
+    fingerprintRow.lead_score = scoreLead(payload);
+    fingerprintRow.priority = priorityForScore(fingerprintRow.lead_score);
+  } else {
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign']) delete payload[key];
+  }
+  const bytes = new TextEncoder().encode(stableJson(fingerprintRow));
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('');
 }
 
-async function saveQuoteIntake(sb, { intakeId, fingerprint, row }) {
-  const { data, error } = await sb.rpc('save_quote_intake', {
-    p_intake_id: intakeId,
-    p_fingerprint: fingerprint,
-    p_quote: row,
-  });
-  if (error) {
-    const collision = /quote_intake_identity_collision/i.test(error.message || '');
-    return { error: collision ? 'idempotency_conflict' : 'intake_unavailable' };
+async function saveQuoteIntake(sb, { intakeId, fingerprint, legacyFingerprint, row }) {
+  const candidates = [...new Set([fingerprint, legacyFingerprint].filter(Boolean))];
+  for (const candidate of candidates) {
+    const { data, error } = await sb.rpc('save_quote_intake', {
+      p_intake_id: intakeId,
+      p_fingerprint: candidate,
+      p_quote: row,
+    });
+    if (error) {
+      const collision = /quote_intake_identity_collision/i.test(error.message || '');
+      // A row saved by the preceding release included campaign labels in its hash.
+      // Only an exact old fingerprint may acknowledge it; never replace the row.
+      if (collision && candidate !== candidates.at(-1)) continue;
+      return { error: collision ? 'idempotency_conflict' : 'intake_unavailable' };
+    }
+    const quoteId = String(data?.quote_id || '');
+    if (!UUID.test(quoteId)) return { error: 'intake_unavailable' };
+    return { quoteId, duplicate: data?.duplicate === true };
   }
-  const quoteId = String(data?.quote_id || '');
-  if (!UUID.test(quoteId)) return { error: 'intake_unavailable' };
-  return { quoteId, duplicate: data?.duplicate === true };
 }
 
 export async function handleQuote({ request, env }, dependencies = {}) {
@@ -141,6 +159,14 @@ export async function handleQuote({ request, env }, dependencies = {}) {
 
   if (String(fields._gotcha || '').trim()) return json(200, { ok: true });
   normalizeTaskDetails(fields);
+  const attribution = normalizeLeadAttribution(fields.attribution);
+  delete fields.attribution;
+  // Older cached forms send campaign fields at the top level. Keep only safe labels.
+  const campaign = normalizeLeadAttribution(fields);
+  for (const key of Object.keys(fields).filter((key) => key.startsWith('utm_'))) {
+    delete fields[key];
+    if (campaign?.[key]) fields[key] = campaign[key];
+  }
 
   const type = normalizeRequestType(fields.type);
   const callback = type === 'callback';
@@ -185,7 +211,10 @@ export async function handleQuote({ request, env }, dependencies = {}) {
 
   // Transport-only identity/CAPTCHA fields must never change the durable fingerprint or
   // lead score across an otherwise identical retry.
-  const leadScore = scoreLead(payload);
+  const leadDetails = { ...payload };
+  for (const key of ['utm_source', 'utm_medium', 'utm_campaign']) delete leadDetails[key];
+  const leadScore = scoreLead(leadDetails);
+  if (attribution) payload.attribution = attribution;
   const priority = priorityForScore(leadScore);
   const pipelineStage = pipelineStageForType(type);
   const nextStep = nextStepForType(type);
@@ -223,6 +252,7 @@ export async function handleQuote({ request, env }, dependencies = {}) {
     durable = await persistIntake(sb, {
       intakeId,
       fingerprint: await quoteIntakeFingerprint(row),
+      legacyFingerprint: await quoteIntakeFingerprint(row, true),
       row,
     });
   } catch (error) {

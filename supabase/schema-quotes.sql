@@ -27,6 +27,7 @@ create table if not exists public.quotes (
 
 alter table public.quotes add column if not exists intake_id uuid;
 alter table public.quotes add column if not exists intake_fingerprint text;
+alter table public.quotes add column if not exists reporting_excluded boolean not null default false;
 
 do $$ begin
   alter table public.quotes add constraint quotes_intake_identity_shape_chk check (

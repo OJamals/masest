@@ -18,7 +18,7 @@ import {
   releaseQuoteCheckoutMutation,
 } from '../../_lib/quote-checkout-attempt.js';
 
-const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,source,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
+const QUOTE_SELECT = 'id,created_at,type,name,email,company,phone,product,industry,location,message,payload,source,status,notes,handled_at,handled_by,priority,next_step,due_at,lead_score,assigned_to,assigned_at,reporting_excluded,pipeline_stage,deal_value,expected_close,stage_changed_at,lost_reason,contact_id';
 const QUOTE_STATUSES = new Set(['new', 'contacted', 'closed', 'spam']);
 const QUOTE_PRIORITIES = new Set(['low', 'normal', 'high', 'urgent']);
 const QUOTE_DUE_FILTERS = new Set(['overdue', 'upcoming', 'unscheduled']);

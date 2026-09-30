@@ -5,12 +5,13 @@
 // helpers are injected; esc/delegate/money/confirmDialog/dateTime come from util.js and
 // the dirty-edit helpers from edits.js. The CRM activity panel (Timeline/Tasks/Notes,
 // slice 1) is reused inside the drawer via createCrmPanel — no js/admin.js change needed.
-import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260929c';
-import { captureDirty, restoreDirty } from './edits.js?v=20260929c';
-import { createCrmPanel } from './crm.js?v=20260929c';
-import { createSavedViews } from './saved-views.js?v=20260929c';
-import { QUOTE_TASK_DETAILS, PRIVATE_LABEL_DETAILS } from '../quote-task-details.js?v=20260929c';
-import { normalizeRequestPhone } from '../request-phone.js?v=20260929c';
+import { esc, delegate, money, confirmDialog, dateTime, restoreFocusOnClose } from '../util.js?v=20260929d';
+import { captureDirty, restoreDirty } from './edits.js?v=20260929d';
+import { createCrmPanel } from './crm.js?v=20260929d';
+import { createSavedViews } from './saved-views.js?v=20260929d';
+import { QUOTE_TASK_DETAILS, PRIVATE_LABEL_DETAILS } from '../quote-task-details.js?v=20260929d';
+import { normalizeRequestPhone } from '../request-phone.js?v=20260929d';
+import { leadAttribution, leadAcquisitionLabel } from '../lead-attribution.js?v=20260929d';
 
 const REQUEST_DETAIL_FIELDS = [
   ['request_topic', 'Request topic'],
@@ -28,10 +29,13 @@ function payloadValues(value) {
 }
 
 export function requestDetailsHtml(quote) {
+  const attribution = leadAttribution(quote);
   const rows = REQUEST_DETAIL_FIELDS.map(([key, label]) => {
     const values = payloadValues(quote.payload?.[key]);
     return values.length ? `<span><b>${label}</b>${esc(values.join(', '))}</span>` : '';
-  }).filter(Boolean).join('');
+  }).filter(Boolean).join('')
+    + (attribution ? `<span><b>Acquisition</b>${esc(leadAcquisitionLabel(attribution))}</span>${attribution.landing_path ? `<span><b>Entry page</b>${esc(attribution.landing_path)}</span>` : ''}` : '')
+    + (quote.reporting_excluded ? '<span><b>Reporting</b>Internal/test inquiry · excluded</span>' : '');
   return rows ? `<div class="quote-request-summary">${rows}</div>` : '';
 }
 
@@ -394,6 +398,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       <label>Next step <input class="adm-input" name="next_step" autocomplete="off" data-d-next value="${esc(q.next_step || '')}"></label>
       <label>Follow-up due <input class="adm-input" name="follow_up_due" data-d-due type="datetime-local" value="${esc(dueValue)}"></label>
       <label>Notes <textarea class="adm-textarea" name="quote_notes" data-d-notes>${esc(q.notes || '')}</textarea></label>
+      <label><input type="checkbox" name="reporting_excluded" data-d-reporting-excluded${q.reporting_excluded ? ' checked' : ''}> Exclude from acquisition reporting (internal/test inquiry)</label>
       <div class="adm-tools" style="justify-content:flex-end;flex-wrap:wrap">
         ${quoteContactActions(q)}
         <button class="btn btn-ghost btn-sm" data-drawer-snooze type="button">Snooze 2d</button>
@@ -528,6 +533,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
     // customer-facing flows off a plain note edit.
     const newStage = v('[data-d-stage]');
     const stageChanged = newStage && newStage !== (quote.pipeline_stage || 'new');
+    const reportingExcluded = dlg.querySelector('[data-d-reporting-excluded]')?.checked === true;
     let lostReason;
     if (stageChanged && newStage === 'lost') {
       lostReason = await pickLostReason();
@@ -537,6 +543,7 @@ export function createQuotesTab({ $, api, state, message, admSkeleton, admEmpty,
       const res = await api('/api/admin/quotes', { method: 'POST', body: {
         id: quote.id,
         ...(stageChanged ? { pipeline_stage: newStage, ...(lostReason ? { lost_reason: lostReason } : {}) } : {}),
+        ...(reportingExcluded !== (quote.reporting_excluded === true) ? { reporting_excluded: reportingExcluded } : {}),
         status: v('[data-d-status]'),
         priority: v('[data-d-priority]'),
         deal_value: v('[data-d-deal]') === '' ? null : v('[data-d-deal]'),

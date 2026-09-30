@@ -2,6 +2,7 @@ import { emailLayout, sendEmailResult } from './supabase.js';
 import { htmlEscape } from './supabase.js';
 import { QUOTE_TASK_DETAILS, PRIVATE_LABEL_DETAILS } from '../../js/quote-task-details.js';
 import { normalizeRequestPhone } from '../../js/request-phone.js';
+import { leadAttribution, leadAcquisitionLabel } from '../../js/lead-attribution.js';
 
 export const QUOTE_LABELS = {
   name: 'Name', company: 'Company', email: 'Email', phone: 'Phone', type: 'Request type', product: 'Product',
@@ -16,8 +17,15 @@ export const QUOTE_LABELS = {
 };
 
 function displayRows(payload) {
-  return Object.entries(payload || {}).filter(([, value]) => String(Array.isArray(value) ? value.join(', ') : value || '').trim())
-    .map(([key, value]) => `<tr><td style="padding:6px 10px;color:#667">${htmlEscape(QUOTE_LABELS[key] || key)}</td><td style="padding:6px 10px">${htmlEscape(Array.isArray(value) ? value.join(', ') : value)}</td></tr>`).join('');
+  const metadata = new Set(['attribution', 'utm_source', 'utm_medium', 'utm_campaign']);
+  const entries = Object.entries(payload || {}).filter(([key, value]) => !metadata.has(key)
+    && String(Array.isArray(value) ? value.join(', ') : value || '').trim());
+  const attribution = leadAttribution({ payload });
+  if (attribution) {
+    entries.push(['Acquisition source', leadAcquisitionLabel(attribution)]);
+    if (attribution.landing_path) entries.push(['Entry page', attribution.landing_path]);
+  }
+  return entries.map(([key, value]) => `<tr><td style="padding:6px 10px;color:#667">${htmlEscape(QUOTE_LABELS[key] || key)}</td><td style="padding:6px 10px">${htmlEscape(Array.isArray(value) ? value.join(', ') : value)}</td></tr>`).join('');
 }
 
 export async function deliverQuoteIntakeEmail(env, sb, quote, kind, dependencies = {}) {

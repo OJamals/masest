@@ -35,6 +35,30 @@ test('entry referrer survives internal navigation and strips URL secrets', async
   assert.doesNotMatch(JSON.stringify(packets), /private|person|secret|quote-id/);
 });
 
+test('form attribution retains the session entry page without exposing visitor identity', () => {
+  const first = tracking({ pathname: '/blog/how-to-descale-heat-exchanger', referrer: 'https://www.google.com/search?q=secret' });
+  const next = tracking({ sessionStorage: first.sessionStorage, pathname: '/contact', search: '?email=person%40example.com' });
+  const context = JSON.parse(JSON.stringify(next.window.masestAttribution()));
+  assert.deepEqual(context, { landing_path: '/blog/how-to-descale-heat-exchanger', referrer_origin: 'https://www.google.com' });
+  assert.doesNotMatch(JSON.stringify(context), /person|secret|session-id/);
+});
+
+test('an untagged entry cannot acquire campaign labels from a later internal link', () => {
+  const first = tracking({ pathname: '/blog/how-to-descale-heat-exchanger', referrer: 'https://www.google.com' });
+  const next = tracking({ sessionStorage: first.sessionStorage, pathname: '/contact', search: '?utm_source=later&utm_medium=email' });
+  assert.deepEqual(JSON.parse(JSON.stringify(next.window.masestUtm())), {});
+  assert.equal(next.window.masestAttribution().landing_path, '/blog/how-to-descale-heat-exchanger');
+});
+
+test('upgrading an existing untagged session does not invent a landing page or campaign', () => {
+  const sessionStorage = storage();
+  sessionStorage.setItem('masest_vid', 'older-session');
+  sessionStorage.setItem('masest_utm', JSON.stringify({ utm_source: 'uncertain-old-campaign' }));
+  const upgraded = tracking({ sessionStorage, pathname: '/contact', search: '?utm_source=later' });
+  assert.deepEqual(JSON.parse(JSON.stringify(upgraded.window.masestUtm())), {});
+  assert.equal(upgraded.window.masestAttribution().landing_path, '');
+});
+
 test('repeat acknowledgement of one quote emits once; different quote emits separately', async () => {
   const first = tracking();
   first.window.mtrack('quote_submit', { dedupe_key: 'one' });

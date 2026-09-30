@@ -16,7 +16,7 @@ import {
 const STATUSES = ['new', 'contacted', 'closed', 'spam'];
 const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const MUTATION_SELECT = 'id,source,payload,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,contact_id,email,product,company,type';
+const MUTATION_SELECT = 'id,source,payload,status,notes,handled_at,priority,next_step,due_at,lead_score,assigned_to,assigned_at,pipeline_stage,deal_value,expected_close,lost_reason,contact_id,email,product,company,type,reporting_excluded';
 
 function dueAt(value) {
   if (value === null || value === '') return null;
@@ -46,6 +46,10 @@ function transitionPatch(changes, actor, now) {
   }
   if (typeof changes.notes === 'string') patch.notes = changes.notes.slice(0, 4000);
   if (typeof changes.next_step === 'string') patch.next_step = changes.next_step.slice(0, 500);
+  if (changes.reporting_excluded !== undefined) {
+    if (typeof changes.reporting_excluded !== 'boolean') return { error: 'invalid_reporting_excluded' };
+    patch.reporting_excluded = changes.reporting_excluded;
+  }
   return { patch };
 }
 

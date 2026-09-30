@@ -1,17 +1,26 @@
 /* MASEST - first-party pageview + funnel-event beacon. Privacy-light: random per-session id,
- * no cookies, no PII. Include site-wide with <script src="js/track.js?v=20260929c" defer></script>.
- * Exposes window.mtrack(event) for funnel events and window.masestUtm() for forms.
+ * no cookies, no PII. Include site-wide with <script src="js/track.js?v=20260929d" defer></script>.
+ * Exposes window.mtrack(event), window.masestUtm(), and window.masestAttribution().
  * Silently no-ops if the /api/track function isn't deployed. */
 (function () {
   try {
     if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(location.hostname)) return;
-    var VKEY = 'masest_vid', UKEY = 'masest_utm', RKEY = 'masest_referrer';
+    var VKEY = 'masest_vid', UKEY = 'masest_utm', RKEY = 'masest_referrer', LKEY = 'masest_landing';
 
     var vid = sessionStorage.getItem(VKEY);
+    var newSession = !vid;
     if (!vid) {
       vid = (crypto && crypto.randomUUID) ? crypto.randomUUID()
         : String(Date.now()) + Math.round(Math.random() * 1e9);
       sessionStorage.setItem(VKEY, vid);
+    }
+    var landing = sessionStorage.getItem(LKEY);
+    var upgradedSession = !newSession && landing === null;
+    if (landing === null) {
+      // An older tracker may already have started this session. Do not invent its
+      // original landing page during a release or when storage is only partial.
+      landing = newSession ? location.pathname : '';
+      sessionStorage.setItem(LKEY, landing);
     }
 
     // Preserve the entry referrer across internal navigation. Store only the origin:
@@ -27,16 +36,24 @@
     }
 
     // First-touch UTM: capture from the URL once per session, then reuse for every beacon.
-    var utm = {};
-    try { utm = JSON.parse(sessionStorage.getItem(UKEY) || '{}'); } catch (e) { utm = {}; }
-    if (!utm.utm_source) {
-      var q = new URLSearchParams(location.search);
-      var got = {};
-      ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) {
-        var v = q.get(k);
-        if (v) got[k] = String(v).slice(0, 120);
-      });
-      if (got.utm_source) { utm = got; sessionStorage.setItem(UKEY, JSON.stringify(utm)); }
+    var storedUtm = sessionStorage.getItem(UKEY), utm = {};
+    if (upgradedSession) {
+      // Old trackers could capture a campaign later in the visit. Its entry-page
+      // provenance is uncertain, so an upgrade must not promote it to entry data.
+      storedUtm = '{}';
+      sessionStorage.setItem(UKEY, storedUtm);
+    }
+    try { utm = JSON.parse(storedUtm || '{}'); } catch (e) { utm = {}; }
+    if (storedUtm === null) {
+      if (newSession) {
+        var q = new URLSearchParams(location.search);
+        ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (k) {
+          var v = q.get(k);
+          if (v) utm[k] = String(v).slice(0, 120);
+        });
+      }
+      // Empty is a captured entry too; later internal links cannot supply its source.
+      sessionStorage.setItem(UKEY, JSON.stringify(utm));
     }
 
     function cleanPart(value, max) {
@@ -87,6 +104,9 @@
 
     window.mtrack = beacon;                          // funnel events: mtrack('quote_submit', { industry: 'Data Centers' })
     window.masestUtm = function () { return utm; };  // forms attach attribution to submissions
+    window.masestAttribution = function () {
+      return Object.assign({ landing_path: landing, referrer_origin: referrer }, utm);
+    };
     beacon('pageview');
   } catch (e) { /* never affect the page */ }
 })();
