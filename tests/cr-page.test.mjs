@@ -36,9 +36,9 @@ test("CIP CR separates trial conditions from label directions and credits the HC
   assert.ok(all(result, node => attr(node, "href") === "../products/hcr").length);
 });
 
-test("CIP CR links current EMS data and real brewery evidence without the synthetic skid", () => {
+test("CIP CR offers technical data requests and real brewery evidence without the synthetic skid", () => {
   const technical = section("product-technical-cr");
-  assert.ok(all(technical, node => attr(node, "href") === "https://www.enviromfg.com/s/elevate-tds.pdf").length);
+  assert.ok(all(technical, node => attr(node, "href")?.startsWith("../contact?type=quote&product=VertKleen%20CIP%20CR&message=")).length);
   const hero = all(doc, node => attr(node, "class") === "product-hero-proof")[0];
   assert.equal(attr(hero, "href"), "#product-result-cr");
   assert.equal(text(hero), "See brewery cleaning results");

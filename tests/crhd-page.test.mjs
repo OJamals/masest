@@ -39,7 +39,7 @@ test("CR HD features authentic kitchen photos with the documented job context", 
 });
 
 test("CR HD provides current manufacturer support without the stale competitor PDF", () => {
-  assert.ok(all(section("product-reference-crhd"), node => attr(node, "href") === "https://www.enviromfg.com/s/syncleanhdwso-tds.pdf").length);
+  assert.ok(all(section("product-reference-crhd"), node => attr(node, "href")?.startsWith("../contact?type=quote&product=VertKleen%20CR%20HD&message=")).length);
   const link = all(section("product-technical-crhd"), node => node.tagName === "a")[0];
   const url = new URL(attr(link, "href"), "https://masest.co/products/crhd");
   assert.equal(url.searchParams.get("product"), "VertKleen CR HD");

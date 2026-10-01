@@ -717,7 +717,7 @@ function productApplicationPanels(id) {
         <div>
           <h2 id="product-certification-${attr(id)}">${text(certification.heading)}</h2>
           <p>${text(certification.intro)}</p>
-          <p><a href="${attr(certification.source_url)}" target="_blank" rel="noopener">${text(certification.source_label)}</a></p>
+          <p><a href="${attr(certification.source_url)}"${/^https?:\/\//.test(certification.source_url) ? ' target="_blank" rel="noopener"' : ""}>${text(certification.source_label)}</a></p>
         </div>
         <ul class="spec-list">${certification.facts.map(([title, body]) => `<li><b>${text(title)}</b><span>${text(body)}</span></li>`).join("")}</ul>
       </article>`,
@@ -730,12 +730,12 @@ function productApplicationPanels(id) {
         <h2 id="product-brightening-${attr(id)}">${text(comparison.heading)}</h2>
         <p>${text(comparison.intro)}</p>
         <div class="table-scroll"><table class="product-reference-table product-brightening-table">
-          <caption>EMS aluminum brightening comparison</caption>
+          <caption>Manufacturer aluminum brightening comparison</caption>
           <thead><tr><th scope="col">Cleaner</th><th scope="col">Score</th></tr></thead>
           <tbody>${comparison.rows.map(([name, score]) => `<tr><th scope="row">${text(name)}</th><td>${text(score)}</td></tr>`).join("")}</tbody>
         </table></div>
         <p>${text(comparison.note)}</p>
-        <p><a href="${attr(comparison.source_url)}" target="_blank" rel="noopener">${text(comparison.source_label)}</a></p>
+        <p><a href="${attr(comparison.source_url)}"${/^https?:\/\//.test(comparison.source_url) ? ' target="_blank" rel="noopener"' : ""}>${text(comparison.source_label)}</a></p>
       </article>`,
     performance && `<article class="product-static-panel" aria-labelledby="product-performance-${attr(id)}">
         <h2 id="product-performance-${attr(id)}">${text(performance.heading)}</h2>
@@ -771,8 +771,8 @@ function productApplicationPanels(id) {
     profile && `<article class="product-static-panel product-comparison-panel" aria-labelledby="product-technical-${attr(id)}">
         <div>
           <h2 id="product-technical-${attr(id)}">${text(profile.heading)}</h2>
-          <p>${text(profile.intro || "Cleaning performance, handling, and environmental data from EMS.")}</p>
-          <p><a href="${attr(profile.source_url)}"${/^https?:\/\//.test(profile.source_url) ? ' target="_blank" rel="noopener"' : ""}>${text(profile.source_label || "Explore EMS technical data, studies & transport classifications (PDF)")}</a></p>
+          <p>${text(profile.intro || "Manufacturer data on cleaning performance, handling, and environmental properties.")}</p>
+          <p><a href="${attr(profile.source_url)}"${/^https?:\/\//.test(profile.source_url) ? ' target="_blank" rel="noopener"' : ""}>${text(profile.source_label || "Request technical data and product documents")}</a></p>
         </div>
         <ul class="spec-list">${profile.facts.map(([title, body]) => `<li><b>${text(title)}</b><span>${text(body)}</span></li>`).join("")}</ul>
       </article>`,

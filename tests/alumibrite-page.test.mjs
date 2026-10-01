@@ -25,7 +25,7 @@ test("AlumiBrite comparison keeps score, source and test conditions together", (
   for (const phrase of ["Manufacturer-reported", "not percentages", "5% active", "7075-Y6", "3 minutes at 70°F", "not mixing or dwell-time directions"]) {
     assert.ok(text(panel).includes(phrase), phrase);
   }
-  assert.ok(all(panel, (node) => attr(node, "href") === "https://www.enviromfg.com/s/alumibritewso-tds.pdf").length);
+  assert.ok(all(panel, (node) => attr(node, "href")?.startsWith("../contact?type=quote&product=VertKleen%20AlumiBrite&message=")).length);
   assert.equal(all(panel, (node) => node.tagName === "caption").length, 1);
 });
 
@@ -58,11 +58,11 @@ test("AlumiBrite shows actual paired evidence with both products attributed", ()
   }
 });
 
-test("AlumiBrite technical advantages remain attributed to EMS", () => {
+test("AlumiBrite technical advantages retain manufacturer attribution and document requests", () => {
   const panel = byId("product-technical-alumibrite")?.parentNode.parentNode;
   assert.ok(panel);
   for (const phrase of ["HMIS 0-0-0", "Non-DOT regulated", "No VOCs or phosphates", "OECD 404", "Paint and glass"]) {
     assert.ok(text(panel).includes(phrase), phrase);
   }
-  assert.ok(all(panel, (node) => attr(node, "href") === "https://www.enviromfg.com/s/alumibritewso-tds.pdf").length);
+  assert.ok(all(panel, (node) => attr(node, "href")?.startsWith("../contact?type=quote&product=VertKleen%20AlumiBrite&message=")).length);
 });

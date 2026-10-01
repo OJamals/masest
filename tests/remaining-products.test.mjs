@@ -23,7 +23,7 @@ test("MultiWash keeps general-label recipes separate from specialty packages", (
   assert.match(main, /2:1/);
   assert.match(main, /Gym and marine packages have their own application directions/);
   assert.doesNotMatch(main, /neutral.pH|33 gallons|17 gallons|NSF.certified/i);
-  assert.ok(all(doc, n => attr(n, "href") === "https://www.enviromfg.com/s/fortis-tds.pdf").length);
+  assert.ok(all(doc, n => attr(n, "href")?.startsWith("../contact?type=quote&product=VertKleen%20MultiWash&message=")).length);
 });
 
 test("LAM3 attributes genuine concrete photos without inventing their test conditions", () => {
@@ -44,14 +44,14 @@ test("LAM3 attributes genuine concrete photos without inventing their test condi
   assert.deepEqual(cards.find(card => card.slug === "property-grout-moss").chips, ["VertKleen CR"]);
 });
 
-test("Purgo separates surface application from system dosing and preserves manufacturer identity", () => {
+test("Purgo separates surface application from system dosing and offers technical data", () => {
   const doc = page("purgo");
   const main = text(all(doc, n => n.tagName === "main")[0]);
   assert.match(main, /Surface and water-system applications use different dosing methods/);
   assert.match(main, /Commercial fogging/);
   assert.match(main, /occupancy schedule/);
   assert.doesNotMatch(main, /Purgo N|no respirator|safe to inhale|freely dump/i);
-  assert.ok(all(doc, n => attr(n, "href") === "https://www.enviromfg.com/s/Purgo-tds.pdf").length);
+  assert.ok(all(doc, n => attr(n, "href")?.startsWith("../contact?type=quote&product=Purgo&message=")).length);
 });
 
 test("remaining products retain focused technical inquiries and withdraw staged scenes", () => {
@@ -86,7 +86,7 @@ test("all fifteen public products have application, evidence, and purchasing con
     const doc = page(id);
     assert.equal(all(doc, n => n.tagName === "h1").length, 1, `${id}: heading`);
     assert.ok(section(doc, id, "technical"), `${id}: technical profile`);
-    assert.ok(section(doc, id, "reference") || all(doc, n => n.tagName === "a" && /enviromfg\.com|info\.nsf\.org|docs\/sds\//.test(attr(n, "href") || "")).length, `${id}: source reference`);
+    assert.ok(section(doc, id, "reference") || all(doc, n => n.tagName === "a" && /docs\/sds\/|contact\?type=quote.*message=/.test(attr(n, "href") || "")).length, `${id}: source reference`);
     assert.match(read(`products/${id}.html`), /data-commerce-price/);
   }
 });

@@ -537,8 +537,8 @@ export const PRODUCT_CATALOG_COPY = {
     manufacturer_reference: {
       heading: "The chemistry behind the clean.",
       body: "HCR uses synthetic-acid chemistry to remove mineral deposits with a non-fuming handling profile. The HCR technical sheet documents its mineral-dissolving performance, zero VOCs, and non-DOT transport. Choose the working method for the equipment and deposit.",
-      source_label: "Explore the manufacturer's technical data",
-      source_url: "https://www.enviromfg.com/our-juice2"
+      source_label: "Request HCR technical data",
+      source_url: "../contact?type=quote&product=VertKleen%20HVAC%20HCR&message=Please%20send%20HCR%20technical%20data.#quoteForm"
     },
     technical_profile: {
       heading: "Built for recurring maintenance.",
@@ -705,7 +705,7 @@ export const PRODUCT_CATALOG_COPY = {
     },
     technical_profile: {
       heading: "Strong alkaline cleaning. Easier daily handling.",
-      intro: "EMS identifies its brewery chemistry as Elevate/CR. This high-pH wash contains no conventional hydroxides and supports a simpler chemical-handling and rinse routine.",
+      intro: "The manufacturer's CR technical data describes a high-pH wash that contains no conventional hydroxides and supports a simpler chemical-handling and rinse routine.",
       facts: [
         ["HMIS 0-0-0", "Triple-zero handling profile, with reduced risk of severe conventional-caustic burns."],
         ["Zero VOCs", "Non-flammable chemistry without solvent emissions."],
@@ -713,8 +713,8 @@ export const PRODUCT_CATALOG_COPY = {
         ["Non-DOT regulated", "Ships without the hazardous-material classification of conventional caustic."],
         ["Readily biodegradable", "Manufacturer data reports 100% biodegradation in less than 10 days."]
       ],
-      source_label: "Read the EMS Elevate/CR technical data (PDF)",
-      source_url: "https://www.enviromfg.com/s/elevate-tds.pdf"
+      source_label: "Request CR technical data",
+      source_url: "../contact?type=quote&product=VertKleen%20CIP%20CR&message=Please%20send%20CR%20technical%20data.#quoteForm"
     },
     handling_guide: {
       eyebrow: "Plan your first CR cycle",
@@ -778,8 +778,8 @@ export const PRODUCT_CATALOG_COPY = {
     manufacturer_reference: {
       heading: "The chemistry behind CR HD.",
       body: "The manufacturer's technical sheet describes a solvent-free, non-butyl cleaner that lifts petroleum oils, animal and vegetable fats, and protein soils. Its high-detergency formulation includes wetting agents and corrosion inhibitors, with separate Low Foam and Neutral options for different equipment and surfaces.",
-      source_label: "Explore the manufacturer's CR HD technical data (PDF)",
-      source_url: "https://www.enviromfg.com/s/syncleanhdwso-tds.pdf"
+      source_label: "Request CR HD technical data",
+      source_url: "../contact?type=quote&product=VertKleen%20CR%20HD&message=Please%20send%20CR%20HD%20technical%20data.#quoteForm"
     },
     technical_profile: {
       heading: "Strong cleaning. Simpler routine handling.",
@@ -853,8 +853,8 @@ export const PRODUCT_CATALOG_COPY = {
     manufacturer_reference: {
       heading: "The chemistry behind VertKleen Neutral.",
       body: "The manufacturer's technical sheet describes a concentrated, neutral-pH degreaser for petroleum oils, animal and vegetable fats, and general grime. Detergents, wetting agents, and corrosion inhibitors support its cleaning action without butyl solvents.",
-      source_label: "Explore the manufacturer's Neutral technical data (PDF)",
-      source_url: "https://www.enviromfg.com/s/syncleannwso-tds.pdf"
+      source_label: "Request Neutral technical data",
+      source_url: "../contact?type=quote&product=VertKleen%20Neutral&message=Please%20send%20Neutral%20technical%20data.#quoteForm"
     },
     technical_profile: {
       heading: "A practical concentrate for recurring cleaning.",
@@ -863,7 +863,7 @@ export const PRODUCT_CATALOG_COPY = {
         ["Near-neutral pH", "The manufacturer reports pH 7.5 for the neutral cleaner, with cleaning power supplied by its detergent system."],
         ["Non-butyl · solvent-free", "Removes greasy soil without solvent-based degreasing chemistry."],
         ["Zero VOCs · non-flammable", "Manufacturer-reported properties, with a mild soapy odor and HMIS 0-0-0 in the VertKleen product record."],
-        ["Non-DOT-regulated · biodegradable", "The VertKleen SDS lists non-regulated transport; EMS reports a 100% biodegradable, phosphate-free formula."]
+        ["Non-DOT-regulated · biodegradable", "The VertKleen SDS lists non-regulated transport; manufacturer data reports a 100% biodegradable, phosphate-free formula."]
       ],
       source_label: "Request Neutral dilution guidance and the latest SDS",
       source_url: "../contact?type=quote&product=VertKleen%20Neutral&message=Please%20send%20VertKleen%20Neutral%20dilution%20guidance%2C%20package%20directions%2C%20and%20the%20latest%20SDS.#quoteForm"
@@ -884,7 +884,7 @@ export const PRODUCT_CATALOG_COPY = {
     job: "Everyday grime, greasy film, and odors",
     platform: "Concentrated multi-surface cleaner",
     summary: "Clean everyday grime, greasy film, and mineral residue across facility surfaces and exterior wash jobs with one versatile concentrate.",
-    meta_description: "VertKleen MultiWash cleans and deodorizes facility surfaces and exterior wash jobs. See general-label dilutions, application methods, and EMS Fortis technical data.",
+    meta_description: "VertKleen MultiWash cleans and deodorizes facility surfaces and exterior wash jobs. See general-label dilutions, application methods, and technical data.",
     mechanism: "MultiWash combines mineral-cleaning, degreasing, and odor-control chemistry to loosen mixed soils, lift greasy residue, and control odors in one cleaning program.",
     operator_advantage: "Cover more routine jobs with a non-caustic, solvent-free formula and HMIS 0-0-0 handling.",
     hero_summary: {
@@ -895,7 +895,7 @@ export const PRODUCT_CATALOG_COPY = {
     quote_cta: "Try MultiWash on my facility",
     sample_cta: "Try a free MultiWash sample",
     fits: ["facility surfaces", "tile and grout", "gym equipment", "exterior washing"],
-    proof: "General MultiWash package directions and EMS Fortis technical data",
+    proof: "General MultiWash package directions and manufacturer technical data",
     application_modes: [
       {
         heading: "One cleaner for everyday work.",
@@ -924,10 +924,10 @@ export const PRODUCT_CATALOG_COPY = {
       ]
     },
     manufacturer_reference: {
-      heading: "Three EMS cleaning technologies in one formula.",
-      body: "EMS Fortis technical data describes the MultiWash cleaning platform: mineral cleaning for scale, degreasing for oily residue, and odor control for facility maintenance. The result is a concentrated multi-surface cleaner for indoor and outdoor maintenance.",
-      source_label: "Explore EMS Fortis technical data (PDF)",
-      source_url: "https://www.enviromfg.com/s/fortis-tds.pdf"
+      heading: "Three cleaning technologies in one formula.",
+      body: "Manufacturer technical data describes the MultiWash cleaning platform: mineral cleaning for scale, degreasing for oily residue, and odor control for facility maintenance. The result is a concentrated multi-surface cleaner for indoor and outdoor maintenance.",
+      source_label: "Request MultiWash technical data",
+      source_url: "../contact?type=quote&product=VertKleen%20MultiWash&message=Please%20send%20MultiWash%20technical%20data.#quoteForm"
     },
     technical_profile: {
       heading: "Simplify the routine cleaning shelf.",
@@ -961,13 +961,13 @@ export const PRODUCT_CATALOG_COPY = {
     sample_cta: "Request a WaterSafe60 trial sample",
     certification: {
       heading: "NSF/ANSI/CAN 60 certified.",
-      intro: "NSF lists Watersafe 60 under Environmental Manufacturing Solutions for drinking-water treatment and offline water-system maintenance.",
+      intro: "Watersafe 60 is listed for drinking-water treatment and offline water-system maintenance under NSF/ANSI/CAN 60.",
       facts: [
         ["Metered treatment", "Listed for corrosion and scale control, descaling, and pH adjustment. Maximum use level: 80 mg/L."],
         ["Offline applications", "Listed for descaling, drilling fluid, pipe cleaning, well cleaning, well drilling, and well rehabilitation. Flush the product out before returning the system to drinking-water service."]
       ],
-      source_label: "View the current official NSF listing",
-      source_url: "https://info.nsf.org/Certified/PwsChemicals/Listings.asp?Company=C0284921&Standard=060"
+      source_label: "Request WaterSafe60 certification documentation",
+      source_url: "../contact?type=quote&product=WaterSafe60&message=Please%20send%20WaterSafe60%20certification%20documentation.#quoteForm"
     },
     application_modes: [
       {
@@ -1039,7 +1039,7 @@ export const PRODUCT_CATALOG_COPY = {
       },
       {
         heading: "Apply it to fit your cleaning routine.",
-        intro: "EMS lists spray-and-wipe, spray-and-leave, and fogging applications for Purgo. Match the method to the space and the product directions.",
+        intro: "The manufacturer's technical data lists spray-and-wipe, spray-and-leave, and fogging applications for Purgo. Match the method to the space and the product directions.",
         facts: [["Spray and wipe", "Use the surface-care directions for the material and cleaning task, then wipe away the loosened residue."], ["Spray and leave", "Choose this method where the package directions specify a leave-on application and contact time."], ["Commercial fogging", "Share the equipment, room volume, ventilation, and occupancy schedule with MASEST to plan an application protocol."]]
       }
     ],
@@ -1048,15 +1048,15 @@ export const PRODUCT_CATALOG_COPY = {
       steps: [["Choose the task", "Identify the surface, odor source, and application method. Use the directions for the exact Purgo package and job."], ["Mix for the application", "Confirm the concentrate-and-water recipe before setting a dispenser or filling a sprayer. Surface and water-system applications use different dosing methods."], ["Apply and finish", "Follow the specified coverage, contact time, wiping, and rinse instructions. Food-contact areas need the applicable finishing directions."], ["Review the routine", "Record product use, labor, odor recurrence, and the finished surface. Use those results to plan replenishment and recurring supply."]]
     },
     manufacturer_reference: {
-      heading: "Purgo surface care, documented by EMS.",
+      heading: "The chemistry behind Purgo surface care.",
       body: "The manufacturer describes Purgo as a colorless, non-staining multi-surface cleaner for odor-causing bacteria and everyday hard-surface care. Its technical sheet separates surface-cleaning uses from cooling-tower and other water-system applications.",
-      source_label: "Explore EMS Purgo technical data (PDF)",
-      source_url: "https://www.enviromfg.com/s/Purgo-tds.pdf"
+      source_label: "Request Purgo technical data",
+      source_url: "../contact?type=quote&product=Purgo&message=Please%20send%20Purgo%20technical%20data.#quoteForm"
     },
     technical_profile: {
       heading: "Make each gallon work across your routine.",
       intro: "Start with the application and working dilution, then compare product use and crew time per cleaned area.",
-      facts: [["Colorless · non-staining", "Manufacturer-described formula for compatible hard surfaces and everyday odor control."], ["Zero VOCs · non-flammable", "Properties reported in the EMS Purgo technical sheet."], ["Concentrated supply", "Small packs for trials and daily use, with drums and totes available through a tailored quote."], ["Product evidence", "Review the linked bacterial persistence report alongside the directions for your application."]],
+      facts: [["Colorless · non-staining", "Manufacturer-described formula for compatible hard surfaces and everyday odor control."], ["Zero VOCs · non-flammable", "Properties reported in the manufacturer's Purgo technical sheet."], ["Concentrated supply", "Small packs for trials and daily use, with drums and totes available through a tailored quote."], ["Product evidence", "Review the linked bacterial persistence report alongside the directions for your application."]],
       source_label: "Request Purgo application guidance and product documents",
       source_url: "../contact?type=quote&product=Purgo&message=Please%20send%20Purgo%20application%20guidance%2C%20dilution%20instructions%2C%20and%20product%20documents.#quoteForm"
     },
@@ -1087,7 +1087,7 @@ export const PRODUCT_CATALOG_COPY = {
     },
     quote_cta: "Test LAM3 on my exterior",
     fits: ["roofs", "pavers", "siding", "stucco"],
-    proof: "Original LAM3 concrete before-and-after photographs and EMS application guidance",
+    proof: "Original LAM3 concrete before-and-after photographs and manufacturer application guidance",
     proof_slugs: ["lam3-concrete-cleaning"],
     proof_cta: "See the concrete before & after",
     featured_result: "lam3-concrete-cleaning",
@@ -1101,7 +1101,7 @@ export const PRODUCT_CATALOG_COPY = {
     application_modes: [{
       heading: "Choose your finish schedule.",
       intro: "LAM3 offers two ways to handle outdoor staining, depending on how soon the surface needs to be ready.",
-      facts: [["Spray and leave", "Apply at low pressure and leave the treatment to work. EMS reports visible change beginning in one to two weeks; conditions and buildup affect the result."], ["Brush and rinse", "For a more immediate clean, apply, agitate the stained area, and rinse. Check the result and repeat where needed."], ["Maintain the finish", "Inspect treated areas over time and reapply when stains return. Record the weather, dilution, surface, and progress photographs."]]
+      facts: [["Spray and leave", "Apply at low pressure and leave the treatment to work. Manufacturer data reports visible change beginning in one to two weeks; conditions and buildup affect the result."], ["Brush and rinse", "For a more immediate clean, apply, agitate the stained area, and rinse. Check the result and repeat where needed."], ["Maintain the finish", "Inspect treated areas over time and reapply when stains return. Record the weather, dilution, surface, and progress photographs."]]
     }],
     dilution_guide: {
       heading: "Mix for light or heavy staining.",
@@ -1115,15 +1115,15 @@ export const PRODUCT_CATALOG_COPY = {
       steps: [["Inspect and prepare", "Identify the surface and coating, remove loose debris, and test a small area. Plan access, weather, nearby planting, and runoff."], ["Apply at low pressure", "Mix according to the package directions and wet the stained area evenly with a low-pressure sprayer or brush."], ["Use the chosen method", "Leave the treatment in place for gradual cleaning, or brush and rinse for the wash-and-rinse method. Follow the package directions for reapplication."], ["Track the finish", "Photograph the same area before treatment and during follow-up. Schedule maintenance around when staining returns rather than promising one timetable for every property."]]
     },
     manufacturer_reference: {
-      heading: "EMS LAM3 exterior-cleaning technology.",
-      body: "EMS identifies LAM3 as its lichen, algae, moss, mold, and mildew stain remover. The technical sheet covers wood, stucco, brick, concrete, pavers, siding, tile, and roofing, with both leave-on and brush-and-rinse methods.",
-      source_label: "Explore EMS LAM3 technical data (PDF)",
-      source_url: "https://www.enviromfg.com/s/lam3-tds.pdf"
+      heading: "LAM3 exterior-cleaning technology.",
+      body: "Manufacturer technical data describes LAM3 as a lichen, algae, moss, mold, and mildew stain remover. The technical sheet covers wood, stucco, brick, concrete, pavers, siding, tile, and roofing, with both leave-on and brush-and-rinse methods.",
+      source_label: "Request LAM3 technical data",
+      source_url: "../contact?type=quote&product=VertKleen%20LAM3&message=Please%20send%20LAM3%20technical%20data.#quoteForm"
     },
     technical_profile: {
       heading: "Exterior cleaning without bleach or quats.",
       intro: "A concentrated option for property-maintenance routes, from small exterior areas to recurring commercial work.",
-      facts: [["Bleach · quat · peroxide free", "Manufacturer-listed formulation features for exterior stain removal."], ["Zero VOCs · non-flammable", "A water-soluble product with a mild detergent odor."], ["HMIS 0-0-0", "Triple-zero handling profile reported by EMS."], ["Non-DOT-regulated · biodegradable", "Manufacturer technical data reports non-regulated transport and a biodegradable formula."]],
+      facts: [["Bleach · quat · peroxide free", "Manufacturer-listed formulation features for exterior stain removal."], ["Zero VOCs · non-flammable", "A water-soluble product with a mild detergent odor."], ["HMIS 0-0-0", "Triple-zero handling profile reported in manufacturer data."], ["Non-DOT-regulated · biodegradable", "Manufacturer technical data reports non-regulated transport and a biodegradable formula."]],
       source_label: "Request LAM3 application guidance and the latest SDS",
       source_url: "../contact?type=quote&product=VertKleen%20LAM3&message=Please%20send%20VertKleen%20LAM3%20application%20guidance%20and%20the%20latest%20SDS.#quoteForm"
     },
@@ -1144,7 +1144,7 @@ export const PRODUCT_CATALOG_COPY = {
     quote_cta: "Test AlumiBrite on my aluminum",
     sample_cta: "Request a free AlumiBrite sample",
     fits: ["truck tanks", "trailers", "wheels", "marine aluminum"],
-    proof: "EMS brightening comparison and a documented AlumiBrite + Torque vessel restoration",
+    proof: "Manufacturer brightening comparison and a documented AlumiBrite + Torque vessel restoration",
     proof_slugs: ["airboat-alumibrite"],
     featured_result: "airboat-alumibrite",
     featured_result_copy: {
@@ -1159,23 +1159,24 @@ export const PRODUCT_CATALOG_COPY = {
     ],
     brightening_comparison: {
       heading: "Strong brightening. No hydrofluoric acid.",
-      intro: "In the EMS comparison, Alumi-Brite scored close to hydrofluoric acid and above hydrochloric acid for aluminum brightening.",
+      intro: "In the manufacturer comparison, Alumi-Brite scored close to hydrofluoric acid and above hydrochloric acid for aluminum brightening.",
       rows: [["Alumi-Brite", "90.1"], ["Hydrofluoric acid (HF)", "92.5"], ["Hydrochloric acid (HCl)", "86.3"]],
       note: "Manufacturer-reported scores, not percentages. Test: 200 g of 5% active solution on 5 sq. in. of corroded 7075-Y6 aluminum, 3 minutes at 70°F. These are comparison conditions, not mixing or dwell-time directions.",
-      source_label: "Read the EMS technical data & comparison (PDF)",
-      source_url: "https://www.enviromfg.com/s/alumibritewso-tds.pdf"
+      source_label: "Request AlumiBrite technical data and comparison",
+      source_url: "../contact?type=quote&product=VertKleen%20AlumiBrite&message=Please%20send%20AlumiBrite%20technical%20data%20and%20comparison.#quoteForm"
     },
     technical_profile: {
       heading: "Built for the wash bay.",
       facts: [
-        ["HMIS 0-0-0", "EMS reports zero ratings for health, flammability, and reactivity."],
+        ["HMIS 0-0-0", "Manufacturer data reports zero ratings for health, flammability, and reactivity."],
         ["Non-DOT regulated", "Manufacturer transportation classification: non-hazardous for shipping."],
         ["No VOCs or phosphates", "Water-soluble chemistry with a mild soapy odor."],
-        ["100% biodegradable", "Reported in the EMS biodegradation study summary."],
-        ["Non-skin-irritant test result", "EMS reports this classification from modified Draize testing under OECD 404."],
+        ["100% biodegradable", "Reported in the manufacturer's biodegradation study summary."],
+        ["Non-skin-irritant test result", "Manufacturer data reports this classification from modified Draize testing under OECD 404."],
         ["Paint and glass compatibility", "Useful around truck bodies and cab glass; check the condition of specialty finishes with a test patch."]
       ],
-      source_url: "https://www.enviromfg.com/s/alumibritewso-tds.pdf"
+      source_label: "Request AlumiBrite technical data and the latest SDS",
+      source_url: "../contact?type=quote&product=VertKleen%20AlumiBrite&message=Please%20send%20AlumiBrite%20technical%20data%20and%20the%20latest%20SDS.#quoteForm"
     },
     application_guide: {
       heading: "A brighter finish starts with a test patch.",
@@ -1222,28 +1223,29 @@ export const PRODUCT_CATALOG_COPY = {
     },
     manufacturer_reference: {
       heading: "Fleet experience behind the finish.",
-      body: "EMS identifies Torque as the wash behind Blue Bird’s Bird Bath bus wash and reports paint-safety testing by PPG, Blue Bird’s coatings manufacturer.",
-      source_label: "Explore the Blue Bird and PPG connection at EMS",
-      source_url: "https://www.enviromfg.com/vehicle-washing"
+      body: "Manufacturer data identifies Torque as the wash behind Blue Bird’s Bird Bath bus wash and reports paint-safety testing by PPG, Blue Bird’s coatings manufacturer.",
+      source_label: "Request Torque fleet and paint-testing documentation",
+      source_url: "../contact?type=quote&product=VertKleen%20Torque&message=Please%20send%20Torque%20fleet%20and%20paint-testing%20documentation.#quoteForm"
     },
     technical_profile: {
       heading: "Strong cleaning. Easier fleet care.",
       facts: [
-        ["HMIS 0-0-0", "Triple-zero ratings for health, flammability, and reactivity, reported by EMS."],
+        ["HMIS 0-0-0", "Triple-zero ratings for health, flammability, and reactivity, reported in manufacturer data."],
         ["Non-corrosive; non-DOT regulated", "Heavy-duty cleaning without DOT hazardous-material shipping classification."],
         ["No VOCs or phosphates", "Water-soluble concentrate with a mild soapy odor."],
-        ["100% biodegradable", "Biodegradability reported in the EMS technical data."],
+        ["100% biodegradable", "Biodegradability reported in the manufacturer's technical data."],
         ["Built for winter road film", "Removes road salt, calcium deposits, and magnesium chloride, as well as grease and diesel soot."],
-        ["Vehicle-material compatibility", "EMS lists glass, aluminum, chrome, stainless steel, rubber, and plastic."]
+        ["Vehicle-material compatibility", "Manufacturer data lists glass, aluminum, chrome, stainless steel, rubber, and plastic."]
       ],
-      source_url: "https://www.enviromfg.com/s/torquewso-tds.pdf"
+      source_label: "Request Torque technical data and the latest SDS",
+      source_url: "../contact?type=quote&product=VertKleen%20Torque&message=Please%20send%20Torque%20technical%20data%20and%20the%20latest%20SDS.#quoteForm"
     }
   },
   "cr-hd-low-foam": {
     job: "Machine wash and low-foam degreasing",
     platform: "VertKleen low-foam degreaser",
     summary: "Cut heavy grease and hydraulic oil with a low-foam concentrate built for parts washers, wash cabinets, and floor-cleaning equipment.",
-    meta_description: "VertKleen CR HD Low Foam cuts grease and hydraulic oil in parts washers, wash cabinets, and scrubbers. See LF dilution guidance and EMS technical data.",
+    meta_description: "VertKleen CR HD Low Foam cuts grease and hydraulic oil in parts washers, wash cabinets, and scrubbers. See LF dilution guidance and technical data.",
     mechanism: "Wetting agents reach beneath oily buildup and lift it from the surface. The non-emulsifying formula leaves removed oils intact for collection and separation.",
     operator_advantage: "Get strong degreasing with controlled foam, no butyl solvents, zero VOCs, and non-flammability. Works with warm or cold water.",
     quote_cta: "Test it in my wash equipment",
@@ -1255,7 +1257,7 @@ export const PRODUCT_CATALOG_COPY = {
         heading: "Heavy grease removal. Foam suited to the machine.",
         intro: "Choose Low Foam when the wash equipment needs detergency without the ample foam of standard CR HD.",
         facts: [
-          ["Parts washers and wash cabinets", "Lift grease and oily deposits from compatible parts. EMS specifically identifies its LF formulation for these machine applications."],
+          ["Parts washers and wash cabinets", "Lift grease and oily deposits from compatible parts. Manufacturer technical data specifically identifies the LF formulation for these machine applications."],
           ["Automatic and rotary floor cleaning", "Cut oily shop-floor soil with a low-foam cleaner, then recover the dirty solution. Match the pad, dilution, and water flow to the floor and machine."],
           ["Warm or cold water", "Choose the temperature your equipment and parts allow. The technical sheet also lists steam cleaners, rotary cleaners, and carpet-cleaning equipment."]
         ]
@@ -1265,7 +1267,7 @@ export const PRODUCT_CATALOG_COPY = {
       heading: "Match the dilution to the soil.",
       intro: "The manufacturer's Low Foam technical sheet gives two starting examples. Use the Low Foam package directions to set the final mix for your machine.",
       column_labels: ["Cleaning job", "LF technical-sheet dilution"],
-      caption: "CR HD Low Foam: EMS technical-sheet dilution examples",
+      caption: "CR HD Low Foam: manufacturer technical-sheet dilution examples",
       rows: [["Caked-on hydraulic fluid or grease", "10:1"], ["Floors, vehicles, and carpets", "30:1"]],
       note: "Ratios are reproduced as printed in the LF technical sheet. Confirm the water-and-concentrate recipe with MASEST before filling a tank or setting an automatic dispenser."
     },
@@ -1281,8 +1283,8 @@ export const PRODUCT_CATALOG_COPY = {
     manufacturer_reference: {
       heading: "The chemistry behind VertKleen Low Foam.",
       body: "The manufacturer's LF technical sheet describes a non-butyl, non-solvent, low-foaming cleaner for petroleum oils, animal and vegetable fats, and protein soils. Its non-emulsifying action lifts grease for removal, with wetting agents and corrosion inhibitors supporting industrial cleaning.",
-      source_label: "Explore Manufacturer's Low Foam technical data (PDF)",
-      source_url: "https://www.enviromfg.com/s/syncleanlf-tds.pdf"
+      source_label: "Request Low Foam technical data",
+      source_url: "../contact?type=quote&product=VertKleen%20CR%20HD%20Low%20Foam&message=Please%20send%20Low%20Foam%20technical%20data.#quoteForm"
     },
     technical_profile: {
       heading: "Less foam. Simpler routine handling.",
@@ -1290,7 +1292,7 @@ export const PRODUCT_CATALOG_COPY = {
       facts: [
         ["Non-butyl · solvent-free", "Cuts grease without butyl or solvent-based degreasing chemistry."],
         ["Zero VOCs · non-flammable", "The LF technical sheet reports no VOCs and a non-flammable formula."],
-        ["Non-DOT-regulated shipping", "EMS lists LF as non-regulated for DOT, TDG, IMO, IATA, and IMDG transport."],
+        ["Non-DOT-regulated shipping", "Manufacturer technical data lists LF as non-regulated for DOT, TDG, IMO, IATA, and IMDG transport."],
         ["100% biodegradable · phosphate-free", "Manufacturer-reported formula properties. Collect used washwater and the grease it removes through your site's recovery process."]
       ],
       source_label: "Request Low Foam technical data and the latest SDS",

@@ -38,7 +38,7 @@ test("HVAC HCR presents the Brevard surface job with actual before-and-after ima
 test("HVAC HCR supports small packs, material checks, and manufacturer technology", () => {
   assert.match(text(section("product-technical-hcr-t16")), /Small packs through bulk/);
   assert.match(text(section("product-handling-hcr-t16")), /excludes aluminum piping and fittings/);
-  assert.ok(all(section("product-reference-hcr-t16"), node => attr(node, "href") === "https://www.enviromfg.com/our-juice2").length);
+  assert.ok(all(section("product-reference-hcr-t16"), node => attr(node, "href")?.startsWith("../contact?type=quote&product=VertKleen%20HVAC%20HCR&message=")).length);
   const main = text(all(doc, node => node.tagName === "main")[0]);
   assert.doesNotMatch(main, /Tote supply lowers delivered cost|NSF\/ANSI\/CAN 60|280×|sixteen drums/);
 });

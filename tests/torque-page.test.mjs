@@ -44,14 +44,14 @@ test("Torque's featured evidence is its own vessel wash and retains product navi
 test("Torque keeps named fleet evidence separate from manufacturer technical classifications", () => {
   const reference = byId("product-reference-torque")?.parentNode;
   assert.ok(reference);
-  assert.match(text(reference), /EMS identifies Torque/);
+  assert.match(text(reference), /Manufacturer data identifies Torque/);
   assert.match(text(reference), /Blue Bird/);
   assert.match(text(reference), /PPG/);
-  assert.ok(all(reference, (node) => attr(node, "href") === "https://www.enviromfg.com/vehicle-washing").length);
+  assert.ok(all(reference, (node) => attr(node, "href")?.startsWith("../contact?type=quote&product=VertKleen%20Torque&message=")).length);
   const technical = byId("product-technical-torque")?.parentNode.parentNode;
   assert.ok(technical);
   assert.match(text(technical), /Non-corrosive; non-DOT regulated/);
   assert.match(text(technical), /100% biodegradable/);
-  assert.ok(all(technical, (node) => attr(node, "href") === "https://www.enviromfg.com/s/torquewso-tds.pdf").length);
+  assert.ok(all(technical, (node) => attr(node, "href")?.startsWith("../contact?type=quote&product=VertKleen%20Torque&message=")).length);
   assert.doesNotMatch(text(all(doc, (node) => node.tagName === "main")[0]), /EPA approved|Safer Choice certified|NSF certified|no rinse|freely dump/i);
 });

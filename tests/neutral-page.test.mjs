@@ -24,8 +24,8 @@ test("Neutral uses its near-neutral mechanism and does not invent a single label
   assert.doesNotMatch(main, /safe on all|zero risk|no PPE|freely dump|aviation approved|Safer Choice certified/i);
 });
 
-test("Neutral links exact technical sources and a product-specific application request", () => {
-  assert.ok(all(section("reference"), node => attr(node, "href") === "https://www.enviromfg.com/s/syncleannwso-tds.pdf").length);
+test("Neutral offers technical data and product-specific application requests", () => {
+  assert.ok(all(section("reference"), node => attr(node, "href")?.startsWith("../contact?type=quote&product=VertKleen%20Neutral&message=")).length);
   const technical = all(section("technical"), node => node.tagName === "a")[0];
   const technicalUrl = new URL(attr(technical, "href"), "https://masest.co/products/neutral");
   assert.equal(technicalUrl.searchParams.get("product"), "VertKleen Neutral");

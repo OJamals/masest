@@ -13,14 +13,18 @@ const attr = (node, name) => node.attrs?.find((item) => item.name === name)?.val
 const text = (node) => node.nodeName === "#text" ? node.value : (node.childNodes || []).map(text).join("");
 const byId = (id) => all(doc, (node) => attr(node, "id") === id)[0];
 
-test("WaterSafe60 shows exact NSF use scope and links the official manufacturer listing", () => {
+test("WaterSafe60 shows exact NSF use scope and offers certification documentation", () => {
   const cert = byId("product-certification-watersafe60")?.parentNode.parentNode;
   assert.ok(cert);
-  for (const phrase of ["NSF/ANSI/CAN 60", "Environmental Manufacturing Solutions", "Watersafe 60", "80 mg/L", "Flush the product out"]) {
+  for (const phrase of ["NSF/ANSI/CAN 60", "Watersafe 60", "80 mg/L", "Flush the product out"]) {
     assert.ok(text(cert).includes(phrase), phrase);
   }
   const listing = all(cert, (node) => node.tagName === "a")[0];
-  assert.equal(attr(listing, "href"), "https://info.nsf.org/Certified/PwsChemicals/Listings.asp?Company=C0284921&Standard=060");
+  const request = new URL(attr(listing, "href"), "https://masest.co/products/watersafe60");
+  assert.equal(request.pathname, "/contact");
+  assert.equal(request.searchParams.get("product"), "WaterSafe60");
+  assert.match(request.searchParams.get("message"), /certification documentation/);
+  assert.equal(request.hash, "#quoteForm");
   const hero = all(doc, (node) => attr(node, "class") === "product-hero-proof")[0];
   assert.equal(attr(hero, "href"), "#product-certification-watersafe60");
   assert.match(text(hero), /certification/);

@@ -270,12 +270,22 @@ test("approved public evidence surfaces expose no stale verification status", ()
   }
 });
 
-test("product pages retain orderable identities alongside authorized EMS technology", () => {
-  // Owner authorized EMS source attribution and materials on 2026-09-25.
-  // Technology names explain the chemistry; catalog names identify what buyers order.
+test("product pages retain orderable identities without supplier branding", () => {
   for (const id of CATALOG_ORDER) {
     const heading = read(`products/${id}.html`).match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1];
     assert.equal(heading, PRODUCTS[id].name, `${id}: canonical product identity`);
+  }
+});
+
+test("public copy and product generators omit withdrawn supplier references", () => {
+  const paths = [
+    ...readdirSync(root).filter((path) => path.endsWith(".html")),
+    ...["products/", "industries/", "blog/", "comparisons/", "js/", "data/content/"]
+      .flatMap(filesUnder).filter((path) => /\.(?:html|js|json)$/.test(path)),
+    "tools/seo-inject.mjs",
+  ];
+  for (const path of paths) {
+    assert.doesNotMatch(read(path), /\bEMS\b|enviromfg|Environmental Manufacturing Solutions|C0284921/i, `${path}: withdrawn supplier reference`);
   }
 });
 
