@@ -14,6 +14,7 @@ import { dirname, resolve } from "node:path";
 import { proofCardHtml } from "../js/proof-records.js";
 import { industryProductGrid } from "./industry-product-grid.mjs";
 import { PRODUCTS, catalogImageDimensions } from "../js/main/catalog-data.js";
+import { renderHvacWaterHub } from "./hvac-water-page.mjs";
 import { organizationJsonLd } from "./company-identity.mjs";
 import { COMPONENT_VERSION, MAIN_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
@@ -52,8 +53,8 @@ const INDUSTRIES = INDUSTRY_APPLICATIONS.map((application) => ({
 }));
 
 const NAV = [
-  ["", "MASEST"], ["products", "Products"], ["services", "Services"], [null, "Applications"],
-  ["industries", "Industries"], ["proof", "Results"],
+  ["", "MASEST"], ["products", "Products"], ["programs", "Chemical Programs"],
+  ["industries", "Industries"], ["industries/hvac-water", "HVAC &amp; Water Systems"], ["proof", "Results"],
   ["resources", "SDS &amp; Resources"]
 ];
 
@@ -731,6 +732,7 @@ function page(ind) {
 <link rel="stylesheet" href="../css/style.css?v=${STYLE_VERSION}">
 <link rel="stylesheet" href="../css/navigation.css?v=${NAVIGATION_VERSION}">
 <link rel="stylesheet" href="../css/components.css?v=${COMPONENT_VERSION}">
+${ind.slug === "hvac-water" ? '<link rel="stylesheet" href="../css/systems.css?v=20261001f">' : ""}
 <script type="application/ld+json">${JSON.stringify(industrySchema(ind, plain))}</script>
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/industries/${ind.slug}">
@@ -752,7 +754,7 @@ ${nav}
   </nav>
 </noscript>
 
-<main id="main">
+<main id="main">${ind.slug === "hvac-water" ? renderHvacWaterHub(ind, featuredProofBlock(ind) + imageGalleryBlock(ind)) : `
   <section class="hero-split">
     <div class="wrap">
       <span class="eyebrow"><a href="../industries">Industries</a> &rsaquo; ${ind.name}</span>
@@ -774,7 +776,7 @@ ${industryDetailBlock(ind)}${featuredProofBlock(ind)}${imageGalleryBlock(ind)}
 
 ${recommendedProductsBlock(ind)}${industryLabelVariantsBlock(ind)}
 <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="industries/${ind.slug}" data-cms-region="body"></div>
-${ctaBlock(ind)}
+${ctaBlock(ind)}`}
 </main>
 
 <script type="module" src="../js/main.js?v=${MAIN_VERSION}"></script>

@@ -43,10 +43,10 @@ test('canonical industry registry owns discovery taxonomy and presentation', () 
   );
 
   const customDiscovery = structuredClone(industryRegistry.discovery);
-  customDiscovery.roles[0].label = 'Custom facility role';
+  customDiscovery.jobs[0].label = 'Custom cleaning job';
   assert.match(
     renderIndustryDiscovery([industries[0]], customDiscovery),
-    /Custom facility role/,
+    /Custom cleaning job/,
   );
 });
 
@@ -59,6 +59,11 @@ test('industry route generator derives shared presentation copy from the canonic
 
   for (const industry of industries) {
     const html = read(`industries/${industry.slug}.html`);
+    if (industry.slug === 'hvac-water') {
+      assert.match(html, /data-system-primary-cta/);
+      assert.match(html, /id="recirculation"/);
+      continue;
+    }
     assert.match(html, new RegExp(
       `<p class="subhead">${industry.marketing.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</p>`,
     ));
@@ -508,45 +513,20 @@ test('P1 discovery registry maps every route to supported buyer roles and job pa
   }
 });
 
-test('industry hub generates linkable role and job discovery with decision context', () => {
+test('industry directory shows every route without a role gate and offers job filters', () => {
   const hub = read('industries.html');
-
   assert.equal((hub.match(/data-industry-discovery(?!-)/g) || []).length, 1);
   assert.equal((hub.match(/data-industry-discovery-card/g) || []).length, industries.length);
-  assert.doesNotMatch(hub, /Start with a quote/);
-  assert.equal((hub.match(/<dt>What you can see<\/dt>/g) || []).length, industries.length);
-  assert.doesNotMatch(hub, /<dt>Proof<\/dt>/);
-
-  for (const role of roleIds) {
-    assert.match(hub, new RegExp(`href="\\?role=${role}#industry-discovery"`));
-    assert.match(
-      hub,
-      new RegExp(`data-filter-value="${role}"[^>]+data-result-detail="[^"]+"[^>]+data-cta-type="(?:audit|quote)"`),
-    );
-  }
-  for (const job of jobIds) {
-    assert.match(hub, new RegExp(`href="\\?job=${job}#industry-discovery"`));
-    assert.match(
-      hub,
-      new RegExp(`data-filter-value="${job}"[^>]+data-result-detail="[^"]+"[^>]+data-cta-type="(?:audit|quote)"`),
-    );
-  }
-
+  assert.match(hub, /data-industry-search/);
+  assert.doesNotMatch(hub, /data-filter-type="role"|Your role|specialized-operations/);
+  for (const job of jobIds) assert.match(hub, new RegExp('href="\\?job=' + job + '#industry-discovery"'));
   for (const industry of industries) {
-    const card = hub.match(
-      new RegExp(
-        `<article[^>]+data-industry-discovery-card[^>]+data-industry-slug="${industry.slug}"[\\s\\S]*?</article>`,
-      ),
-    )?.[0] || '';
-    assert.match(card, new RegExp(`href="industries/${industry.slug}"`), `${industry.slug}: route`);
-    assert.match(card, /data-buyer-roles="[^"]+"/, `${industry.slug}: roles`);
-    assert.match(card, /data-job-paths="[^"]+"/, `${industry.slug}: jobs`);
-    assert.match(card, /Products to start with/, `${industry.slug}: products`);
-    assert.match(card, /class="industry-discovery-products"/, `${industry.slug}: product list`);
-    assert.doesNotMatch(card, /data-industry-discovery-product[^>]*>[^<]+<\/a>,/);
-    assert.match(card, /<dt>What you can see<\/dt>/, `${industry.slug}: result-photo path`);
-    assert.match(card, /data-industry-discovery-path hidden/, `${industry.slug}: path framing`);
-    assert.match(card, /href="contact\?[^"]+type=(?:audit|quote)/, `${industry.slug}: prefilled CTA`);
+    const card = hub.match(new RegExp('<article[^>]+data-industry-discovery-card[^>]+data-industry-slug="' + industry.slug + '"[\\s\\S]*?</article>'))?.[0] || '';
+    assert.ok(card, industry.slug + ': directory card');
+    assert.doesNotMatch(card.split('>')[0], /\bhidden\b/);
+    assert.match(card, new RegExp('href="industries/' + industry.slug + '"'));
+    assert.match(card, /data-job-paths="[^"]+"|data-search-text=/);
+    assert.match(card, /class="industry-discovery-products"/);
   }
 });
 
@@ -566,7 +546,9 @@ test('industry hero product CTA lands on the visible product selector', () => {
   for (const industry of industries) {
     const html = read(`industries/${industry.slug}.html`);
     assert.equal((html.match(/id="products-for-this-industry"/g) || []).length, 1, `${industry.slug}: product anchor`);
-    assert.match(html, /href="#products-for-this-industry">See products, first-test plan, and results/);
+    assert.match(html, industry.slug === 'hvac-water'
+      ? /href="#products-for-this-industry">Products/
+      : /href="#products-for-this-industry">See products, first-test plan, and results/);
   }
 });
 
@@ -708,6 +690,11 @@ test('every industry page renders one task-led applications and job-fit module',
     const slug = file.replace(/\.html$/, '');
     const html = read(`industries/${file}`);
     const industry = industries.find((candidate) => candidate.slug === slug);
+    if (slug === 'hvac-water') {
+      assert.equal((html.match(/data-industry-applications-proof/g) || []).length, 1);
+      assert.equal((html.match(/class="system-guide"/g) || []).length, 4);
+      continue;
+    }
     const applications = html.match(
       /<!-- industry:applications:start -->([\s\S]*?)<!-- industry:applications:end -->/,
     )?.[1] || '';
@@ -981,6 +968,14 @@ test('localized CTA keeps technical boundaries in the registry and asks customer
   for (const file of industryFiles) {
     const slug = file.replace(/\.html$/, '');
     const html = read(`industries/${file}`);
+    if (slug === 'hvac-water') {
+      const href = html.match(/data-system-primary-cta href="\.\.\/contact\?([^"]+)"/)?.[1];
+      const params = new URLSearchParams(href?.replaceAll('&amp;', '&'));
+      assert.equal(params.get('industry'), 'HVAC & Water Systems');
+      assert.equal(params.get('type'), 'audit');
+      assert.match(params.get('message'), /Task: HVAC or water-system support/);
+      continue;
+    }
     const cta = html.match(/<!-- industry:cta:start -->([\s\S]*?)<!-- industry:cta:end -->/)?.[1] || '';
     const href = cta.match(/href="\.\.\/contact\?([^"]+)"/)?.[1];
     assert.ok(href, `${slug}: contact CTA missing`);

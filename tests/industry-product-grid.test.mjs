@@ -101,7 +101,7 @@ test("every industry card identifies its product and rejects withdrawn or wrong-
       }
     }
   }
-  assert.equal(count, 115, "audit all recommended, specialty-label, and marine cards");
+  assert.equal(count, 116, "audit all recommended, specialty-label, and marine cards, including HVAC Descaler");
 });
 
 test("hydration leaves a populated grid alone", () => {

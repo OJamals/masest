@@ -17,7 +17,7 @@ test.afterAll(async () => {
 });
 
 test("homepage shared header stays above the photo with readable complete navigation", async ({ page }) => {
-  for (const width of [320, 390, 768, 820, 821, 1024, 1440, 1920, 2414]) {
+  for (const width of [320, 390, 540, 768, 820, 821, 1024, 1100, 1101, 1440, 1920, 2414]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: "networkidle" });
     const header = page.locator("header.nav");
@@ -25,9 +25,13 @@ test("homepage shared header stays above the photo with readable complete naviga
     const headerBox = await header.boundingBox();
     const heroBox = await page.locator(".home-hero").boundingBox();
     expect(heroBox.y, `${width} photo begins below header`).toBeGreaterThanOrEqual(headerBox.y + headerBox.height);
-    if (width <= 820) await page.locator(".nav-burger").click();
-    const items = page.locator("#navLinks > a, #navLinks > .nav-group > summary");
-    expect(await items.allTextContents()).toEqual(["Products", "Applications", "Results", "Resources"]);
+    if (width <= 1100) await page.locator(".nav-burger").click();
+    const nav = page.locator("#navLinks");
+    const items = page.locator("#navLinks > a:not(.nav-mobile-account):visible, #navLinks > .nav-group > summary:visible");
+    expect(await items.allTextContents()).toEqual(["Products", "Industries", "HVAC & Water Systems", "Results", "Resources"]);
+    const account = nav.locator(".nav-mobile-account");
+    if (width <= 1100) await expect(account).toBeVisible();
+    else await expect(account).toBeHidden();
     const geometry = await page.locator(".nav-logo, .nav-actions, #navLinks")
       .evaluateAll(nodes => nodes.map(node => {
         const rect = node.getBoundingClientRect();
@@ -38,7 +42,7 @@ test("homepage shared header stays above the photo with readable complete naviga
       expect(box.right, `${width} header right edge`).toBeLessThanOrEqual(width);
       expect(box.top, `${width} header top edge`).toBeGreaterThanOrEqual(0);
     }
-    if (width > 820) {
+    if (width > 1100) {
       expect(geometry[0].right).toBeLessThanOrEqual(geometry[1].left);
       expect(geometry[1].right).toBeLessThanOrEqual(geometry[2].left);
       expect(Math.max(geometry[0].bottom, geometry[1].bottom, geometry[2].bottom)).toBeLessThanOrEqual(headerBox.y + headerBox.height);
@@ -57,15 +61,18 @@ test("homepage shared header stays above the photo with readable complete naviga
     });
     expect(contrast.alpha, `${width} opaque header`).toBe(1);
     for (const ratio of contrast.ratios) expect(ratio, `${width} navigation contrast`).toBeGreaterThanOrEqual(4.5);
-    await page.locator(".nav-group > summary").filter({hasText:"Applications"}).click();
-    await expect(page.getByRole("link", {name:"HVAC & Water Systems", exact:true})).toBeVisible();
+    await expect(nav.getByRole("link", {name:"HVAC & Water Systems", exact:true})).toBeVisible();
+    await page.locator(".nav-group > summary").filter({hasText:"Products"}).click();
+    await expect(nav.getByRole("link", {name:"Chemical Programs", exact:true})).toBeVisible();
+    await expect(nav.getByRole("link", {name:"Private Label", exact:true})).toBeVisible();
     await page.locator(".nav-group > summary").filter({hasText:"Resources"}).click();
-    await expect(page.getByRole("link", {name:"SDS & Resources", exact:true})).toBeVisible();
+    await expect(nav.getByRole("link", {name:"SDS & Resources", exact:true})).toBeVisible();
+    await expect(nav.getByRole("link", {name:"Testing & Technical Services", exact:true})).toBeVisible();
   }
 });
 
 test("mobile and tablet header keeps every action inside the viewport", async ({ page }) => {
-  for (const width of [390, 768, 800, 820]) {
+  for (const width of [320, 390, 540, 768, 800, 820, 1024, 1100]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
@@ -101,7 +108,7 @@ test("mobile and tablet header keeps every action inside the viewport", async ({
 });
 
 test("desktop header begins after tablet collapse without overlap", async ({ page }) => {
-  for (const width of [821, 1024]) {
+  for (const width of [1101, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`${BASE_URL}/products.html`, { waitUntil: "domcontentloaded" });
 
@@ -651,12 +658,17 @@ test("blog category chips keep touch-sized filter controls", async ({ page }) =>
   }
 });
 
-test("industry thumbnails expose explicit link names", async ({ page }) => {
+test("industry directory exposes all 26 named industry links", async ({ page }) => {
   await page.goto(`${BASE_URL}/industries.html`, { waitUntil: "domcontentloaded" });
 
-  const labels = await page.locator(".row-thumb").evaluateAll((links) => links.map((link) => link.getAttribute("aria-label")));
-  expect(labels.length).toBeGreaterThanOrEqual(10);
-  expect(labels.every(Boolean)).toBe(true);
+  const links = page.locator("[data-industry-discovery-card] h3 a");
+  await expect(links).toHaveCount(26);
+  for (const link of await links.all()) {
+    const name = (await link.innerText()).trim();
+    expect(name).not.toBe("");
+    await expect(link).toHaveAccessibleName(name);
+    await expect(link).toBeVisible();
+  }
 });
 
 test("core pages keep visible heading levels sequential", async ({ page }) => {
@@ -861,76 +873,83 @@ test("mobile industry detail pages keep quote and chemical-map actions", async (
   await expect(bar.getByRole("link", { name: /get a quote/i })).toHaveAttribute("href", /type=quote/);
 });
 
-test("mobile hamburger menu centers Applications and exposes child links", async ({ page }) => {
+test("mobile hamburger menu exposes Products and system routes with keyboard focus", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/industries/plumbing.html`, { waitUntil: "domcontentloaded" });
   const burger = page.locator("#navBurger");
   await burger.click();
 
   const nav = page.locator("#navLinks");
-  await expect(nav.getByRole("link", { name: "Products" })).toBeFocused();
+  const productMenu = nav.locator('.nav-group').filter({ hasText: 'Products' });
+  const summary = productMenu.locator('summary');
+  await expect(summary).toBeFocused();
   const topLevelColors = await page.locator("#navLinks > a, #navLinks summary").evaluateAll((nodes) =>
     nodes.map((node) => getComputedStyle(node).color)
   );
   expect(topLevelColors).not.toContain("rgb(255, 255, 255)");
 
-  const applicationMenu = page.locator('.nav-group').filter({ hasText: 'Applications' });
-  await applicationMenu.locator('summary').click();
+  await summary.click();
   await expect(nav.getByRole("link", { name: "Industries" })).toHaveAttribute("href", "../industries");
+  await expect(nav.getByRole("link", { name: "HVAC & Water Systems", exact: true })).toHaveAttribute("href", "../industries/hvac-water");
   await expect(nav.getByRole("link", { name: "Results" })).toHaveAttribute("href", "../proof");
+  await expect(nav.getByRole("link", { name: "Chemical Programs" })).toHaveAttribute("href", "../programs");
+  await expect(nav.getByRole("link", { name: "Private Label" })).toHaveAttribute("href", "../private-label");
 
-  const labelDelta = await applicationMenu.locator('summary').evaluate((node) => {
+  const labelFits = await productMenu.locator('summary').evaluate((node) => {
     const label = node.querySelector(".nav-group-label");
-    if (!label) return Number.POSITIVE_INFINITY;
+    if (!label) return false;
     const labelRect = label.getBoundingClientRect();
     const nodeRect = node.getBoundingClientRect();
-    return Math.abs((labelRect.left + labelRect.width / 2) - (nodeRect.left + nodeRect.width / 2));
+    return labelRect.left >= nodeRect.left && labelRect.right <= nodeRect.right;
   });
-  expect(labelDelta).toBeLessThan(2);
+  expect(labelFits).toBe(true);
 
   await page.keyboard.press("Escape");
   await expect(nav).not.toHaveClass(/open/);
   await expect(burger).toBeFocused();
 });
 
-test("desktop Applications dropdown fits its labels and retains keyboard focus during scroll", async ({ page }) => {
+test("desktop dropdowns fit their labels and retain keyboard focus during scroll", async ({ page }) => {
   await page.setViewportSize({ width: 1140, height: 408 });
   await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
-  const applicationMenu = page.locator('.nav-group').filter({ hasText: 'Applications' });
-  await applicationMenu.locator('summary').click();
+  for (const name of ["Products", "Resources"]) {
+    const dropdown = page.locator('.nav-group').filter({ hasText: name });
+    const summary = dropdown.locator('summary');
+    await summary.click();
 
-  const fit = await applicationMenu.locator('.nav-menu').evaluate((menu) => {
-    const menuBox = menu.getBoundingClientRect();
-    const links = [...menu.querySelectorAll("a")].map((link) => {
-      const linkBox = link.getBoundingClientRect();
+    const fit = await dropdown.locator('.nav-menu').evaluate((menu) => {
+      const links = [...menu.querySelectorAll("a")].map((link) => {
+        return {
+          text: link.textContent.trim(),
+          visibleWidth: link.clientWidth,
+          scrollWidth: link.scrollWidth,
+        };
+      });
+
       return {
-        text: link.textContent.trim(),
-        visibleWidth: linkBox.width,
-        scrollWidth: link.scrollWidth,
+        menuWidth: menu.clientWidth,
+        menuScrollWidth: menu.scrollWidth,
+        links,
       };
     });
 
-    return {
-      menuWidth: menuBox.width,
-      menuScrollWidth: menu.scrollWidth,
-      links,
-    };
-  });
+    expect(fit.menuWidth, "dropdown panel should not clip child links").toBeGreaterThanOrEqual(fit.menuScrollWidth);
+    for (const link of fit.links) {
+      expect(link.visibleWidth, `${link.text} label should fit its link`).toBeGreaterThanOrEqual(link.scrollWidth);
+    }
 
-  expect(fit.menuWidth, "dropdown panel should not clip child links").toBeGreaterThanOrEqual(fit.menuScrollWidth);
-  for (const link of fit.links) {
-    expect(link.visibleWidth, `${link.text} label should fit its link`).toBeGreaterThanOrEqual(link.scrollWidth);
+    await page.keyboard.press("Escape");
+    await expect(dropdown).not.toHaveJSProperty("open", true);
+
+    await summary.click();
+    await expect(dropdown).toHaveJSProperty("open", true);
+    await expect(summary).toBeFocused();
+    await page.mouse.wheel(0, 240);
+    await expect(dropdown).toHaveJSProperty("open", true);
+    await expect(summary).toBeFocused();
+    await page.locator('main h1').click();
+    await expect(dropdown).not.toHaveJSProperty("open", true);
   }
-
-  await page.keyboard.press("Escape");
-  await expect(applicationMenu).not.toHaveJSProperty("open", true);
-
-  await applicationMenu.locator('summary').click();
-  await expect(applicationMenu).toHaveJSProperty("open", true);
-  await page.mouse.wheel(0, 240);
-  await expect(applicationMenu).toHaveJSProperty("open", true);
-  await page.locator('main h1').click();
-  await expect(applicationMenu).not.toHaveJSProperty("open", true);
 });
 
 test("mobile home uses original conversion controls without the quick-action switcher", async ({ page }) => {
@@ -1067,10 +1086,12 @@ test("industry cards keep consistent desktop proportions", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.goto(`${BASE_URL}/industries.html`, { waitUntil: "networkidle" });
-  const categoryWidth = await page.locator(".industry-specialists .route-card span").first().evaluate((node) =>
-    Math.round(node.getBoundingClientRect().width)
+  const directoryWidths = await page.locator("[data-industry-discovery-card]").evaluateAll((nodes) =>
+    nodes.map((node) => Math.round(node.getBoundingClientRect().width))
   );
-  expect(categoryWidth).toBeGreaterThanOrEqual(96);
+  expect(directoryWidths).toHaveLength(26);
+  expect(Math.min(...directoryWidths)).toBeGreaterThanOrEqual(240);
+  expect(Math.max(...directoryWidths) - Math.min(...directoryWidths)).toBeLessThanOrEqual(3);
 
   await page.goto(`${BASE_URL}/industries/plumbing.html`, { waitUntil: "networkidle" });
   const productWidths = await page.locator("[data-ind-products] .prod-card").evaluateAll((cards) =>
@@ -1148,14 +1169,23 @@ test("buyer-page sections stay visible after scrolling", async ({ page }) => {
     {
       pagePath: "programs.html",
       viewport: { width: 1440, height: 1000 },
-      selector: ".program-scope-visual.reveal",
-      label: "program tier comparison",
+      selector: "#water-treatment",
+      label: "program water-system handoff",
+      alwaysVisible: true,
     },
     {
       pagePath: "programs.html",
       viewport: { width: 390, height: 844 },
-      selector: ".program-map-disclosure.reveal",
-      label: "mobile program disclosure",
+      selector: "#heat-transfer-fluids .resource-disclosure.reveal",
+      label: "mobile glycol quote disclosure",
+    },
+    {
+      pagePath: "industries/hvac-water.html#recirculation",
+      viewport: { width: 390, height: 844 },
+      selector: "#recirculation",
+      label: "mobile recirculation guide",
+      alwaysVisible: true,
+      openGuide: true,
     },
     {
       pagePath: "resources.html",
@@ -1189,6 +1219,7 @@ test("buyer-page sections stay visible after scrolling", async ({ page }) => {
     }
 
     const section = page.locator(item.selector).first();
+    if (item.openGuide) await expect(section).toHaveJSProperty("open", true);
     await section.evaluate((node) => {
       const top = node.getBoundingClientRect().top + window.scrollY;
       const root = document.documentElement;

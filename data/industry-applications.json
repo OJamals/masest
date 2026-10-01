@@ -294,7 +294,7 @@
       "kind": "canonical",
       "icon": "ph-hard-drives",
       "headline": "Get cooling equipment clean and back online on schedule.",
-      "marketing": "HCR and Descaler clear scale from cooling equipment. WaterSafe60 helps keep scale and corrosion under control after the clean.",
+      "marketing": "HVAC HCR and Descaler clear scale from cooling equipment. WaterSafe60 helps keep scale and corrosion under control after the clean.",
       "operating_outcome": "Compare restored flow and heat transfer, the final rinse, and time back online.",
       "cta_label": "Plan my maintenance window",
       "cta_type": "audit",
@@ -307,12 +307,12 @@
       ],
       "job_paths": {
         "descale": [
-          "hcr",
+          "hcr-t16",
           "descaler"
         ],
         "cooling-water": [
           "watersafe60",
-          "hcr",
+          "hcr-t16",
           "descaler"
         ]
       },
@@ -322,12 +322,12 @@
       "method": "Take the loop offline, circulate the cleaner, rinse fully, and restart the water treatment",
       "products": [
         "watersafe60",
-        "hcr",
+        "hcr-t16",
         "descaler"
       ],
       "document_products": [
         "watersafe60",
-        "hcr"
+        "hcr-t16"
       ],
       "concentration": "Set descaler concentration from the current label/user guide, buildup analysis, metallurgy, and loop volume; water-treatment dose remains site-engineered.",
       "process": "Trend inlet/return temperature, flow, pressure drop, solution pH, iron or hardness response, contact time, scrubbing/recirculation, and rinse conductivity.",
@@ -492,7 +492,7 @@
       "kind": "canonical",
       "icon": "ph-graduation-cap",
       "headline": "One campus cleaning plan, matched to every area.",
-      "marketing": "HCR and WaterSafe60 cover boilers, towers, and scale. CR and MultiWash clean kitchens, floors, and facilities. Purgo helps stop recurring odor.",
+      "marketing": "HVAC HCR and WaterSafe60 support boilers, towers, and scale control. HVAC CR and MultiWash clean compatible equipment and surfaces. Purgo supports odor-control work.",
       "operating_outcome": "Fewer products and lower odor make campus cleaning easier for crews and building occupants.",
       "cta_label": "Test it on my campus",
       "cta_type": "sample",
@@ -504,15 +504,15 @@
       ],
       "job_paths": {
         "degrease": [
-          "cr",
+          "cr2",
           "multiwash"
         ],
         "descale": [
-          "hcr"
+          "hcr-t16"
         ],
         "cooling-water": [
           "watersafe60",
-          "hcr"
+          "hcr-t16"
         ],
         "exterior-bio-grime": [
           "multiwash"
@@ -526,13 +526,13 @@
       "soil": "Mineral scale, rust, grease, soap film, tracked grime, algae staining, and drain residue",
       "method": "Match the cleaner to each area and schedule the work around classes and building use",
       "products": [
-        "cr",
-        "hcr",
+        "cr2",
+        "hcr-t16",
         "watersafe60",
         "multiwash"
       ],
       "document_products": [
-        "hcr",
+        "hcr-t16",
         "multiwash"
       ],
       "concentration": "Use the applicable current label/TDS range and approve the starting dilution through facilities, EHS, and a small-area trial.",
@@ -798,7 +798,7 @@
       "kind": "canonical",
       "icon": "ph-hospital",
       "headline": "Clean HVAC and facility equipment with less odor and disruption.",
-      "marketing": "HCR and Descaler remove scale from mechanical equipment, CR clears organic buildup, and WaterSafe60 plus Purgo support ongoing water care.",
+      "marketing": "HVAC HCR and Descaler remove scale from mechanical equipment, HVAC CR clears organic buildup, and WaterSafe60 supports site-specific scale and corrosion control.",
       "operating_outcome": "Lower odor helps crews finish the work with less disruption to nearby patients and staff.",
       "cta_label": "Plan cleaning around patients",
       "cta_type": "audit",
@@ -810,12 +810,12 @@
       ],
       "job_paths": {
         "descale": [
-          "hcr",
+          "hcr-t16",
           "descaler"
         ],
         "cooling-water": [
           "watersafe60",
-          "hcr",
+          "hcr-t16",
           "descaler"
         ]
       },
@@ -826,13 +826,13 @@
       "products": [
         "watersafe60",
         "purgo",
-        "hcr",
-        "cr",
+        "hcr-t16",
+        "cr2",
         "descaler"
       ],
       "document_products": [
         "watersafe60",
-        "hcr"
+        "hcr-t16"
       ],
       "concentration": "Set descaling concentration from the current label/user guide, buildup analysis, and metallurgy; all treatment dosing remains under the facility water plan.",
       "process": "Record temperature, concentration, flow/scrubbing, contact time, rinse pH/conductivity, ventilation, barricade, and restart readings.",
@@ -982,11 +982,11 @@
           }
         ]
       },
-      "label": "HVAC / Water Treatment",
+      "label": "HVAC & Water Systems",
       "kind": "canonical",
       "icon": "ph-wind",
       "headline": "Remove scale and rust. Bring back flow and heat transfer.",
-      "marketing": "HCR breaks down hard carbonate scale and rust. WaterSafe60 helps keep pH, scale, and corrosion under control after the system is clean.",
+      "marketing": "Match HVAC CR to compatible organic soils, HVAC HCR or Descaler to mineral deposits, and WaterSafe60 to site-specific scale and corrosion control.",
       "operating_outcome": "Compare the removed buildup, restored flow, cleaner heat transfer, final rinse, and restart time.",
       "cta_label": "Plan my descaling test",
       "cta_type": "sample",
@@ -998,13 +998,14 @@
       ],
       "job_paths": {
         "descale": [
-          "hcr"
+          "hcr-t16",
+          "descaler"
         ],
         "cooling-water": [
           "watersafe60",
           "purgo",
-          "hcr",
-          "cr"
+          "hcr-t16",
+          "cr2"
         ]
       },
       "lead_task": "Remove scale and rust from water-side equipment, rinse it clean, and restart the treatment program.",
@@ -1014,12 +1015,13 @@
       "products": [
         "watersafe60",
         "purgo",
-        "hcr",
-        "cr"
+        "hcr-t16",
+        "cr2",
+        "descaler"
       ],
       "document_products": [
         "watersafe60",
-        "hcr"
+        "hcr-t16"
       ],
       "concentration": "Select within the current HCR/user-guide range from buildup loading, metallurgy, volume, and reaction monitoring; treatment dose is site-engineered.",
       "process": "Track concentration, solution temperature, flow/scrubbing, pH trend, iron/hardness response, working time, rinse conductivity, and restart chemistry.",
@@ -1318,7 +1320,7 @@
       "kind": "supplemental",
       "icon": "ph-wind",
       "headline": "Give technicians a descaling method they can explain and repeat.",
-      "marketing": "Identify the buildup, choose HCR or Descaler, and build a clear circulation and rinse plan around the equipment.",
+      "marketing": "Identify the buildup, choose HVAC HCR or Descaler, and build a clear circulation and rinse plan around the equipment.",
       "operating_outcome": "A clear circulation and rinse plan cuts guesswork and helps prevent callbacks.",
       "cta_label": "Plan my contractor job",
       "cta_type": "quote",
@@ -1330,11 +1332,11 @@
       ],
       "job_paths": {
         "descale": [
-          "hcr",
+          "hcr-t16",
           "descaler"
         ],
         "cooling-water": [
-          "hcr",
+          "hcr-t16",
           "descaler",
           "watersafe60"
         ]
@@ -1348,12 +1350,12 @@
       "soil": "Carbonate and mixed mineral scale, iron oxide, corrosion product, silt, and water-side organic film",
       "method": "Lock out and isolate the equipment, set up circulation, watch the clean, drain, rinse, inspect, and restart",
       "products": [
-        "hcr",
+        "hcr-t16",
         "descaler",
         "watersafe60"
       ],
       "document_products": [
-        "hcr",
+        "hcr-t16",
         "watersafe60"
       ],
       "concentration": "Choose within the current HCR/Descaler guide from buildup, metallurgy, loop volume, and reaction rate; do not use a universal ratio.",
@@ -1430,7 +1432,7 @@
       "kind": "canonical",
       "icon": "ph-buildings",
       "headline": "Clear scale, rust, and grease from hard-working utility equipment.",
-      "marketing": "WaterSafe60 helps control pH, scale, and corrosion. HCR removes mineral buildups. HVAC CR cuts through greasy utility work.",
+      "marketing": "WaterSafe60 supports site-specific scale and corrosion control. HVAC HCR removes mineral buildups. HVAC CR cuts through greasy utility work.",
       "operating_outcome": "Restore flow, rinse clean, and give crews a method they can repeat on the next job.",
       "cta_label": "Test it at my utility",
       "cta_type": "quote",
@@ -1443,11 +1445,11 @@
       ],
       "job_paths": {
         "descale": [
-          "hcr"
+          "hcr-t16"
         ],
         "cooling-water": [
           "watersafe60",
-          "hcr"
+          "hcr-t16"
         ],
         "fleet-wash": [
           "cr2"
@@ -1460,11 +1462,11 @@
       "products": [
         "cr2",
         "watersafe60",
-        "hcr"
+        "hcr-t16"
       ],
       "document_products": [
         "watersafe60",
-        "hcr"
+        "hcr-t16"
       ],
       "concentration": "Set cleaning concentration from the current label/user guide, buildup sample, metallurgy, and asset volume; treatment dosing is utility-engineered.",
       "process": "Track concentration, solution temperature, flow/scrubbing, pH, working time, metal response, rinse conductivity/turbidity, and controlled restart.",

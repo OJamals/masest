@@ -18,7 +18,7 @@ test('industry discovery intersects optional role and job filters', () => {
     jobs: 'degrease descale',
   };
 
-  assert.equal(industryDiscoveryMatches(route, {}), false);
+  assert.equal(industryDiscoveryMatches(route, {}), true);
   assert.equal(industryDiscoveryMatches(route, { role: 'facility-operations' }), true);
   assert.equal(industryDiscoveryMatches(route, { job: 'descale' }), true);
   assert.equal(

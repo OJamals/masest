@@ -127,20 +127,17 @@ export function renderChrome({
   const homeHref = root || "./";
   const isProductDetail = /\/products\/[^/]+(?:\.html)?$/.test(location.pathname);
   const links = [
-    { href: "products", label: "Products" },
-    {
-      key: "useCases",
-      label: "Applications",
-      children: [
-        { href: "industries/hvac-water", label: "HVAC & Water Systems" },
-        { href: "industries", label: "Industries" },
-        { href: "services", label: "Services" },
-        { href: "programs", label: "Programs" }
-      ]
-    },
+    { key: "products", label: "Products", children: [
+      { href: "products", label: "All products" },
+      { href: "programs", label: "Chemical Programs" },
+      { href: "private-label", label: "Private Label" }
+    ] },
+    { href: "industries", label: "Industries" },
+    { href: "industries/hvac-water", label: "HVAC & Water Systems" },
     { href: "proof", label: "Results" },
     { key: "resources", label: "Resources", children: [
       { href: "resources", label: "SDS & Resources" },
+      { href: "services", label: "Testing & Technical Services" },
       { href: "blog", label: "Blog" },
       { href: "about", label: "About" }
     ] }
@@ -148,7 +145,8 @@ export function renderChrome({
   const isActive = (href) => {
     if (page === href) return true;
     if (href === "products" && (page === "product" || isProductDetail)) return true;
-    if (href === "industries" && /\/industries\//.test(location.pathname)) return true;
+    if (href === "industries/hvac-water" && /\/industries\/hvac-water(?:\.html)?$/.test(location.pathname)) return true;
+    if (href === "industries" && /\/industries\//.test(location.pathname) && !/\/hvac-water(?:\.html)?$/.test(location.pathname)) return true;
     if (href === "blog" && /\/blog(\/|$)/.test(location.pathname)) return true;
     return false;
   };
@@ -179,8 +177,10 @@ export function renderChrome({
       <a class="nav-logo" href="${homeHref}" aria-label="MASEST home"><img class="logo-image logo-ink" src="/img/masest-logo-ink.png" srcset="/img/masest-logo-nav-ink.png 76w, /img/masest-logo-ink.png 192w" sizes="(max-width: 820px) 35px, 38px" alt="MASEST" width="469" height="585"><img class="logo-image logo-grad" src="/img/masest-logo.png" srcset="/img/masest-logo-nav.png 76w, /img/masest-logo.png 192w" sizes="(max-width: 820px) 35px, 38px" alt="" aria-hidden="true" width="469" height="585"></a>
       <nav class="nav-links" id="navLinks" aria-label="Primary">
         ${links.map(navItem).join("")}
+        <a class="nav-mobile-account" href="${root}account">Account / Sign in</a>
       </nav>
         <div class="nav-actions">
+          <a class="nav-quote" href="${root}contact?type=quote">Get a quote</a>
           <span class="nav-auth-placeholder" aria-hidden="true" style="display:block;width:92px;height:44px;align-self:center"></span>
           <a class="nav-cart" href="${root}cart" aria-label="Open cart"><i class="ph ph-shopping-cart-simple" aria-hidden="true"></i><b class="cart-count" data-cart-count hidden>0</b></a>
           <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
@@ -363,7 +363,8 @@ export function renderChrome({
         <div class="foot-secondary">
           <div class="foot-title">SDS &amp; Product Help</div>
           <a href="${root}resources">Resources &amp; SDS</a>
-          <a href="${root}programs">Programs &amp; Pricing</a>
+          <a href="${root}programs">Chemical Programs</a>
+          <a href="${root}industries/hvac-water">HVAC &amp; Water Systems</a>
           <a href="${root}proof">Customer Results</a>
           <a href="${root}blog">Blog</a>
         </div>

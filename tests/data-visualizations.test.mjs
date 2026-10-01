@@ -7,12 +7,12 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), "utf8"
 test("public pages expose data visualization mounts for review-worthy evidence", () => {
   const services = read("services.html");
   const proof = read("proof.html");
-  const programs = read("programs.html");
+  const systems = read("industries/hvac-water.html");
 
   assert.match(services, /data-service-mix-viz/, "services page should expose a catalog mix visualization mount");
   assert.match(proof, /data-proof-coverage/, "proof page should expose a sector coverage visualization mount");
-  assert.match(programs, /class="[^"]*\bprogram-scope-visual\b/, "programs page should compare tier scope visually");
-  assert.match(programs, /<table class="program-scope-table">/, "program tier visual should remain accessible as a table");
+  assert.match(systems, /data-water-programs/);
+  assert.match(systems, /class="circulation-route"/);
 });
 
 test("data visualizations render from canonical data or page metadata", () => {

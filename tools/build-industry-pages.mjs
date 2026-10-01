@@ -139,52 +139,28 @@ function renderDiscoveryProducts(industry) {
 
 function renderDiscoveryCard(industry) {
   const jobIds = Object.keys(industry.job_paths || {});
-  return `<article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="${escapeHtml(industry.slug)}" data-buyer-roles="${escapeHtml((industry.buyer_roles || []).join(" "))}" data-job-paths="${escapeHtml(jobIds.join(" "))}" hidden>
-        <span class="eyebrow">${industry.kind === "supplemental" ? "Specialized job" : "Industry"}</span>
+  return `<article class="industry-directory-card" id="${escapeHtml(industry.slug)}" data-industry-discovery-card data-industry-slug="${escapeHtml(industry.slug)}" data-job-paths="${escapeHtml(jobIds.join(" "))}" data-search-text="${escapeHtml([industry.label, industry.asset, industry.soil, industry.marketing].join(" "))}">
         <h3><a href="industries/${escapeHtml(industry.slug)}">${escapeHtml(industry.label)}</a></h3>
-        <p>${escapeHtml(industry.marketing)}</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd>${renderDiscoveryProducts(industry)}</dd></div>
-          <div><dt>What you can see</dt><dd>${escapeHtml(evidenceStatusLabel(industry))}</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/${escapeHtml(industry.slug)}">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="${contactHref(industry, "audit", "contact")}" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>${escapeHtml(industry.lead_task)}</p>
+        <div data-industry-discovery-product-list hidden>${renderDiscoveryProducts(industry)}</div>
       </article>`;
 }
 
 export function renderIndustryDiscovery(industries, discovery) {
-  const roleCards = discovery.roles.map((role) => discoveryFilterCard("role", role)).join("\n        ");
-  const jobCards = discovery.jobs.map((job) => discoveryFilterCard("job", job)).join("\n        ");
+  const jobCards = discovery.jobs.map((job) => `<a href="?job=${escapeHtml(job.id)}#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="${escapeHtml(job.id)}" aria-pressed="false">${escapeHtml(job.label)}</a>`).join("\n");
   const resultCards = industries.map(renderDiscoveryCard).join("\n      ");
 
   return `<section class="section section-slim">
     <div class="wrap">
-      <div class="industry-router buyer-router reveal" id="industry-discovery" data-industry-discovery>
-        <div>
-          <span class="eyebrow">Find your cleaner</span>
-          <h2>Start with your team or cleaning job.</h2>
-          <p class="subhead">Choose what you do or what you need to clean. We will show the best VertKleen starting products, relevant results, and a clear next step.</p>
-          <p class="industry-discovery-status" data-industry-discovery-status aria-live="polite">Choose your role or cleaning job.</p>
+      <div id="industry-discovery" data-industry-discovery>
+        <div class="industry-directory-controls">
+          <label class="industry-search">Search industries, equipment, or buildup<input type="search" name="q" data-industry-search placeholder="Try cooling tower, marine, or grease" autocomplete="off"></label>
           <button class="btn btn-ghost btn-sm" type="button" data-industry-discovery-clear hidden>Clear filters</button>
         </div>
-        <div class="industry-discovery-controls">
-          <div>
-            <span class="eyebrow">Your role</span>
-            <div class="route-grid">
-              ${roleCards}
-            </div>
-          </div>
-          <div>
-            <span class="eyebrow">Cleaning job</span>
-            <div class="route-grid">
-              ${jobCards}
-            </div>
-          </div>
-        </div>
-        <div class="industry-discovery-results" data-industry-discovery-results hidden>
+        <div class="industry-job-filters" aria-label="Optional cleaning-job filters">${jobCards}</div>
+        <p class="industry-directory-status" data-industry-discovery-status aria-live="polite">${industries.length} industry options. Browse all or narrow by cleaning job.</p>
+        <noscript><p>Browse all industries below. Search and filters require JavaScript.</p></noscript>
+        <div class="industry-directory" data-industry-discovery-results>
           ${resultCards}
         </div>
       </div>
@@ -193,9 +169,13 @@ export function renderIndustryDiscovery(industries, discovery) {
 }
 
 export function renderIndustryHub(html, industries, discovery) {
-  const rendered = replaceMarker(html, "discovery", renderIndustryDiscovery(industries, discovery));
-  if (rendered === null) throw new Error("industries hub: discovery marker missing");
-  return rendered;
+  if (!/<main id="main">[\s\S]*?<\/main>/.test(html)) throw new Error("industries hub: main missing");
+  return html.replace(/<main id="main">[\s\S]*?<\/main>/, `<main id="main">
+  <section class="hero-split"><div class="wrap"><span class="eyebrow">Industries</span><h1 class="display">Find your industry.</h1><p class="subhead">Products and practical application guidance for your work.</p></div></section>
+  ${marker("discovery", renderIndustryDiscovery(industries, discovery))}
+  <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="industries" data-cms-region="body"></div>
+  <section class="section-slim industry-directory-next"><div class="wrap"><p>Planning a pilot, crew training, or resupply across sites? <a href="programs">Explore Chemical Programs</a>. For equipment cleaning and water treatment, <a href="industries/hvac-water">visit HVAC &amp; Water Systems</a>.</p></div></section>
+  </main>`);
 }
 
 function renderHeroFacts(industry) {
@@ -516,6 +496,13 @@ export function renderIndustryPage(html, industry, allIndustries, reviewByPath) 
     const withProducts = replaceIndustryProductGrid(html, industry.products);
     if (withProducts === null) throw new Error(`${industry.slug}: recommended-product grid not found`);
     html = withProducts;
+  }
+  // This route is the dedicated system hub. Its guides and task paths replace
+  // the generic industry overlays; the canonical product grid still syncs above.
+  if (industry.slug === "hvac-water") {
+    const rendered = replaceMarker(html, "applications", applications);
+    if (rendered === null) throw new Error("hvac-water: technical-details mount missing");
+    return rendered.replace(/[ \t]+$/gm, "");
   }
   let output = replaceMarker(html, "hero-facts", hero);
   if (output === null) {

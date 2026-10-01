@@ -144,11 +144,12 @@ const discoveryTokens = (value) => new Set(
 export function industryDiscoveryMatches(route, filters) {
   const role = filters.role || "";
   const job = filters.job || "";
-  if (!role && !job) return false;
-
   const roles = discoveryTokens(route.roles);
   const jobs = discoveryTokens(route.jobs);
-  return (!role || roles.has(role)) && (!job || jobs.has(job));
+  const terms = String(filters.q || "").toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
+  const text = String(route.text || "").toLocaleLowerCase();
+  return (!role || roles.has(role)) && (!job || jobs.has(job))
+    && terms.every((term) => text.includes(term));
 }
 
 export function industryDiscoveryCtaHref(href, type, base) {
@@ -173,7 +174,8 @@ export function initIndustryDiscovery() {
   const results = root.querySelector("[data-industry-discovery-results]");
   const status = root.querySelector("[data-industry-discovery-status]");
   const clear = root.querySelector("[data-industry-discovery-clear]");
-  const filterTypes = ["role", "job"];
+  const search = root.querySelector("[data-industry-search]");
+  const filterTypes = ["job"];
   const controlsByType = Object.fromEntries(filterTypes.map((type) => [
     type,
     new Map(controls
@@ -183,33 +185,28 @@ export function initIndustryDiscovery() {
 
   const readFilters = () => {
     const params = new URLSearchParams(window.location.search);
-    return Object.fromEntries(filterTypes.map((type) => {
+    return { q: (params.get("q") || "").slice(0, 200), ...Object.fromEntries(filterTypes.map((type) => {
       const value = params.get(type) || "";
       return [type, controlsByType[type].has(value) ? value : ""];
-    }));
+    })) };
   };
 
-  const writeFilters = (filters) => {
+  const writeFilters = (filters, replace = false) => {
     const url = new URL(window.location.href);
     for (const type of filterTypes) {
       if (filters[type]) url.searchParams.set(type, filters[type]);
       else url.searchParams.delete(type);
     }
+    if (filters.q) url.searchParams.set("q", filters.q);
+    else url.searchParams.delete("q");
+    url.searchParams.delete("role");
     url.hash = "industry-discovery";
-    window.history.pushState({}, "", url);
+    window.history[replace ? "replaceState" : "pushState"]({}, "", url);
   };
 
   const applyFilters = (filters) => {
-    const active = Boolean(filters.role || filters.job);
-    const activeControls = filterTypes
-      .map((type) => controlsByType[type].get(filters[type]))
-      .filter(Boolean);
-    const pathDetail = activeControls
-      .map((control) => control.dataset.resultDetail)
-      .filter(Boolean)
-      .join(" ");
-    const ctaFilter = industryDiscoveryCtaFilter(filters);
-    const ctaControl = controlsByType[ctaFilter]?.get(filters[ctaFilter]);
+    const active = Boolean(filters.q || filters.job);
+    if (search && search.value !== filters.q) search.value = filters.q || "";
     let visibleCount = 0;
 
     controls.forEach((control) => {
@@ -222,45 +219,32 @@ export function initIndustryDiscovery() {
       const visible = industryDiscoveryMatches({
         roles: card.dataset.buyerRoles,
         jobs: card.dataset.jobPaths,
+        text: card.dataset.searchText,
       }, filters);
       card.hidden = !visible;
       if (visible) visibleCount += 1;
+      const productList = card.querySelector("[data-industry-discovery-product-list]");
+      if (productList) productList.hidden = !filters.job;
 
       card.querySelectorAll("[data-industry-discovery-product]").forEach((product) => {
         product.hidden = Boolean(
           filters.job && !discoveryTokens(product.dataset.jobPaths).has(filters.job),
         );
       });
-      const path = card.querySelector("[data-industry-discovery-path]");
-      if (path) {
-        path.textContent = pathDetail;
-        path.hidden = !pathDetail;
-      }
-      const cta = card.querySelector("[data-industry-discovery-cta]");
-      if (cta && ctaControl) {
-        const type = ctaControl.dataset.ctaType === "quote" ? "quote" : "audit";
-        cta.setAttribute(
-          "href",
-          industryDiscoveryCtaHref(cta.getAttribute("href"), type, window.location.href),
-        );
-        cta.textContent = ctaControl.dataset.ctaLabel || "Plan my first test";
-      }
     });
 
     if (results) results.hidden = !visibleCount;
     if (clear) clear.hidden = !active;
     if (status) {
-      if (!active) status.textContent = "Choose your role or cleaning job.";
-      else if (!visibleCount) status.textContent = "No industries match both choices.";
-      else if (filters.role && !filters.job) {
-        status.textContent = `${visibleCount} industries match this role. Choose a cleaning job to narrow the list.`;
-      } else {
-        status.textContent = `${visibleCount} industry option${visibleCount === 1 ? "" : "s"} match.`;
-      }
+      status.textContent = !visibleCount ? "No industries match. Clear filters or try another search."
+        : `${visibleCount} industry option${visibleCount === 1 ? "" : "s"}${active ? " match." : ". Browse all or narrow by cleaning job."}`;
     }
   };
 
   controls.forEach((control) => {
+    control.addEventListener("keydown", (event) => {
+      if (event.key === " ") { event.preventDefault(); control.click(); }
+    });
     control.addEventListener("click", (event) => {
       event.preventDefault();
       const filters = readFilters();
@@ -272,8 +256,13 @@ export function initIndustryDiscovery() {
     });
   });
   clear?.addEventListener("click", () => {
-    const filters = { role: "", job: "" };
+    const filters = { q: "", job: "" };
     writeFilters(filters);
+    applyFilters(filters);
+  });
+  search?.addEventListener("input", () => {
+    const filters = { ...readFilters(), q: search.value.slice(0, 200) };
+    writeFilters(filters, true);
     applyFilters(filters);
   });
   window.addEventListener("popstate", () => applyFilters(readFilters()));
@@ -533,7 +522,7 @@ export function initQuoteForm() {
     if (email && !email.value) email.value = emailParam;
   }
   const indParam = customerChatAttempt ? "" : params.get("industry");
-  if (indParam) selectOption(form.querySelector('[name="industry"]'), indParam);
+  if (indParam) selectOption(form.querySelector('[name="industry"]'), indParam === "HVAC / Water Treatment" ? "HVAC & Water Systems" : indParam);
   const volumeParam = requestContextVolume(requestContext);
   if (volumeParam) {
     const volumeSelect = form.querySelector('[name="volume"]');

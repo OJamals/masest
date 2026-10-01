@@ -1015,7 +1015,7 @@ ${jsonLd(productSchema(id, product, reviewsSnapshot))}
   <a href="../"><b>MASEST</b></a>
   <a href="../products">Products</a>
   <a href="../services">Services</a>
-  <span>Applications</span>
+  <a href="../industries/hvac-water">HVAC &amp; Water Systems</a>
   <a href="../industries">Industries</a>
   <a href="../proof">Results</a>
   <a href="../resources">SDS &amp; Resources</a>

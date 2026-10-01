@@ -551,7 +551,7 @@ test("public CTA groups keep a consistent gap from their lead copy", async () =>
       ["services.html", ".services-hero-copy .subhead", ".services-hero-copy .hero-actions", 28, 36],
       ["proof.html", ".page-hero .subhead", ".page-hero .btn", 28, 36],
       ["about.html", "#serviceCatalog .subhead", "#serviceCatalog .btn", 28, 36],
-      ["industries.html", ".block-dark .section-head .subhead", ".block-dark .section-head .btn", 28, 36],
+      ["industries/hvac-water.html", ".page-hero-scene-copy .subhead", ".page-hero-scene-copy .hero-ctas", 28, 36],
       ["programs.html", ".cta-band .subhead", ".cta-band .btn", 34, 42],
       ["resources.html", ".cta-band .subhead", ".cta-band .btn", 34, 42],
     ];

@@ -93,6 +93,7 @@ test("public page links and schema do not publish stale html URLs", () => {
     const html = read(file);
     for (const match of html.matchAll(/\bhref=["']([^"']+)["']/gi)) {
       const href = match[1];
+      if (/^https?:\/\//i.test(href) && !["masest.co", "www.masest.co"].includes(new URL(href).hostname)) continue;
       if (/^(?:mailto:|tel:|data:|blob:|javascript:|#)/i.test(href)) continue;
       if (legacyUrl.test(href)) offenders.push(`${file} href ${href}`);
     }

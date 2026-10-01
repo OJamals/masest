@@ -64,7 +64,13 @@ async function withPage(fn) {
 
 test('private-label journey selects visible fields and preserves details across intent changes', async () => {
   await withPage(async (page, base) => {
-    await page.goto(`${base}/contact?type=private-label`);
+    await page.goto(base);
+    const primary = page.getByRole('navigation', { name: 'Primary', exact: true });
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await primary.getByText('Products', { exact: true }).click();
+    await primary.getByRole('link', { name: 'Private Label', exact: true }).click();
+    assert.equal(new URL(page.url()).pathname, '/private-label');
+    await page.locator('.home-hero').getByRole('link', { name: 'Request a private-label quote' }).click();
     await page.getByRole('button', { name: /Add request details/ }).click();
     await page.locator('#requestExtraDetails > summary').click();
     await page.locator('[data-intent-group="private-label"]').waitFor({ state: 'visible' });
