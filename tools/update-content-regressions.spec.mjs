@@ -153,7 +153,7 @@ test("marine route exposes all eight substantiated products with final packshots
   await expect(page.locator('a', { hasText: "Open marine label PDF" })).toHaveCount(0);
   const antimicrobialCard = page.locator('[data-label-variant="marine-purgo"]');
   await expect(
-    antimicrobialCard.getByRole("combobox", { name: "Volume for Marine Antimicrobial" }),
+    antimicrobialCard.getByRole("combobox", { name: "Package size for Marine Antimicrobial" }),
   ).toHaveCount(1);
   await expect(
     antimicrobialCard.getByRole("button", {
