@@ -39,8 +39,11 @@ test("global navigation keeps industry and system routes under Applications", ()
   const applications = navBlock.match(/key: "applications", label: "Applications", children: \[[\s\S]*?\]/)?.[0] || "";
   assert.match(applications, /label: "Industries"/);
   assert.match(applications, /label: "HVAC & Water Systems"/);
+  assert.match(applications, /href: "industries\/marine", label: "Marine"/);
   assert.doesNotMatch(navBlock.replace(applications, ""), /label: "HVAC & Water Systems"/);
-  for (const label of ["Industries", "HVAC & Water Systems", "Results", "Chemical Programs", "Testing & Technical Services"]) assert.ok(navBlock.includes(label));
+  assert.doesNotMatch(navBlock.replace(applications, ""), /label: "Marine"/);
+  assert.match(navBlock, /\{ href: "services", label: "Services" \}/);
+  for (const label of ["Industries", "HVAC & Water Systems", "Marine", "Services", "Results", "Chemical Programs"]) assert.ok(navBlock.includes(label));
   assert.ok(navBlock.indexOf('key: "products"') < navBlock.indexOf('label: "Chemical Programs"'));
 });
 
@@ -247,7 +250,10 @@ test("no-js fallback nav stays focused on primary categories", () => {
   assert.match(nav, /Products/);
   const applications = nav.match(/<details\b[^>]*><summary>Applications<\/summary>[\s\S]*?<\/details>/)?.[0] || "";
   assert.match(applications, /HVAC &amp; Water Systems/);
+  assert.match(applications, />Marine<\/a>/);
   assert.doesNotMatch(nav.replace(applications, ""), /HVAC &amp; Water Systems/);
+  assert.doesNotMatch(nav.replace(applications, ""), />Marine<\/a>/);
+  assert.match(nav.replace(applications, ""), />Services<\/a>/);
   assert.match(nav, /HVAC &amp; Water Systems/);
   assert.match(nav, /Industries/);
   assert.match(nav, /Results/);
@@ -265,6 +271,8 @@ test("industry generator exposes chemical programs and the system hub in fallbac
   const navBlock = generator.match(/const NAV = \[[\s\S]*?\];/)?.[0] || "";
   assert.match(navBlock, /Chemical Programs/);
   assert.match(navBlock, /HVAC &amp; Water Systems/);
+  assert.match(navBlock, /"services", "Services"/);
+  assert.match(navBlock, /"industries\/marine", "Marine"/);
   assert.match(navBlock, /Applications/);
 });
 
@@ -276,6 +284,8 @@ test("no-js fallback uses the same customer labels as the primary nav", () => {
     const nav = html.match(/<nav class="nojs-nav"[\s\S]*?<\/nav>/)?.[0] || "";
     assert.match(nav, /<summary>Applications<\/summary>/);
     assert.match(nav, /HVAC &amp; Water Systems/);
+    assert.match(nav, />Marine<\/a>/);
+    assert.match(nav, />Services<\/a>/);
     assert.match(nav, />Results</);
     assert.match(nav, />Industries</);
     assert.match(nav, page === "index.html" ? />Resources</ : />SDS &amp; Resources</);

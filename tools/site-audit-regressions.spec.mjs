@@ -28,7 +28,8 @@ test("homepage shared header stays above the photo with readable complete naviga
     if (width <= 1100) await page.locator(".nav-burger").click();
     const nav = page.locator("#navLinks");
     const items = page.locator("#navLinks > a:not(.nav-mobile-account):visible, #navLinks > .nav-group > summary:visible");
-    expect(await items.allTextContents()).toEqual(["Products", "Applications", "Results", "Resources"]);
+    expect(await items.allTextContents()).toEqual(["Products", "Services", "Applications", "Results", "Resources"]);
+    await expect(nav.getByRole("link", {name:"Services", exact:true})).toHaveAttribute("href", "services");
     const account = nav.locator(".nav-mobile-account");
     if (width <= 1100) await expect(account).toBeVisible();
     else await expect(account).toBeHidden();
@@ -65,13 +66,14 @@ test("homepage shared header stays above the photo with readable complete naviga
     await applications.locator('summary').click();
     await expect(applications.getByRole("link", {name:"Industries", exact:true})).toBeVisible();
     await expect(applications.getByRole("link", {name:"HVAC & Water Systems", exact:true})).toBeVisible();
+    await expect(applications.getByRole("link", {name:"Marine", exact:true})).toHaveAttribute("href", "industries/marine");
+    await expect(applications.getByRole("link", {name:"Marine", exact:true})).toBeVisible();
     await expect(nav.locator(':scope > a').filter({hasText:"HVAC & Water Systems"})).toHaveCount(0);
     await page.locator(".nav-group > summary").filter({hasText:"Products"}).click();
     await expect(nav.getByRole("link", {name:"Chemical Programs", exact:true})).toBeVisible();
     await expect(nav.getByRole("link", {name:"Private Label", exact:true})).toBeVisible();
     await page.locator(".nav-group > summary").filter({hasText:"Resources"}).click();
     await expect(nav.getByRole("link", {name:"SDS & Resources", exact:true})).toBeVisible();
-    await expect(nav.getByRole("link", {name:"Testing & Technical Services", exact:true})).toBeVisible();
   }
 });
 
@@ -912,6 +914,9 @@ test("mobile hamburger menu exposes Products and Applications with keyboard focu
   await expect(applications.getByRole("link", { name: "HVAC & Water Systems", exact: true })).toBeVisible();
   await expect(applications.getByRole("link", { name: "Industries", exact: true })).toHaveAttribute("href", "../industries");
   await expect(applications.getByRole("link", { name: "HVAC & Water Systems", exact: true })).toHaveAttribute("href", "../industries/hvac-water");
+  await expect(applications.getByRole("link", { name: "Marine", exact: true })).toBeVisible();
+  await expect(applications.getByRole("link", { name: "Marine", exact: true })).toHaveAttribute("href", "../industries/marine");
+  await expect(nav.getByRole("link", { name: "Services", exact: true })).toHaveAttribute("href", "../services");
 
   await page.keyboard.press("Escape");
   await expect(nav).not.toHaveClass(/open/);

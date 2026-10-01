@@ -1,4 +1,4 @@
-import { loadPricingData } from "./pricing-data.js?v=20261001g";
+import { loadPricingData } from "./pricing-data.js?v=20261001h";
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 

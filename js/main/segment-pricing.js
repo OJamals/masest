@@ -111,4 +111,4 @@ export async function initSegmentPricing(root = document) {
 }
 
 initSegmentPricing();
-import { loadPricingData } from "./pricing-data.js?v=20261001g";
+import { loadPricingData } from "./pricing-data.js?v=20261001h";
