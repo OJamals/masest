@@ -26,3 +26,7 @@ body {
   --font: 'Satoshi Cart', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --body-font: var(--font);
 }
+
+/* Fallback glyphs are shorter than Satoshi. Expand only the invisible tap overlay;
+   padding the title would grow live rows beyond their pre-paint skeleton reserve. */
+.cart-line-product-link::after { inset: -13px 0; }
