@@ -171,9 +171,21 @@ const PRICED_CATALOG = {
   }],
 };
 
-async function sampleCartCls(context, { priced = false, warm = false } = {}) {
+async function sampleCartCls(context, { priced = false, warm = false, delayedFonts = false } = {}) {
   const page = await context.newPage();
+  let delayedFontRequests = 0;
   await page.setViewportSize({ width: 768, height: 1024 });
+  if (delayedFonts) {
+    await page.route("**/vendor/satoshi/*.woff2", async (route) => {
+      delayedFontRequests += 1;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await route.continue();
+    });
+    // Establish storage without warming fonts on the preceding product page.
+    await page.route("**/products.html", (route) => route.fulfill({
+      contentType: "text/html", body: "<!doctype html><html><body></body></html>",
+    }));
+  }
   if (priced) await page.addInitScript(() => { window.MASEST_ENABLE_LOCAL_API = true; });
   await page.route("**/api/products*", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, CART_CATALOG_DELAY_MS));
@@ -240,6 +252,10 @@ async function sampleCartCls(context, { priced = false, warm = false } = {}) {
     shipForm: !document.getElementById("shipEstimateForm")?.hidden,
     priced: /\$/.test(document.getElementById("cartEstimate")?.textContent || ""),
   }));
+  if (delayedFonts) {
+    result.delayedFontRequests = delayedFontRequests;
+    result.fontFamily = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  }
   await page.close();
   return result;
 }
@@ -291,4 +307,23 @@ test("cart reserves its totals and its shipping estimate against a priced catalo
     warm.filter((s) => s.cls <= CART_CLS_BUDGET).length,
     `repeat cart view CLS budget: ${report}`,
   ).toBeGreaterThanOrEqual(REQUIRED_PASSING);
+});
+
+test("cart stays within its CLS budgets when fonts arrive after first paint", async ({ context }) => {
+  test.setTimeout(120_000);
+  const samples = [];
+  for (const priced of [false, true]) {
+    const sample = await sampleCartCls(context, { priced, delayedFonts: true });
+    samples.push({ ...sample, expectedPriced: priced });
+  }
+  const report = JSON.stringify({ samples });
+  writeFileSync(`${DIR}/cart-cls-delayed-fonts.json`, report);
+  for (const sample of samples) {
+    expect(sample.delayedFontRequests, `fonts were not delayed: ${report}`).toBeGreaterThan(0);
+    expect(sample.fontFamily, `cart font policy was not applied: ${report}`).toContain("Satoshi Cart");
+    expect(sample.lines, `cart rendered no lines: ${report}`).toBeGreaterThanOrEqual(2);
+    expect(sample.priced, `catalog state changed: ${report}`).toBe(sample.expectedPriced);
+    expect(sample.cls, `delayed-font cart CLS budget: ${report}`)
+      .toBeLessThanOrEqual(sample.expectedPriced ? CART_COLD_CLS_BUDGET : CART_CLS_BUDGET);
+  }
 });

@@ -1,0 +1,28 @@
+/* Keep checkout controls still when a font arrives after first paint. Use the same
+   Satoshi files as the rest of the site, with a cart-only face that has no swap
+   period. A slow first visit keeps its system fallback until the next navigation.
+   The production build preloads the regular and bold files. */
+@font-face {
+  font-family: 'Satoshi Cart';
+  src: url('../vendor/satoshi/satoshi-01.woff2') format('woff2');
+  font-weight: 400; font-display: optional; font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi Cart';
+  src: url('../vendor/satoshi/satoshi-04.woff2') format('woff2');
+  font-weight: 500; font-display: optional; font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi Cart';
+  src: url('../vendor/satoshi/satoshi-07.woff2') format('woff2');
+  font-weight: 700; font-display: optional; font-style: normal;
+}
+@font-face {
+  font-family: 'Satoshi Cart';
+  src: url('../vendor/satoshi/satoshi-10.woff2') format('woff2');
+  font-weight: 900; font-display: optional; font-style: normal;
+}
+body {
+  --font: 'Satoshi Cart', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --body-font: var(--font);
+}
