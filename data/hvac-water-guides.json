@@ -1,0 +1,74 @@
+{
+  "reviewed_on": "2026-10-01",
+  "guides": [
+    {
+      "id": "surface-cleaning",
+      "title": "Clean coils, pans, drains, and exposed surfaces",
+      "summary": "Use HVAC CR for compatible grease and organic soils; review HVAC HCR for mineral scale. Match the cleaner to the soil and equipment.",
+      "products": ["cr2", "hcr-t16"],
+      "prepare": "Read the supplied label and SDS. Confirm coil metal, coatings, seals, and the equipment maker's cleaning limits. Isolate power and protect controls; arrange rinse-water capture.",
+      "steps": [
+        {"title": "Inspect and test", "detail": "Photograph the buildup and check drainage. Test the selected product on a small inconspicuous area at the approved dilution; inspect for discoloration, coating loss, and seal changes."},
+        {"title": "Mix for this job", "detail": "Use the current label's dilution and mixing order. Record product, water-to-product ratio, batch volume, and planned contact time. Surface-cleaning ratios are not recirculation doses."},
+        {"title": "Apply and keep control", "detail": "Apply by the equipment-approved method. Keep cleaner away from energized parts. Observe the label contact time, keep the surface from drying, and use only tools that will not damage fins or coatings."},
+        {"title": "Rinse and inspect", "detail": "Rinse by the approved method, capture runoff, and inspect fins, pan, drain, and seals. Check that the drain flows and no cleaner residue remains before restoring equipment."}
+      ],
+      "stop": "Stop for leaks, discoloration, coating damage, blocked drainage, or unexpected reaction. Do not mix cleaners or use cleaning instructions as a disinfectant procedure.",
+      "record": "Save before/after photos, dilution, contact time, rinse method, drain check, and any equipment defects."
+    },
+    {
+      "id": "recirculation",
+      "title": "Descale an isolated exchanger or water-side loop",
+      "summary": "Plan a temporary cleaning circuit using HVAC HCR or Descaler after confirming scale type and compatibility.",
+      "products": ["hcr-t16", "descaler"],
+      "prepare": "Have a qualified technician approve the method. Confirm metallurgy, gaskets, coatings, isolated volume, pump/hose compatibility, venting, working pressure, concentration, temperature, contact time, monitoring intervals, rinse limits, and waste route before starting.",
+      "steps": [
+        {"title": "Baseline and isolate", "detail": "Record flow, pressure drop, inlet/return temperatures, and visible scale. Shut down under the site's energy-control procedure, verify isolation, release stored pressure, cool as required, and protect adjacent operating equipment."},
+        {"title": "Build and water-test the circuit", "detail": "Connect the cleaning reservoir to a compatible pump, the isolated asset, and a contained return. Use the approved vent arrangement; do not seal a circuit that can evolve gas. Test with water for leaks, flow, return capacity, and isolation from the live system."},
+        {"title": "Charge the approved solution", "detail": "Measure the actual cleaning volume, including reservoir and hoses. Prepare the specified product concentration using its label mixing order. Do not extrapolate surface dilution or add a second chemical to the circuit."},
+        {"title": "Circulate and log", "detail": "Run at the approved flow, temperature, and pressure. Log elapsed time, supply/return pH, flow, pressure drop, temperature, and visible reaction at the method's intervals. Filter or remove dislodged solids as specified. Replenish only within the approved method; pH alone does not prove cleaning is complete."},
+        {"title": "Drain and rinse", "detail": "Stop at the approved endpoint or time limit. Collect spent solution for the site's wastewater assessment. Flush with approved water until the specified pH, conductivity, and residue limits are met; inspect strainers and check flow/pressure drop."},
+        {"title": "Restart and hand off", "detail": "Restore valves, probes, strainers, and guards; leak-test and return the system under the equipment maker's restart procedure. Re-establish the approved treatment program. Verify operating readings and obtain the owner's acceptance."}
+      ],
+      "stop": "Stop circulation for a leak, loss of flow, blocked return, excessive pressure/temperature, uncontrolled gas or foam, or signs of material attack. Never run a cleanout through an occupied or live potable-water circuit.",
+      "record": "Keep the circuit sketch, isolated volume, product/batch, concentration, readings, waste disposition, rinse acceptance, restored operating data, and owner sign-off."
+    },
+    {
+      "id": "cooling-tower-cleaning",
+      "title": "Clean a cooling tower during a planned shutdown",
+      "summary": "Separate physical cleaning, descaling, and the site's disinfection procedure before restarting treatment.",
+      "products": ["hcr-t16", "descaler", "cr2"],
+      "prepare": "Coordinate the outage with the owner and water-management team. Follow the tower maker's instructions and site water-management plan for shutdown, aerosol control, cleaning, disinfection, and restart.",
+      "steps": [
+        {"title": "Shut down and contain", "detail": "Isolate electrical and mechanical energy under the site procedure. Establish containment and the approved waste route. Follow site controls for fans, nearby air intakes, and exposure during cleaning."},
+        {"title": "Remove loose deposits", "detail": "Drain as specified and remove sludge and debris from the basin, strainers, and accessible surfaces. Inspect fill, drift eliminators, distribution nozzles, coatings, and corrosion before choosing a cleaner."},
+        {"title": "Clean for the actual soil", "detail": "Use the compatible product and approved method for grease, organic soils, or mineral deposits. Apply surface directions to surfaces; use the isolated recirculation method only where the equipment and method permit it."},
+        {"title": "Rinse and complete site disinfection", "detail": "Capture cleaning waste and verify the rinse endpoint. Complete the separate disinfection procedure specified by the water-management plan using the appropriate registered product and its label; a descaler is not a substitute."},
+        {"title": "Refill, treat, and verify", "detail": "Inspect and restore equipment, refill with approved water, restart the approved treatment/feed controls, and check leaks and operating readings. Record control measurements and owner approval before routine operation."}
+      ],
+      "stop": "If contamination or a Legionella concern is suspected, involve the water-management team and follow its response plan before proceeding. Do not improvise chemical mixtures or disinfection doses.",
+      "record": "Log shutdown, inspection findings, cleaning product/method, separate disinfection record, waste route, refill chemistry, controller checks, and restart approval."
+    },
+    {
+      "id": "ongoing-treatment",
+      "title": "Set up ongoing scale and corrosion control",
+      "summary": "Use WaterSafe60 within a site-specific treatment plan; cleaning and maintenance treatment have different concentrations and endpoints.",
+      "products": ["watersafe60"],
+      "prepare": "Identify the system and use: open cooling tower, closed loop, process water, or potable application. Confirm applicable product listing, maximum use level, system restrictions, and current label with the treatment specialist.",
+      "steps": [
+        {"title": "Characterize the water", "detail": "Measure makeup and system water chemistry, including the specialist's required hardness, alkalinity, conductivity, pH, temperature, and corrosion indicators. Confirm system volume, makeup demand, blowdown, materials, and existing chemicals."},
+        {"title": "Set the treatment target", "detail": "Have the treatment specialist select the dose, target residual, control limits, sampling points, and response actions from the current product documentation and site water analysis. Do not use a descaling concentration as a continuous feed setting."},
+        {"title": "Commission the feed", "detail": "Use compatible metering equipment and containment. Verify pump calibration and controller/probe readings, set the approved feed/interlocks, and confirm the actual treatment response with the specified test or titration method."},
+        {"title": "Monitor and correct", "detail": "Trend the required residual and water parameters at the site's intervals. Inspect for scale, corrosion, fouling, and leaks. Correct out-of-limit results under the approved plan; record water changes, feed adjustments, and service work."},
+        {"title": "Maintain the full water-management plan", "detail": "Coordinate scale/corrosion treatment with the site's separate microbiological controls, cleaning schedule, stagnation controls, and shutdown/restart procedures. Review results and responsibilities with the owner."}
+      ],
+      "stop": "Escalate unknown water chemistry, loss of feed, unexplained pH change, corrosion, or a water-management control failure. WaterSafe60, HVAC CR, and HVAC HCR do not replace a Legionella water-management program.",
+      "record": "Keep water analyses, selected dose and control limits, calibration/test records, trend logs, corrective actions, service visits, and the current site plan."
+    }
+  ],
+  "sources": [
+    {"label": "CDC cooling-tower controls", "url": "https://www.cdc.gov/control-legionella/php/toolkit/cooling-towers-module.html"},
+    {"label": "CDC water-management programs", "url": "https://www.cdc.gov/control-legionella/php/wmp/"},
+    {"label": "OSHA hazardous-energy control", "url": "https://www.osha.gov/laws-regs/regulations/standardnumber/1910/1910.147"}
+  ]
+}

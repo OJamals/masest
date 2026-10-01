@@ -63,10 +63,10 @@ function bodyWordCount(markdown) {
 
 test("shared navigation collapses before tablet-width links overlap", () => {
   const css = read("css/navigation.css");
-  assert.match(css, /@media\s*\(min-width:\s*821px\)/);
-  assert.match(css, /@media\s*\(max-width:\s*820px\)[\s\S]*?\.nav-links\s*\{[\s\S]*?display:\s*none/);
-  assert.match(css, /@media\s*\(max-width:\s*820px\)[\s\S]*?\.nav-links\.open\s*\{[\s\S]*?display:\s*flex/);
-  assert.match(css, /@media\s*\(max-width:\s*820px\)[\s\S]*?\.nav-burger\s*\{[\s\S]*?display:\s*block/);
+  assert.match(css, /@media\s*\(min-width:\s*1101px\)/);
+  assert.match(css, /@media\s*\(max-width:\s*1100px\)[\s\S]*?\.nav-links\s*\{[\s\S]*?display:\s*none/);
+  assert.match(css, /@media\s*\(max-width:\s*1100px\)[\s\S]*?\.nav-links\.open\s*\{[\s\S]*?display:\s*flex/);
+  assert.match(css, /@media\s*\(max-width:\s*1100px\)[\s\S]*?\.nav-burger\s*\{[\s\S]*?display:\s*block/);
 });
 
 test("comparison pages have internal discovery links and unique search titles", () => {

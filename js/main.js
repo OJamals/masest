@@ -1,24 +1,25 @@
 /* MASEST / VertKleen shared JS (v2, taste-skill applied)
    Icons: Phosphor web family only. No emoji. No em-dashes in copy. */
-import { renderChrome } from "./main/chrome.js?v=20261001e";
+import { renderChrome } from "./main/chrome.js?v=20261001f";
 import { initResponsiveTables, initReveal } from "./main/effects.js";
-import { initServiceCatalog } from "./main/service-catalog.js?v=20261001e";
+import { initServiceCatalog } from "./main/service-catalog.js?v=20261001f";
 import {
   initCartButtons,
   initShop,
   productCard,
-} from "./main/commerce-ui.js?v=20261001e";
+} from "./main/commerce-ui.js?v=20261001f";
 import {
   initBeforeAfter,
   initIndustryDiscovery,
   initMarineProductSelector,
   initProofFilters,
   initQuoteForm,
-} from "./main/engagement.js?v=20261001e";
-import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20261001e";
+} from "./main/engagement.js?v=20261001f";
+import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20261001f";
 import { initDataVisualizations } from "./main/data-visuals.js";
-import { initContentSnapshots } from "./main/content-snapshots.js?v=20261001e";
-import { initPricingBindings } from "./main/pricing-data.js?v=20261001e";
+import { initContentSnapshots } from "./main/content-snapshots.js?v=20261001f";
+import { initPricingBindings } from "./main/pricing-data.js?v=20261001f";
+import { initSystemGuides, initWaterPrograms } from "./main/water-programs.js?v=20261001f";
 
 window.MASESTMain = {
   initReveal,
@@ -41,6 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initShop();
   initServiceCatalog();
   initPricingBindings();
+  initSystemGuides();
+  initWaterPrograms();
   // Run the proof-coverage viz AFTER the CMS snapshot inject resolves so it counts
   // the live [data-proof-card] set, not the pre-injection fallback DOM.
   Promise.resolve(initContentSnapshots()).finally(() => { initDataVisualizations(); });

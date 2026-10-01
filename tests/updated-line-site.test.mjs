@@ -16,7 +16,7 @@ test("site presents one program portfolio without exposing account-specific mate
   const chrome = read("js/main/chrome.js");
   const publicProgramCopy = `${home}\n${programs}\n${chrome}`;
 
-  assert.match(chrome, /href:\s*"programs",\s*label:\s*"Programs"/);
+  assert.match(chrome, /href:\s*"programs",\s*label:\s*"Chemical Programs"/);
   assert.doesNotMatch(chrome, /Water Programs/);
   assert.match(home, /href="contact\?type=distributor">Become a distributor/);
   assert.doesNotMatch(home, /href="private-label"/);

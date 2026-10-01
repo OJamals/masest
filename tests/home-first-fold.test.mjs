@@ -20,14 +20,14 @@ test('landing pages keep buyer actions visible and layouts within each viewport'
         assert.ok(dimensions.top >= 0 && dimensions.bottom <= dimensions.height, `${path} CTA below fold at ${width}px: ${dimensions.bottom}`);
         assert.equal(await page.locator('h1').count(), 1);
         assert.equal(await page.locator('.brand-wordmark, .home-wordmark').count(), 0);
-        assert.equal(await page.locator('.nav-logo .logo-image:visible').evaluate(el => Math.round(el.getBoundingClientRect().height)), width <= 820 ? 44 : 48);
+        assert.equal(await page.locator('.nav-logo .logo-image:visible').evaluate(el => Math.round(el.getBoundingClientRect().height)), width <= 1100 ? 44 : 48);
       }
       await page.close();
     }
   } finally { await browser.close(); await server.close(); }
 });
 
-test('shared keyboard navigation exposes skip link and HVAC menu without a private-label entry', async () => {
+test('shared keyboard navigation keeps HVAC visible and opens Private Label through Products', async () => {
   const server = await startStaticTestServer(new URL('../', import.meta.url));
   const browser = await launchTestBrowser();
   try {
@@ -38,15 +38,17 @@ test('shared keyboard navigation exposes skip link and HVAC menu without a priva
     assert.equal(await page.locator('.skip-link').evaluate(el => el === document.activeElement), true);
     await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => location.hash), '#main');
-    const applications = page.locator('.nav-group').filter({ hasText: 'Applications' }).locator('summary');
-    await applications.focus();
+    const products = page.locator('.nav-group').filter({ hasText: 'All products' }).locator('summary');
+    await products.focus();
     await page.keyboard.press('Enter');
-    await page.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).waitFor({ state: 'visible' });
-    assert.equal(await page.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), true);
+    await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'HVAC & Water Systems', exact: true }).waitFor({ state: 'visible' });
+    assert.equal(await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), true);
     await page.keyboard.press('Escape');
-    await page.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).waitFor({ state: 'hidden' });
-    assert.equal(await page.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), false);
-    assert.equal(await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'Private Label', exact: true }).count(), 0);
+    await page.getByRole('link', { name: 'Private Label', exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), true);
+    await products.click();
+    await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'Private Label', exact: true }).click();
+    assert.equal(new URL(page.url()).pathname, '/private-label');
   } finally { await browser.close(); await server.close(); }
 });
 
@@ -77,10 +79,8 @@ test('homepage job choices precede field proof with direct product, account, and
     assert.equal(await page.locator('.home-industry').count(), 8);
     const primary = page.getByRole('navigation', { name: 'Primary', exact: true });
     await page.getByRole('button', { name: 'Menu', exact: true }).click();
-    assert.equal(await primary.getByRole('link', { name: 'Results', exact: true }).isVisible(), true);
-    assert.equal(await primary.getByRole('link', { name: 'Private Label', exact: true }).count(), 0);
-    const accountHref = await page.getByRole('link', { name: 'Sign in', exact: true }).getAttribute('href');
-    assert.match(new URL(accountHref, server.baseUrl).pathname, /^\/account(?:\.html)?$/);
+    await primary.getByText('Products', { exact: true }).click();
+    assert.equal(await primary.getByRole('link', { name: 'Private Label', exact: true }).isVisible(), true);
     assert.equal(await page.getByRole('link', { name: 'Become a distributor' }).getAttribute('href'), 'contact?type=distributor');
   } finally { await browser.close(); await server.close(); }
 });

@@ -41,11 +41,14 @@ test("public pages expose CMS mount points without replacing hardcoded fallback 
   }
 });
 
-test("programs pricing tiers mount as a CMS-only region without static fallback", () => {
-  const html = readFileSync(new URL("../programs.html", import.meta.url), "utf8");
-  assert.match(html, /data-cms-content="pricing_tiers"/, "programs.html must mount the pricing_tiers snapshot");
-  assert.match(html, /data-cms-render="replace"/, "CMS tiers own the region");
-  assert.doesNotMatch(html, /class="tier-card/, "program tiers must not duplicate CMS values");
+test("water hub owns one API-priced comparison and Programs keeps its compatibility link", () => {
+  const html = readFileSync(new URL("../industries/hvac-water.html", import.meta.url), "utf8");
+  const programs = readFileSync(new URL("../programs.html", import.meta.url), "utf8");
+  assert.match(html, /data-water-programs/);
+  assert.doesNotMatch(html, /class="system-plan"/, "prices stay owned by the runtime API");
+  assert.doesNotMatch(programs, /data-cms-content="pricing_tiers"/);
+  assert.match(programs, /id="water-treatment"/);
+  assert.ok(programs.includes('industries/hvac-water#water-treatment'));
 });
 
 test("program tier quote links carry the selected tier into contact prefill", () => {
@@ -69,11 +72,11 @@ test("program tier quote links carry the selected tier into contact prefill", ()
   }
 });
 
-test("industries sector rows mount as a CMS-replaceable region over hardcoded fallback", () => {
+test("industry directory comes from canonical application registry with static links", () => {
   const html = readFileSync(new URL("../industries.html", import.meta.url), "utf8");
-  assert.match(html, /data-cms-content="industry_sectors"/, "industries.html must mount the industry_sectors snapshot");
-  assert.match(html, /data-cms-render="replace"/, "CMS industry sectors should replace the hardcoded fallback when present");
-  assert.match(html, /class="row-card/, "hardcoded industry rows must remain as fallback");
+  assert.doesNotMatch(html, /data-cms-content="industry_sectors"/, "a second directory must not replace the canonical routes");
+  assert.match(html, /class="industry-directory-card/);
+  assert.ok(html.includes('href="industries/hvac-water"'));
 });
 
 test("public CMS renderer preserves fallback cards unless replacement is explicit", async () => {
@@ -129,7 +132,7 @@ test("CMS page-section slots render before final quote CTAs", () => {
   const pages = [
     ["index.html", "home-close home-section"],
     ["about.html", "block-dark on-dark cta-band"],
-    ["industries.html", "section class=\"block-dark\""],
+    ["industries.html", "industry-directory-next"],
     ["products.html", "product-job-router block-dark on-dark"],
     ["programs.html", "block-dark on-dark cta-band"],
     ["proof.html", "block-dark on-dark cta-band"],

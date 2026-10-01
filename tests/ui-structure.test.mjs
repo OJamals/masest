@@ -34,14 +34,11 @@ test("global logo links navigate to the home page from top-level pages", () => {
   assert.doesNotMatch(chrome, /class="(?:nav-logo|foot-logo-link)" href="\$\{root\}"/, "logo href must not collapse to the current page on top-level routes");
 });
 
-test("global navigation groups proof and industries as use cases", () => {
+test("global navigation exposes distinct industry and system routes with product support grouped", () => {
   const navBlock = chrome.match(/const links = \[[\s\S]*?\];/)?.[0] || "";
-  assert.match(chrome, /useCases/);
-  assert.match(chrome, /Applications/);
-  assert.match(chrome, /SDS & Resources/);
-  // Customer labels stay plain while routes remain stable.
-  assert.match(navBlock, /label: "Results"/);
-  assert.doesNotMatch(navBlock, /Field Results/);
+  assert.doesNotMatch(navBlock, /Applications|useCases/);
+  for (const label of ["Industries", "HVAC & Water Systems", "Results", "Chemical Programs", "Testing & Technical Services"]) assert.ok(navBlock.includes(label));
+  assert.ok(navBlock.indexOf('key: "products"') < navBlock.indexOf('label: "Chemical Programs"'));
 });
 
 test("industry product cards lead with direct purchase before product details", () => {
@@ -149,17 +146,13 @@ test("products page keeps the conversion-results strip between catalog and CTA",
   assert.doesNotMatch(products, /30 min|36 hours|Occupied sites/);
 });
 
-test("program function map is optional below the tiers", () => {
-  const programs = read("programs.html");
-  const tiersIndex = programs.indexOf("Four service levels, from quarterly checkups to full support");
-  const mapIndex = programs.indexOf("See which VertKleen product replaces each conventional chemical");
-  const mapDisclosureIndex = programs.indexOf('class="resource-disclosure program-map-disclosure');
-
-  assert.ok(tiersIndex > -1, "expected tiers content");
-  assert.ok(mapIndex > -1, "expected function map content to remain");
-  assert.ok(mapDisclosureIndex > -1, "expected program map disclosure");
-  assert.ok(tiersIndex < mapDisclosureIndex, "tiers should stay primary");
-  assert.ok(mapDisclosureIndex < mapIndex, "map should be wrapped by disclosure");
+test("Programs delegates treatment comparison and methods to the single system hub", () => {
+  const programs = read("programs.html"), hub = read("industries/hvac-water.html");
+  assert.ok(programs.includes('id="water-treatment"'));
+  assert.ok(programs.includes('industries/hvac-water#water-treatment'));
+  assert.doesNotMatch(programs, /program-scope-table|program-map-disclosure|data-water-programs/);
+  assert.match(hub, /data-water-programs/);
+  assert.match(hub, /id="recirculation"/);
 });
 
 test("proof page leads with scoped records and expandable conversion evidence", () => {
@@ -195,18 +188,12 @@ test("home proof routes to a documented field record instead of a source PDF", (
   assert.doesNotMatch(home, /class="(?:doc-link|doc-badge)"/);
 });
 
-test("industries page routes buyers before the long industry list", () => {
+test("industry directory shows all routes with optional search and job filters", () => {
   const industries = read("industries.html");
-  const routerIndex = industries.indexOf('class="industry-router');
-  const gridIndex = industries.indexOf('class="industry-grid');
-
-  assert.ok(routerIndex > -1, "expected industry buyer router");
-  assert.ok(gridIndex > -1, "expected industry grid to remain");
-  assert.ok(routerIndex < gridIndex, "router should precede dense industry list");
-  assert.match(industries, /Start with your team or cleaning job/);
-  assert.match(industries, /Facility \/ operations/);
-  assert.match(industries, /Degrease/);
-  assert.match(industries, /Products to start with/);
+  assert.ok(industries.indexOf('data-industry-search') < industries.indexOf('class="industry-directory"'));
+  assert.match(industries, /data-filter-type="job"/);
+  assert.doesNotMatch(industries, /data-filter-type="role"|class="industry-grid"/);
+  assert.equal((industries.match(/data-industry-discovery-card/g) || []).length, 26);
 });
 
 test("industry router stacks route cards on mobile", () => {
@@ -255,8 +242,8 @@ test("no-js fallback nav stays focused on primary categories", () => {
 
   assert.ok(nav, `${page} should keep no-js nav`);
   assert.match(nav, /Products/);
-  assert.doesNotMatch(nav, /Programs/);
-  assert.match(nav, /Applications/);
+  assert.doesNotMatch(nav, /Applications/);
+  assert.match(nav, /HVAC &amp; Water Systems/);
   assert.match(nav, /Industries/);
   assert.match(nav, /Results/);
   assert.match(nav, /SDS &amp; Resources/);
@@ -268,13 +255,12 @@ test("no-js fallback nav stays focused on primary categories", () => {
   }
 });
 
-test("industry generator keeps fallback nav off the removed Programs tab", () => {
+test("industry generator exposes chemical programs and the system hub in fallback navigation", () => {
   const generator = read("tools/gen_industries.mjs");
-  const navBlock = generator.match(/const NAV = \[[\s\S]*?\];/);
-  assert.ok(navBlock, "expected generated industry nav source");
-  assert.doesNotMatch(navBlock[0], /Programs/);
-  assert.doesNotMatch(navBlock[0], /programs/);
-  assert.match(navBlock[0], /Applications/);
+  const navBlock = generator.match(/const NAV = \[[\s\S]*?\];/)?.[0] || "";
+  assert.match(navBlock, /Chemical Programs/);
+  assert.match(navBlock, /HVAC &amp; Water Systems/);
+  assert.doesNotMatch(navBlock, /Applications/);
 });
 
 test("no-js fallback uses the same customer labels as the primary nav", () => {
@@ -283,7 +269,7 @@ test("no-js fallback uses the same customer labels as the primary nav", () => {
   for (const page of pages) {
     const html = read(page);
     const nav = html.match(/<nav class="nojs-nav"[\s\S]*?<\/nav>/)?.[0] || "";
-    assert.match(nav, /Applications/);
+    if (page !== "index.html") assert.match(nav, /HVAC &amp; Water Systems/);
     assert.match(nav, />Results</);
     if (page !== "index.html") assert.match(nav, />Industries</);
     assert.match(nav, page === "index.html" ? />Resources</ : />SDS &amp; Resources</);

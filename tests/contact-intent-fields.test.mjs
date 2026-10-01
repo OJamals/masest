@@ -42,7 +42,7 @@ test("industry select covers every generated industry page", () => {
   for (const sector of [
     "Oil, Gas &amp; Process Plants", "Marine", "Manufacturing", "Food &amp; Beverage", "Healthcare",
     "Construction", "Distribution / Cold Storage", "Military / Government",
-    "Education Facilities", "HVAC / Water Treatment", "Plumbing",
+    "Education Facilities", "HVAC &amp; Water Systems", "Plumbing",
     "Golf Courses &amp; Sports Facilities", "Hotels, Resorts &amp; Property Management",
     "Solar Farms &amp; Panel Cleaning",
   ]) {

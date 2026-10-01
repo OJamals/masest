@@ -117,7 +117,7 @@ test("support routes use task-first science copy without changing destinations",
   const serviceCategorySource = JSON.stringify(pages.serviceCategories);
 
   assert.match(pages.about, />Request a service quote<\/a>/);
-  assert.match(pages.services, />Test the switch before you roll it out\.<\/h1>/);
+  assert.ok(pages.services.includes("Testing &amp; Technical Services"));
   for (const label of [
     "Request water analysis",
     "Request biological testing",
@@ -134,7 +134,7 @@ test("support routes use task-first science copy without changing destinations",
   assert.match(pages.serviceCatalog, /const cta = copy\.cta/);
   assert.match(serviceCategorySource, /See what is in your water and get a clearer next step/);
   assert.match(serviceCategorySource, /Build a practical water plan around your facility, systems, team, and day-to-day work/);
-  assert.match(pages.programs, />Price my water-treatment program<\/a>/);
+  assert.match(pages.programs, />Compare water-treatment programs<\/a>/);
   assert.match(pages.resources, />Get my cleaning plan<\/a>/);
   assert.match(pages.newsletter, />Useful cleaning ideas, once a month\.<\/h1>/);
   assert.match(pages.hvacPricing, />Price the result, not the gallon\.<\/h1>/);

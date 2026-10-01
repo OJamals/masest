@@ -9,8 +9,9 @@
 <link rel="icon" type="image/png" href="img/favicon-enhanced.png?v=20260617c">
 <link rel="stylesheet" href="vendor/phosphor/style.css">
 <link rel="stylesheet" href="css/style.css?v=20261001d">
-<link rel="stylesheet" href="css/navigation.css?v=20260929e">
+<link rel="stylesheet" href="css/navigation.css?v=20261001f">
 <link rel="stylesheet" href="css/components.css?v=20260929e">
+<link rel="stylesheet" href="css/systems.css?v=20261001f">
 <!-- seo:auto -->
 <link rel="canonical" href="https://masest.co/industries">
 <meta property="og:title" content="Industries | MASEST VertKleen">
@@ -33,7 +34,7 @@
   <a href="/"><b>MASEST</b></a>
   <a href="products">Products</a>
   <a href="services">Services</a>
-  <span>Applications</span>
+  <a href="industries/hvac-water">HVAC &amp; Water Systems</a>
   <a href="industries">Industries</a>
   <a href="proof">Results</a>
   <a href="resources">SDS &amp; Resources</a>
@@ -41,616 +42,162 @@
 </noscript>
 
 <main id="main">
-  <section class="hero-split">
-    <div class="wrap">
-      <h1 class="display">Find the VertKleen products built for your industry.</h1>
-      <p class="subhead">Tell us what you clean or what needs to come off. We will point you to the best VertKleen products, real results, and an easy first step.</p>
-    </div>
-  </section>
-
+  <section class="hero-split"><div class="wrap"><span class="eyebrow">Industries</span><h1 class="display">Find your industry.</h1><p class="subhead">Products and practical application guidance for your work.</p></div></section>
   <!-- industry:discovery:start -->
 <section class="section section-slim">
     <div class="wrap">
-      <div class="industry-router buyer-router reveal" id="industry-discovery" data-industry-discovery>
-        <div>
-          <span class="eyebrow">Find your cleaner</span>
-          <h2>Start with your team or cleaning job.</h2>
-          <p class="subhead">Choose what you do or what you need to clean. We will show the best VertKleen starting products, relevant results, and a clear next step.</p>
-          <p class="industry-discovery-status" data-industry-discovery-status aria-live="polite">Choose your role or cleaning job.</p>
+      <div id="industry-discovery" data-industry-discovery>
+        <div class="industry-directory-controls">
+          <label class="industry-search">Search industries, equipment, or buildup<input type="search" name="q" data-industry-search placeholder="Try cooling tower, marine, or grease" autocomplete="off"></label>
           <button class="btn btn-ghost btn-sm" type="button" data-industry-discovery-clear hidden>Clear filters</button>
         </div>
-        <div class="industry-discovery-controls">
-          <div>
-            <span class="eyebrow">Your role</span>
-            <div class="route-grid">
-              <a class="route-card" href="?role=facility-operations#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="role" data-filter-value="facility-operations" data-result-detail="Start with the equipment, available cleaning time, current method, and finished result." data-cta-type="audit" data-cta-label="Plan the first test" aria-pressed="false">
-          <span>Your role</span>
-          <strong>Facility / operations</strong>
-          <b>Equipment, downtime, labor, and getting back to work.</b>
-        </a>
-        <a class="route-card" href="?role=ehs-compliance#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="role" data-filter-value="ehs-compliance" data-result-detail="Start with crew experience, water use, cleanup, and how wash water is handled today." data-cta-type="audit" data-cta-label="Compare crew handling" aria-pressed="false">
-          <span>Your role</span>
-          <strong>Safety &amp; handling</strong>
-          <b>Crew handling, rinse, wash water, and a cleaner workday.</b>
-        </a>
-        <a class="route-card" href="?role=procurement#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="role" data-filter-value="procurement" data-result-detail="Start with the product, volume, delivery location, job cost, and buying deadline." data-cta-type="quote" data-cta-label="Price the product" aria-pressed="false">
-          <span>Your role</span>
-          <strong>Purchasing</strong>
-          <b>Product, pack size, supply, full-job cost, and quote.</b>
-        </a>
-        <a class="route-card" href="?role=service-contractors#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="role" data-filter-value="service-contractors" data-result-detail="Start with a repeatable method, clear finished result, wash water, and client handoff." data-cta-type="audit" data-cta-label="Build service plan" aria-pressed="false">
-          <span>Your role</span>
-          <strong>Service contractors</strong>
-          <b>Job fit, repeatable cleaning steps, and client results.</b>
-        </a>
-            </div>
-          </div>
-          <div>
-            <span class="eyebrow">Cleaning job</span>
-            <div class="route-grid">
-              <a class="route-card" href="?job=degrease#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="degrease" data-result-detail="Match the grease, surface, tools, cleanup, and finished result." data-cta-type="audit" data-cta-label="Plan a degreasing test" aria-pressed="false">
-          <span>Cleaning job</span>
-          <strong>Degrease</strong>
-          <b>Oil, grease, carbon film, and industrial grime.</b>
-        </a>
-        <a class="route-card" href="?job=descale#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="descale" data-result-detail="Match the mineral buildup and equipment material to circulation, rinse, and restart." data-cta-type="audit" data-cta-label="Plan a descaling test" aria-pressed="false">
-          <span>Cleaning job</span>
-          <strong>Descale</strong>
-          <b>Mineral scale, rust, and water-side buildups.</b>
-        </a>
-        <a class="route-card" href="?job=cip#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="cip" data-result-detail="Match the circuit, buildup, equipment material, flow, cycle time, rinse, and finished result." data-cta-type="audit" data-cta-label="Plan a CIP test" aria-pressed="false">
-          <span>Cleaning job</span>
-          <strong>CIP</strong>
-          <b>Process circuits, tanks, lines, and exchangers.</b>
-        </a>
-        <a class="route-card" href="?job=cooling-water#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="cooling-water" data-result-detail="Match the water system, buildup, treatment plan, service schedule, and restart." data-cta-type="audit" data-cta-label="Plan my water program" aria-pressed="false">
-          <span>Cleaning job</span>
-          <strong>Cooling water</strong>
-          <b>Towers, loops, exchangers, treatment, and restart.</b>
-        </a>
-        <a class="route-card" href="?job=fleet-wash#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="fleet-wash" data-result-detail="Match road film and grease to the finish, wash setup, vehicles per day, and dry result." data-cta-type="quote" data-cta-label="Price my fleet wash" aria-pressed="false">
-          <span>Cleaning job</span>
-          <strong>Fleet wash</strong>
-          <b>Vehicles, equipment, finishes, wash water, and speed.</b>
-        </a>
-        <a class="route-card" href="?job=exterior-bio-grime#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="exterior-bio-grime" data-result-detail="Match the surface and buildup to access, nearby landscaping, wash water, and finished appearance." data-cta-type="audit" data-cta-label="Plan an exterior test" aria-pressed="false">
-          <span>Cleaning job</span>
-          <strong>Outdoor stains &amp; growth</strong>
-          <b>Facades, hardscape, roofs, algae, moss, and outdoor stains.</b>
-        </a>
-            </div>
-          </div>
-        </div>
-        <div class="industry-discovery-results" data-industry-discovery-results hidden>
-          <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="aviation-fbos-mro-airports" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash" hidden>
-        <span class="eyebrow">Specialized job</span>
+        <div class="industry-job-filters" aria-label="Optional cleaning-job filters"><a href="?job=degrease#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="degrease" aria-pressed="false">Degrease</a>
+<a href="?job=descale#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="descale" aria-pressed="false">Descale</a>
+<a href="?job=cip#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="cip" aria-pressed="false">CIP</a>
+<a href="?job=cooling-water#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="cooling-water" aria-pressed="false">Cooling water</a>
+<a href="?job=fleet-wash#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="fleet-wash" aria-pressed="false">Fleet wash</a>
+<a href="?job=exterior-bio-grime#industry-discovery" role="button" data-industry-discovery-filter data-filter-type="job" data-filter-value="exterior-bio-grime" aria-pressed="false">Outdoor stains &amp; growth</a></div>
+        <p class="industry-directory-status" data-industry-discovery-status aria-live="polite">26 industry options. Browse all or narrow by cleaning job.</p>
+        <noscript><p>Browse all industries below. Search and filters require JavaScript.</p></noscript>
+        <div class="industry-directory" data-industry-discovery-results>
+          <article class="industry-directory-card" id="aviation-fbos-mro-airports" data-industry-discovery-card data-industry-slug="aviation-fbos-mro-airports" data-job-paths="degrease fleet-wash" data-search-text="Aviation - FBOs, MRO, Airports Ground-support equipment, shop floors, wheel-well tooling, engine stands, and approved aluminum or coated parts Hydraulic oil, lubricating grease, carbon film, rubber transfer, and ramp grime CR HD cuts through hydraulic oil and carbon, Neutral cleans sensitive finishes, and AlumiBrite brings dull aluminum back to life.">
         <h3><a href="industries/aviation-fbos-mro-airports">Aviation - FBOs, MRO, Airports</a></h3>
-        <p>CR HD cuts through hydraulic oil and carbon, Neutral cleans sensitive finishes, and AlumiBrite brings dull aluminum back to life.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/neutral">VertKleen Neutral</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/aviation-fbos-mro-airports">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Aviation+-+FBOs%2C+MRO%2C+Airports&amp;type=audit&amp;message=Industry%3A+Aviation+-+FBOs%2C+MRO%2C+Airports%0AWhat+needs+cleaning%3A+Ground-support+equipment%2C+shop+floors%2C+wheel-well+tooling%2C+engine+stands%2C+and+approved+aluminum+or+coated+parts%0AWhat+needs+to+come+off%3A+Hydraulic+oil%2C+lubricating+grease%2C+carbon+film%2C+rubber+transfer%2C+and+ramp+grime%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Wash oil, grease, and exhaust grime from ground equipment and approved aircraft-area parts.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/neutral">VertKleen Neutral</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="breweries-distilleries-wineries" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cip" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="breweries-distilleries-wineries" data-industry-discovery-card data-industry-slug="breweries-distilleries-wineries" data-job-paths="degrease descale cip" data-search-text="Breweries, Distilleries &amp; Wineries Fermenters, bright tanks, kettles, fillers, kegs, transfer lines, and plate heat exchangers Krausen, protein, carbohydrate film, yeast, beer stone, tartrate, and mineral scale CR clears krausen, protein, yeast, and organic film. HCR follows with beer stone, rust, and mineral scale for a complete two-step CIP clean.">
         <h3><a href="industries/breweries-distilleries-wineries">Breweries, Distilleries &amp; Wineries</a></h3>
-        <p>CR clears krausen, protein, yeast, and organic film. HCR follows with beer stone, rust, and mineral scale for a complete two-step CIP clean.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/cr-hd-low-foam">VertKleen CR HD Low Foam</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/breweries-distilleries-wineries">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Breweries%2C+Distilleries+%26+Wineries&amp;type=audit&amp;message=Industry%3A+Breweries%2C+Distilleries+%26+Wineries%0AWhat+needs+cleaning%3A+Fermenters%2C+bright+tanks%2C+kettles%2C+fillers%2C+kegs%2C+transfer+lines%2C+and+plate+heat+exchangers%0AWhat+needs+to+come+off%3A+Krausen%2C+protein%2C+carbohydrate+film%2C+yeast%2C+beer+stone%2C+tartrate%2C+and+mineral+scale%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Run CR first for organic film, then HCR for beer stone, rust, and scale.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/cr-hd-low-foam">VertKleen CR HD Low Foam</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="construction" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale fleet-wash exterior-bio-grime" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="construction" data-industry-discovery-card data-industry-slug="construction" data-job-paths="degrease descale fleet-wash exterior-bio-grime" data-search-text="Construction Concrete pumps, forms, mixers, hand tools, compact equipment, vehicle exteriors, and finished masonry Cement film, form oil, hydraulic grease, asphalt transfer, rust, and mineral efflorescence HCR or Descaler breaks down cement and mineral residue, CR HD removes form oil, and LAM3 keeps working on outdoor stains.">
         <h3><a href="industries/construction">Construction</a></h3>
-        <p>HCR or Descaler breaks down cement and mineral residue, CR HD removes form oil, and LAM3 keeps working on outdoor stains.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale exterior-bio-grime"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/construction">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Construction&amp;type=audit&amp;message=Industry%3A+Construction%0AWhat+needs+cleaning%3A+Concrete+pumps%2C+forms%2C+mixers%2C+hand+tools%2C+compact+equipment%2C+vehicle+exteriors%2C+and+finished+masonry%0AWhat+needs+to+come+off%3A+Cement+film%2C+form+oil%2C+hydraulic+grease%2C+asphalt+transfer%2C+rust%2C+and+mineral+efflorescence%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove cement residue, form oil, and outdoor stains from tools, forms, equipment, and fleet vehicles.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale exterior-bio-grime"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="data-centers" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="data-centers" data-industry-discovery-card data-industry-slug="data-centers" data-job-paths="descale cooling-water" data-search-text="Data Centers Cooling towers, plate heat exchangers, condenser-water piping, closed loops, strainers, and mechanical-room coils Carbonate scale, iron oxide, corrosion product, silt, and water-side organic fouling HVAC HCR and Descaler clear scale from cooling equipment. WaterSafe60 helps keep scale and corrosion under control after the clean.">
         <h3><a href="industries/data-centers">Data Centers</a></h3>
-        <p>HCR and Descaler clear scale from cooling equipment. WaterSafe60 helps keep scale and corrosion under control after the clean.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/data-centers">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Data+Centers&amp;type=audit&amp;message=Industry%3A+Data+Centers%0AWhat+needs+cleaning%3A+Cooling+towers%2C+plate+heat+exchangers%2C+condenser-water+piping%2C+closed+loops%2C+strainers%2C+and+mechanical-room+coils%0AWhat+needs+to+come+off%3A+Carbonate+scale%2C+iron+oxide%2C+corrosion+product%2C+silt%2C+and+water-side+organic+fouling%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Clear scale from cooling equipment during planned maintenance without bringing cleaner near live IT equipment.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr-t16">VertKleen HVAC HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="distribution-cold-storage" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cooling-water fleet-wash" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="distribution-cold-storage" data-industry-discovery-card data-industry-slug="distribution-cold-storage" data-job-paths="degrease descale cooling-water fleet-wash" data-search-text="Distribution / Cold Storage Warehouse floors, loading docks, forklifts, battery areas, drains, cold-room surfaces, and isolated evaporator components Hydraulic oil, tire polymer, pallet grime, food residue, ice-related mineral scale, and drain film CR HD lifts oil and tire film even in cold areas, MultiWash handles everyday grime, Descaler removes scale, and Purgo tackles odor at its source.">
         <h3><a href="industries/distribution-cold-storage">Distribution / Cold Storage</a></h3>
-        <p>CR HD lifts oil and tire film even in cold areas, MultiWash handles everyday grime, Descaler removes scale, and Purgo tackles odor at its source.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/distribution-cold-storage">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Distribution+%2F+Cold+Storage&amp;type=audit&amp;message=Industry%3A+Distribution+%2F+Cold+Storage%0AWhat+needs+cleaning%3A+Warehouse+floors%2C+loading+docks%2C+forklifts%2C+battery+areas%2C+drains%2C+cold-room+surfaces%2C+and+isolated+evaporator+components%0AWhat+needs+to+come+off%3A+Hydraulic+oil%2C+tire+polymer%2C+pallet+grime%2C+food+residue%2C+ice-related+mineral+scale%2C+and+drain+film%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Lift forklift oil, tire marks, food residue, and scale without leaving a slippery film behind.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="drone-cleaning-companies" data-buyer-roles="ehs-compliance procurement service-contractors" data-job-paths="exterior-bio-grime" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="drone-cleaning-companies" data-industry-discovery-card data-industry-slug="drone-cleaning-companies" data-job-paths="exterior-bio-grime" data-search-text="Drone Cleaning Companies Roofs, façades, siding, glazing, solar modules, canopies, and elevated coated surfaces Atmospheric soot, algae and mildew staining, bird residue, salt film, and loose particulate MultiWash handles everyday exterior grime, LAM3 stays on algae and organic staining longer, and CR HD cuts through oily film.">
         <h3><a href="industries/drone-cleaning-companies">Drone Cleaning Companies</a></h3>
-        <p>MultiWash handles everyday exterior grime, LAM3 stays on algae and organic staining longer, and CR HD cuts through oily film.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/crhd">VertKleen CR HD</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/drone-cleaning-companies">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Drone+Cleaning+Companies&amp;type=audit&amp;message=Industry%3A+Drone+Cleaning+Companies%0AWhat+needs+cleaning%3A+Roofs%2C+fa%C3%A7ades%2C+siding%2C+glazing%2C+solar+modules%2C+canopies%2C+and+elevated+coated+surfaces%0AWhat+needs+to+come+off%3A+Atmospheric+soot%2C+algae+and+mildew+staining%2C+bird+residue%2C+salt+film%2C+and+loose+particulate%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Use low-pressure drone cleaning on roofs and facades while keeping overspray and runoff under control.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/crhd">VertKleen CR HD</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="education" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cooling-water exterior-bio-grime" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="education" data-industry-discovery-card data-industry-slug="education" data-job-paths="degrease descale cooling-water exterior-bio-grime" data-search-text="Education Facilities Boilers, cooling towers, heat exchangers, kitchen equipment, restroom fixtures, gym floors, drains, and hardscape Mineral scale, rust, grease, soap film, tracked grime, algae staining, and drain residue HVAC HCR and WaterSafe60 support boilers, towers, and scale control. HVAC CR and MultiWash clean compatible equipment and surfaces. Purgo supports odor-control work.">
         <h3><a href="industries/education">Education Facilities</a></h3>
-        <p>HCR and WaterSafe60 cover boilers, towers, and scale. CR and MultiWash clean kitchens, floors, and facilities. Purgo helps stop recurring odor.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="degrease exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/education">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Education+Facilities&amp;type=audit&amp;message=Industry%3A+Education+Facilities%0AWhat+needs+cleaning%3A+Boilers%2C+cooling+towers%2C+heat+exchangers%2C+kitchen+equipment%2C+restroom+fixtures%2C+gym+floors%2C+drains%2C+and+hardscape%0AWhat+needs+to+come+off%3A+Mineral+scale%2C+rust%2C+grease%2C+soap+film%2C+tracked+grime%2C+algae+staining%2C+and+drain+residue%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Clean campus equipment, kitchens, restrooms, and outdoor areas around the school schedule.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease"><a href="products/cr2">VertKleen HVAC CR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr-t16">VertKleen HVAC HCR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="degrease exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="fleet-trucking-car-washes" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="fleet-trucking-car-washes" data-industry-discovery-card data-industry-slug="fleet-trucking-car-washes" data-job-paths="degrease fleet-wash" data-search-text="Fleet, Trucking &amp; Car Washes Truck and bus exteriors, wheels, aluminum tanks, chassis, engine bays, wash-bay floors, and service equipment Road film, insect residue, diesel soot, lubricating grease, brake dust, salt, and aluminum oxidation CR HD and MultiWash remove road film and grease, Torque washes and finishes in one step, and AlumiBrite restores oxidized aluminum.">
         <h3><a href="industries/fleet-trucking-car-washes">Fleet, Trucking &amp; Car Washes</a></h3>
-        <p>CR HD and MultiWash remove road film and grease, Torque washes and finishes in one step, and AlumiBrite restores oxidized aluminum.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/torque">VertKleen Torque</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/fleet-trucking-car-washes">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Fleet%2C+Trucking+%26+Car+Washes&amp;type=audit&amp;message=Industry%3A+Fleet%2C+Trucking+%26+Car+Washes%0AWhat+needs+cleaning%3A+Truck+and+bus+exteriors%2C+wheels%2C+aluminum+tanks%2C+chassis%2C+engine+bays%2C+wash-bay+floors%2C+and+service+equipment%0AWhat+needs+to+come+off%3A+Road+film%2C+insect+residue%2C+diesel+soot%2C+lubricating+grease%2C+brake+dust%2C+salt%2C+and+aluminum+oxidation%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove road film, bugs, grease, and aluminum oxidation while protecting fleet finishes.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/torque">VertKleen Torque</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="food-beverage" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cip" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="food-beverage" data-industry-discovery-card data-industry-slug="food-beverage" data-job-paths="degrease descale cip" data-search-text="Food &amp; Beverage Process tanks, piping, fillers, pasteurizers, heat exchangers, kettles, conveyors, and removable parts Fat, protein, carbohydrate, yeast, biofilm-supporting residue, beer or milk stone, and hard-water scale CR removes fat, protein, and organic film. HCR clears beer stone, rust, and scale. Neutral, CR HD, and MultiWash handle open equipment and daily cleaning.">
         <h3><a href="industries/food-beverage">Food &amp; Beverage</a></h3>
-        <p>CR removes fat, protein, and organic film. HCR clears beer stone, rust, and scale. Neutral, CR HD, and MultiWash handle open equipment and daily cleaning.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/neutral">VertKleen Neutral</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/food-beverage">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Food+%26+Beverage&amp;type=audit&amp;message=Industry%3A+Food+%26+Beverage%0AWhat+needs+cleaning%3A+Process+tanks%2C+piping%2C+fillers%2C+pasteurizers%2C+heat+exchangers%2C+kettles%2C+conveyors%2C+and+removable+parts%0AWhat+needs+to+come+off%3A+Fat%2C+protein%2C+carbohydrate%2C+yeast%2C+biofilm-supporting+residue%2C+beer+or+milk+stone%2C+and+hard-water+scale%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Match each CIP or COP cleaning step to food grime, grease, protein, beer stone, and mineral scale.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/neutral">VertKleen Neutral</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="agriculture" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cip fleet-wash exterior-bio-grime" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="agriculture" data-industry-discovery-card data-industry-slug="agriculture" data-job-paths="degrease descale cip fleet-wash exterior-bio-grime" data-search-text="Agriculture &amp; Farm Operations Harvest and packing equipment, bins, hoppers, augers, milking components, wash pads, utility vehicles, irrigation parts, and drains Plant residue, grime, fertilizer salt, grease, manure-adjacent organic buildup, milk film, and hard-water scale MultiWash and CR HD lift crop residue, grease, and farm grime. HCR breaks down fertilizer salts and hard mineral film.">
         <h3><a href="industries/agriculture">Agriculture &amp; Farm Operations</a></h3>
-        <p>MultiWash and CR HD lift crop residue, grease, and farm grime. HCR breaks down fertilizer salts and hard mineral film.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/agriculture">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Agriculture+%26+Farm+Operations&amp;type=audit&amp;message=Industry%3A+Agriculture+%26+Farm+Operations%0AWhat+needs+cleaning%3A+Harvest+and+packing+equipment%2C+bins%2C+hoppers%2C+augers%2C+milking+components%2C+wash+pads%2C+utility+vehicles%2C+irrigation+parts%2C+and+drains%0AWhat+needs+to+come+off%3A+Plant+residue%2C+grime%2C+fertilizer+salt%2C+grease%2C+manure-adjacent+organic+buildup%2C+milk+film%2C+and+hard-water+scale%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove crop residue, farm grime, fertilizer salts, grease, and mineral film from equipment and wash areas.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="golf-courses" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale fleet-wash exterior-bio-grime" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="golf-courses" data-industry-discovery-card data-industry-slug="golf-courses" data-job-paths="degrease descale fleet-wash exterior-bio-grime" data-search-text="Golf Courses &amp; Sports Facilities Carts, mowers, utility vehicles, irrigation hardware, stadium hardscape, locker-room floors, sport flooring, pavers, and fountains Grass oil, grease, rubber transfer, body-grime film, fertilizer salt, mineral scale, algae staining, mud, and tracked organic buildup Torque and MultiWash clean carts and equipment, HCR clears irrigation scale, LAM3 works on outdoor growth, and Purgo helps control odor.">
         <h3><a href="industries/golf-courses">Golf Courses &amp; Sports Facilities</a></h3>
-        <p>Torque and MultiWash clean carts and equipment, HCR clears irrigation scale, LAM3 works on outdoor growth, and Purgo helps control odor.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/torque">VertKleen Torque</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/golf-courses">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Golf+Courses+%26+Sports+Facilities&amp;type=audit&amp;message=Industry%3A+Golf+Courses+%26+Sports+Facilities%0AWhat+needs+cleaning%3A+Carts%2C+mowers%2C+utility+vehicles%2C+irrigation+hardware%2C+stadium+hardscape%2C+locker-room+floors%2C+sport+flooring%2C+pavers%2C+and+fountains%0AWhat+needs+to+come+off%3A+Grass+oil%2C+grease%2C+rubber+transfer%2C+body-grime+film%2C+fertilizer+salt%2C+mineral+scale%2C+algae+staining%2C+mud%2C+and+tracked+organic+buildup%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Clean carts, grounds equipment, irrigation parts, hardscape, locker rooms, and public areas.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/torque">VertKleen Torque</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="healthcare" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="healthcare" data-industry-discovery-card data-industry-slug="healthcare" data-job-paths="descale cooling-water" data-search-text="Healthcare Cooling towers, closed loops, heat exchangers, steam-plant equipment, kitchen/laundry equipment, drains, and nonclinical hard surfaces Scale, rust, corrosion product, grease, soap film, mineral buildup, and ordinary facility grime HVAC HCR and Descaler remove scale from mechanical equipment, HVAC CR clears organic buildup, and WaterSafe60 supports site-specific scale and corrosion control.">
         <h3><a href="industries/healthcare">Healthcare</a></h3>
-        <p>HCR and Descaler remove scale from mechanical equipment, CR clears organic buildup, and WaterSafe60 plus Purgo support ongoing water care.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/healthcare">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Healthcare&amp;type=audit&amp;message=Industry%3A+Healthcare%0AWhat+needs+cleaning%3A+Cooling+towers%2C+closed+loops%2C+heat+exchangers%2C+steam-plant+equipment%2C+kitchen%2Flaundry+equipment%2C+drains%2C+and+nonclinical+hard+surfaces%0AWhat+needs+to+come+off%3A+Scale%2C+rust%2C+corrosion+product%2C+grease%2C+soap+film%2C+mineral+buildup%2C+and+ordinary+facility+grime%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove scale and buildup from mechanical equipment and facility areas around patient-care schedules.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr-t16">VertKleen HVAC HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="healthcare-senior-living" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale exterior-bio-grime" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="healthcare-senior-living" data-industry-discovery-card data-industry-slug="healthcare-senior-living" data-job-paths="descale exterior-bio-grime" data-search-text="Healthcare &amp; Senior Living Kitchens, laundries, mechanical rooms, restroom fixtures, nonclinical floors, drains, carts, and isolated heat-transfer equipment Cooking grease, laundry film, soap scum, hard-water scale, tracked grime, and drain residue Neutral and MultiWash handle everyday cleaning across mixed surfaces, Descaler removes scale, and Purgo tackles recurring odor.">
         <h3><a href="industries/healthcare-senior-living">Healthcare &amp; Senior Living</a></h3>
-        <p>Neutral and MultiWash handle everyday cleaning across mixed surfaces, Descaler removes scale, and Purgo tackles recurring odor.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/neutral">VertKleen Neutral</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/healthcare-senior-living">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Healthcare+%26+Senior+Living&amp;type=audit&amp;message=Industry%3A+Healthcare+%26+Senior+Living%0AWhat+needs+cleaning%3A+Kitchens%2C+laundries%2C+mechanical+rooms%2C+restroom+fixtures%2C+nonclinical+floors%2C+drains%2C+carts%2C+and+isolated+heat-transfer+equipment%0AWhat+needs+to+come+off%3A+Cooking+grease%2C+laundry+film%2C+soap+scum%2C+hard-water+scale%2C+tracked+grime%2C+and+drain+residue%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove grease, scale, and everyday grime from resident-facing areas and building equipment.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/neutral">VertKleen Neutral</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="hotels-property-management" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cooling-water exterior-bio-grime" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="hotels-property-management" data-industry-discovery-card data-industry-slug="hotels-property-management" data-job-paths="degrease descale cooling-water exterior-bio-grime" data-search-text="Hotels, Resorts &amp; Property Management Commercial kitchens, laundry equipment, restroom fixtures, mechanical rooms, pool-side hardscape, façades, drains, and parking surfaces Cooking grease, soap scum, carbonate scale, body-grime film, algae staining, tire marks, and atmospheric grime CR HD cuts kitchen grease, Descaler clears fixture and equipment scale, MultiWash handles daily grime, and LAM3 works on exterior stains.">
         <h3><a href="industries/hotels-property-management">Hotels, Resorts &amp; Property Management</a></h3>
-        <p>CR HD cuts kitchen grease, Descaler clears fixture and equipment scale, MultiWash handles daily grime, and LAM3 works on exterior stains.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/hotels-property-management">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Hotels%2C+Resorts+%26+Property+Management&amp;type=audit&amp;message=Industry%3A+Hotels%2C+Resorts+%26+Property+Management%0AWhat+needs+cleaning%3A+Commercial+kitchens%2C+laundry+equipment%2C+restroom+fixtures%2C+mechanical+rooms%2C+pool-side+hardscape%2C+fa%C3%A7ades%2C+drains%2C+and+parking+surfaces%0AWhat+needs+to+come+off%3A+Cooking+grease%2C+soap+scum%2C+carbonate+scale%2C+body-grime+film%2C+algae+staining%2C+tire+marks%2C+and+atmospheric+grime%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove kitchen grease, soap film, scale, and outdoor stains while keeping guest areas presentable.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="hvac-water" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water" hidden>
-        <span class="eyebrow">Industry</span>
-        <h3><a href="industries/hvac-water">HVAC / Water Treatment</a></h3>
-        <p>HCR breaks down hard carbonate scale and rust. WaterSafe60 helps keep pH, scale, and corrosion under control after the system is clean.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/purgo">Purgo</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/cr">VertKleen CIP CR</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/hvac-water">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=HVAC+%2F+Water+Treatment&amp;type=audit&amp;message=Industry%3A+HVAC+%2F+Water+Treatment%0AWhat+needs+cleaning%3A+Cooling+towers%2C+fill%2C+plate+and+shell+heat+exchangers%2C+condensers%2C+boilers%2C+closed+loops%2C+coils%2C+strainers%2C+and+piping%0AWhat+needs+to+come+off%3A+Calcium+carbonate%2C+iron+oxide%2C+mixed+mineral+scale%2C+silt%2C+corrosion+product%2C+and+organic+fouling%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+      <article class="industry-directory-card" id="hvac-water" data-industry-discovery-card data-industry-slug="hvac-water" data-job-paths="descale cooling-water" data-search-text="HVAC &amp; Water Systems Cooling towers, fill, plate and shell heat exchangers, condensers, boilers, closed loops, coils, strainers, and piping Calcium carbonate, iron oxide, mixed mineral scale, silt, corrosion product, and organic fouling Match HVAC CR to compatible organic soils, HVAC HCR or Descaler to mineral deposits, and WaterSafe60 to site-specific scale and corrosion control.">
+        <h3><a href="industries/hvac-water">HVAC &amp; Water Systems</a></h3>
+        <p>Remove scale and rust from water-side equipment, rinse it clean, and restart the treatment program.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/purgo">Purgo</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr-t16">VertKleen HVAC HCR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/cr2">VertKleen HVAC CR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="manufacturing" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale cip" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="manufacturing" data-industry-discovery-card data-industry-slug="manufacturing" data-job-paths="degrease descale cip" data-search-text="Manufacturing Parts, machine tools, floors, conveyors, tanks, heat exchangers, molds, dies, and utility piping Cutting oil, hydraulic fluid, grease, carbonized residue, adhesive film, rust, and mineral scale CR HD cuts oil and grease, CR clears organic process buildup, and HCR or Descaler removes rust and hard mineral scale.">
         <h3><a href="industries/manufacturing">Manufacturing</a></h3>
-        <p>CR HD cuts oil and grease, CR clears organic process buildup, and HCR or Descaler removes rust and hard mineral scale.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/manufacturing">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Manufacturing&amp;type=audit&amp;message=Industry%3A+Manufacturing%0AWhat+needs+cleaning%3A+Parts%2C+machine+tools%2C+floors%2C+conveyors%2C+tanks%2C+heat+exchangers%2C+molds%2C+dies%2C+and+utility+piping%0AWhat+needs+to+come+off%3A+Cutting+oil%2C+hydraulic+fluid%2C+grease%2C+carbonized+residue%2C+adhesive+film%2C+rust%2C+and+mineral+scale%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove process oil, carbon, grease, and scale from production equipment and get it back to work.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cip"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="degrease cip"><a href="products/cr">VertKleen CIP CR</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="marine" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale fleet-wash exterior-bio-grime" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="marine" data-industry-discovery-card data-industry-slug="marine" data-job-paths="degrease descale fleet-wash exterior-bio-grime" data-search-text="Marine, Marinas &amp; Boatyards Hulls, decks, topsides, bilges, engine-room surfaces, lifts, aluminum rails, trailers, dock equipment, and service floors Salt film, algae staining, diesel soot, bilge oil, grease, fish residue, road film, and aluminum oxidation Choose among eight marine products for routine washing, grease, scale, drains, aluminum, and label-directed antimicrobial cleaning.">
         <h3><a href="industries/marine">Marine, Marinas &amp; Boatyards</a></h3>
-        <p>Choose among eight marine products for routine washing, grease, scale, drains, aluminum, and label-directed antimicrobial cleaning.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr-t16">VertKleen HVAC HCR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span><span data-industry-discovery-product data-job-paths="fleet-wash exterior-bio-grime"><a href="products/torque">VertKleen Torque</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/marine">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Marine%2C+Marinas+%26+Boatyards&amp;type=audit&amp;message=Industry%3A+Marine%2C+Marinas+%26+Boatyards%0AWhat+needs+cleaning%3A+Hulls%2C+decks%2C+topsides%2C+bilges%2C+engine-room+surfaces%2C+lifts%2C+aluminum+rails%2C+trailers%2C+dock+equipment%2C+and+service+floors%0AWhat+needs+to+come+off%3A+Salt+film%2C+algae+staining%2C+diesel+soot%2C+bilge+oil%2C+grease%2C+fish+residue%2C+road+film%2C+and+aluminum+oxidation%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove salt, marine film, oil, mineral scale, and oxidation from boats, trailers, docks, lifts, and service equipment.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr-t16">VertKleen HVAC HCR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span><span data-industry-discovery-product data-job-paths="fleet-wash exterior-bio-grime"><a href="products/torque">VertKleen Torque</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="mechanical-contractors-water-treatment" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="mechanical-contractors-water-treatment" data-industry-discovery-card data-industry-slug="mechanical-contractors-water-treatment" data-job-paths="descale cooling-water" data-search-text="Mechanical Contractors &amp; Water Treatment Plate and shell heat exchangers, boilers, cooling towers, coils, pumps, closed loops, strainers, and temporary circulation rigs Carbonate and mixed mineral scale, iron oxide, corrosion product, silt, and water-side organic film Identify the buildup, choose HVAC HCR or Descaler, and build a clear circulation and rinse plan around the equipment.">
         <h3><a href="industries/mechanical-contractors-water-treatment">Mechanical Contractors &amp; Water Treatment</a></h3>
-        <p>Identify the buildup, choose HCR or Descaler, and build a clear circulation and rinse plan around the equipment.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/mechanical-contractors-water-treatment">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Mechanical+Contractors+%26+Water+Treatment&amp;type=audit&amp;message=Industry%3A+Mechanical+Contractors+%26+Water+Treatment%0AWhat+needs+cleaning%3A+Plate+and+shell+heat+exchangers%2C+boilers%2C+cooling+towers%2C+coils%2C+pumps%2C+closed+loops%2C+strainers%2C+and+temporary+circulation+rigs%0AWhat+needs+to+come+off%3A+Carbonate+and+mixed+mineral+scale%2C+iron+oxide%2C+corrosion+product%2C+silt%2C+and+water-side+organic+film%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove scale from boilers, heat exchangers, coils, and water loops, then return them clean and ready for treatment.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr-t16">VertKleen HVAC HCR</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="military-government" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale fleet-wash" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="military-government" data-industry-discovery-card data-industry-slug="military-government" data-job-paths="degrease descale fleet-wash" data-search-text="Military / Government Motor-pool vehicles, ground equipment, hangar floors, public works machinery, heat exchangers, water assets, and maintenance shops Petroleum grease, hydraulic oil, carbon, road film, rust, mineral scale, and ordinary facility grime Match one VertKleen product to the job, use the same cleaning steps each time, and keep the result easy to explain.">
         <h3><a href="industries/military-government">Military / Government</a></h3>
-        <p>Match one VertKleen product to the job, use the same cleaning steps each time, and keep the result easy to explain.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/military-government">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Military+%2F+Government&amp;type=audit&amp;message=Industry%3A+Military+%2F+Government%0AWhat+needs+cleaning%3A+Motor-pool+vehicles%2C+ground+equipment%2C+hangar+floors%2C+public+works+machinery%2C+heat+exchangers%2C+water+assets%2C+and+maintenance+shops%0AWhat+needs+to+come+off%3A+Petroleum+grease%2C+hydraulic+oil%2C+carbon%2C+road+film%2C+rust%2C+mineral+scale%2C+and+ordinary+facility+grime%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Clean vehicles, buildings, and utility equipment with one clear product and work plan.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/alumibrite">VertKleen AlumiBrite</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="municipalities-water-utilities" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale cooling-water fleet-wash" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="municipalities-water-utilities" data-industry-discovery-card data-industry-slug="municipalities-water-utilities" data-job-paths="descale cooling-water fleet-wash" data-search-text="Municipalities &amp; Water Utilities Pumps, valves, screens, strainers, heat exchangers, treatment skids, maintenance floors, and out-of-service storage components Carbonate scale, iron and manganese buildup, rust, grease, silt, and treatment-chemical residue WaterSafe60 supports site-specific scale and corrosion control. HVAC HCR removes mineral buildups. HVAC CR cuts through greasy utility work.">
         <h3><a href="industries/municipalities-water-utilities">Municipalities &amp; Water Utilities</a></h3>
-        <p>WaterSafe60 helps control pH, scale, and corrosion. HCR removes mineral buildups. HVAC CR cuts through greasy utility work.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/cr2">VertKleen HVAC CR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr">VertKleen CIP HCR</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/municipalities-water-utilities">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Municipalities+%26+Water+Utilities&amp;type=audit&amp;message=Industry%3A+Municipalities+%26+Water+Utilities%0AWhat+needs+cleaning%3A+Pumps%2C+valves%2C+screens%2C+strainers%2C+heat+exchangers%2C+treatment+skids%2C+maintenance+floors%2C+and+out-of-service+storage+components%0AWhat+needs+to+come+off%3A+Carbonate+scale%2C+iron+and+manganese+buildup%2C+rust%2C+grease%2C+silt%2C+and+treatment-chemical+residue%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove scale, rust, and grease from pumps, pipes, basins, and other utility equipment.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="fleet-wash"><a href="products/cr2">VertKleen HVAC CR</a></span><span data-industry-discovery-product data-job-paths="cooling-water"><a href="products/watersafe60">WaterSafe60</a></span><span data-industry-discovery-product data-job-paths="descale cooling-water"><a href="products/hcr-t16">VertKleen HVAC HCR</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="oil-gas" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease descale" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="oil-gas" data-industry-discovery-card data-industry-slug="oil-gas" data-job-paths="degrease descale" data-search-text="Oil, Gas &amp; Process Plants Tanks, heat exchangers, separators, pipe spools, pumps, valves, rig equipment, containment floors, and vehicle components Crude and refined hydrocarbon film, grease, drilling residue, carbon, iron oxide, carbonate scale, and mixed buildups CR HD and Neutral lift oil and greasy film. HCR and Descaler loosen scale, rust, and mineral buildups.">
         <h3><a href="industries/oil-gas">Oil, Gas &amp; Process Plants</a></h3>
-        <p>CR HD and Neutral lift oil and greasy film. HCR and Descaler loosen scale, rust, and mineral buildups.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/oil-gas">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Oil%2C+Gas+%26+Process+Plants&amp;type=audit&amp;message=Industry%3A+Oil%2C+Gas+%26+Process+Plants%0AWhat+needs+cleaning%3A+Tanks%2C+heat+exchangers%2C+separators%2C+pipe+spools%2C+pumps%2C+valves%2C+rig+equipment%2C+containment+floors%2C+and+vehicle+components%0AWhat+needs+to+come+off%3A+Crude+and+refined+hydrocarbon+film%2C+grease%2C+drilling+residue%2C+carbon%2C+iron+oxide%2C+carbonate+scale%2C+and+mixed+buildups%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove oil, grease, rust, and scale from rigs, terminals, and support equipment cleared for maintenance.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="plumbing" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="descale" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="plumbing" data-industry-discovery-card data-industry-slug="plumbing" data-job-paths="descale" data-search-text="Plumbing Tankless heat exchangers, boilers, recirculation components, valves, fixtures, strainers, pumps, and service piping Calcium carbonate, mixed mineral scale, rust, iron buildup, and soap/mineral film HCR and Descaler break down hard-water scale, then circulation and rinsing carry the loosened buildup out of the loop.">
         <h3><a href="industries/plumbing">Plumbing</a></h3>
-        <p>HCR and Descaler break down hard-water scale, then circulation and rinsing carry the loosened buildup out of the loop.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Field photos available</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/plumbing">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Plumbing&amp;type=audit&amp;message=Industry%3A+Plumbing%0AWhat+needs+cleaning%3A+Tankless+heat+exchangers%2C+boilers%2C+recirculation+components%2C+valves%2C+fixtures%2C+strainers%2C+pumps%2C+and+service+piping%0AWhat+needs+to+come+off%3A+Calcium+carbonate%2C+mixed+mineral+scale%2C+rust%2C+iron+buildup%2C+and+soap%2Fmineral+film%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Clear hard-water scale from tankless heaters, boilers, fixtures, and water equipment to restore flow and heat transfer.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="descale"><a href="products/descaler">VertKleen Descaler</a></span><span data-industry-discovery-product data-job-paths="descale"><a href="products/hcr">VertKleen CIP HCR</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="pressure-washing-soft-wash-contractors" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash exterior-bio-grime" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="pressure-washing-soft-wash-contractors" data-industry-discovery-card data-industry-slug="pressure-washing-soft-wash-contractors" data-job-paths="degrease fleet-wash exterior-bio-grime" data-search-text="Pressure-Washing &amp; Soft-Wash Contractors Roofs, siding, stucco, painted masonry, concrete, pavers, fences, storefronts, and exterior glass Algae, lichen and mildew staining, soot, pollen, bird residue, tire marks, oil spots, and general grime LAM3 stays on algae and organic stains longer, CR HD cuts oily grime, and MultiWash handles everyday exterior film.">
         <h3><a href="industries/pressure-washing-soft-wash-contractors">Pressure-Washing &amp; Soft-Wash Contractors</a></h3>
-        <p>LAM3 stays on algae and organic stains longer, CR HD cuts oily grime, and MultiWash handles everyday exterior film.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="fleet-wash exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/pressure-washing-soft-wash-contractors">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Pressure-Washing+%26+Soft-Wash+Contractors&amp;type=audit&amp;message=Industry%3A+Pressure-Washing+%26+Soft-Wash+Contractors%0AWhat+needs+cleaning%3A+Roofs%2C+siding%2C+stucco%2C+painted+masonry%2C+concrete%2C+pavers%2C+fences%2C+storefronts%2C+and+exterior+glass%0AWhat+needs+to+come+off%3A+Algae%2C+lichen+and+mildew+staining%2C+soot%2C+pollen%2C+bird+residue%2C+tire+marks%2C+oil+spots%2C+and+general+grime%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Lift algae, soot, and traffic film from roofs, siding, hardscape, and other exterior surfaces.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span><span data-industry-discovery-product data-job-paths="fleet-wash exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="restaurants-commercial-kitchens" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="restaurants-commercial-kitchens" data-industry-discovery-card data-industry-slug="restaurants-commercial-kitchens" data-job-paths="degrease" data-search-text="Restaurants &amp; Commercial Kitchens Hoods, filters, floors, walls, equipment exteriors, grease traps, drains, and wash areas Animal and vegetable fat, polymerized grease, carbonized food, protein film, floor oil, and drain residue CR HD breaks through kitchen grease, MultiWash or Neutral handles mixed surfaces, and Purgo attacks recurring odor at the source.">
         <h3><a href="industries/restaurants-commercial-kitchens">Restaurants &amp; Commercial Kitchens</a></h3>
-        <p>CR HD breaks through kitchen grease, MultiWash or Neutral handles mixed surfaces, and Purgo attacks recurring odor at the source.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/restaurants-commercial-kitchens">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Restaurants+%26+Commercial+Kitchens&amp;type=audit&amp;message=Industry%3A+Restaurants+%26+Commercial+Kitchens%0AWhat+needs+cleaning%3A+Hoods%2C+filters%2C+floors%2C+walls%2C+equipment+exteriors%2C+grease+traps%2C+drains%2C+and+wash+areas%0AWhat+needs+to+come+off%3A+Animal+and+vegetable+fat%2C+polymerized+grease%2C+carbonized+food%2C+protein+film%2C+floor+oil%2C+and+drain+residue%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Break through baked-on fat, grease, and carbon on hoods, filters, floors, and kitchen equipment.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="degrease"><a href="products/neutral">VertKleen Neutral</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="solar-panel-cleaning" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="exterior-bio-grime" hidden>
-        <span class="eyebrow">Industry</span>
+      <article class="industry-directory-card" id="solar-panel-cleaning" data-industry-discovery-card data-industry-slug="solar-panel-cleaning" data-job-paths="exterior-bio-grime" data-search-text="Solar Farms &amp; Panel Cleaning Photovoltaic module glass, frames, clamps, trackers, inverter-pad hardscape, and accessible support structures Dust, pollen, bird residue, salt film, industrial fallout, light organic film, and hard-water spotting MultiWash loosens dust, salt, bird residue, and light mineral film so panels rinse clean without a harsh cleaner.">
         <h3><a href="industries/solar-panel-cleaning">Solar Farms &amp; Panel Cleaning</a></h3>
-        <p>MultiWash loosens dust, salt, bird residue, and light mineral film so panels rinse clean without a harsh cleaner.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/solar-panel-cleaning">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Solar+Farms+%26+Panel+Cleaning&amp;type=audit&amp;message=Industry%3A+Solar+Farms+%26+Panel+Cleaning%0AWhat+needs+cleaning%3A+Photovoltaic+module+glass%2C+frames%2C+clamps%2C+trackers%2C+inverter-pad+hardscape%2C+and+accessible+support+structures%0AWhat+needs+to+come+off%3A+Dust%2C+pollen%2C+bird+residue%2C+salt+film%2C+industrial+fallout%2C+light+organic+film%2C+and+hard-water+spotting%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove dust, bird residue, salt, and mineral spots from solar panels while protecting the glass and equipment.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/multiwash">VertKleen MultiWash</a></span><span data-industry-discovery-product data-job-paths="exterior-bio-grime"><a href="products/lam3">VertKleen LAM3</a></span></span></div>
       </article>
-      <article class="ind-scope-note industry-discovery-card" data-industry-discovery-card data-industry-slug="warehousing-distribution-centers" data-buyer-roles="facility-operations ehs-compliance procurement service-contractors" data-job-paths="degrease fleet-wash" hidden>
-        <span class="eyebrow">Specialized job</span>
+      <article class="industry-directory-card" id="warehousing-distribution-centers" data-industry-discovery-card data-industry-slug="warehousing-distribution-centers" data-job-paths="degrease fleet-wash" data-search-text="Warehousing &amp; Distribution Centers Concrete and coated floors, docks, forklifts, pallet jacks, racks, battery areas, shop parts, and drains Hydraulic oil, grease, tire polymer, battery-area residue kept segregated, cardboard dust, adhesive, and tracked grime CR HD cuts heavy oil and tire film. MultiWash handles mixed floor, dock, and equipment grime so crews can clean more with fewer bottles.">
         <h3><a href="industries/warehousing-distribution-centers">Warehousing &amp; Distribution Centers</a></h3>
-        <p>CR HD cuts heavy oil and tire film. MultiWash handles mixed floor, dock, and equipment grime so crews can clean more with fewer bottles.</p>
-        <p class="industry-discovery-path" data-industry-discovery-path hidden></p>
-        <dl>
-          <div><dt>Products to start with</dt><dd><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span></span></dd></div>
-          <div><dt>What you can see</dt><dd>Ready to try</dd></div>
-        </dl>
-        <div class="prod-actions">
-          <a class="btn btn-secondary btn-sm" href="industries/warehousing-distribution-centers">See products and results</a>
-          <a class="btn btn-primary btn-sm" href="contact?industry=Warehousing+%26+Distribution+Centers&amp;type=audit&amp;message=Industry%3A+Warehousing+%26+Distribution+Centers%0AWhat+needs+cleaning%3A+Concrete+and+coated+floors%2C+docks%2C+forklifts%2C+pallet+jacks%2C+racks%2C+battery+areas%2C+shop+parts%2C+and+drains%0AWhat+needs+to+come+off%3A+Hydraulic+oil%2C+grease%2C+tire+polymer%2C+battery-area+residue+kept+segregated%2C+cardboard+dust%2C+adhesive%2C+and+tracked+grime%0ACleaner+or+method+used+today%3A+%0AResult+wanted%3A+%0AWhen+it+is+needed%3A+" data-industry-discovery-cta>Plan my first test</a>
-        </div>
+        <p>Remove oil, tire marks, and pallet grime from floors, docks, forklifts, and warehouse equipment without leaving residue.</p>
+        <div data-industry-discovery-product-list hidden><span class="industry-discovery-products"><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/crhd">VertKleen CR HD</a></span><span data-industry-discovery-product data-job-paths="degrease fleet-wash"><a href="products/multiwash">VertKleen MultiWash</a></span></span></div>
       </article>
         </div>
       </div>
     </div>
   </section>
 <!-- industry:discovery:end -->
-
-  <section class="section">
-    <div class="industry-grid wrap u-stack-18" data-cms-content="industry_sectors" data-cms-render="replace">
-      <article id="oil-gas" class="row-card has-photo">
-        <i class="ph ph-gas-can" aria-hidden="true"></i>
-        <div><h3>Oil, Gas &amp; Process Plants</h3><p>Cut heavy grease and scale from rigs, skids, exchangers, valves, and plant equipment with HMIS 0-0-0 products made for hard industrial work.</p></div>
-        <a class="row-thumb" href="industries/oil-gas" aria-label="View Oil, Gas and Process Plants industry page"><img src="img/industries/samples/oil-gas.webp" alt="Oil and gas worker cleaning an isolated valve manifold and heat exchanger" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/oil-gas">View fit</a>
-      </article>
-
-      <article id="marine" class="row-card has-photo">
-        <i class="ph ph-anchor" aria-hidden="true"></i>
-        <div><h3>Marine</h3><p>Wash salt and road film, cut bilge grease, and brighten aluminum without bringing conventional acids and solvent-heavy cleaners aboard.</p></div>
-        <a class="row-thumb" href="industries/marine" aria-label="View Marine industry page"><img src="img/industries/samples/marine.webp" alt="Boatyard worker cleaning a yacht hull while the vessel is in a lift" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/marine">View fit</a>
-      </article>
-
-      <article id="manufacturing" class="row-card has-photo">
-        <i class="ph ph-factory" aria-hidden="true"></i>
-        <div><h3>Manufacturing</h3><p>Cut heavy grease, oil, rust, and scale from production equipment, floors, and plant systems—then get the line back to work.</p></div>
-        <a class="row-thumb" href="industries/manufacturing" aria-label="View Manufacturing industry page"><img src="img/industries/samples/manufacturing.webp" alt="Manufacturing worker degreasing heavy production machinery" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/manufacturing">View fit</a>
-      </article>
-
-      <article id="distribution-cold-storage" class="row-card has-photo">
-        <i class="ph ph-warehouse" aria-hidden="true"></i>
-        <div><h3>Distribution / Cold Storage</h3><p>Three Walmart distribution centers switched to CR HD for equipment, floors, kitchens, drains, and other hard warehouse cleaning jobs.</p></div>
-        <a class="row-thumb" href="industries/distribution-cold-storage" aria-label="View Distribution and Cold Storage fit"><img src="img/industries/samples/distribution-cold-storage.webp" alt="Cold-storage worker cleaning a refrigerated warehouse floor near a forklift" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/distribution-cold-storage">View fit</a>
-      </article>
-
-      <article id="food-beverage" class="row-card has-photo">
-        <i class="ph ph-beer-bottle" aria-hidden="true"></i>
-        <div><h3>Food &amp; Beverage</h3><p>Remove yeast, protein, fat, beer stone, grease, and drain buildup across brewery, distillery, restaurant, and food-plant cleaning.</p></div>
-        <a class="row-thumb" href="industries/food-beverage" aria-label="View Food and Beverage industry page"><img src="img/industries/samples/food-beverage.webp" alt="Food-processing technician operating a clean-in-place skid beside stainless tanks" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/food-beverage">View fit</a>
-      </article>
-
-      <article id="healthcare" class="row-card has-photo">
-        <i class="ph ph-hospital" aria-hidden="true"></i>
-        <div><h3>Healthcare</h3><p>Clean and service water systems with patients still in the building—without fume events, evacuations, or closing a wing for routine maintenance.</p></div>
-        <a class="row-thumb" href="industries/healthcare" aria-label="View Healthcare industry page"><img src="img/industries/samples/healthcare.webp" alt="Healthcare facilities technician descaling a plate heat exchanger in a mechanical room" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/healthcare">View fit</a>
-      </article>
-
-      <article id="construction" class="row-card has-photo">
-        <i class="ph ph-crane" aria-hidden="true"></i>
-        <div><h3>Construction</h3><p>Clean concrete, equipment, rust, and job-site grime with HMIS 0-0-0 products that are easier to store and use around the crew.</p></div>
-        <a class="row-thumb" href="industries/construction" aria-label="View Construction industry page"><img src="img/industries/samples/construction.webp" alt="Workers cleaning concrete pump equipment and a commercial job-site slab" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/construction">View fit</a>
-      </article>
-
-      <article id="military-government" class="row-card has-photo">
-        <i class="ph ph-seal-check" aria-hidden="true"></i>
-        <div><h3>Military / Government</h3><p>Public fleet, facility, and utility teams can buy through SAM.gov using CAGE 0B2Q3 and NAICS 424690.</p></div>
-        <a class="row-thumb" href="industries/military-government" aria-label="View Military and Government industry page"><img src="img/industries/samples/military-government.webp" alt="Public-sector fleet worker washing a utility truck in a maintenance bay" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/military-government">View fit</a>
-      </article>
-
-      <article id="education" class="row-card has-photo">
-        <i class="ph ph-graduation-cap" aria-hidden="true"></i>
-        <div><h3>Education Facilities</h3><p>Give campus crews one HMIS 0-0-0 line for mechanical rooms, kitchens, restrooms, gyms, and exterior cleaning.</p></div>
-        <a class="row-thumb" href="industries/education" aria-label="View Education Facilities industry page"><img src="img/industries/samples/education.webp" alt="Campus facilities worker cleaning stained exterior steps and walkway" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/education">View fit</a>
-      </article>
-
-      <article id="hvac-water" class="row-card has-photo">
-        <i class="ph ph-wind" aria-hidden="true"></i>
-        <div><h3>HVAC / Water Treatment</h3><p>Remove old scale, protect water systems, and keep towers and heat exchangers running with one simpler VertKleen program.</p></div>
-        <a class="row-thumb" href="industries/hvac-water" aria-label="View HVAC and Water Treatment industry page"><img src="img/industries/samples/hvac-water.webp" alt="HVAC technician servicing cooling-tower and heat-exchanger water equipment" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/hvac-water">View fit</a>
-      </article>
-
-      <article id="data-centers" class="row-card has-photo">
-        <i class="ph ph-hard-drives" aria-hidden="true"></i>
-        <div><h3>Data Centers</h3><p>Keep cooling towers clean, heat transfer strong, and Legionella controls on track without turning maintenance into an uptime event.</p></div>
-        <a class="row-thumb" href="industries/data-centers" aria-label="View Data Centers fit"><img src="img/industries/samples/data-centers.webp" alt="Data-center technician cleaning water-side cooling equipment beside a server aisle" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/data-centers">View fit</a>
-      </article>
-
-      <article id="plumbing" class="row-card has-photo">
-        <i class="ph ph-wrench" aria-hidden="true"></i>
-        <div><h3>Plumbing</h3><p>Clear scale and calcium from water lines, heaters, fixtures, and drains without the fumes and handling of hydrochloric acid.</p></div>
-        <a class="row-thumb" href="industries/plumbing" aria-label="View Plumbing industry page"><img src="img/industries/samples/plumbing.webp" alt="Plumber circulating descaling solution through tankless water heaters" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/plumbing">View fit</a>
-      </article>
-
-      <article id="golf-courses" class="row-card has-photo">
-        <i class="ph ph-flag" aria-hidden="true"></i>
-        <div><h3>Golf Courses &amp; Sports Facilities</h3><p>Clean mowers, carts, irrigation equipment, locker rooms, hardscape, and outdoor stains with fewer harsh products around the property.</p></div>
-        <a class="row-thumb" href="industries/golf-courses" aria-label="View Golf Courses and Sports Facilities fit"><img src="img/industries/samples/golf-courses.webp" alt="Grounds worker cleaning golf-course mowers and carts on a wash pad" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/golf-courses">View fit</a>
-      </article>
-
-      <article id="solar-panel-cleaning" class="row-card has-photo">
-        <i class="ph ph-sun" aria-hidden="true"></i>
-        <div><h3>Solar Farms &amp; Panel Cleaning</h3><p>Remove dust, bird residue, algae, and atmospheric film from solar panels with low-pressure cleaning built for large arrays.</p></div>
-        <a class="row-thumb" href="industries/solar-panel-cleaning" aria-label="View Solar Farms and Panel Cleaning fit"><img src="img/industries/samples/solar-panel-cleaning.webp" alt="Robotic soft-brush cleaner removing grime from a utility-scale solar array" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/solar-panel-cleaning">View fit</a>
-      </article>
-
-      <article id="municipalities-water-utilities" class="row-card has-photo">
-        <i class="ph ph-buildings" aria-hidden="true"></i>
-        <div><h3>Municipalities &amp; Water Utilities</h3><p>Meet public-water needs with NSF/ANSI/CAN 60-certified treatment, HMIS 0-0-0 cleaners, and strong acid-replacement proof.</p></div>
-        <a class="row-thumb" href="industries/municipalities-water-utilities" aria-label="View Municipalities and Water Utilities fit"><img src="img/industries/samples/municipalities-water-utilities.webp" alt="Municipal water utility workers cleaning a removed pump impeller and valve" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/municipalities-water-utilities">View fit</a>
-      </article>
-
-      <article id="hotels-property-management" class="row-card has-photo">
-        <i class="ph ph-buildings" aria-hidden="true"></i>
-        <div><h3>Hotels, Resorts &amp; Property Management</h3><p>Handle facades, pools, restrooms, HVAC, outdoor stains, and odor complaints without creating a new guest-facing problem.</p></div>
-        <a class="row-thumb" href="industries/hotels-property-management" aria-label="View Hotels, Resorts and Property Management fit"><img src="img/industries/samples/hotels-property-management.webp" alt="Hotel facilities worker cleaning a poolside courtyard with a surface cleaner" loading="lazy" width="168" height="104"></a>
-        <a class="btn btn-ghost btn-sm" href="industries/hotels-property-management">View fit</a>
-      </article>
-    </div>
-  </section>
-
-  <section class="section section-slim industry-specialists">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Specific operation?</span>
-        <h2 class="headline">Find the page made for your work.</h2>
-        <p class="subhead">See the products, cleaning jobs, and results most useful to your team.</p>
-      </div>
-      <div class="route-grid">
-        <a class="route-card" href="industries/aviation-fbos-mro-airports"><span>Manufacturing</span><strong>Aviation, FBOs, MRO &amp; Airports</strong><b>Ground equipment, aluminum, hangars, and finish checks.</b></a>
-        <a class="route-card" href="industries/breweries-distilleries-wineries"><span>Food &amp; Beverage</span><strong>Breweries, Distilleries &amp; Wineries</strong><b>Tanks, lines, beer stone, heat exchangers, and two-step CIP.</b></a>
-        <a class="route-card" href="industries/agriculture"><span>Food &amp; Beverage</span><strong>Agriculture &amp; Farm Operations</strong><b>Farm equipment, packing areas, dairy maintenance, and cleanup.</b></a>
-        <a class="route-card" href="industries/restaurants-commercial-kitchens"><span>Food &amp; Beverage</span><strong>Restaurants &amp; Commercial Kitchens</strong><b>Hoods, floors, drains, kitchen grease, and daily cleaning.</b></a>
-        <a class="route-card" href="industries/drone-cleaning-companies"><span>Construction</span><strong>Drone Cleaning Companies</strong><b>High, hard-to-reach surfaces, coatings, overspray, and runoff.</b></a>
-        <a class="route-card" href="industries/pressure-washing-soft-wash-contractors"><span>Construction</span><strong>Pressure &amp; Soft-Wash Contractors</strong><b>Roofs, siding, hardscape, plants, rinsing, and wash-water recovery.</b></a>
-        <a class="route-card" href="industries/fleet-trucking-car-washes"><span>Distribution</span><strong>Fleet, Trucking &amp; Car Washes</strong><b>Road film, grease, finishes, wash systems, and vehicles per day.</b></a>
-        <a class="route-card" href="industries/warehousing-distribution-centers"><span>Distribution</span><strong>Warehousing &amp; Distribution Centers</strong><b>Docks, forklifts, floors, battery areas, and cleaning time.</b></a>
-        <a class="route-card" href="industries/healthcare-senior-living"><span>Healthcare</span><strong>Healthcare &amp; Senior Living</strong><b>Residents, occupied spaces, housekeeping teams, and cleaner surfaces.</b></a>
-        <a class="route-card" href="industries/marine"><span>Marine</span><strong>Marine, Marinas &amp; Boatyards</strong><b>Hull, salt, aluminum, bilges, dockside work, and water protection.</b></a>
-        <a class="route-card" href="industries/mechanical-contractors-water-treatment"><span>HVAC / Water</span><strong>Mechanical Contractors &amp; Water Treatment</strong><b>Scale removal, system startup, fewer callbacks, and clear results.</b></a>
-      </div>
-    </div>
-  </section>
-
-  <section class="section section-slim">
-    <div class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Task gallery</span>
-        <h2 class="headline">See the work by sector.</h2>
-        <p class="subhead">See real-job photos, common cleaning challenges, and where each VertKleen product fits.</p>
-      </div>
-      <div class="gallery-row">
-        <a class="proof-thumb" href="industries/food-beverage"><img src="img/proof/cases/brewery.webp" alt="Brewery CIP with VertKleen" loading="lazy" width="1200" height="900"><span>Breweries</span></a>
-        <a class="proof-thumb" href="industries/marine"><img src="img/proof/cases/marine.webp" alt="Marine vessel washed with VertKleen" loading="lazy" width="1175" height="1125"><span>Marine</span></a>
-        <a class="proof-thumb" href="industries/hvac-water"><img src="img/proof/cases/ac-coil.webp" alt="AC coil descaled in place with VertKleen" loading="lazy" width="839" height="471"><span>HVAC / Water</span></a>
-        <a class="proof-thumb" href="industries/distribution-cold-storage"><img src="img/industries/samples/distribution-cold-storage.webp" alt="Representative cold-storage floor-cleaning task near a forklift" loading="lazy" width="840" height="520"><span>Cold Storage</span></a>
-        <a class="proof-thumb" href="industries/manufacturing"><img src="img/proof/cases/farm-rust-after.webp" alt="Industrial rust removal" loading="lazy" width="740" height="967"><span>Manufacturing</span></a>
-        <a class="proof-thumb" href="industries/hotels-property-management"><img src="img/proof/cases/grout-moss.webp" alt="Property exterior cleaning" loading="lazy" width="919" height="690"><span>Property</span></a>
-        <a class="proof-thumb" href="industries/solar-panel-cleaning"><img src="img/before-after/drone.webp" alt="Drone exterior wash" loading="lazy" width="1008" height="610"><span>Drone &amp; Wash</span></a>
-      </div>
-    </div>
-  </section>
-
   <div class="cms-page-sections" data-cms-content="page_sections" data-cms-page="industries" data-cms-region="body"></div>
+  <section class="section-slim industry-directory-next"><div class="wrap"><p>Planning a pilot, crew training, or resupply across sites? <a href="programs">Explore Chemical Programs</a>. For equipment cleaning and water treatment, <a href="industries/hvac-water">visit HVAC &amp; Water Systems</a>.</p></div></section>
+  </main>
 
   <section class="block-dark">
     <div class="wrap">
@@ -664,7 +211,7 @@
   </section>
 </main>
 
-<script type="module" src="js/main.js?v=20261001e"></script>
+<script type="module" src="js/main.js?v=20261001f"></script>
 <script src="js/track.js?v=20260929e" defer></script>
 </body>
 </html>

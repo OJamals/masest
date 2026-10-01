@@ -98,7 +98,7 @@ test("products page is shop-focused and routes services to a standalone page", a
     assert.equal(services.status, 200, "services page should exist");
     const servicesHtml = await services.text();
     assert.match(servicesHtml, /data-service-catalog/, "services page should render the service catalog");
-    assert.match(servicesHtml, /Test the switch before you roll it out/);
+    assert.match(servicesHtml, /Testing &amp; Technical Services/);
     assert.match(servicesHtml, /Compare the finish, labor, water, and total job cost/);
     assert.match(servicesHtml, /With 35 services and 4 packages/);
     assert.match(
