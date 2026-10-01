@@ -1,7 +1,49 @@
 {
   "version": 1,
-  "count": 325,
+  "count": 328,
   "assets": [
+    {
+      "storage_path": "/img/products/multiwash-general-studio-v2.webp",
+      "public_url": "/img/products/multiwash-general-studio-v2.webp",
+      "filename": "multiwash-general-studio-v2.webp",
+      "alt": "VertKleen MultiWash package rendering with the general product label",
+      "width": 1086,
+      "height": 1448,
+      "byte_size": 96130,
+      "sha256": "83e7c1c1895ae8531da8b8e3a229e015fa2a81c7fea903a7a0d0d07ab7c7fd87",
+      "mime_type": "image/webp",
+      "category": "products",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/products/neutral-identity-studio-v2.webp",
+      "public_url": "/img/products/neutral-identity-studio-v2.webp",
+      "filename": "neutral-identity-studio-v2.webp",
+      "alt": "VertKleen Neutral product rendering",
+      "width": 1098,
+      "height": 1433,
+      "byte_size": 75520,
+      "sha256": "364323183919ffdcaaaee407980cc2322eddb9b22871b7903629712458d0168e",
+      "mime_type": "image/webp",
+      "category": "products",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/products/cr-hd-low-foam-identity-studio-v1.webp",
+      "public_url": "/img/products/cr-hd-low-foam-identity-studio-v1.webp",
+      "filename": "cr-hd-low-foam-identity-studio-v1.webp",
+      "alt": "VertKleen CR HD Low Foam product rendering",
+      "width": 1091,
+      "height": 1442,
+      "byte_size": 77506,
+      "sha256": "49e82cd7c7dbf0b3923f27b9a755d911e4a1c57df40f28c84f5cc20c792980c0",
+      "mime_type": "image/webp",
+      "category": "products",
+      "status": "available",
+      "source": "site"
+    },
     {
       "storage_path": "/img/home/bright-industrial-hero.webp",
       "public_url": "/img/home/bright-industrial-hero.webp",

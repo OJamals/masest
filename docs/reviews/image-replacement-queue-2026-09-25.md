@@ -20,6 +20,8 @@ Owner instruction, 2026-09-25: flag visibly AI-generated images encountered duri
 
 LAM3 update, September 30, 2026: owner requested correction and reupload. Replaced the withdrawn label on the package rendering with the supplied approved general label (`docs/labels/general/vertkleen-lam3-label-6x8.pdf`). Corrected heavy/light stain directions to 5:1/10:1; removed the roof-specific recipe and coverage/yield claims. Published the corrected rendering as `img/products/lam3-studio-v2.webp`; restored canonical LAM3 media. This is a package rendering, not field-result photography. MultiWash remains pending.
 
+October 1 industry-card update: canonical and specialty MultiWash cards now select the general-label rendering `img/products/multiwash-general-studio-v2.webp`, using the supplied general label's 10:1/5:1/2:1 directions without the old NSF/yield claims. Neutral and Low Foam now have distinct identity renderings (`neutral-identity-studio-v2.webp`, `cr-hd-low-foam-identity-studio-v1.webp`) without disputed numeric recipes or certifications. Visible captions identify renderings and direct buyers to supplied package instructions. Actual package photography and controlled Neutral/LF label reconciliation remain pending. See `industry-product-images-2026-10-01.md` for audit and prompts.
+
 ## MultiWash drone and LAM3/CR grout proof — correct attribution
 
 - `uf-shands-drone-wash` combines a facade narrative with aerial roof before/after photographs. The supplied `vertdrone before.JPG` and `vertdrone after.jpeg` confirm the roof subjects; `drone.PNG` and `drone2.png` instead show facade spraying. No matching facade before/after pair was established. Do not feature this card as a measured MultiWash facade result until reconciled.

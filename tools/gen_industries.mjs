@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { proofCardHtml } from "../js/proof-records.js";
 import { industryProductGrid } from "./industry-product-grid.mjs";
+import { PRODUCTS, catalogImageDimensions } from "../js/main/catalog-data.js";
 import { organizationJsonLd } from "./company-identity.mjs";
 import { COMPONENT_VERSION, MAIN_VERSION, NAVIGATION_VERSION, STYLE_VERSION } from "./static-release.mjs";
 
@@ -294,7 +295,8 @@ const LABEL_VARIANTS = {
     market: "FB label",
     name: "VertKleen MultiWash",
     subtitle: "Multi-surface cleaner · deodorizer",
-    image: "multiwash-food-beverage-studio.webp",
+    image: PRODUCTS.multiwash.image,
+    imageCaption: PRODUCTS.multiwash.image_caption,
     productHref: "multiwash",
     directions: [
       ["Bar tops, glass & tables", "Fill a 32 oz spray bottle at 1:16; mist and wipe"],
@@ -320,7 +322,8 @@ const LABEL_VARIANTS = {
     name: "VertKleen CRS",
     subtitle: "Calcium, rust & scale · compatibility tested",
     image: "crs-studio.webp",
-    productHref: "descaler",
+    productHref: "crs",
+    quoteOnly: true,
     directions: [
       ["Rust & fertilizer stains", "Apply at 1:4, let it work 3–5 min, scrub, then rinse"],
       ["Battery / deep stains", "Apply at 1:2, let it work, then rinse"],
@@ -331,7 +334,8 @@ const LABEL_VARIANTS = {
     market: "PW label",
     name: "VertKleen MultiWash",
     subtitle: "Bleach / sodium hypochlorite replacement",
-    image: "multiwash-pressure-wash-studio.webp",
+    image: PRODUCTS.multiwash.image,
+    imageCaption: PRODUCTS.multiwash.image_caption,
     productHref: "multiwash",
     directions: [
       ["House wash / soft wash", "Apply through a downstream injector at 1:16; let it work, then rinse at low pressure"],
@@ -343,7 +347,8 @@ const LABEL_VARIANTS = {
     market: "Gym label",
     name: "VertKleen MultiWash",
     subtitle: "Gym · fitness · studio & clinic cleaner",
-    image: "multiwash-gym-studio.webp",
+    image: PRODUCTS.multiwash.image,
+    imageCaption: PRODUCTS.multiwash.image_caption,
     productHref: "multiwash",
     directions: [
       ["Equipment, machines & mats", "Dilute 1:32; mist onto a cloth or surface and wipe. Do not soak electronics"],
@@ -437,8 +442,11 @@ function labelVariantCard(key) {
   const productAction = variant.jobs?.length
     ? `<span class="commerce-slot" data-commerce-action="${variant.productHref}" data-commerce-size="button" data-commerce-market="marine"></span>
           <a class="btn btn-ink btn-sm" href="../products/${variant.productHref}${productQuery}">Product details</a>`
-    : `<a class="btn btn-primary" href="../products/${variant.productHref}${productQuery}">See product details</a>`;
+    : variant.quoteOnly
+      ? `<a class="btn btn-primary" href="../contact?product=${enc(variant.name)}#quoteForm">Request product guidance</a>`
+      : `<a class="btn btn-primary" href="../products/${variant.productHref}${productQuery}">See product details</a>`;
   const imagePath = variant.image.includes("/") ? `../${variant.image}` : `../img/products/${variant.image}`;
+  const imageSize = catalogImageDimensions(imagePath.replace(/^\.\.\//, ""));
   const imageAlt = variant.jobs?.length
     ? `${variant.name} marine product jug`
     : `${variant.name} ${variant.market} jug`;
@@ -447,8 +455,8 @@ function labelVariantCard(key) {
     ? ` data-marine-product-card data-marine-jobs="${htmlAttr(variant.jobs.join(" "))}"`
     : "";
 
-  return `<article class="prod-card" data-label-variant="${key}"${marineAttributes}>
-        <img class="product-shot" src="${htmlAttr(imagePath)}" alt="${htmlAttr(imageAlt)}" width="900" height="1200" loading="lazy">
+  return `<article class="prod-card" data-product-id="${variant.productHref}" data-label-variant="${key}"${marineAttributes}>
+        <img class="product-shot" src="${htmlAttr(imagePath)}" alt="${htmlAttr(variant.imageCaption ? PRODUCTS[variant.productHref].image_alt : imageAlt)}" width="${imageSize.width}" height="${imageSize.height}" loading="lazy">${variant.imageCaption ? `\n        <p class="note">${htmlText(variant.imageCaption)}</p>` : ""}
         <span class="catalog-type">${variant.market}</span>
         <h3>${htmlText(variant.name)}</h3>
         <div class="replaces">${htmlText(variant.subtitle)}</div>

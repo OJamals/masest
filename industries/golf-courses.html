@@ -115,8 +115,8 @@
           <p class="subhead">Match the cleaner to the mess, surface, and way your team cleans.</p>
       </div>
       <div class="prod-grid prod-grid-rec" data-ind-products="torque lam3 hcr multiwash purgo">
-      <div class="prod-card reveal">
-    <a class="prod-media" href="/products/torque" aria-label="View VertKleen Torque details"><img src="../img/products/torque-studio.webp" alt="VertKleen Torque product photo" loading="lazy" width="900" height="1200"></a>
+      <div class="prod-card reveal" data-product-id="torque">
+    <a class="prod-media" href="/products/torque" aria-label="View VertKleen Torque details"><img src="../img/products/torque-studio.webp" alt="VertKleen Torque product image" loading="lazy" width="900" height="1200"></a>
     <div class="prod-top"><i class="ph ph-sparkle" aria-hidden="true"></i><span class="hmis-badge note">Vehicle wash & wax</span></div>
     <span class="catalog-type">One-step vehicle and marine wash & wax</span>
     <h3>VertKleen Torque</h3>
@@ -126,8 +126,8 @@
         <a class="btn btn-ink btn-sm" href="/products/torque">Product details</a>
       </div>
   </div>
-      <div class="prod-card reveal">
-    <a class="prod-media" href="/products/lam3" aria-label="View VertKleen LAM3 details"><img src="../img/products/lam3-studio-v2.webp" alt="VertKleen LAM3 product photo" loading="lazy" width="1092" height="1441"></a>
+      <div class="prod-card reveal" data-product-id="lam3">
+    <a class="prod-media" href="/products/lam3" aria-label="View VertKleen LAM3 details"><img src="../img/products/lam3-studio-v2.webp" alt="VertKleen LAM3 product image" loading="lazy" width="1092" height="1441"></a><p class="note">2.5-gallon package rendering with the general LAM3 label.</p>
     <div class="prod-top"><i class="ph ph-house-line" aria-hidden="true"></i><span class="hmis-badge note">VertKleen exterior cleaner</span></div>
     <span class="catalog-type">Outdoor growth and weathered staining</span>
     <h3>VertKleen LAM3</h3>
@@ -137,8 +137,8 @@
         <a class="btn btn-ink btn-sm" href="/products/lam3">Product details</a>
       </div>
   </div>
-      <div class="prod-card reveal">
-    <a class="prod-media" href="/products/hcr" aria-label="View VertKleen CIP HCR details"><img src="../img/products/cip-hcr-studio.webp" alt="VertKleen CIP HCR product photo" loading="lazy" width="900" height="1200"></a>
+      <div class="prod-card reveal" data-product-id="hcr">
+    <a class="prod-media" href="/products/hcr" aria-label="View VertKleen CIP HCR details"><img src="../img/products/cip-hcr-studio.webp" alt="VertKleen CIP HCR product image" loading="lazy" width="900" height="1200"></a>
     <div class="prod-top"><i class="ph ph-flask" aria-hidden="true"></i><span class="hmis-badge note">Synthetic-acid brewery cleaner</span></div>
     <span class="catalog-type">Beer stone, scale, and rust in brewery CIP</span>
     <h3>VertKleen CIP HCR</h3>
@@ -148,7 +148,8 @@
         <a class="btn btn-ink btn-sm" href="/products/hcr">Product details</a>
       </div>
   </div>
-      <div class="prod-card reveal">
+      <div class="prod-card reveal" data-product-id="multiwash">
+    <a class="prod-media" href="/products/multiwash" aria-label="View VertKleen MultiWash details"><img src="../img/products/multiwash-general-studio-v2.webp" alt="VertKleen MultiWash package rendering with the general product label" loading="lazy" width="1086" height="1448"></a><p class="note">General MultiWash package rendering. Specialty packages have their own directions.</p>
     <div class="prod-top"><i class="ph ph-sparkle" aria-hidden="true"></i><span class="hmis-badge note">Concentrated multi-surface cleaner</span></div>
     <span class="catalog-type">Everyday grime, greasy film, and odors</span>
     <h3>VertKleen MultiWash</h3>
@@ -158,8 +159,8 @@
         <a class="btn btn-ink btn-sm" href="/products/multiwash">Product details</a>
       </div>
   </div>
-      <div class="prod-card reveal">
-    <a class="prod-media" href="/products/purgo" aria-label="View Purgo details"><img src="../img/products/purgo-studio.webp" alt="Purgo product photo" loading="lazy" width="900" height="1200"></a>
+      <div class="prod-card reveal" data-product-id="purgo">
+    <a class="prod-media" href="/products/purgo" aria-label="View Purgo details"><img src="../img/products/purgo-studio.webp" alt="Purgo product image" loading="lazy" width="900" height="1200"></a>
     <div class="prod-top"><i class="ph ph-shield-plus" aria-hidden="true"></i><span class="hmis-badge note">VertKleen antimicrobial surface care</span></div>
     <span class="catalog-type">Surface cleaning and odor control</span>
     <h3>Purgo</h3>
@@ -180,8 +181,9 @@
         <p class="subhead">Choose the label for the job, then open the product page for details, pricing, and help.</p>
       </div>
       <div class="prod-grid prod-grid-rec">
-      <article class="prod-card" data-label-variant="gym-multiwash">
-        <img class="product-shot" src="../img/products/multiwash-gym-studio.webp" alt="VertKleen MultiWash Gym label jug" width="900" height="1200" loading="lazy">
+      <article class="prod-card" data-product-id="multiwash" data-label-variant="gym-multiwash">
+        <img class="product-shot" src="../img/products/multiwash-general-studio-v2.webp" alt="VertKleen MultiWash package rendering with the general product label" width="1086" height="1448" loading="lazy">
+        <p class="note">General MultiWash package rendering. Specialty packages have their own directions.</p>
         <span class="catalog-type">Gym label</span>
         <h3>VertKleen MultiWash</h3>
         <div class="replaces">Gym · fitness · studio &amp; clinic cleaner</div>
@@ -191,7 +193,7 @@
           <a class="btn btn-primary" href="../products/multiwash">See product details</a>
         </div>
       </article>
-      <article class="prod-card" data-label-variant="gym-purgo">
+      <article class="prod-card" data-product-id="purgo" data-label-variant="gym-purgo">
         <img class="product-shot" src="../img/products/purgo-studio.webp" alt="VertKleen Pūrgo Gym label jug" width="900" height="1200" loading="lazy">
         <span class="catalog-type">Gym label</span>
         <h3>VertKleen Pūrgo</h3>

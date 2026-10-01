@@ -883,7 +883,7 @@ function productPage(id, product, reviewsSnapshot) {
   if (hasPhoto && !heroSize) throw new Error(`Missing CMS image metadata for /${product.image.replace(/^\/+/, "")}`);
   const heroMedia = hasPhoto
     ? `<figure class="product-hero-media reveal" data-commerce-media="${id}">
-        <img src="${attr(img)}" alt="${attr(product.name)} product photo" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async">${product.image_caption ? `\n        <figcaption class="product-hero-caption">${text(product.image_caption)}</figcaption>` : ""}
+        <img src="${attr(img)}" alt="${attr(product.image_alt || `${product.name} product image`)}" width="${heroSize.width}" height="${heroSize.height}" fetchpriority="high" decoding="async">${product.image_caption ? `\n        <figcaption class="product-hero-caption">${text(product.image_caption)}</figcaption>` : ""}
       </figure>`
     : copy.hero_summary ? `<figure class="product-hero-media product-hero-summary reveal" data-commerce-media="${id}">
         <span class="eyebrow">${text(copy.hero_summary.eyebrow)}</span>

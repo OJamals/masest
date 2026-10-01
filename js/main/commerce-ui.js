@@ -17,10 +17,10 @@ export function productCard(id, heroCard = false, eager = false) {
   const mediaLoading = heroCard || eager ? "eager" : "lazy";
   const mediaPriority = heroCard || eager ? ' fetchpriority="high"' : "";
   const media = p.image
-    ? `<a class="prod-media" href="/products/${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.name} product photo" loading="${mediaLoading}"${mediaPriority} ${imageDimsAttr(p.image)}></a>`
+    ? `<a class="prod-media" href="/products/${id}" aria-label="View ${p.name} details"><img src="${p.image}" alt="${p.image_alt || `${p.name} product image`}" loading="${mediaLoading}"${mediaPriority} ${imageDimsAttr(p.image)}></a>${p.image_caption ? `<p class="note">${p.image_caption}</p>` : ""}`
     : "";
   return `
-  <div class="prod-card${heroCard ? " hero-card" : ""} reveal">${media ? `\n    ${media}` : ""}
+  <div class="prod-card${heroCard ? " hero-card" : ""} reveal" data-product-id="${id}">${media ? `\n    ${media}` : ""}
     <div class="prod-top"><i class="ph ${p.icon}" aria-hidden="true"></i>${badge}</div>
     <span class="catalog-type">${catalog.job || p.replaces}</span>
     <h3>${p.name}</h3>
@@ -490,10 +490,15 @@ function commerceMediaFor(id) {
   const p = PRODUCTS[id];
   // Keep withdrawn label artwork out of hydrated product media as well.
   if (p?.image_review_pending) return { src: "", alt: "" };
-  const src = row?.image_url || p?.image || "";
+  const candidate = row?.image_url || p?.image || "";
+  const candidatePath = String(candidate).replace(/^https?:\/\/[^/]+\/(?:site\/)?|^\/+/, "");
+  const replaced = p?.image_replaces?.some(path =>
+    String(path).replace(/^https?:\/\/[^/]+\/(?:site\/)?|^\/+/, "") === candidatePath,
+  );
+  const src = replaced ? p.image : candidate;
   return {
     src: isPosterFallback(src) ? "" : src,
-    alt: row?.photo_alt || (p ? `${p.name} product image` : "")
+    alt: p?.image_alt || row?.photo_alt || (p ? `${p.name} product image` : "")
   };
 }
 

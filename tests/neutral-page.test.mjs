@@ -36,15 +36,15 @@ test("Neutral offers technical data and product-specific application requests", 
   assert.equal(url.hash, "#quoteForm");
 });
 
-test("Neutral omits conflicting label artwork and fabricated material-test evidence", () => {
-  assert.equal(PRODUCTS.neutral.image, "");
-  assert.equal(PRODUCTS.neutral.image_review_pending, true);
+test("Neutral shows its identity rendering without conflicting label artwork or fabricated evidence", () => {
+  assert.equal(PRODUCTS.neutral.image, "img/products/neutral-identity-studio-v2.webp");
+  assert.equal(PRODUCTS.neutral.image_review_pending, undefined);
   assert.equal(PRODUCTS.neutral.application_image, undefined);
   const media = all(doc, node => attr(node, "data-commerce-media") === "neutral")[0];
-  assert.equal(all(media, node => node.tagName === "img").length, 0);
-  assert.match(text(media), /VertKleen Neutral/);
-  assert.match(text(media), /pH 7.5/);
-  assert.equal(all(media, node => node.tagName === "dt").length, 3);
+  const image = all(media, node => node.tagName === "img")[0];
+  assert.equal(attr(image, "src"), "../img/products/neutral-identity-studio-v2.webp");
+  assert.match(attr(image, "alt"), /Neutral product rendering/);
+  assert.match(text(media), /Follow directions supplied with your Neutral package/);
   assert.doesNotMatch(html, /neutral-studio.webp|neutral-material-test-patch-v1/);
 });
 
@@ -55,6 +55,12 @@ test("commerce hydration cannot restore withdrawn artwork from a catalog image U
   const resolve = new Function("PRODUCTS", "commerceRowFor", "isPosterFallback", `${definition}; return commerceMediaFor;`)(
     PRODUCTS, () => ({ image_url: "/img/products/neutral-studio.webp", photo_alt: "Catalog photo" }), () => false,
   );
-  assert.deepEqual(resolve("neutral"), { src: "", alt: "" });
+  assert.deepEqual(resolve("neutral"), { src: PRODUCTS.neutral.image, alt: PRODUCTS.neutral.image_alt });
   assert.equal(resolve("crhd").src, "/img/products/neutral-studio.webp");
+  const compiled = structuredClone(PRODUCTS);
+  compiled.neutral.image_replaces = compiled.neutral.image_replaces.map(path => `https://media.masest.co/site/${path}`);
+  const resolveCompiled = new Function("PRODUCTS", "commerceRowFor", "isPosterFallback", `${definition}; return commerceMediaFor;`)(
+    compiled, () => ({ image_url: "https://media.masest.co/site/img/products/neutral-studio.webp" }), () => false,
+  );
+  assert.equal(resolveCompiled("neutral").src, PRODUCTS.neutral.image, "R2-rewritten legacy paths must still be blocked");
 });

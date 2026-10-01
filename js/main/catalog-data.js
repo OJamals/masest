@@ -1,6 +1,9 @@
 const PRODUCT_FALLBACK_IMAGE = "img/products/masest-poster-transparent.png";
 
 const CATALOG_IMAGE_DIMENSIONS = Object.freeze({
+  "img/products/multiwash-general-studio-v2.webp": [1086, 1448],
+  "img/products/neutral-identity-studio-v2.webp": [1098, 1433],
+  "img/products/cr-hd-low-foam-identity-studio-v1.webp": [1091, 1442],
   "img/products/lam3-studio-v2.webp": [1092, 1441],
   "img/products/masest-poster-transparent.png": [1193, 610],
   "img/products/dbnpa-studio.webp": [900, 822],
@@ -78,8 +81,10 @@ export const PRODUCTS = {
     replaces: "Caustic and solvent degreasers",
     hmis: "0-0-0",
     icon: "ph-drop",
-    image: "",
-    image_review_pending: true,
+    image: "img/products/neutral-identity-studio-v2.webp",
+    image_alt: "VertKleen Neutral product rendering",
+    image_caption: "Product rendering. Follow directions supplied with your Neutral package.",
+    image_replaces: ["img/products/neutral-studio.webp"],
     uses: [
       "Heavy equipment and machinery degreasing",
       "Painted equipment and finished surfaces",
@@ -96,8 +101,10 @@ export const PRODUCTS = {
     replaces: "Separate everyday cleaning products",
     hmis: "0-0-0",
     icon: "ph-sparkle",
-    image: "",
-    image_review_pending: true,
+    image: "img/products/multiwash-general-studio-v2.webp",
+    image_alt: "VertKleen MultiWash package rendering with the general product label",
+    image_caption: "General MultiWash package rendering. Specialty packages have their own directions.",
+    image_replaces: ["img/products/multiwash-gym-studio.webp", "img/products/multiwash-pressure-wash-studio.webp", "img/products/multiwash-food-beverage-studio.webp"],
     uses: [
       "Floors, tile, grout, and everyday facility surfaces",
       "Gym equipment and shared spaces",
@@ -285,8 +292,10 @@ export const PRODUCTS = {
     replaces: "Solvent and butyl degreasers",
     hmis: "0-0-0",
     icon: "ph-drop-half",
-    image: "img/products/crhd-studio.webp",
-    image_caption: "CR HD family packaging shown. Use the Low Foam directions for this formulation.",
+    image: "img/products/cr-hd-low-foam-identity-studio-v1.webp",
+    image_alt: "VertKleen CR HD Low Foam product rendering",
+    image_caption: "Low Foam product rendering. Follow directions supplied with your Low Foam package.",
+    image_replaces: ["img/products/crhd-studio.webp"],
     uses: [
       "Automatic floor scrubbers and machine wash",
       "Parts washers and recirculating wash systems",

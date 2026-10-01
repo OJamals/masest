@@ -65,10 +65,11 @@ test("remaining products retain focused technical inquiries and withdraw staged 
     assert.ok(url.searchParams.get("message"));
   }
   for (const id of ["multiwash"]) {
-    assert.equal(PRODUCTS[id].image_review_pending, true);
+    assert.equal(PRODUCTS[id].image_review_pending, undefined);
     const media = all(page(id), n => attr(n, "data-commerce-media") === id)[0];
-    assert.equal(all(media, n => n.tagName === "img").length, 0);
-    assert.equal(all(media, n => n.tagName === "dt").length, 3);
+    const image = all(media, n => n.tagName === "img")[0];
+    assert.equal(attr(image, "src"), "../img/products/multiwash-general-studio-v2.webp");
+    assert.match(text(media), /Specialty packages have their own directions/);
   }
   assert.equal(PRODUCTS.lam3.image_review_pending, undefined);
   const lam3Media = all(page("lam3"), n => attr(n, "data-commerce-media") === "lam3")[0];
