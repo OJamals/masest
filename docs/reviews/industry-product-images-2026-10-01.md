@@ -22,6 +22,12 @@ Specialty industry cards select their matching supplied jug again. Low Foam has 
 
 The prior simplified Neutral, Low Foam, MultiWash, and LAM3 renderings remain archived assets but are rejected as stale CMS image selections. Cache release `20261001c` publishes the new mapping. Source and output SHA-256 values are retained in the release proof.
 
+## Package selector follow-up
+
+Owner reported clipped “1 gal” labels. Shared purchase controls now put a full-width, visibly labeled “Package size” selector above the cart or quote action. Product detail selectors use the available width. Catalog controls sit below the photo, outside the price block that catalog hydration replaces, so refreshing prices preserves package selection and cart actions. Native selection, SKU mapping, case inquiries, and bulk quote routing remain intact.
+
+Shared CSS and main module release `20261001d` includes both this change and the supplied label mappings. Local checks passed for all 26 industry pages at 1440, 1024, 390, and 320 pixels: 104 page/viewport checks, 460 decoded and painted images, 388 selectors with readable selected text and 44px targets, zero failures. Relevant cart, quote, product layout, shop, and cache tests passed (59 tests).
+
 Audited all 26 industry routes, including recommended products, specialty-label cards, and eight marine products: 115 cards total. Twenty recommended cards on 16 routes omitted MultiWash or Neutral images because their prior artwork was withdrawn. One Low Foam recommendation used the standard CR HD jug. Six specialty MultiWash cards still selected older gym, pressure-washing, or food/beverage artwork. Three CRS cards linked to Descaler despite showing CRS.
 
 ## Corrections

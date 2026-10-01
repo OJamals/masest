@@ -17,7 +17,12 @@ mkdirSync(output, { recursive: true });
 const browser = wrapBrowserWithMediaIsolation(await chromium.launch({ headless: true }));
 const results = [];
 try {
-  for (const [view, viewport] of [["desktop", { width: 1440, height: 1000 }], ["mobile", { width: 390, height: 844 }]]) {
+  for (const [view, viewport] of [
+    ["desktop", { width: 1440, height: 1000 }],
+    ["tablet", { width: 1024, height: 900 }],
+    ["mobile", { width: 390, height: 844 }],
+    ["small-mobile", { width: 320, height: 700 }],
+  ]) {
     const context = await browser.newContext({ viewport, reducedMotion: "reduce" });
     if (new URL(base).hostname === "127.0.0.1") {
       const catalog = await (await fetch("https://masest.co/api/products")).text();
@@ -71,6 +76,26 @@ try {
           assert.ok(actual.naturalWidth > 0 && actual.naturalHeight > 0 && actual.alt, "image must decode and have alt text");
           assert.ok(actual.visible, "image must be visibly painted");
           assert.ok(actual.contained, "whole product must remain in frame");
+          const packages = await card.locator(".commerce-vol").evaluateAll(selects => selects.map(select => {
+            const style = getComputedStyle(select);
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            context.font = style.font;
+            const label = select.closest("label")?.querySelector(".commerce-pack-label");
+            return {
+              selected: select.selectedOptions[0]?.textContent.trim(),
+              textWidth: context.measureText(select.selectedOptions[0]?.textContent || "").width,
+              availableWidth: select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+              packageLabel: label?.textContent.trim(),
+              height: select.getBoundingClientRect().height,
+            };
+          }));
+          for (const pack of packages) {
+            assert.equal(pack.packageLabel, "Package size", "visible package size label");
+            assert.ok(pack.height >= 44, "package selector needs a 44px target");
+            assert.ok(pack.availableWidth >= pack.textWidth + 16, `selected package is clipped: ${pack.selected}`);
+          }
+          actual.packages = packages;
           result.cards.push(actual);
         }
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, "no horizontal overflow");

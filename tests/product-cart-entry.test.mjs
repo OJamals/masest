@@ -57,21 +57,21 @@ test("local product routes keep a working purchase path and catalog quick add", 
 
     const geometry = await quickAdd.evaluate((button) => {
       const control = button.getBoundingClientRect();
-      const stage = button.closest(".shop-card-media-wrap")?.getBoundingClientRect();
+      const card = button.closest(".shop-card").getBoundingClientRect();
+      const stage = button.closest(".shop-card").querySelector(".shop-card-media-wrap").getBoundingClientRect();
       return {
         position: getComputedStyle(button.closest(".shop-card-quick-commerce")).position,
         width: control.width,
         height: control.height,
-        insideStage: !!stage
-          && control.left >= stage.left
-          && control.right <= stage.right
-          && control.top >= stage.top
-          && control.bottom <= stage.bottom,
+        belowPhoto: control.top >= stage.bottom,
+        insideCard: control.left >= card.left && control.right <= card.right
+          && control.top >= card.top && control.bottom <= card.bottom,
       };
     });
-    assert.equal(geometry.position, "absolute", "quick add should overlay the media instead of taking card space");
+    assert.equal(geometry.position, "static", "purchase controls should have their own space below the photo");
     assert.ok(geometry.width >= 44 && geometry.height >= 44, `quick add must remain a 44px tap target: ${JSON.stringify(geometry)}`);
-    assert.equal(geometry.insideStage, true, "quick add should stay inside the product image stage");
+    assert.equal(geometry.belowPhoto, true, "purchase controls should preserve the full product photo");
+    assert.equal(geometry.insideCard, true, "purchase controls should remain inside the card");
 
     await quickAdd.click();
     await page.waitForFunction(() => (

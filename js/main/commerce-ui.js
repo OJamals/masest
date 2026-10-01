@@ -1,9 +1,9 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20261001c";
-import { smoothPref } from "./engagement.js?v=20261001c";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20261001d";
+import { smoothPref } from "./engagement.js?v=20261001d";
 import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260929e";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20261001c";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20261001d";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -369,7 +369,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on", market =
       const packLabel = optLabel(firstVariant);
       const readyLabel = `Add ${displayName}, ${packLabel}, to cart`;
       const sizePicker = row.variants.length > 1
-        ? `<select class="commerce-vol" name="volume" aria-label="Volume for ${htmlEscape(displayName)}">${unitOpts}</select>`
+        ? `<label class="commerce-pack"><span class="commerce-pack-label">Package size</span><select class="commerce-vol" name="volume" aria-label="Package size for ${htmlEscape(displayName)}">${unitOpts}</select></label>`
         : "";
       return `<span class="commerce-buy shop-card-quick-buy" data-commerce-buy="${htmlEscape(id)}">`
         + sizePicker
@@ -388,7 +388,7 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on", market =
     const quoteHref = `/contact?type=quote&product=${encodeURIComponent(displayName)}`;
     const firstPackLabel = optLabel(firstVariant);
     return `<span class="commerce-buy" data-commerce-buy="${htmlEscape(id)}">`
-      + `<select class="commerce-vol" name="volume" aria-label="Volume for ${htmlEscape(displayName)}">${opts}</select>`
+      + `<label class="commerce-pack"><span class="commerce-pack-label">Package size</span><select class="commerce-vol" name="volume" aria-label="Package size for ${htmlEscape(displayName)}">${opts}</select></label>`
       + `<button class="${btnClass}" type="button" data-cart-add="${htmlEscape(first)}" data-cart-product-name="${htmlEscape(displayName)}" data-account-path="${htmlEscape(accountPath)}" aria-label="Add ${htmlEscape(displayName)}, ${htmlEscape(firstPackLabel)}, to cart">Add to cart</button>`
       + `<a class="${btnClass} commerce-quote-swap" hidden href="${htmlEscape(`${quoteHref}#quoteForm`)}" data-quote-base="${htmlEscape(quoteHref)}" aria-label="Request a bulk quote for ${htmlEscape(displayName)}">Request quote</a>`
       + `</span>`;
@@ -699,7 +699,6 @@ export function catalogCard(id, eager = false, context = null) {
       <div class="shop-card-core">
         <span class="shop-card-media-wrap">
           <span class="shop-card-media">${media}</span>
-          ${quickCommerce}
         </span>
         <a class="shop-card-link" href="${htmlEscape(detailHref)}" aria-label="View ${htmlEscape(displayName)} details">
         <span class="shop-card-body">
@@ -710,6 +709,7 @@ export function catalogCard(id, eager = false, context = null) {
         <div class="shop-card-buybar">
           ${buybar}
         </div>
+        ${quickCommerce}
       </div>
     </article>`;
 }

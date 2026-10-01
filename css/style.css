@@ -3712,23 +3712,24 @@ fully clickable cards) ---- */
 }
 .shop-card-media-wrap > .shop-card-media { width: 100%; }
 .shop-card-quick-commerce {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
+  position: static;
+  width: calc(100% - var(--s5) - var(--s5));
+  margin: 0 var(--s5) var(--s4);
   z-index: 4;
   display: block;
 }
-/* The size choice sits to the left of the add button, sharing its
+/* The size choice sits above the add button, sharing its
    [data-commerce-buy] wrapper so a change picks up the button's existing
    volume-sync handler for free. */
 .shop-card-quick-commerce .commerce-buy {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
   gap: var(--s2);
 }
 .shop-card-quick-commerce .commerce-vol {
-  min-height: 36px;
-  max-width: 132px;
+  min-height: 44px;
+  max-width: none;
   padding: 0 var(--s5) 0 var(--s2);
   border-radius: var(--r-pill);
   background-color: rgba(255, 255, 255, .86);
@@ -3743,18 +3744,20 @@ fully clickable cards) ---- */
 }
 .shop-card-quick-add {
   position: relative;
-  display: inline-grid;
-  width: 44px;
+  display: inline-flex;
+  width: 100%;
   height: 44px;
   min-width: 44px;
   min-height: 44px;
-  place-items: center;
-  border: 1px solid var(--line-ink);
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  border: 1px solid var(--accent);
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, .78);
+  background: var(--accent);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  color: var(--accent-ink);
+  color: var(--on-accent);
   box-shadow: 0 8px 24px rgba(9, 46, 52, .16);
   cursor: pointer;
   text-decoration: none;
@@ -3762,8 +3765,8 @@ fully clickable cards) ---- */
 .shop-card-quick-add i { font-size: 1.2rem; }
 .shop-card-quick-add:hover,
 .shop-card-quick-add:focus-visible {
-  background: rgba(255, 255, 255, .94);
-  color: var(--accent);
+  background: var(--accent-ink);
+  color: var(--on-accent);
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -3782,21 +3785,15 @@ fully clickable cards) ---- */
   border-color: transparent;
   cursor: wait;
 }
-/* Was a hover-only tooltip (opacity 0 until :hover/:focus-visible) — invisible
-   on touch, so a phone buyer saw an unlabeled circle over the product photo.
-   The label is now part of the resting state; it sits above the button,
-   clear of the size select beside it, instead of popping out sideways. */
+/* Keep the action label inside the button, below the package selector. */
 .shop-card-quick-add-copy {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
-  width: max-content;
-  max-width: 140px;
-  padding: var(--s1) var(--s3);
-  border-radius: var(--r-pill);
-  background: rgba(7, 20, 23, .88);
-  color:var(--on-accent);
-  font-size: var(--fs-caption);
+  position: static;
+  width: auto;
+  max-width: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: var(--fs-small);
   font-weight: 850;
   line-height: 1.2;
   white-space: nowrap;
@@ -5029,9 +5026,9 @@ body .page-hero .product-shot {
 }
 
 .product-detail-hero .commerce-vol {
-  width: auto;
-  min-width: min(100%, 240px);
-  max-width: 260px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   min-height: 44px;
   flex: 0 1 240px;
   padding-inline: var(--s3) var(--s7);
@@ -5334,14 +5331,29 @@ body .page-hero .product-shot {
 .commerce-buy {
   display: grid;
   width: 100%;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s2);
   align-items: center;
 }
 
+.commerce-pack {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: var(--s1);
+  margin: 0;
+}
+
+.commerce-pack-label {
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .commerce-vol {
   width: 100%;
-  min-height: 42px;
+  min-height: 44px;
   max-width: none;
   padding: 0 var(--s7) 0 var(--s3);
   border: 1px solid var(--line);

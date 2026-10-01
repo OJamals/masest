@@ -158,21 +158,29 @@ test("product detail offers exact case savings without sending an inactive case 
     const measureCompactBuyingFit = () => card.evaluate((element) => {
       const quick = element.querySelector("[data-cart-quick-add]").getBoundingClientRect();
       const stage = element.querySelector(".shop-card-media-wrap").getBoundingClientRect();
+      const card = element.getBoundingClientRect();
       const savings = element.querySelector(".shop-card-savings");
       return {
         quickWidth: quick.width,
         quickHeight: quick.height,
-        quickInsideStage: quick.left >= stage.left && quick.right <= stage.right
-          && quick.top >= stage.top && quick.bottom <= stage.bottom,
+        quickBelowPhoto: quick.top >= stage.bottom,
+        quickInsideCard: quick.left >= card.left && quick.right <= card.right
+          && quick.top >= card.top && quick.bottom <= card.bottom,
         savingsFits: savings.scrollWidth <= savings.clientWidth + 1,
       };
     });
     const compactFit = await measureCompactBuyingFit();
-    assert.deepEqual(compactFit, { quickWidth: 44, quickHeight: 44, quickInsideStage: true, savingsFits: true });
+    assert.ok(compactFit.quickWidth >= 44 && compactFit.quickHeight >= 44);
+    assert.equal(compactFit.quickBelowPhoto, true);
+    assert.equal(compactFit.quickInsideCard, true);
+    assert.equal(compactFit.savingsFits, true);
 
     await page.setViewportSize({ width: 1440, height: 1000 });
     const desktopFit = await measureCompactBuyingFit();
-    assert.deepEqual(desktopFit, { quickWidth: 44, quickHeight: 44, quickInsideStage: true, savingsFits: true });
+    assert.ok(desktopFit.quickWidth >= 44 && desktopFit.quickHeight >= 44);
+    assert.equal(desktopFit.quickBelowPhoto, true);
+    assert.equal(desktopFit.quickInsideCard, true);
+    assert.equal(desktopFit.savingsFits, true);
   } finally {
     await browser.close();
     await staticSite.close();
