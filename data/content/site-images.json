@@ -1,7 +1,21 @@
 {
   "version": 1,
-  "count": 340,
+  "count": 341,
   "assets": [
+    {
+      "storage_path": "/img/home/job-dirty-hallway-illustration-20261001.webp",
+      "public_url": "/img/home/job-dirty-hallway-illustration-20261001.webp",
+      "filename": "job-dirty-hallway-illustration-20261001.webp",
+      "alt": "Representative illustration of muddy footprints and grime in a tiled commercial hallway",
+      "width": 800,
+      "height": 500,
+      "byte_size": 56794,
+      "sha256": "a27c7a9a05eff0d9ada23a5b9b2daf16eac0e5ebcc40d9110abb497f977854fa",
+      "mime_type": "image/webp",
+      "category": "home",
+      "status": "available",
+      "source": "site"
+    },
     {
       "storage_path": "/img/products/alumibrite-desktop-label-20261001.webp",
       "public_url": "/img/products/alumibrite-desktop-label-20261001.webp",
