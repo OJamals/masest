@@ -1,5 +1,5 @@
 import { shippingServiceLabel, shippingServiceSummary } from './shipping-service-label.js?v=20260929e';
-import { catalogImageDimensions } from './main/catalog-data.js?v=20261001f';
+import { catalogImageDimensions } from './main/catalog-data.js?v=20261001g';
 import {
   createShippingRequestCoordinator,
   fetchShippingJson,

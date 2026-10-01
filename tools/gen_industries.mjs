@@ -54,7 +54,9 @@ const INDUSTRIES = INDUSTRY_APPLICATIONS.map((application) => ({
 
 const NAV = [
   ["", "MASEST"], ["products", "Products"], ["programs", "Chemical Programs"],
-  ["industries", "Industries"], ["industries/hvac-water", "HVAC &amp; Water Systems"], ["proof", "Results"],
+  ["applications", "Applications", [
+    ["industries", "Industries"], ["industries/hvac-water", "HVAC &amp; Water Systems"]
+  ]], ["proof", "Results"],
   ["resources", "SDS &amp; Resources"]
 ];
 
@@ -709,7 +711,8 @@ function primaryCtaBlock(ind) {
 }
 
 function page(ind) {
-  const nav = NAV.map(([href, label]) => {
+  const nav = NAV.map(([href, label, children]) => {
+    if (children) return `    <details><summary>${label}</summary><div>${children.map(([childHref, childLabel]) => `<a href="../${childHref}">${childLabel}</a>`).join(" ")}</div></details>`;
     if (href === null) return `    <span>${label}</span>`;
     const content = label === "MASEST" ? `<b>${label}</b>` : label;
     return `    <a href="../${href}"${href === "industries" ? ' aria-current="page"' : ""}>${content}</a>`;
