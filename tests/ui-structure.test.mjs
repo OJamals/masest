@@ -283,10 +283,10 @@ test("no-js fallback uses the same customer labels as the primary nav", () => {
   for (const page of pages) {
     const html = read(page);
     const nav = html.match(/<nav class="nojs-nav"[\s\S]*?<\/nav>/)?.[0] || "";
-    if (page !== "index.html") assert.match(nav, /Applications/);
+    assert.match(nav, /Applications/);
     assert.match(nav, />Results</);
     if (page !== "index.html") assert.match(nav, />Industries</);
-    assert.match(nav, />SDS &amp; Resources</);
+    assert.match(nav, page === "index.html" ? />Resources</ : />SDS &amp; Resources</);
     assert.doesNotMatch(nav, />Field Results</);
   }
 });

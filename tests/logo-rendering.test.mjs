@@ -66,7 +66,7 @@ test("shared chrome renders decoded, named logos on root and nested routes", asy
         // marketing footer, so it has no .foot-logo. Its logo is covered by the
         // staff-chrome guard in tests/admin-shared-chrome.test.mjs.
         for (const [route, visibleNavLogo] of [
-          ["index.html", "logo-grad"],
+          ["index.html", "logo-ink"],
           ["products/hcr.html", "logo-ink"],
         ]) {
           const failedLogoResponses = [];

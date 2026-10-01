@@ -38,7 +38,7 @@ try {
       const result = { view, slug, cards: [], errors: [] };
       results.push(result);
       try {
-        const response = await page.goto(`${base}/industries/${slug}`, { waitUntil: "domcontentloaded", timeout: 30000 });
+        const response = await page.goto(`${base}/industries/${slug}`, { waitUntil: "networkidle", timeout: 30000 });
         assert.equal(response.status(), 200, "page must return HTTP 200");
         const cards = page.locator(".prod-card");
         assert.equal(await cards.count(), expected.length, "all static cards must survive hydration");

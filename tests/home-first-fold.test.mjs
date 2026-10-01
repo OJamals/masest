@@ -20,7 +20,7 @@ test('landing pages keep buyer actions visible and layouts within each viewport'
         assert.ok(dimensions.top >= 0 && dimensions.bottom <= dimensions.height, `${path} CTA below fold at ${width}px: ${dimensions.bottom}`);
         assert.equal(await page.locator('h1').count(), 1);
         assert.equal(await page.locator('.brand-wordmark, .home-wordmark').count(), 0);
-        assert.equal(await page.locator('.nav-logo .logo-grad').evaluate(el => Math.round(el.getBoundingClientRect().height)), path === '/' ? (width <= 820 ? 54 : 62) : (width <= 820 ? 44 : 48));
+        assert.equal(await page.locator('.nav-logo .logo-image:visible').evaluate(el => Math.round(el.getBoundingClientRect().height)), width <= 820 ? 44 : 48);
       }
       await page.close();
     }
@@ -79,7 +79,8 @@ test('homepage job choices precede field proof with direct product, account, and
     await page.getByRole('button', { name: 'Menu', exact: true }).click();
     assert.equal(await primary.getByRole('link', { name: 'Results', exact: true }).isVisible(), true);
     assert.equal(await primary.getByRole('link', { name: 'Private Label', exact: true }).count(), 0);
-    assert.equal(await page.getByRole('link', { name: 'Get Started', exact: true }).getAttribute('href'), 'account');
+    const accountHref = await page.getByRole('link', { name: 'Sign in', exact: true }).getAttribute('href');
+    assert.match(new URL(accountHref, server.baseUrl).pathname, /^\/account(?:\.html)?$/);
     assert.equal(await page.getByRole('link', { name: 'Become a distributor' }).getAttribute('href'), 'contact?type=distributor');
   } finally { await browser.close(); await server.close(); }
 });

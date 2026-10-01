@@ -74,7 +74,7 @@ test("lead bar renders on product and industry pages", () => {
   );
   assert.match(
     chrome,
-    /if \(!homeUnveiling && \(leadBarPages\.has\(page\) \|\| isIndustryDetail \|\| isProductDetail\)\)/,
+    /if \(page !== "index" && \(leadBarPages\.has\(page\) \|\| isIndustryDetail \|\| isProductDetail\)\)/,
     "lead bar gating must include industry and product detail pages"
   );
 });

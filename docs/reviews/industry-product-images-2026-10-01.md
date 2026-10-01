@@ -30,6 +30,14 @@ Shared CSS and main module release `20261001d` includes both this change and the
 
 Audited all 26 industry routes, including recommended products, specialty-label cards, and eight marine products: 115 cards total. Twenty recommended cards on 16 routes omitted MultiWash or Neutral images because their prior artwork was withdrawn. One Low Foam recommendation used the standard CR HD jug. Six specialty MultiWash cards still selected older gym, pressure-washing, or food/beverage artwork. Three CRS cards linked to Descaler despite showing CRS.
 
+## Homepage header and compact case choices
+
+The owner identified the homepage header overlapping the hero photograph and showing an older three-link menu. The homepage now uses the shared Products, Applications, Results, Resources navigation in its own opaque row above the photo. Shared logo, account, cart, dropdowns, and mobile menu behavior apply to the homepage. First-fold primary actions remain visible.
+
+Main module release `20261001e` and homepage CSS release `20261001-header` publish this correction. Header checks passed at nine widths from 320 to 2414 pixels, including dropdown visibility, element containment, opaque background, and navigation text contrast of at least 4.5:1. The full 3,176-test suite, 88 interaction checks, and four performance checks passed locally.
+
+An additional all-options audit found long case choices clipping at 320 pixels. Options now show case quantity and price; the separate case-savings display retains the verified discount. Case orders remain inquiries and bulk packages remain quotes. All 480 package choices across 68 page/viewport combinations passed locally with current production catalog data; package labels, 44px controls, text fit, and cart SKU mapping were checked. Focused commerce tests passed after this final adjustment.
+
 ## Corrections
 
 - MultiWash: new general-label package rendering, `img/products/multiwash-general-studio-v2.webp`. Supplied reference: `docs/labels/general/vertkleen-multiwash-label-6x8.pdf`. General directions remain 10:1, 5:1, 2:1; removed gym-only claims, NSF badge, and conflicting yield/coverage text. Specialty cards explicitly identify the general rendering while retaining their separately sourced specialty directions.

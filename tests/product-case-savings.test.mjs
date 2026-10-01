@@ -135,7 +135,7 @@ test("product detail offers exact case savings without sending an inactive case 
 
     assert.deepEqual(await select.locator("option").allTextContents(), [
       "1 gal — $25",
-      "4 × 1 gal case — $90 · 10% off",
+      "4 × 1 gal case — $90",
     ]);
     assert.equal(
       await page.locator('.product-hero-buy .shop-card-savings').textContent(),

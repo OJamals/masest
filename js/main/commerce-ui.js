@@ -1,9 +1,9 @@
 /* Product cards, catalog filtering, and commerce UI behavior. */
 
-import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20261001d";
-import { smoothPref } from "./engagement.js?v=20261001d";
+import { CATALOG_GROUPS, CATALOG_ORDER, PRODUCT_CATALOG_COPY, PRODUCTS, QUOTE_FIRST_IDS, catalogImageDimensions } from "./catalog-data.js?v=20261001e";
+import { smoothPref } from "./engagement.js?v=20261001e";
 import { MARINE_CATALOG_GROUP, loadMarineCatalog, marineSearchRow } from "./marine-catalog.js?v=20260929e";
-import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20261001d";
+import { normalizeProductSearch, rankProductIds } from "./product-search.js?v=20261001e";
 
 function imageDimsAttr(src) {
   const { width, height } = catalogImageDimensions(src);
@@ -336,19 +336,17 @@ function commerceActionHTML(id, variant = "chip", quoteFallback = "on", market =
     const displayName = row.variants[0]?.marketing_name || p?.name || id;
     const unitOpts = row.variants
       .map((v, i) => {
-        const savings = caseSavingsFor(row, v);
         const priceLabel = Number.isFinite(Number(v.price)) && Number(v.price) > 0
           ? ` — ${fmtMoney(v.price, v.currency)}`
           : "";
-        const savingsLabel = savings && v.package_kind === "case" ? ` · ${savings.percent}% off` : "";
-        return `<option value="${htmlEscape(v.vsku)}"${i === 0 ? " selected" : ""}>${htmlEscape(optLabel(v))}${htmlEscape(priceLabel)}${htmlEscape(savingsLabel)}</option>`;
+        return `<option value="${htmlEscape(v.vsku)}"${i === 0 ? " selected" : ""}>${htmlEscape(optLabel(v))}${htmlEscape(priceLabel)}</option>`;
       })
       .join("");
     const caseOpts = (row.caseVariants || [])
       .map((v) => {
         const savings = caseSavingsFor(row, v);
         return savings
-          ? `<option value="${htmlEscape(v.vsku)}" data-quote="1" data-case-contact="1">${htmlEscape(optLabel(v))} — ${htmlEscape(fmtMoney(v.price, v.currency))} · ${savings.percent}% off</option>`
+          ? `<option value="${htmlEscape(v.vsku)}" data-quote="1" data-case-contact="1">${htmlEscape(optLabel(v))} — ${htmlEscape(fmtMoney(v.price, v.currency))}</option>`
           : "";
       })
       .join("");
