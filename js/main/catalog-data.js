@@ -1,6 +1,7 @@
 const PRODUCT_FALLBACK_IMAGE = "img/products/masest-poster-transparent.png";
 
 const CATALOG_IMAGE_DIMENSIONS = Object.freeze({
+  "img/products/lam3-studio-v2.webp": [1092, 1441],
   "img/products/masest-poster-transparent.png": [1193, 610],
   "img/products/dbnpa-studio.webp": [900, 822],
   "img/products/crs-studio.webp": [899, 1200],
@@ -248,8 +249,8 @@ export const PRODUCTS = {
     replaces: "Bleach and quat-based exterior cleaners",
     hmis: "0-0-0",
     icon: "ph-house-line",
-    image: "",
-    image_review_pending: true,
+    image: "img/products/lam3-studio-v2.webp",
+    image_caption: "2.5-gallon package rendering with the general LAM3 label.",
     uses: [
       "Roofs, siding, stucco, and pavers",
       "Concrete, walkways, and exterior walls",

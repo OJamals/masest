@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "count": 324,
+  "count": 325,
   "assets": [
     {
       "storage_path": "/img/home/bright-industrial-hero.webp",
@@ -167,6 +167,20 @@
       "sha256": "09deaca6e3639e4ad2f1ef496b14ee057fc17de873c290bee1296b0ddfeccf97",
       "mime_type": "image/webp",
       "category": "home",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/products/lam3-studio-v2.webp",
+      "public_url": "/img/products/lam3-studio-v2.webp",
+      "filename": "lam3-studio-v2.webp",
+      "alt": "VertKleen LAM3 2.5-gallon package rendering with the general product label",
+      "width": 1092,
+      "height": 1441,
+      "byte_size": 124162,
+      "sha256": "7a190ffeee5ada6816879e6f8f20c8dc9b7d84183ebead09598c750ef5b3a9d2",
+      "mime_type": "image/webp",
+      "category": "products",
       "status": "available",
       "source": "site"
     },

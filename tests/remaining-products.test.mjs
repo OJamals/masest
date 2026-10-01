@@ -64,12 +64,19 @@ test("remaining products retain focused technical inquiries and withdraw staged 
     assert.match(url.searchParams.get("product"), new RegExp(id, "i"));
     assert.ok(url.searchParams.get("message"));
   }
-  for (const id of ["multiwash", "lam3"]) {
+  for (const id of ["multiwash"]) {
     assert.equal(PRODUCTS[id].image_review_pending, true);
     const media = all(page(id), n => attr(n, "data-commerce-media") === id)[0];
     assert.equal(all(media, n => n.tagName === "img").length, 0);
     assert.equal(all(media, n => n.tagName === "dt").length, 3);
   }
+  assert.equal(PRODUCTS.lam3.image_review_pending, undefined);
+  const lam3Media = all(page("lam3"), n => attr(n, "data-commerce-media") === "lam3")[0];
+  const lam3Image = all(lam3Media, n => n.tagName === "img")[0];
+  assert.equal(attr(lam3Image, "src"), "../img/products/lam3-studio-v2.webp");
+  assert.equal(attr(lam3Image, "width"), "1092");
+  assert.equal(attr(lam3Image, "height"), "1441");
+  assert.match(text(lam3Media), /2.5-gallon package rendering/);
 });
 
 test("all fifteen public products have application, evidence, and purchasing content", () => {

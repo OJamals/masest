@@ -6,13 +6,13 @@ const root = new URL("../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), "utf8");
 const RELEASE = "20260929e";
 const CHAT_RELEASE = "20260929e";
-const MAIN_RELEASE = "20260929e";
+const MAIN_RELEASE = "20260930a";
 const ADMIN_RELEASE = "20260929e";
 const ADMIN_PAGE_RELEASE = "20260929e";
 const ADMIN_ACCOUNTS_RELEASE = "20260929e";
 const ADMIN_WORKFLOW_RELEASE = "20260929e";
 const ADMIN_CHROME_RELEASE = "20260929e";
-const CHROME_RELEASE = "20261001a";
+const CHROME_RELEASE = MAIN_RELEASE;
 const ACCOUNT_NAV_RELEASE = "20260929e";
 const CUSTOMER_CHAT_RELEASE = "20260929e";
 const CUSTOMER_CHAT_STYLE_RELEASE = "20260929e";
@@ -89,7 +89,7 @@ test("auth-consuming module paths are refreshed from their page entrypoints", ()
   assert.match(read("js/admin-support.js"), new RegExp(`admin-support\\.css\\?v=${ADMIN_SUPPORT_STYLE_RELEASE}`));
   assert.match(read("js/main/service-catalog.js"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
   assert.match(read("products/hcr.html"), new RegExp(`reviews\\.js\\?v=${RELEASE}`));
-  assert.match(read("index.html"), new RegExp(`main\\.js\\?v=${RELEASE}`));
+  assert.match(read("index.html"), new RegExp(`main\\.js\\?v=${MAIN_RELEASE}`));
   assert.doesNotMatch(read("index.html"), /story\.(?:css|js)\?v=/);
 });
 
