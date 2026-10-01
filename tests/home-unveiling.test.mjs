@@ -42,18 +42,49 @@ test('all homepage destinations resolve to files or real local sections', () => 
   }
 });
 
-test('one cleaner finder retains every buyer category and a full catalog route', () => {
+test('cleaner finder retains matching category, product, and full catalog routes', () => {
   const finder = text(section('find-cleaner'));
   assert.match(finder, /What needs to come off/);
-  for (const category of ['descale', 'degrease', 'exterior', 'water']) {
+  for (const category of ['descale', 'degrease', 'water']) {
     assert.ok(links.some(n => attr(n, 'href') === `products?category=${category}`));
   }
   assert.ok(links.some(n => attr(n, 'href') === 'products' && /All products/.test(text(n))));
-  for (const product of ['hcr', 'lam3', 'alumibrite', 'torque']) {
+  for (const product of ['hcr', 'lam3', 'alumibrite', 'multiwash', 'purgo', 'torque']) {
     assert.ok(links.some(n => attr(n, 'href') === `products/${product}`), product);
   }
-  for (const route of ['products?q=HVAC', 'products?q=CIP', 'products?category=marine']) {
-    assert.ok(links.some(n => attr(n, 'href') === route), route);
+});
+
+test('job and industry photo gateways are distinct and open matching destinations', () => {
+  const cards = elements.filter(n => ['home-job', 'home-industry'].includes(attr(n, 'class')));
+  const destinations = [
+    ['Rust & oxidation', 'products?category=descale'],
+    ['Scale & minerals', 'products?category=descale'],
+    ['Grease & grime', 'products?category=degrease'],
+    ['Moss, algae & mold', 'products/lam3'],
+    ['Aluminum brightening', 'products/alumibrite'],
+    ['Wash & odor control', 'products/multiwash'],
+    ['Clean, wax & shine', 'products/torque'],
+    ['Water system care', 'products?category=water'],
+    ['HVAC', 'industries/hvac-water'],
+    ['Marine', 'industries/marine'],
+    ['Industrial cleaning', 'industries/restaurants-commercial-kitchens'],
+    ['Water treatment', 'industries/municipalities-water-utilities'],
+    ['CIP & brewing', 'industries/breweries-distilleries-wineries'],
+    ['Gyms & fitness', 'blog/commercial-gym-cleaning-checklist'],
+    ['Auto & fleet', 'industries/fleet-trucking-car-washes'],
+    ['Hotels & property', 'industries/hotels-property-management'],
+  ];
+  const imageBytes = new Set();
+  assert.equal(cards.length, destinations.length);
+  for (const [i, card] of cards.entries()) {
+    const gateway = card.childNodes.find(n => n.tagName === 'a');
+    const image = gateway.childNodes.find(n => n.tagName === 'img');
+    const heading = gateway.childNodes.find(n => n.tagName === 'h3');
+    assert.deepEqual([text(heading), attr(gateway, 'href')], destinations[i]);
+    const src = attr(image, 'src');
+    const bytes = readFileSync(new URL(src, root)).toString('base64');
+    assert.ok(!imageBytes.has(bytes), `unique photograph for ${text(heading)}`);
+    imageBytes.add(bytes);
   }
 });
 

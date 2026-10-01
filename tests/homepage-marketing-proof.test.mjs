@@ -39,7 +39,7 @@ test('homepage presents product selection before scoped field evidence and techn
   assert.match(home, /36-hour CLR attempt.*30 minutes/s);
   assert.match(home, /One documented job\. Results depend/);
   assert.match(home, /href="blog\/hcr-brevard-hvac-rust-case-study"/);
-  assert.match(home, /href="products\?q=HVAC"/);
+  assert.match(home, /href="industries\/hvac-water"/);
   assert.match(home, /href="resources"/);
   assert.doesNotMatch(home + privateLabel, /non-toxic|safe for all|water-based|Purgo N|Fusion/);
 });
