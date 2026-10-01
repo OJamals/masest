@@ -1,7 +1,49 @@
 {
   "version": 1,
-  "count": 328,
+  "count": 331,
   "assets": [
+    {
+      "storage_path": "/img/home/industry-marine-yacht-20261001.webp",
+      "public_url": "/img/home/industry-marine-yacht-20261001.webp",
+      "filename": "industry-marine-yacht-20261001.webp",
+      "alt": "White motor yacht cruising across blue seawater",
+      "width": 800,
+      "height": 500,
+      "byte_size": 75228,
+      "sha256": "7392a1dee153862c7ea9b0ab041847e123018912db2d16b9bf88744bc047e844",
+      "mime_type": "image/webp",
+      "category": "home",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/home/industry-industrial-wash-20261001.webp",
+      "public_url": "/img/home/industry-industrial-wash-20261001.webp",
+      "filename": "industry-industrial-wash-20261001.webp",
+      "alt": "Worker pressure washing surfaces inside an industrial wash bay",
+      "width": 800,
+      "height": 500,
+      "byte_size": 32496,
+      "sha256": "2e23c87224a15961fcf553b256fa3f3f4f145c914d5050e6015f76b929192bd1",
+      "mime_type": "image/webp",
+      "category": "home",
+      "status": "available",
+      "source": "site"
+    },
+    {
+      "storage_path": "/img/home/industry-water-clarifiers-20261001.webp",
+      "public_url": "/img/home/industry-water-clarifiers-20261001.webp",
+      "filename": "industry-water-clarifiers-20261001.webp",
+      "alt": "Aerial view of circular clarifier tanks and aeration basins at a water treatment plant",
+      "width": 800,
+      "height": 500,
+      "byte_size": 73788,
+      "sha256": "9e2b28a0bf44e8b52de953baef9fe5a9ea32152a562d63360bfcd640105f2236",
+      "mime_type": "image/webp",
+      "category": "home",
+      "status": "available",
+      "source": "site"
+    },
     {
       "storage_path": "/img/products/multiwash-general-studio-v2.webp",
       "public_url": "/img/products/multiwash-general-studio-v2.webp",
