@@ -132,14 +132,15 @@ export function renderChrome({
       { href: "programs", label: "Chemical Programs" },
       { href: "private-label", label: "Private Label" }
     ] },
+    { href: "services", label: "Services" },
     { key: "applications", label: "Applications", children: [
       { href: "industries", label: "Industries" },
-      { href: "industries/hvac-water", label: "HVAC & Water Systems" }
+      { href: "industries/hvac-water", label: "HVAC & Water Systems" },
+      { href: "industries/marine", label: "Marine" }
     ] },
     { href: "proof", label: "Results" },
     { key: "resources", label: "Resources", children: [
       { href: "resources", label: "SDS & Resources" },
-      { href: "services", label: "Testing & Technical Services" },
       { href: "blog", label: "Blog" },
       { href: "about", label: "About" }
     ] }
@@ -147,8 +148,10 @@ export function renderChrome({
   const isActive = (href) => {
     if (page === href) return true;
     if (href === "products" && (page === "product" || isProductDetail)) return true;
+    if (href === "services" && /\/services\//.test(location.pathname)) return true;
     if (href === "industries/hvac-water" && /\/industries\/hvac-water(?:\.html)?$/.test(location.pathname)) return true;
-    if (href === "industries" && /\/industries\//.test(location.pathname) && !/\/hvac-water(?:\.html)?$/.test(location.pathname)) return true;
+    if (href === "industries/marine" && /\/industries\/marine(?:\.html)?$/.test(location.pathname)) return true;
+    if (href === "industries" && /\/industries\//.test(location.pathname) && !/\/(?:hvac-water|marine)(?:\.html)?$/.test(location.pathname)) return true;
     if (href === "blog" && /\/blog(\/|$)/.test(location.pathname)) return true;
     return false;
   };
@@ -366,7 +369,9 @@ export function renderChrome({
           <div class="foot-title">SDS &amp; Product Help</div>
           <a href="${root}resources">Resources &amp; SDS</a>
           <a href="${root}programs">Chemical Programs</a>
+          <a href="${root}services">Testing &amp; Technical Services</a>
           <a href="${root}industries/hvac-water">HVAC &amp; Water Systems</a>
+          <a href="${root}industries/marine">Marine</a>
           <a href="${root}proof">Customer Results</a>
           <a href="${root}blog">Blog</a>
         </div>

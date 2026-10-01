@@ -54,8 +54,10 @@ const INDUSTRIES = INDUSTRY_APPLICATIONS.map((application) => ({
 
 const NAV = [
   ["", "MASEST"], ["products", "Products"], ["programs", "Chemical Programs"],
+  ["services", "Services"],
   ["applications", "Applications", [
-    ["industries", "Industries"], ["industries/hvac-water", "HVAC &amp; Water Systems"]
+    ["industries", "Industries"], ["industries/hvac-water", "HVAC &amp; Water Systems"],
+    ["industries/marine", "Marine"]
   ]], ["proof", "Results"],
   ["resources", "SDS &amp; Resources"]
 ];
