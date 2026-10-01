@@ -68,16 +68,17 @@ test("remaining products retain focused technical inquiries and withdraw staged 
     assert.equal(PRODUCTS[id].image_review_pending, undefined);
     const media = all(page(id), n => attr(n, "data-commerce-media") === id)[0];
     const image = all(media, n => n.tagName === "img")[0];
-    assert.equal(attr(image, "src"), "../img/products/multiwash-general-studio-v2.webp");
-    assert.match(text(media), /Specialty packages have their own directions/);
+    assert.equal(attr(image, "src"), "../img/products/multiwash-gym-desktop-label-20261001.webp");
+    assert.match(text(media), /MultiWash Gym package shown/);
+    assert.match(text(media), /Follow your package directions/);
   }
   assert.equal(PRODUCTS.lam3.image_review_pending, undefined);
   const lam3Media = all(page("lam3"), n => attr(n, "data-commerce-media") === "lam3")[0];
   const lam3Image = all(lam3Media, n => n.tagName === "img")[0];
-  assert.equal(attr(lam3Image, "src"), "../img/products/lam3-studio-v2.webp");
-  assert.equal(attr(lam3Image, "width"), "1092");
-  assert.equal(attr(lam3Image, "height"), "1441");
-  assert.match(text(lam3Media), /2.5-gallon package rendering/);
+  assert.equal(attr(lam3Image, "src"), "../img/products/lam3-desktop-label-20261001.webp");
+  assert.equal(attr(lam3Image, "width"), "810");
+  assert.equal(attr(lam3Image, "height"), "1080");
+  assert.match(attr(lam3Image, "alt"), /supplied exterior-cleaning label/);
 });
 
 test("all fifteen public products have application, evidence, and purchasing content", () => {

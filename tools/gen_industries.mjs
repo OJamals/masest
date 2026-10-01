@@ -295,8 +295,7 @@ const LABEL_VARIANTS = {
     market: "FB label",
     name: "VertKleen MultiWash",
     subtitle: "Multi-surface cleaner · deodorizer",
-    image: PRODUCTS.multiwash.image,
-    imageCaption: PRODUCTS.multiwash.image_caption,
+    image: "img/products/multiwash-food-beverage-desktop-label-20261001.webp",
     productHref: "multiwash",
     directions: [
       ["Bar tops, glass & tables", "Fill a 32 oz spray bottle at 1:16; mist and wipe"],
@@ -334,8 +333,7 @@ const LABEL_VARIANTS = {
     market: "PW label",
     name: "VertKleen MultiWash",
     subtitle: "Bleach / sodium hypochlorite replacement",
-    image: PRODUCTS.multiwash.image,
-    imageCaption: PRODUCTS.multiwash.image_caption,
+    image: "img/products/multiwash-pressure-wash-desktop-label-20261001.webp",
     productHref: "multiwash",
     directions: [
       ["House wash / soft wash", "Apply through a downstream injector at 1:16; let it work, then rinse at low pressure"],
@@ -347,8 +345,7 @@ const LABEL_VARIANTS = {
     market: "Gym label",
     name: "VertKleen MultiWash",
     subtitle: "Gym · fitness · studio & clinic cleaner",
-    image: PRODUCTS.multiwash.image,
-    imageCaption: PRODUCTS.multiwash.image_caption,
+    image: "img/products/multiwash-gym-desktop-label-20261001.webp",
     productHref: "multiwash",
     directions: [
       ["Equipment, machines & mats", "Dilute 1:32; mist onto a cloth or surface and wipe. Do not soak electronics"],

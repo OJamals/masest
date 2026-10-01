@@ -36,12 +36,13 @@ test("Low Foam offers product-specific technical data and document requests", ()
   assert.match(text(section("technical")), /DOT, TDG, IMO, IATA, and IMDG/);
 });
 
-test("Low Foam shows a distinct identity rendering and omits synthetic scenes and unrelated case photos", () => {
+test("Low Foam identifies supplied CR HD family artwork and keeps formulation directions separate", () => {
   const media = all(doc, node => attr(node, "data-commerce-media") === "cr-hd-low-foam")[0];
-  assert.match(text(media), /Low Foam product rendering/);
+  assert.match(text(media), /CR HD family jug shown/);
   assert.match(text(media), /Follow directions supplied with your Low Foam package/);
-  assert.equal(attr(all(media, node => node.tagName === "img")[0], "src"), "../img/products/cr-hd-low-foam-identity-studio-v1.webp");
-  assert.notEqual(PRODUCTS["cr-hd-low-foam"].image, PRODUCTS.crhd.image);
+  assert.equal(attr(all(media, node => node.tagName === "img")[0], "src"), "../img/products/crhd-desktop-label-20261001.webp");
+  assert.match(attr(all(media, node => node.tagName === "img")[0], "alt"), /Low Foam package label not pictured/);
+  assert.equal(PRODUCTS["cr-hd-low-foam"].image, PRODUCTS.crhd.image);
   assert.equal(PRODUCTS["cr-hd-low-foam"].application_image, undefined);
   assert.doesNotMatch(html, /cr-hd-low-foam-machine-wash-v1|product-application-media|kitchen-before.webp|distribution-center-assessment/);
 });

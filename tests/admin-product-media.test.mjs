@@ -47,7 +47,7 @@ test("admin products show catalog media when CMS media fields are empty", () => 
     image_url: null,
     photo_alt: null,
   });
-  assert.equal(fallback.image_url, "img/products/crhd-studio.webp");
+  assert.equal(fallback.image_url, "img/products/crhd-desktop-label-20261001.webp");
   assert.equal(fallback.photo_alt, "VertKleen CR HD product image");
 
   const customized = withCatalogMediaFallback({

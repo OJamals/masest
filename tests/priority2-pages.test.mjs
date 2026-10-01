@@ -155,7 +155,7 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
   assert.match(pages.food, /data-label-variant="fb-cip-cr"/);
   assert.match(pages.food, /cip-hcr-studio\.webp/);
   assert.match(pages.food, /crhd-food-beverage-studio\.webp/);
-  assert.match(pages.food, /multiwash-general-studio-v2\.webp/);
+  assert.match(pages.food, /multiwash-food-beverage-desktop-label-20261001\.webp/);
   assert.match(pages.brewery, /0\.5 L per 10 gal/);
   assert.match(pages.restaurant, /Kitchen line — light grease/);
   assert.match(pages.restaurant, /Bar tops, glass &amp; tables/);
@@ -165,7 +165,7 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
   for (const html of [pages.pressure, pages.drone]) {
     assert.match(html, /crhd-pressure-wash-studio\.webp/);
     assert.match(html, /crs-studio\.webp/);
-    assert.match(html, /multiwash-general-studio-v2\.webp/);
+    assert.match(html, /multiwash-pressure-wash-desktop-label-20261001\.webp/);
     assert.match(html, /Apply at 1:20 through a downstream injector or foam cannon/);
     assert.match(html, /Rust &amp; fertilizer stains/);
     assert.match(html, /<span class="catalog-type">PW label<\/span>/);
@@ -174,7 +174,7 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
   assert.match(pages.fleet, /data-label-variant="pw-crhd"/);
   assert.match(pages.fleet, /data-label-variant="pw-multiwash"/);
 
-  assert.match(pages.gym, /multiwash-general-studio-v2\.webp/);
+  assert.match(pages.gym, /multiwash-gym-desktop-label-20261001\.webp/);
   assert.match(pages.gym, /purgo-studio\.webp/);
   assert.match(pages.gym, /Floors &amp; tile:<\/strong>&nbsp; Dilute 5:1/);
   assert.match(pages.gym, /High-touch odor:<\/strong>&nbsp; Dilute 1:16/);
@@ -184,7 +184,9 @@ test("FB, PW, and gym label variants keep source directions without catalog pric
     "cip-cr-studio.webp",
     "cip-hcr-studio.webp",
     "crhd-food-beverage-studio.webp",
-    "multiwash-general-studio-v2.webp",
+    "multiwash-food-beverage-desktop-label-20261001.webp",
+    "multiwash-pressure-wash-desktop-label-20261001.webp",
+    "multiwash-gym-desktop-label-20261001.webp",
     "crhd-pressure-wash-studio.webp",
     "crs-studio.webp",
     "purgo-studio.webp",

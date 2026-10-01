@@ -2,6 +2,26 @@
 
 Owner request: review every industry page and fix every product card that does not show the actual product.
 
+## Supplied artwork correction
+
+Follow-up owner instruction: “Use the real labels from the updated desktop masest folder.” Owner identified `/Users/omar/Desktop/masest/images/new jugs` and `/Users/omar/Desktop/masest/images/labels` as the sources. This instruction supersedes the simplified identity artwork decisions below. Supplied label text, logos, badges, recipes, and jug pixels are preserved; no replacement label is generated.
+
+Lossless WebP copies, at original dimensions, use fresh `*-desktop-label-20261001.webp` aliases:
+
+- Neutral: `images/new jugs/neutral.png`.
+- LAM3: `images/new jugs/lam3.png`.
+- CR HD: `images/new jugs/crhd.png`.
+- AlumiBrite: `images/new jugs/alumibrite.png`.
+- Descaler: `images/new jugs/hvac descaler.png`, matching the HVAC label linked from the product page.
+- MultiWash Gym: `images/new jugs/multiwash gym.png`.
+- MultiWash Food/Beverage: `images/new jugs/multiwash fb.png`.
+- MultiWash Pressure Wash: `images/new jugs/multiwash pw.png`.
+- General MultiWash label reference: the actual `updates/VertKleen_MultiWash_Label_6x8.pdf`, rendered at 900×1200 and losslessly encoded. No general-label jug exists in the supplied new-jugs folder. Base MultiWash cards show the supplied Gym jug with an explicit package caption; the product page retains its linked general label and separate general dilution guidance.
+
+Specialty industry cards select their matching supplied jug again. Low Foam has no separately named label or jug in either supplied image directory; it shows the supplied CR HD family jug with an explicit visible family-image caption and alt text stating that the Low Foam package label is not pictured. Its technical directions remain formulation specific.
+
+The prior simplified Neutral, Low Foam, MultiWash, and LAM3 renderings remain archived assets but are rejected as stale CMS image selections. Cache release `20261001c` publishes the new mapping. Source and output SHA-256 values are retained in the release proof.
+
 Audited all 26 industry routes, including recommended products, specialty-label cards, and eight marine products: 115 cards total. Twenty recommended cards on 16 routes omitted MultiWash or Neutral images because their prior artwork was withdrawn. One Low Foam recommendation used the standard CR HD jug. Six specialty MultiWash cards still selected older gym, pressure-washing, or food/beverage artwork. Three CRS cards linked to Descaler despite showing CRS.
 
 ## Corrections

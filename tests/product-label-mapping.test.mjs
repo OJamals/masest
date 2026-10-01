@@ -28,7 +28,7 @@ const expectedLabels = {
   },
   multiwash: {
     name: "VertKleen MultiWash",
-    image: "img/products/multiwash-general-studio-v2.webp",
+    image: "img/products/multiwash-gym-desktop-label-20261001.webp",
   },
   purgo: {
     name: "Purgo",

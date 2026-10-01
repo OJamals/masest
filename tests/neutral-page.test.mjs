@@ -36,15 +36,15 @@ test("Neutral offers technical data and product-specific application requests", 
   assert.equal(url.hash, "#quoteForm");
 });
 
-test("Neutral shows its identity rendering without conflicting label artwork or fabricated evidence", () => {
-  assert.equal(PRODUCTS.neutral.image, "img/products/neutral-identity-studio-v2.webp");
+test("Neutral shows the supplied Desktop label without fabricated evidence", () => {
+  assert.equal(PRODUCTS.neutral.image, "img/products/neutral-desktop-label-20261001.webp");
   assert.equal(PRODUCTS.neutral.image_review_pending, undefined);
   assert.equal(PRODUCTS.neutral.application_image, undefined);
   const media = all(doc, node => attr(node, "data-commerce-media") === "neutral")[0];
   const image = all(media, node => node.tagName === "img")[0];
-  assert.equal(attr(image, "src"), "../img/products/neutral-identity-studio-v2.webp");
-  assert.match(attr(image, "alt"), /Neutral product rendering/);
-  assert.match(text(media), /Follow directions supplied with your Neutral package/);
+  assert.equal(attr(image, "src"), "../img/products/neutral-desktop-label-20261001.webp");
+  assert.match(attr(image, "alt"), /Neutral jug with the supplied product label/);
+  assert.doesNotMatch(text(media), /Product rendering/);
   assert.doesNotMatch(html, /neutral-studio.webp|neutral-material-test-patch-v1/);
 });
 
