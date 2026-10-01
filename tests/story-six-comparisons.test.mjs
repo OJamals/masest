@@ -25,7 +25,7 @@ const alignedHeight = 1017;
 
 test("product-first homepage does not mount the retired story engine", () => {
   assert.match(home, /<section class="home-hero"/);
-  assert.match(home, /Explore products/);
+  assert.match(home, /Go to products/);
   assert.doesNotMatch(home, /id="story"|js\/story\.js/);
 });
 

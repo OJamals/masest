@@ -911,7 +911,7 @@ test("proof image sets use stable media slots", async ({ page }) => {
       viewport: { width: 1440, height: 900 },
       cardSelector: ".home-proof__photos figure",
       mediaSelector: ":scope > img",
-      expectedAspectRatio: 1.55,
+      expectedAspectRatio: 2.15,
       label: "home field-result photos",
     },
     {

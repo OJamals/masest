@@ -2,6 +2,7 @@
 const home = document.querySelector('body.home-unveiling main');
 const actions = new Map([
   ['products', 'home_product_click'],
+  ['distributor', 'home_distributor_click'],
   ['hvac', 'home_job_click'],
   ['rust_scale', 'home_job_click'],
   ['grease_grime', 'home_job_click'],
@@ -21,6 +22,7 @@ home?.addEventListener('click', (event) => {
   try {
     const detail = { source: `home_${placement}_${action}` };
     if (action === 'private_label') detail.request_type = 'private-label';
+    else if (action === 'distributor') detail.request_type = 'distributor';
     else if (action === 'advice' || action === 'bulk') detail.request_type = 'quote';
     window.mtrack(actions.get(action), detail);
   } catch { /* Analytics must never interrupt navigation. */ }

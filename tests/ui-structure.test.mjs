@@ -190,7 +190,7 @@ test("home proof routes to a documented field record instead of a source PDF", (
   const home = read("index.html");
 
   assert.match(home, /href="blog\/hcr-brevard-hvac-rust-case-study">Read the field record/);
-  assert.match(home, /href="proof">Explore all field results/);
+  assert.match(home, /href="proof">All results/);
   assert.doesNotMatch(home, /href="docs\/brewery-cip-trial-brewlando\.pdf"/);
   assert.doesNotMatch(home, /class="(?:doc-link|doc-badge)"/);
 });

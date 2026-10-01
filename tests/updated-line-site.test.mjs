@@ -18,8 +18,8 @@ test("site presents one program portfolio without exposing account-specific mate
 
   assert.match(chrome, /href:\s*"programs",\s*label:\s*"Programs"/);
   assert.doesNotMatch(chrome, /Water Programs/);
-  assert.match(home, /Private-label options/);
-  assert.match(home, /href="private-label"/);
+  assert.match(home, /href="contact\?type=distributor">Become a distributor/);
+  assert.doesNotMatch(home, /href="private-label"/);
   assert.match(programs, /Chemical consolidation/);
   assert.match(programs, /Private-label supply/);
   assert.match(programs, /Pilot rollout/);

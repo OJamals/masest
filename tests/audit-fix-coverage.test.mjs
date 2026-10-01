@@ -66,7 +66,7 @@ test('checkout keeps address rationale and mobile escape/trust cues', () => {
 });
 
 test('homepage makes industrial cleaning and the two buyer routes explicit', () => {
-  assert.match(home, /Industrial cleaning products/);
-  assert.match(home, /href="private-label"/);
-  assert.match(home, /href="products">Shop VertKleen/);
+  assert.match(home, /Purpose-built industrial cleaning chemistry/);
+  assert.match(home, /href="contact\?type=distributor">Become a distributor/);
+  assert.match(home, /href="products">Go to products/);
 });

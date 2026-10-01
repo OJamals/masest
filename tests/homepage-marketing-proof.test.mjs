@@ -39,7 +39,7 @@ test('homepage presents product selection before scoped field evidence and techn
   assert.match(home, /36-hour CLR attempt.*30 minutes/s);
   assert.match(home, /One documented job\. Results depend/);
   assert.match(home, /href="blog\/hcr-brevard-hvac-rust-case-study"/);
-  assert.match(home, /href="industries\/hvac-water"/);
+  assert.match(home, /href="products\?q=HVAC"/);
   assert.match(home, /href="resources"/);
   assert.doesNotMatch(home + privateLabel, /non-toxic|safe for all|water-based|Purgo N|Fusion/);
 });
@@ -48,7 +48,7 @@ test('hero delivery stays small while field photographs remain lazy and labeled'
   elements.length = 0;
   walk(parse(home));
   const images = elements.filter(n => n.tagName === 'img');
-  assert.equal(images.length, 3);
+  assert.equal(images.length, 19);
   for (const img of images) {
     assert.ok(attr(img, 'alt'));
     assert.ok(Number(attr(img, 'width')) > 0 && Number(attr(img, 'height')) > 0);

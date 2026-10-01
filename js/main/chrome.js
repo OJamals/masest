@@ -126,9 +126,9 @@ export function renderChrome({
   const root = /\/(?:industries|products|services|comparisons|blog)\//.test(location.pathname) ? "../" : "";
   const homeHref = root || "./";
   const isProductDetail = /\/products\/[^/]+(?:\.html)?$/.test(location.pathname);
+  const homeUnveiling = page === "index" && document.body.dataset.header === "unveiling";
   const links = [
     { href: "products", label: "Products" },
-    { href: "private-label", label: "Private Label" },
     {
       key: "useCases",
       label: "Applications",
@@ -146,6 +146,11 @@ export function renderChrome({
       { href: "about", label: "About" }
     ] }
   ];
+  if (homeUnveiling) links.splice(0, links.length,
+    { href: "products", label: "Products" },
+    { href: "#results", label: "Results" },
+    { href: "#support", label: "Support" }
+  );
   const isActive = (href) => {
     if (page === href) return true;
     if (href === "products" && (page === "product" || isProductDetail)) return true;
@@ -182,6 +187,7 @@ export function renderChrome({
         ${links.map(navItem).join("")}
       </nav>
         <div class="nav-actions">
+          ${homeUnveiling ? `<a class="home-nav-advice" href="${root}account">Get Started <i class="ph ph-arrow-right" aria-hidden="true"></i></a>` : ""}
           <span class="nav-auth-placeholder" aria-hidden="true" style="display:block;width:92px;height:44px;align-self:center"></span>
           <a class="nav-cart" href="${root}cart" aria-label="Open cart"><i class="ph ph-shopping-cart-simple" aria-hidden="true"></i><b class="cart-count" data-cart-count hidden>0</b></a>
           <button class="nav-burger" id="navBurger" aria-label="Menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
@@ -211,7 +217,7 @@ export function renderChrome({
  "",
  ]);
   const isIndustryDetail = /\/industries\/[^/]+(?:\.html)?$/.test(location.pathname);
-  if (leadBarPages.has(page) || isIndustryDetail || isProductDetail) {
+  if (!homeUnveiling && (leadBarPages.has(page) || isIndustryDetail || isProductDetail)) {
     const leadBar = document.createElement("div");
     leadBar.className = "lead-action-bar";
     leadBar.setAttribute("data-customer-chat-obstruction", "");

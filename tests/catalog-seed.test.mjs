@@ -71,7 +71,7 @@ test("public catalog counts match the canonical product order", () => {
   const count = String(CATALOG_ORDER.length);
   assert.match(readSite("products.html"), new RegExp(`content="Shop ${count} VertKleen cleaners`));
   // The landing page routes to the canonical catalog without duplicating its count.
-  assert.match(readSite("index.html"), /href="products">Shop VertKleen/);
+  assert.match(readSite("index.html"), /href="products">Go to products/);
 });
 
 test("CR60 publication hold removes public commerce while retaining authoritative pricing", () => {

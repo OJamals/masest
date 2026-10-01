@@ -69,9 +69,9 @@ test("static product hero exposes buying context before long copy", () => {
 test("homepage copy and actions retain stable accessible names", () => {
   const home = read("index.html");
   assert.match(home, /aria-labelledby="home-title"/);
-  assert.match(home, /<h1 class="display" id="home-title">Tough cleaning jobs\.<br><span[^>]*>Meet VertKleen\.<\/span><\/h1>/);
-  assert.match(home, /class="home-button" href="products">Explore products/);
-  assert.match(home, /Shop VertKleen/);
+  assert.match(home, /<h1 class="display" id="home-title">Better<br>chemistry\.<br>A better clean\.<\/h1>/);
+  assert.match(home, /class="home-button" href="products">Go to products/);
+  assert.match(home, /Become a distributor/);
   assert.doesNotMatch(home, /data-act=|class="cmp-table cmp-jobs"/);
 });
 
