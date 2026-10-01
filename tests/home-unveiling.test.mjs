@@ -100,9 +100,13 @@ test('hero is prioritized while documentary proof images remain lazy and labeled
 });
 
 test('conversion paths and global reach remain available', () => {
-  for (const href of ['contact?type=audit', 'contact?type=quote', 'products/hcr', 'proof']) {
+  for (const href of ['contact?type=quote', 'products/hcr', 'proof']) {
     assert.ok(links.some(n => attr(n, 'href') === href), href);
   }
   assert.ok(links.some(n => attr(n, 'href') === 'about' && /50\+ countries/.test(text(n))));
   assert.match(html, /data-cms-page="home"/);
+  const advice = links.find(n => /Get product advice/.test(text(n)));
+  const url = new URL(attr(advice, 'href'), 'https://masest.co/');
+  assert.equal(url.searchParams.get('type'), 'quote');
+  assert.equal(url.searchParams.get('message'), 'Help me choose a VertKleen cleaner for my application.');
 });
