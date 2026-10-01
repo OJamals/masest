@@ -188,9 +188,21 @@ async function sampleCartCls(context, { priced = false, warm = false } = {}) {
   });
   await page.addInitScript(() => {
     window.__cartCls = 0;
+    window.__cartShifts = [];
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
-        if (!entry.hadRecentInput) window.__cartCls += entry.value;
+        if (entry.hadRecentInput) continue;
+        window.__cartCls += entry.value;
+        window.__cartShifts.push({
+          value: entry.value,
+          at: entry.startTime,
+          sources: (entry.sources || []).map(({ node, previousRect, currentRect }) => ({
+            node: node?.id || node?.className || node?.nodeName,
+            text: node?.textContent?.trim().slice(0, 80),
+            before: { x: previousRect.x, y: previousRect.y, width: previousRect.width, height: previousRect.height },
+            after: { x: currentRect.x, y: currentRect.y, width: currentRect.width, height: currentRect.height },
+          })),
+        });
       }
     }).observe({ type: "layout-shift", buffered: true });
   });
@@ -221,6 +233,7 @@ async function sampleCartCls(context, { priced = false, warm = false } = {}) {
   await page.waitForTimeout(1200);
   const result = await page.evaluate(() => ({
     cls: window.__cartCls,
+    shifts: window.__cartShifts,
     lines: document.querySelectorAll(".cart-line").length,
     // A run where the ZIP form never appeared proves nothing about reserving it, and a
     // priced run that silently lost its prices would look like a pass.

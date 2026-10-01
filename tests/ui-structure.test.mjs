@@ -34,9 +34,12 @@ test("global logo links navigate to the home page from top-level pages", () => {
   assert.doesNotMatch(chrome, /class="(?:nav-logo|foot-logo-link)" href="\$\{root\}"/, "logo href must not collapse to the current page on top-level routes");
 });
 
-test("global navigation exposes distinct industry and system routes with product support grouped", () => {
+test("global navigation keeps industry and system routes under Applications", () => {
   const navBlock = chrome.match(/const links = \[[\s\S]*?\];/)?.[0] || "";
-  assert.doesNotMatch(navBlock, /Applications|useCases/);
+  const applications = navBlock.match(/key: "applications", label: "Applications", children: \[[\s\S]*?\]/)?.[0] || "";
+  assert.match(applications, /label: "Industries"/);
+  assert.match(applications, /label: "HVAC & Water Systems"/);
+  assert.doesNotMatch(navBlock.replace(applications, ""), /label: "HVAC & Water Systems"/);
   for (const label of ["Industries", "HVAC & Water Systems", "Results", "Chemical Programs", "Testing & Technical Services"]) assert.ok(navBlock.includes(label));
   assert.ok(navBlock.indexOf('key: "products"') < navBlock.indexOf('label: "Chemical Programs"'));
 });
@@ -242,7 +245,9 @@ test("no-js fallback nav stays focused on primary categories", () => {
 
   assert.ok(nav, `${page} should keep no-js nav`);
   assert.match(nav, /Products/);
-  assert.doesNotMatch(nav, /Applications/);
+  const applications = nav.match(/<details\b[^>]*><summary>Applications<\/summary>[\s\S]*?<\/details>/)?.[0] || "";
+  assert.match(applications, /HVAC &amp; Water Systems/);
+  assert.doesNotMatch(nav.replace(applications, ""), /HVAC &amp; Water Systems/);
   assert.match(nav, /HVAC &amp; Water Systems/);
   assert.match(nav, /Industries/);
   assert.match(nav, /Results/);
@@ -260,7 +265,7 @@ test("industry generator exposes chemical programs and the system hub in fallbac
   const navBlock = generator.match(/const NAV = \[[\s\S]*?\];/)?.[0] || "";
   assert.match(navBlock, /Chemical Programs/);
   assert.match(navBlock, /HVAC &amp; Water Systems/);
-  assert.doesNotMatch(navBlock, /Applications/);
+  assert.match(navBlock, /Applications/);
 });
 
 test("no-js fallback uses the same customer labels as the primary nav", () => {
@@ -269,9 +274,10 @@ test("no-js fallback uses the same customer labels as the primary nav", () => {
   for (const page of pages) {
     const html = read(page);
     const nav = html.match(/<nav class="nojs-nav"[\s\S]*?<\/nav>/)?.[0] || "";
-    if (page !== "index.html") assert.match(nav, /HVAC &amp; Water Systems/);
+    assert.match(nav, /<summary>Applications<\/summary>/);
+    assert.match(nav, /HVAC &amp; Water Systems/);
     assert.match(nav, />Results</);
-    if (page !== "index.html") assert.match(nav, />Industries</);
+    assert.match(nav, />Industries</);
     assert.match(nav, page === "index.html" ? />Resources</ : />SDS &amp; Resources</);
     assert.doesNotMatch(nav, />Field Results</);
   }

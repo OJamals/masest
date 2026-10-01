@@ -27,7 +27,7 @@ test('landing pages keep buyer actions visible and layouts within each viewport'
   } finally { await browser.close(); await server.close(); }
 });
 
-test('shared keyboard navigation keeps HVAC visible and opens Private Label through Products', async () => {
+test('shared keyboard navigation nests HVAC in Applications and opens Private Label through Products', async () => {
   const server = await startStaticTestServer(new URL('../', import.meta.url));
   const browser = await launchTestBrowser();
   try {
@@ -38,14 +38,23 @@ test('shared keyboard navigation keeps HVAC visible and opens Private Label thro
     assert.equal(await page.locator('.skip-link').evaluate(el => el === document.activeElement), true);
     await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => location.hash), '#main');
-    const products = page.locator('.nav-group').filter({ hasText: 'All products' }).locator('summary');
+    const primary = page.getByRole('navigation', { name: 'Primary', exact: true });
+    const applications = primary.locator('.nav-group').filter({ hasText: 'Applications' }).locator('summary');
+    const hvac = primary.getByRole('link', { name: 'HVAC & Water Systems', exact: true });
+    assert.equal(await hvac.isVisible(), false);
+    await applications.focus();
+    await page.keyboard.press('Enter');
+    await hvac.waitFor({ state: 'visible' });
+    assert.equal(await hvac.getAttribute('href'), 'industries/hvac-water');
+    await page.keyboard.press('Escape');
+    await hvac.waitFor({ state: 'hidden' });
+    const products = primary.locator('.nav-group').filter({ hasText: 'All products' }).locator('summary');
     await products.focus();
     await page.keyboard.press('Enter');
-    await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'HVAC & Water Systems', exact: true }).waitFor({ state: 'visible' });
-    assert.equal(await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), true);
+    await primary.getByRole('link', { name: 'Private Label', exact: true }).waitFor({ state: 'visible' });
+    assert.equal(await hvac.isVisible(), false);
     await page.keyboard.press('Escape');
     await page.getByRole('link', { name: 'Private Label', exact: true }).waitFor({ state: 'hidden' });
-    assert.equal(await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), true);
     await products.click();
     await page.getByRole('navigation', { name: 'Primary', exact: true }).getByRole('link', { name: 'Private Label', exact: true }).click();
     assert.equal(new URL(page.url()).pathname, '/private-label');
@@ -63,6 +72,10 @@ test('homepage retains both buying routes and readable proof without JavaScript'
     assert.equal(await page.locator('.home-private-option').count(), 0);
     assert.equal(await page.getByRole('link', { name: 'Read the field record' }).isVisible(), true);
     assert.equal(await page.locator('.nojs-nav').getByRole('link', { name: 'Products', exact: true }).isVisible(), true);
+    const applications = page.locator('.nojs-nav details').filter({ hasText: 'Applications' });
+    await applications.locator('summary').click();
+    assert.equal(await applications.getByRole('link', { name: 'Industries', exact: true }).isVisible(), true);
+    assert.equal(await applications.getByRole('link', { name: 'HVAC & Water Systems', exact: true }).isVisible(), true);
   } finally { await browser.close(); await server.close(); }
 });
 

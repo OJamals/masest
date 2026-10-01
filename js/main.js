@@ -1,25 +1,25 @@
 /* MASEST / VertKleen shared JS (v2, taste-skill applied)
    Icons: Phosphor web family only. No emoji. No em-dashes in copy. */
-import { renderChrome } from "./main/chrome.js?v=20261001f";
+import { renderChrome } from "./main/chrome.js?v=20261001g";
 import { initResponsiveTables, initReveal } from "./main/effects.js";
-import { initServiceCatalog } from "./main/service-catalog.js?v=20261001f";
+import { initServiceCatalog } from "./main/service-catalog.js?v=20261001g";
 import {
   initCartButtons,
   initShop,
   productCard,
-} from "./main/commerce-ui.js?v=20261001f";
+} from "./main/commerce-ui.js?v=20261001g";
 import {
   initBeforeAfter,
   initIndustryDiscovery,
   initMarineProductSelector,
   initProofFilters,
   initQuoteForm,
-} from "./main/engagement.js?v=20261001f";
-import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20261001f";
+} from "./main/engagement.js?v=20261001g";
+import { initImageFallbacks, initIndustryProducts, initLightbox } from "./main/media.js?v=20261001g";
 import { initDataVisualizations } from "./main/data-visuals.js";
-import { initContentSnapshots } from "./main/content-snapshots.js?v=20261001f";
-import { initPricingBindings } from "./main/pricing-data.js?v=20261001f";
-import { initSystemGuides, initWaterPrograms } from "./main/water-programs.js?v=20261001f";
+import { initContentSnapshots } from "./main/content-snapshots.js?v=20261001g";
+import { initPricingBindings } from "./main/pricing-data.js?v=20261001g";
+import { initSystemGuides, initWaterPrograms } from "./main/water-programs.js?v=20261001g";
 
 window.MASESTMain = {
   initReveal,

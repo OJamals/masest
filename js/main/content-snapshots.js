@@ -1,12 +1,12 @@
 import { initReveal } from "./effects.js";
 import { esc } from "../util.js";
 import { canonicalPublicImageUrl } from "../image-url.js?v=20260929e";
-import { proofCardHtml } from "../proof-records.js?v=20261001f";
+import { proofCardHtml } from "../proof-records.js?v=20261001g";
 import {
   browserContentDeliveries,
   normalizeContentPageKey,
 } from "../content-types.js";
-import { loadPricingData } from "./pricing-data.js?v=20261001f";
+import { loadPricingData } from "./pricing-data.js?v=20261001g";
 
 const BROWSER_RENDERERS = Object.freeze({
   proof_card: proofCardHtml,

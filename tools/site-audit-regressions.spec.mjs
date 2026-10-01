@@ -28,7 +28,7 @@ test("homepage shared header stays above the photo with readable complete naviga
     if (width <= 1100) await page.locator(".nav-burger").click();
     const nav = page.locator("#navLinks");
     const items = page.locator("#navLinks > a:not(.nav-mobile-account):visible, #navLinks > .nav-group > summary:visible");
-    expect(await items.allTextContents()).toEqual(["Products", "Industries", "HVAC & Water Systems", "Results", "Resources"]);
+    expect(await items.allTextContents()).toEqual(["Products", "Applications", "Results", "Resources"]);
     const account = nav.locator(".nav-mobile-account");
     if (width <= 1100) await expect(account).toBeVisible();
     else await expect(account).toBeHidden();
@@ -61,7 +61,11 @@ test("homepage shared header stays above the photo with readable complete naviga
     });
     expect(contrast.alpha, `${width} opaque header`).toBe(1);
     for (const ratio of contrast.ratios) expect(ratio, `${width} navigation contrast`).toBeGreaterThanOrEqual(4.5);
-    await expect(nav.getByRole("link", {name:"HVAC & Water Systems", exact:true})).toBeVisible();
+    const applications = nav.locator('.nav-group').filter({hasText:"Applications"});
+    await applications.locator('summary').click();
+    await expect(applications.getByRole("link", {name:"Industries", exact:true})).toBeVisible();
+    await expect(applications.getByRole("link", {name:"HVAC & Water Systems", exact:true})).toBeVisible();
+    await expect(nav.locator(':scope > a').filter({hasText:"HVAC & Water Systems"})).toHaveCount(0);
     await page.locator(".nav-group > summary").filter({hasText:"Products"}).click();
     await expect(nav.getByRole("link", {name:"Chemical Programs", exact:true})).toBeVisible();
     await expect(nav.getByRole("link", {name:"Private Label", exact:true})).toBeVisible();
@@ -873,7 +877,7 @@ test("mobile industry detail pages keep quote and chemical-map actions", async (
   await expect(bar.getByRole("link", { name: /get a quote/i })).toHaveAttribute("href", /type=quote/);
 });
 
-test("mobile hamburger menu exposes Products and system routes with keyboard focus", async ({ page }) => {
+test("mobile hamburger menu exposes Products and Applications with keyboard focus", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/industries/plumbing.html`, { waitUntil: "domcontentloaded" });
   const burger = page.locator("#navBurger");
@@ -889,8 +893,6 @@ test("mobile hamburger menu exposes Products and system routes with keyboard foc
   expect(topLevelColors).not.toContain("rgb(255, 255, 255)");
 
   await summary.click();
-  await expect(nav.getByRole("link", { name: "Industries" })).toHaveAttribute("href", "../industries");
-  await expect(nav.getByRole("link", { name: "HVAC & Water Systems", exact: true })).toHaveAttribute("href", "../industries/hvac-water");
   await expect(nav.getByRole("link", { name: "Results" })).toHaveAttribute("href", "../proof");
   await expect(nav.getByRole("link", { name: "Chemical Programs" })).toHaveAttribute("href", "../programs");
   await expect(nav.getByRole("link", { name: "Private Label" })).toHaveAttribute("href", "../private-label");
@@ -904,6 +906,13 @@ test("mobile hamburger menu exposes Products and system routes with keyboard foc
   });
   expect(labelFits).toBe(true);
 
+  const applications = nav.locator('.nav-group').filter({ hasText: 'Applications' });
+  await applications.locator('summary').click();
+  await expect(applications.getByRole("link", { name: "Industries", exact: true })).toBeVisible();
+  await expect(applications.getByRole("link", { name: "HVAC & Water Systems", exact: true })).toBeVisible();
+  await expect(applications.getByRole("link", { name: "Industries", exact: true })).toHaveAttribute("href", "../industries");
+  await expect(applications.getByRole("link", { name: "HVAC & Water Systems", exact: true })).toHaveAttribute("href", "../industries/hvac-water");
+
   await page.keyboard.press("Escape");
   await expect(nav).not.toHaveClass(/open/);
   await expect(burger).toBeFocused();
@@ -912,7 +921,7 @@ test("mobile hamburger menu exposes Products and system routes with keyboard foc
 test("desktop dropdowns fit their labels and retain keyboard focus during scroll", async ({ page }) => {
   await page.setViewportSize({ width: 1140, height: 408 });
   await page.goto(`${BASE_URL}/services.html`, { waitUntil: "domcontentloaded" });
-  for (const name of ["Products", "Resources"]) {
+  for (const name of ["Products", "Applications", "Resources"]) {
     const dropdown = page.locator('.nav-group').filter({ hasText: name });
     const summary = dropdown.locator('summary');
     await summary.click();

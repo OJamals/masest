@@ -132,8 +132,10 @@ export function renderChrome({
       { href: "programs", label: "Chemical Programs" },
       { href: "private-label", label: "Private Label" }
     ] },
-    { href: "industries", label: "Industries" },
-    { href: "industries/hvac-water", label: "HVAC & Water Systems" },
+    { key: "applications", label: "Applications", children: [
+      { href: "industries", label: "Industries" },
+      { href: "industries/hvac-water", label: "HVAC & Water Systems" }
+    ] },
     { href: "proof", label: "Results" },
     { key: "resources", label: "Resources", children: [
       { href: "resources", label: "SDS & Resources" },
