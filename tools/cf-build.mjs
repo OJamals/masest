@@ -41,6 +41,7 @@ const siteImagePaths = (siteImageManifest.assets || []).map((asset) => asset.pub
 const configuredMediaBase = String(process.env.CMS_MEDIA_BASE || '').trim().replace(/\/+$/, '');
 const cmsMediaBase = configuredMediaBase || SITE_MEDIA_BASE;
 const rewritableExtensions = new Set(['.css', '.html', '.js', '.json', '.xml']);
+const AHREFS_ANALYTICS_SCRIPT = '<script src="https://analytics.ahrefs.com/analytics.js" data-key="MUmg3K7L/OfrNXerE1kStQ" async></script>';
 const LOCAL_SITE_IMAGE_PATTERN = /https?:\/\/(?:www\.)?masest\.co\/img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)|(?<![a-z0-9_./-])(?:(?:\.\.\/)+|\.\/|\/)?img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)/gi;
 /* Two faces, not one. satoshi-01 is the body weight; satoshi-07 is --heading-weight: 700,
    which every .display and .headline uses -- i.e. the LCP element on the homepage and on
@@ -122,7 +123,12 @@ for (const f of files) {
   if (rewritableExtensions.has(extname(f).toLowerCase()) && f !== 'data/content/site-images.json') {
     const source = readFileSync(f, 'utf8');
     let compiled = rewriteCmsImageReferences(source, siteImagePaths, cmsMediaBase);
-    if (extname(f).toLowerCase() === '.html') compiled = ensureCriticalFontPreload(compiled);
+    if (extname(f).toLowerCase() === '.html') {
+      compiled = ensureCriticalFontPreload(compiled);
+      if (!compiled.includes(AHREFS_ANALYTICS_SCRIPT)) {
+        compiled = compiled.replace(/<\/head\s*>/i, `${AHREFS_ANALYTICS_SCRIPT}\n$&`);
+      }
+    }
     const unresolvedImages = unresolvedLocalImageReferences(compiled);
     if (unresolvedImages.length) {
       throw new Error(`cf-build: ${f} has image references missing from data/content/site-images.json: ${unresolvedImages.join(', ')}`);
@@ -143,7 +149,7 @@ writeFileSync(join(OUT, '_headers'),
   X-Frame-Options: SAMEORIGIN
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()
-  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.gstatic.com; connect-src 'self' https://challenges.cloudflare.com https://*.supabase.co https://api.stripe.com https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.gstatic.com; frame-src 'self' https://challenges.cloudflare.com; form-action 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://analytics.ahrefs.com https://challenges.cloudflare.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.gstatic.com; connect-src 'self' https://analytics.ahrefs.com https://challenges.cloudflare.com https://*.supabase.co https://api.stripe.com https://cloudflareinsights.com https://static.cloudflareinsights.com https://*.googleapis.com https://*.gstatic.com; frame-src 'self' https://challenges.cloudflare.com; form-action 'self'; upgrade-insecure-requests
 `);
 mkdirSync(join(OUT, 'data'), { recursive: true });
 writeFileSync(
