@@ -40,7 +40,7 @@ async function boundedBytes(stream, limit) {
 
 const base64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 
-export async function signCrmRequest(settings, staff, method, target, body) {
+export async function signCrmRequest(settings, staff, method, target, body, assignee) {
   const iat = Math.floor(Date.now() / 1000);
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', body));
   const claims = {
@@ -48,6 +48,7 @@ export async function signCrmRequest(settings, staff, method, target, body) {
     workspace_id: settings.workspace, role: staff.role, iat, exp: iat + 30,
     method, target, body_sha256: [...digest].map((b) => b.toString(16).padStart(2, '0')).join(''),
   };
+  if (assignee) claims.assignee = assignee;
   const message = `v1.${base64url(encoder.encode(JSON.stringify(claims)))}`;
   const key = await crypto.subtle.importKey('raw', Uint8Array.from(settings.key.match(/../g), (h) => parseInt(h, 16)), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
@@ -68,6 +69,14 @@ export async function handleConnectedCrm({ request, env }, dependencies) {
   if (!['GET', 'POST'].includes(method)) return error(405, 'method_not_allowed', 'Method not permitted');
   const params = new URL(request.url).searchParams;
   const resource = params.get('resource') || 'people';
+  if (resource === 'staff_directory') {
+    if (method !== 'GET') return error(405, 'method_not_allowed', 'Directory is read-only');
+    if ([...params.keys()].some((key) => !['resource', 'limit', 'cursor'].includes(key) || params.getAll(key).length !== 1)
+        || (params.has('limit') && (!/^\d+$/.test(params.get('limit')) || Number(params.get('limit')) < 1 || Number(params.get('limit')) > 50))
+        || (params.has('cursor') && !UUID.test(params.get('cursor')))) return error(422, 'validation_error', 'Invalid directory query');
+    try { return json(200, await dependencies.staffDirectory.list({ limit: Number(params.get('limit') || 25), cursor: params.get('cursor') })); }
+    catch { return error(503, 'staff_directory_unavailable', 'Staff directory unavailable. Retry.'); }
+  }
   const isSales = resource.startsWith('sales_');
   const salesTarget = isSales ? connectedSalesTarget(params, method) : null;
   const personReview = ['person', 'contacts', 'evidence', 'assertions'].includes(resource);
@@ -84,12 +93,27 @@ export async function handleConnectedCrm({ request, env }, dependencies) {
   let body;
   try { body = await boundedBytes(request.body, LIMIT); }
   catch { return error(413, 'request_too_large', 'Request exceeds CRM limit'); }
+  let assignee;
+  if (method === 'POST' && ['sales_tasks', 'sales_task', 'sales_deals', 'sales_deal'].includes(resource)) {
+    let command;
+    try { command = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)); }
+    catch { return error(422, 'validation_error', 'Invalid JSON command'); }
+    const owner = command?.owner_staff_id;
+    if (owner != null && !UUID.test(owner)) return error(422, 'validation_error', 'Invalid staff identity');
+    if (owner && owner !== staff.user.id) {
+      try {
+        // A revoked target may still have a committed lost receipt. The canonical
+        // service may replay it, but requires this proof for every new write.
+        if (await dependencies.staffDirectory.eligible(owner)) assignee = owner;
+      } catch { return error(503, 'staff_directory_unavailable', 'Staff directory unavailable. Retry the original change.'); }
+    }
+  }
   const query = new URLSearchParams();
   for (const key of ['limit', 'cursor', 'q']) if (params.has(key)) query.set(key, params.get(key));
   const path = personReview ? `/v1/people/${params.get('person_id')}${pagedReview ? '/' + resource : ''}` : `/v1/${resource}`;
   const target = salesTarget || `${path}${query.size ? `?${query}` : ''}`;
   try {
-    const assertion = await signCrmRequest(settings, staff, method, target, body);
+    const assertion = await signCrmRequest(settings, staff, method, target, body, assignee);
     const response = await (dependencies.fetch || fetch)(settings.origin + target, {
       method, body: method === 'POST' ? body : undefined, redirect: 'error', signal: AbortSignal.timeout(15_000),
       headers: { 'Content-Type': 'application/json', 'X-MASEST-CRM-Assertion': assertion },

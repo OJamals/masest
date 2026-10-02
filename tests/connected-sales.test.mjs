@@ -7,6 +7,12 @@ const context = { workspace_id: id(), staff_id: id() };
 const store = () => { const data = new Map(); return { getItem: (k) => data.get(k), setItem: (k, v) => data.set(k, v), removeItem: (k) => data.delete(k) }; };
 const task = (body) => ({ id: id(), revision: 1, title: body.title, owner_staff_id: context.staff_id, owner_name: null, body: '', status: 'open', priority: 'normal', due_at: null, completed_at: null });
 
+test('canonical assignee rejection clears pending so another target can be chosen', async () => {
+  const actions = salesActions(async () => { throw Object.assign(new Error('unavailable'), { status: 403, data: { error: { code: 'assignee_unavailable' } } }); }, context, store());
+  await assert.rejects(actions.execute('sales_tasks', {}, { action_id: id(), title: 'Synthetic', owner_staff_id: id() }));
+  assert.equal(actions.pending, null);
+});
+
 test('uncertain command survives reload and reuses exact body and action ID', async () => {
   const storage = store(); const calls = []; const body = { action_id: id(), title: 'Synthetic', owner_staff_id: context.staff_id };
   const api = async (_, options) => { calls.push(options.body); if (calls.length === 1) throw new Error('lost'); return task(body); };

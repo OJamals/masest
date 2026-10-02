@@ -11,13 +11,18 @@ const routes = {
   sales_events: { path: 'events', query: [...page, 'entity_type', 'entity_id'], required: ['entity_type', 'entity_id'] },
   sales_summary: { path: 'summary', query: [] },
   sales_timeline: { path: 'people', id: 'person_id', suffix: '/timeline', query: page },
+  sales_accounts: { path: 'accounts', query: page },
+  sales_account_timeline: { path: 'accounts', id: 'organization_id', suffix: '/timeline', query: page },
+  sales_engagement: { path: 'people', id: 'person_id', query: page },
 };
 
 export function connectedSalesTarget(params, method) {
   const resource = params.get('resource'); const route = routes[resource];
   if (!route || (method === 'POST' && !route.write)) return null;
   const queryKeys = method === 'POST' ? [] : route.query;
-  const allowed = new Set(['resource', ...(route.id ? [route.id] : []), ...queryKeys]);
+  const engagement = resource === 'sales_engagement';
+  if (engagement && !['activities', 'preferences', 'handoffs', 'opportunities'].includes(params.get('section'))) return null;
+  const allowed = new Set(['resource', ...(route.id ? [route.id] : []), ...queryKeys, ...(engagement ? ['section'] : [])]);
   if ([...params.keys()].some((key) => !allowed.has(key) || params.getAll(key).length !== 1)
       || (route.id && !UUID.test(params.get(route.id) || ''))
       || route.required?.some((key) => !params.has(key))) return null;
@@ -35,5 +40,5 @@ export function connectedSalesTarget(params, method) {
         || (key.startsWith('limit') && (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > (key === 'limit_per_stage' ? 25 : 100)))) return null;
     query.set(key, value);
   }
-  return `/v1/sales/${route.path}${route.id ? '/' + params.get(route.id) : ''}${route.suffix || ''}${query.size ? '?' + query : ''}`;
+  return `/v1/sales/${route.path}${route.id ? '/' + params.get(route.id) : ''}${engagement ? '/engagement/' + params.get('section') : route.suffix || ''}${query.size ? '?' + query : ''}`;
 }

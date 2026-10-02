@@ -53,7 +53,7 @@ test.afterAll(async () => {
   }
 });
 
-async function boot(page, { role = 'owner', disabled = false, loseReceipt = false, view = 'intake', holdReceipt = null, holdRead = null } = {}) {
+async function boot(page, { role = 'owner', disabled = false, loseReceipt = false, view = 'intake', holdReceipt = null, holdRead = null, directory = null } = {}) {
   const bodies = []; const errors = []; let lost = false;
   page.on('pageerror', (error) => errors.push(error.message));
   await page.addInitScript(() => { window.MASEST_SUPABASE_URL = 'https://stub.supabase.co'; window.MASEST_SUPABASE_ANON = 'stub-anon-key'; });
@@ -69,6 +69,7 @@ async function boot(page, { role = 'owner', disabled = false, loseReceipt = fals
     });
     const response = await handleConnectedCrm({ request, env: disabled ? {} : env }, {
       requireStaff: async () => ({ user: { id: '00000000-0000-4000-8000-000000000042' }, staff: true, role }),
+      staffDirectory: directory || { list: async () => ({ items: [], next_cursor: null }), eligible: async () => false },
       fetch: fixtureFetch,
     });
     if (body && loseReceipt && !lost && response.ok) { lost = true; await route.abort('failed'); return; }
@@ -162,6 +163,116 @@ async function salesFixture(resource, body) {
   }) }, { requireStaff: async () => ({ user: { id: '00000000-0000-4000-8000-000000000042' }, staff: true, role: 'owner' }), fetch: fixtureFetch });
   expect(response.status).toBe(200); return response.json();
 }
+
+test('engagement history ignores stale section responses', async ({ page }) => {
+  const person = await seedDossier('Stale Engagement Buyer');
+  let release; let received = false; const gate = new Promise((resolve) => { release = resolve; });
+  await boot(page, { view: 'sales', holdRead: async (params) => {
+    if (params.get('resource') === 'sales_engagement' && params.get('section') === 'activities' && params.get('person_id') === person) { received = true; await gate; }
+  } });
+  await page.getByRole('combobox', { name: 'Prospect', exact: true }).selectOption(person);
+  await expect.poll(() => received).toBe(true);
+  await page.getByRole('combobox', { name: 'Engagement section', exact: true }).selectOption('preferences');
+  await expect(page.locator('[data-history-engagement-status]')).toContainText('No recorded preferences');
+  const oldResponse = page.waitForResponse((res) => res.url().includes('sales_engagement') && res.url().includes('activities'));
+  release(); await oldResponse;
+  await expect(page.locator('[data-history-engagement-status]')).toContainText('No recorded preferences');
+});
+
+test('directory paging retries and staff task filter survives workspace navigation', async ({ page }) => {
+  const teammate = '00000000-0000-4000-8000-000000000043'; let pageTwo = 0;
+  await boot(page, { view: 'sales', directory: {
+    list: async ({ cursor }) => {
+      if (!cursor) return { items: [], next_cursor: teammate };
+      if (++pageTwo === 1) throw new Error('Synthetic directory unavailable');
+      return { items: [{ staff_id: teammate, display_name: 'Paged teammate', role: 'support' }], next_cursor: null };
+    }, eligible: async () => false,
+  } });
+  await page.getByRole('button', { name: 'More staff', exact: true }).click();
+  await expect(page.locator('[data-staff-status]')).toContainText('unavailable');
+  await page.getByRole('button', { name: 'More staff', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Task assignment', exact: true }).selectOption(teammate);
+  await page.locator('[data-crm-ws-tab="contacts"]').click();
+  await page.locator('[data-crm-ws-tab="sales"]').click();
+  await expect(page.getByRole('combobox', { name: 'Task assignment', exact: true })).toHaveValue(teammate);
+  await page.getByRole('button', { name: 'More staff', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Task assignment', exact: true })).toHaveValue(teammate);
+});
+
+test('account and engagement history page independently, retry safely and escape notes', async ({ page }) => {
+  const person = await seedDossier('History Buyer');
+  const seed = spawn(path.join(process.env.OPENGTM_TEST_ROOT, '.venv/bin/python'), ['-c', 'import sys; from tests.connected_fixture_server import seed_engagement; print(seed_engagement(sys.argv[1], sys.argv[2]))', workspace, person], { cwd: process.env.OPENGTM_TEST_ROOT });
+  let output = ''; seed.stdout.on('data', (chunk) => { output += chunk; });
+  expect((await once(seed, 'exit'))[0]).toBe(0); const organization = output.trim();
+  for (let i = 0; i < 12; i++) await salesFixture('sales_tasks', { organization_id: organization, title: 'Account history task ' + i });
+  const { errors } = await boot(page, { view: 'sales', role: 'read_only' });
+  await page.getByRole('combobox', { name: 'CRM account', exact: true }).selectOption(organization);
+  await expect(page.locator('[data-history-account-events] article')).toHaveCount(10);
+  await page.getByRole('button', { name: 'More account history', exact: true }).click();
+  await expect(page.locator('[data-history-account-events] article')).toHaveCount(12);
+  await page.locator('[data-history-account-events]').getByRole('button', { name: 'Open task Account history task 0', exact: true }).click();
+  await expect(page.locator('[data-sales-editor]')).toContainText('Task details');
+  await page.getByRole('combobox', { name: 'Prospect', exact: true }).selectOption(person);
+  await expect(page.locator('[data-history-engagement-events] article')).toHaveCount(10);
+  const cursors = [];
+  await page.route('**/api/admin/connected-crm?resource=sales_engagement**', async (route) => {
+    const cursor = new URL(route.request().url()).searchParams.get('cursor');
+    if (cursor) { cursors.push(cursor); if (cursors.length === 1) return route.fulfill({ status: 503, json: { error: { code: 'synthetic', message: 'Synthetic interruption' } } }); }
+    return route.fallback();
+  });
+  await page.getByRole('button', { name: 'More engagement history', exact: true }).click();
+  await expect(page.locator('[data-history-engagement-status]')).toContainText('Synthetic interruption');
+  await expect(page.locator('[data-history-engagement-events] article')).toHaveCount(10);
+  await page.getByRole('button', { name: 'More engagement history', exact: true }).click();
+  await expect(page.locator('[data-history-engagement-events] article')).toHaveCount(12);
+  expect(cursors[1]).toBe(cursors[0]);
+  await expect(page.locator('[data-history-engagement-events] img')).toHaveCount(0);
+  await expect(page.locator('[data-history-engagement-events]')).toContainText('<img src=x onerror=alert(1)>');
+  await expect(page.locator('[data-history-engagement-events]')).not.toContainText('DO_NOT_EXPOSE');
+  await expect(page.locator('[data-history-engagement-events]')).toContainText('Occurred');
+  await page.getByRole('heading', { name: 'Prospect engagement history', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/connected-team-history-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.getByRole('heading', { name: 'Prospect engagement history', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/connected-team-history-mobile.png' });
+  for (const section of ['preferences', 'handoffs', 'opportunities']) {
+    await page.getByRole('combobox', { name: 'Engagement section', exact: true }).selectOption(section);
+    await expect(page.locator('[data-history-engagement-status]')).toContainText('No recorded');
+  }
+  expect(errors).toEqual([]);
+});
+
+test('team assignment survives lost receipt and target revocation, with audited ownership', async ({ page }) => {
+  const person = await seedDossier('Team Buyer'); const teammate = '00000000-0000-4000-8000-000000000043';
+  let eligible = true;
+  const { errors } = await boot(page, { view: 'sales', loseReceipt: true, directory: {
+    list: async () => ({ items: [{ staff_id: teammate, display_name: 'Synthetic teammate', role: 'support' }], next_cursor: null }),
+    eligible: async (id) => eligible && id === teammate,
+  } });
+  await page.getByRole('combobox', { name: 'Prospect', exact: true }).selectOption(person);
+  const form = page.locator('[data-sales-create="task"]');
+  await form.getByLabel('Task title', { exact: true }).fill('Assigned team review');
+  await form.getByRole('combobox', { name: /^Assignment/ }).selectOption(teammate);
+  await form.getByRole('button', { name: 'Create task', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Retry original change' })).toBeVisible();
+  eligible = false;
+  await page.getByRole('button', { name: 'Retry original change' }).click();
+  await expect(page.locator('[data-sales-editor]')).toContainText('Synthetic teammate');
+  await expect(page.locator('[data-sales-history]')).toContainText('Task created');
+  await page.getByRole('combobox', { name: 'Task assignment', exact: true }).selectOption(teammate);
+  await expect(page.locator('[data-sales-tasks]')).toContainText('Assigned team review');
+  const editor = page.locator('[data-sales-editor]');
+  await editor.getByRole('combobox', { name: /^Assignment/ }).selectOption(teammate);
+  await editor.getByLabel('Reason', { exact: true }).fill('Check revoked target');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.locator('[data-sales-status]')).toContainText('currently eligible');
+  await expect(page.getByRole('button', { name: 'Retry original change' })).toBeHidden();
+  await editor.getByRole('combobox', { name: /^Assignment/ }).selectOption('clear');
+  await editor.getByRole('button', { name: 'Save changes' }).click();
+  await expect(editor).toContainText('Unassigned');
+  expect(errors.filter((value) => !value.includes('Failed to fetch'))).toEqual([]);
+});
 
 test('connected daily work filters tasks and pages prospect sales history with read-only access', async ({ page }) => {
   const person = await seedDossier('Daily Buyer');

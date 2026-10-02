@@ -63,9 +63,9 @@ export function salesSummary(value) {
   return value;
 }
 
-export function salesTimeline(value, personId) {
+export function salesTimeline(value, personId, scope = 'person_id') {
   return salesPage(value, (event) => {
-    if (!event || !UUID.test(event.id) || event.person_id !== personId || !UUID.test(event.entity_id)
+    if (!event || !UUID.test(event.id) || event[scope] !== personId || !UUID.test(event.entity_id)
         || !['task', 'deal'].includes(event.entity_type) || !timestamp(event.created_at)
         || typeof event.title !== 'string' || event.title.length > 200 || typeof event.reason !== 'string' || event.reason.length > 1000
         || !(event.actor_staff_id === null && event.actor_role === null || UUID.test(event.actor_staff_id) && ['owner', 'finance', 'support'].includes(event.actor_role))) return invalid();
@@ -107,7 +107,8 @@ export function salesActions(api, context, storage) {
       // Only explicit command failures prove rollback. Auth/throttling failures
       // can occur after an earlier committed attempt whose receipt was lost.
       const definitive = ['validation_error', 'revision_conflict', 'sales_record_not_found', 'sales_identity_hold', 'sales_stage_invalid', 'sales_close_reason_required', 'sales_opportunity_already_linked', 'staff_assignment_required'];
-      if ([404, 409, 422].includes(error.status) && definitive.includes(error.data?.error?.code)) {
+      if (([404, 409, 422].includes(error.status) && definitive.includes(error.data?.error?.code))
+          || (error.status === 403 && error.data?.error?.code === 'assignee_unavailable')) {
         storage.removeItem(key); pending = null;
       }
       throw error;

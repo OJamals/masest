@@ -2,6 +2,8 @@ import { esc } from '../util.js?v=20260929e';
 import { UUID, salesActions, salesPage, salesRecord, salesUrl, salesBoardPipeline, salesDealPage } from './connected-sales-contract.js?v=20260929e';
 import { creationForms, editorForm, editorChanges } from './connected-sales-forms.js?v=20260929e';
 import { createDailyWork, dailyMarkup } from './connected-daily-work.js?v=20260929e';
+import { createStaffDirectory } from './connected-staff.js?v=20260929e';
+import { createConnectedHistory, historyMarkup } from './connected-history.js?v=20260929e';
 
 const message = (error) => error?.data?.error?.message || error?.message || 'CRM is unavailable. Retry.';
 
@@ -27,14 +29,17 @@ export function createConnectedSales({ api }) {
       <button class="btn btn-ghost btn-sm" data-sales-more-people hidden>More prospects</button>
       <label class="crm-field">Pipeline<select class="adm-select" data-sales-pipeline><option value="">Choose a pipeline</option></select></label>
       <button class="btn btn-ghost btn-sm" data-sales-more-pipelines hidden>More pipelines</button>
+      <p data-staff-status role="status"></p><button class="btn btn-ghost btn-sm" data-staff-refresh>Refresh staff directory</button><button class="btn btn-ghost btn-sm" data-staff-more hidden>More staff</button>
       <div data-sales-create-forms>${creationForms(context)}</div>
       <h4>Tasks</h4><button class="btn btn-ghost btn-sm" data-sales-refresh>Refresh tasks and board</button>
       ${dailyMarkup.filters}
       <div data-sales-tasks></div><button class="btn btn-ghost btn-sm" data-sales-more-tasks hidden>More tasks</button>
       <h4>Pipeline board</h4><div data-sales-board></div>
-      <section data-sales-editor></section><section data-sales-history></section>${dailyMarkup.timeline}`;
+      <section data-sales-editor></section><section data-sales-history></section>${dailyMarkup.timeline}${historyMarkup}`;
     const at = (key) => root.querySelector(`[data-sales-${key}]`);
     const daily = createDailyWork({ api, root, active, staffId: context.staff_id, state: dailyState, onTasksChange: () => tasks() });
+    const staff = createStaffDirectory({ api, root, active, context, dailyState });
+    const broaderHistory = createConnectedHistory({ api, root, active });
     let peopleCursor = null; let taskCursor = null; let pipelineCursor = null; let historyCursor = null;
     let peopleQuery = ''; let pipelines = new Map(); let selected = null; let selectedKind = null; let conflict = false;
     let peopleVersion = 0; let pipelineVersion = 0; let taskVersion = 0; let boardVersion = 0; let detailVersion = 0; let historyVersion = 0;
@@ -58,7 +63,7 @@ export function createConnectedSales({ api }) {
       const page = salesPage(await api(salesUrl('people', { limit: '50', q: peopleQuery, ...(append && peopleCursor ? { cursor: peopleCursor } : {}) })), (p) => { if (!UUID.test(p.id) || typeof p.name !== 'string') throw new Error('Invalid prospect list.'); });
       if (!active() || version !== peopleVersion) return;
       options(at('prospect'), page.items, 'prospect', append); peopleCursor = page.next_cursor; at('more-people').hidden = !peopleCursor;
-      if (!append) await daily.prospectChanged();
+      if (!append) await Promise.all([daily.prospectChanged(), broaderHistory.prospectChanged()]);
     }
     async function catalog(append = false, choose = null) {
       const version = ++pipelineVersion;
@@ -126,7 +131,7 @@ export function createConnectedSales({ api }) {
       }
       if (!active() || version !== detailVersion) return;
       selected = record; selectedKind = kind;
-      at('editor').innerHTML = editorForm(record, kind, context, pipeline); controls(); at('editor').querySelector('h4').focus();
+      at('editor').innerHTML = editorForm(record, kind, context, pipeline); staff.populate(); controls(); at('editor').querySelector('h4').focus();
       try { await history(); } catch (error) { if (active() && selected?.id === id) at('history').textContent = 'History unavailable: ' + message(error); }
     }
     async function change(resource, params, command, retry = false) {
@@ -139,7 +144,7 @@ export function createConnectedSales({ api }) {
         if (!active()) return;
         status('Change saved.');
         if (resource === 'sales_pipelines') await catalog(false, value.id);
-        await Promise.all([tasks(), board(), daily.refresh()]);
+        await Promise.all([tasks(), board(), daily.refresh(), broaderHistory.refresh()]);
         if (resource !== 'sales_pipelines') await open(resource.includes('task') ? 'task' : 'deal', value.id);
       } catch (error) {
         outcome.error = message(error);
@@ -156,7 +161,7 @@ export function createConnectedSales({ api }) {
         actions = salesActions(api, context, sessionStorage); controls();
         if (outcome.error) status(outcome.error);
         else if (outcome.saved) status('Change saved.');
-        await catalog(); await Promise.all([tasks(), board(), daily.refresh()]);
+        await catalog(); await Promise.all([tasks(), board(), daily.refresh(), broaderHistory.refresh()]);
       } catch (error) { status(message(error)); }
     };
     const guarded = (work) => async (event) => { try { await work(event); } catch (error) { status(message(error)); } };
@@ -173,7 +178,7 @@ export function createConnectedSales({ api }) {
       if (kind === 'pipeline') Object.assign(command, { name: values.name.trim(), stages: [{ name: 'Open', kind: 'open' }, { name: 'Won', kind: 'won' }, { name: 'Lost', kind: 'lost' }] });
       else {
         if (!at('prospect').value) throw new Error('Choose a prospect first.');
-        Object.assign(command, { title: values.title.trim(), person_id: at('prospect').value, owner_staff_id: context.staff_id });
+        Object.assign(command, { title: values.title.trim(), person_id: at('prospect').value, owner_staff_id: values.assignment === 'me' ? context.staff_id : values.assignment === 'clear' ? null : values.assignment });
         if (kind === 'task') Object.assign(command, { body: values.body, priority: values.priority, due_at: values.due_at ? new Date(values.due_at).toISOString() : null });
         else {
           const pipeline = pipelines.get(at('pipeline').value); if (!pipeline) throw new Error('Choose a pipeline first.');
@@ -203,9 +208,9 @@ export function createConnectedSales({ api }) {
       }
     }));
     at('pipeline').addEventListener('change', guarded(board));
-    at('prospect').addEventListener('change', () => daily.prospectChanged());
+    at('prospect').addEventListener('change', () => Promise.all([daily.prospectChanged(), broaderHistory.prospectChanged()]));
     controls();
-    try { await Promise.all([people(), catalog(), tasks(), daily.summary()]); await board(); ready = true; controls(); }
+    try { await Promise.all([people(), catalog(), tasks(), daily.summary(), staff.load(), broaderHistory.accounts()]); await board(); ready = true; controls(); }
     catch (error) { status(message(error)); }
   }
   return { render };

@@ -1,4 +1,5 @@
 import { json, requireStaff } from '../../_lib/supabase.js';
+import { createConnectedStaffDirectory } from '../../_lib/connected-staff-directory.js';
 import { connectedCrmConfigured, handleConnectedCrm } from '../../_lib/connected-crm.js';
 
 export async function onRequest(context) {
@@ -12,5 +13,6 @@ export async function onRequest(context) {
   if (!staff) return json(403, { error: { code: 'forbidden', message: 'Platform staff access required' } });
   // Reuse this request's fresh identity; the bridge additionally validates role,
   // origin, request bounds and route scope before signing anything.
-  return handleConnectedCrm(context, { requireStaff: async () => identity });
+  return handleConnectedCrm(context, { requireStaff: async () => identity,
+    staffDirectory: createConnectedStaffDirectory(env, { signal: request.signal }) });
 }

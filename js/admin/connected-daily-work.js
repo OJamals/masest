@@ -1,5 +1,5 @@
 import { esc } from '../util.js?v=20260929e';
-import { salesSummary, salesTimeline, salesUrl } from './connected-sales-contract.js?v=20260929e';
+import { UUID, salesSummary, salesTimeline, salesUrl } from './connected-sales-contract.js?v=20260929e';
 
 const field = (label, key, options) => `<label class="crm-field">${label}<select class="adm-select" data-daily-filter="${key}">${options.map(([value, text]) => `<option value="${value}">${text}</option>`).join('')}</select></label>`;
 export const dailyMarkup = {
@@ -22,6 +22,7 @@ export function createDailyWork({ api, root, active, staffId, state, onTasksChan
     const params = {};
     for (const key of ['status', 'due', 'priority']) if (state[key]) params[key] = state[key];
     if (state.assignment === 'mine') params.owner_staff_id = staffId;
+    else if (UUID.test(state.assignment || '')) params.owner_staff_id = state.assignment;
     if (state.assignment === 'unassigned') params.assignment = 'unassigned';
     if (state.scope === 'prospect') {
       if (!prospect().value) return null;
