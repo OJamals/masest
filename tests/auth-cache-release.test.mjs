@@ -102,6 +102,7 @@ test("segment pricing entrypoints and pricing-data importers share the public re
     "js/main/content-snapshots.js",
     "js/main/service-catalog.js",
     "js/main/segment-pricing.js",
+    "js/main/water-programs.js",
   ]) {
     assert.match(read(path), new RegExp(`pricing-data\\.js\\?v=${MAIN_RELEASE}`), path);
   }
