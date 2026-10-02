@@ -168,7 +168,7 @@ test("Cloudflare build emits baseline security headers", () => {
   const build = read("tools/cf-build.mjs");
 
   assert.match(build, /X-Content-Type-Options:\s*nosniff/);
-  assert.match(build, /Referrer-Policy:\s*strict-origin-when-cross-origin/);
+  assert.match(build, /Referrer-Policy:\s*origin\b/);
   assert.match(build, /X-Frame-Options:\s*SAMEORIGIN/);
   assert.match(build, /Strict-Transport-Security:/);
   assert.match(build, /Permissions-Policy:/);

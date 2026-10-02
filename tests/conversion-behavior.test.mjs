@@ -11,19 +11,72 @@ const storage = () => {
   return { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)), removeItem: (key) => values.delete(key) };
 };
 
-function tracking({ sessionStorage = storage(), referrer = '', pathname = '/', search = '', accepted = true } = {}) {
+function tracking({ sessionStorage = storage(), referrer = '', pathname = '/', search = '', accepted = true, ahrefs } = {}) {
   const blobs = [];
   const fallbacks = [];
-  const window = {};
+  const window = { AhrefsAnalytics: ahrefs };
+  let trackerLoaded;
+  const trackerAttributes = {};
   runInNewContext(track, {
-    window, sessionStorage, document: { referrer },
+    window, sessionStorage, document: {
+      referrer,
+      querySelector: () => ({
+        addEventListener: (_event, handler) => { trackerLoaded = handler; },
+        setAttribute: (name, value) => { trackerAttributes[name] = value; },
+      }),
+    },
     location: { hostname: 'masest.co', pathname, search },
     crypto: { randomUUID: () => 'session-id' }, URL, URLSearchParams, Blob,
     navigator: { sendBeacon: (_url, blob) => { if (accepted) blobs.push(blob); return accepted; } },
     fetch: async (_url, init) => { fallbacks.push(JSON.parse(init.body)); return { ok: true }; },
   });
-  return { window, sessionStorage, fallbacks, packets: async () => Promise.all(blobs.map(async (blob) => JSON.parse(await blob.text()))) };
+  return { window, sessionStorage, fallbacks, trackerAttributes, trackerLoaded: () => trackerLoaded(), packets: async () => Promise.all(blobs.map(async (blob) => JSON.parse(await blob.text()))) };
 }
+
+test('Ahrefs receives funnel events once without form details or duplicate pageviews', () => {
+  const events = [];
+  const result = tracking({ ahrefs: { sendEvent: (...args) => events.push(args) } });
+  result.window.mtrack('quote_submit', { dedupe_key: 'private-quote-id', email: 'buyer@example.com', product: 'private notes' });
+  result.window.mtrack('quote_submit', { dedupe_key: 'private-quote-id' });
+  result.window.mtrack('checkout_start');
+  result.window.mtrack('order_confirmed');
+  result.window.mtrack('document_download', { document: 'document.pdf' });
+  result.window.mtrack('unrecognized_event');
+  assert.deepEqual(events, [['quote_submit'], ['checkout_start'], ['order_confirmed'], ['document_download']]);
+});
+
+test('early funnel events survive async Ahrefs loading and repeated load notifications', () => {
+  const events = [];
+  const result = tracking();
+  result.window.mtrack('quote_submit', { dedupe_key: 'one' });
+  result.window.mtrack('quote_submit', { dedupe_key: 'one' });
+  result.window.AhrefsAnalytics = { sendEvent: (...args) => events.push(args) };
+  result.trackerLoaded();
+  result.trackerLoaded();
+  assert.deepEqual(events, [['quote_submit']]);
+});
+
+test('missing or throwing Ahrefs leaves first-party conversion tracking intact', async () => {
+  for (const ahrefs of [undefined, { sendEvent: () => { throw new Error('provider failed'); } }]) {
+    const result = tracking({ ahrefs });
+    result.window.mtrack('quote_submit', { dedupe_key: 'one' });
+    result.window.mtrack('quote_submit', { dedupe_key: 'one' });
+    assert.equal((await result.packets()).filter((packet) => packet.event === 'quote_submit').length, 1);
+  }
+});
+
+test('custom-event URLs exclude checkout capabilities; query-bearing referrers stay first-party only', async () => {
+  const events = [];
+  const ahrefs = { sendEvent: (...args) => events.push(args) };
+  const safe = tracking({ ahrefs, pathname: '/order-confirmed', search: '?session_id=secret&email=buyer@example.com', referrer: 'https://checkout.stripe.com/' });
+  safe.window.mtrack('order_confirmed');
+  assert.equal(safe.trackerAttributes['data-page-location'], '/order-confirmed');
+  assert.deepEqual(events, [['order_confirmed']]);
+  const sensitive = tracking({ ahrefs, referrer: 'https://masest.co/contact?email=buyer%40example.com' });
+  sensitive.window.mtrack('quote_submit', { dedupe_key: 'one' });
+  assert.equal(events.length, 1);
+  assert.equal((await sensitive.packets()).filter((packet) => packet.event === 'quote_submit').length, 1);
+});
 
 test('entry referrer survives internal navigation and strips URL secrets', async () => {
   const first = tracking({ referrer: 'https://www.google.com/search?q=private&email=person%40example.com' });

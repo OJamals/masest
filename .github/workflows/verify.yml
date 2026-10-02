@@ -30,6 +30,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Sitemap lastmod uses each source file's Git history.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v5
         with:

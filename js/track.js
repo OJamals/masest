@@ -76,11 +76,36 @@
       return parts.length ? '#' + parts.join('&') : '';
     }
 
+    // Reuse the existing success gates and retry deduplication. Ahrefs owns its
+    // pageviews; forward only funnel event names, never form data or quote IDs.
+    var ahrefsQueue = [];
+    function flushAhrefsEvents() {
+      if (!window.AhrefsAnalytics || typeof window.AhrefsAnalytics.sendEvent !== 'function') return;
+      // The provider reads the current URL/referrer itself. Keep custom-event
+      // URLs path-only; a query-bearing referrer cannot be safely overridden.
+      try { if (new URL(document.referrer).search) { ahrefsQueue.length = 0; return; } } catch (e) { /* no referrer */ }
+      if (!ahrefsScript) return;
+      ahrefsScript.setAttribute('data-page-location', location.pathname);
+      while (ahrefsQueue.length) {
+        var event = ahrefsQueue.shift();
+        try { window.AhrefsAnalytics.sendEvent(event); } catch (e) { /* optional provider */ }
+      }
+    }
+    function forwardAhrefsEvent(event) {
+      if (['quote_submit', 'checkout_start', 'order_confirmed', 'document_download'].indexOf(event) === -1) return;
+      // The head script is async: preserve early confirmations until it loads.
+      if (ahrefsQueue.length < 20) ahrefsQueue.push(event);
+      flushAhrefsEvents();
+    }
+    var ahrefsScript = document.querySelector('script[src="https://analytics.ahrefs.com/analytics.js"]');
+    if (ahrefsScript) ahrefsScript.addEventListener('load', flushAhrefsEvents);
+
     function beacon(event, detail) {
       try {
         // Durable quote IDs are used only for local retry deduplication, never sent.
         var dedupeKey = detail && detail.dedupe_key ? 'masest_event:' + cleanPart(event, 40) + ':' + cleanPart(detail.dedupe_key, 128) : '';
         if (dedupeKey && sessionStorage.getItem(dedupeKey)) return;
+        forwardAhrefsEvent(event);
         var payload = JSON.stringify({
           // Query strings can contain checkout capabilities, auth codes, unsubscribe
           // tokens, or email addresses. Attribution is captured separately above.

@@ -1,5 +1,13 @@
 import { canonicalPublicImageUrl } from "./image-url.js?v=20260929e";
 
+// Link only records with a published, matching field assessment. This shared
+// renderer keeps generated HTML and CMS-refreshed cards on the same evidence path.
+const FIELD_RECORDS = Object.freeze({
+  "distribution-center-assessment": { href: "/blog/cr-hd-walmart-distribution-center-case-study", label: "Read the distribution-center assessment" },
+  "fire-pump-descaler": { href: "/blog/descaler-fire-pump-walmart-case-study", label: "Read the fire-pump field record" },
+  "brevard-farm-hvac": { href: "/blog/hcr-brevard-hvac-rust-case-study", label: "Read the HVAC field record" },
+});
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -17,6 +25,7 @@ export function proofCardHtml(card) {
     : "Every job is different. Try it on your surface and compare the result.";
   const image = canonicalPublicImageUrl(card?.image);
   const afterImage = canonicalPublicImageUrl(card?.image_after);
+  const fieldRecord = Object.hasOwn(FIELD_RECORDS, card?.slug) ? FIELD_RECORDS[card.slug] : null;
   const imageHtml = image
     ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(card.image_alt || card.title || "")}" loading="lazy" width="${escapeHtml(card.image_w || 1600)}" height="${escapeHtml(card.image_h || 900)}">`
     : "";
@@ -33,7 +42,7 @@ export function proofCardHtml(card) {
         <h3>${escapeHtml(card?.title || "VertKleen result")}</h3>
         <p class="case-result">${escapeHtml(card?.result || "")}</p>
         <p class="case-publication">${recordNote}</p>
-        ${chips.length ? `<div class="case-meta">${chips.map((chip) => `<span class="case-chip">${escapeHtml(chip)}</span>`).join("")}</div>` : ""}
+        ${chips.length ? `<div class="case-meta">${chips.map((chip) => `<span class="case-chip">${escapeHtml(chip)}</span>`).join("")}</div>` : ""}${fieldRecord ? `\n        <p class="case-record-link"><a href="${fieldRecord.href}">${fieldRecord.label}</a></p>` : ""}
         <details class="case-disclosure">
           <summary>Read the story</summary>
           <div class="case-disclosure-body">

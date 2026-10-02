@@ -4,6 +4,7 @@
 // Pages compiles functions/ into the Worker separately, so functions are NOT copied here.
 // Run by Pages as the build command: `node tools/cf-build.mjs`.
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
 
@@ -42,6 +43,7 @@ const configuredMediaBase = String(process.env.CMS_MEDIA_BASE || '').trim().repl
 const cmsMediaBase = configuredMediaBase || SITE_MEDIA_BASE;
 const rewritableExtensions = new Set(['.css', '.html', '.js', '.json', '.xml']);
 const AHREFS_ANALYTICS_SCRIPT = '<script src="https://analytics.ahrefs.com/analytics.js" data-key="MUmg3K7L/OfrNXerE1kStQ" async></script>';
+const TRACKING_VERSION = createHash('sha256').update(readFileSync('js/track.js')).digest('hex').slice(0, 12);
 const LOCAL_SITE_IMAGE_PATTERN = /https?:\/\/(?:www\.)?masest\.co\/img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)|(?<![a-z0-9_./-])(?:(?:\.\.\/)+|\.\/|\/)?img\/[a-z0-9_.@()+%/-]+\.(?:avif|gif|jpe?g|png|svg|webp)/gi;
 /* Two faces, not one. satoshi-01 is the body weight; satoshi-07 is --heading-weight: 700,
    which every .display and .headline uses -- i.e. the LCP element on the homepage and on
@@ -90,7 +92,7 @@ const DENY = [
   // Local agent configuration must never become public site assets.
   /^\.(?:grok|dsh)(\/|$)/, /^\.(?:mcp\.json|ignore)$/,
   /^functions\//, /^cloudflare\//, /^supabase\//, /^tools\//, /^tests\//, /^factory\//, /^artifacts\//, /^node_modules(\/|$)/,
-  /^dist\//, /^tmp\//, /^graft\//, /^prototypes\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//,
+  /^dist\//, /^tmp\//, /^graft\//, /^prototypes\//, /^audit-[^/]+\//, /^audits?\//, /^masest\.co-audit\//, /^reports\//,
   /^\.github\//, /^\.vscode\//, /^docs\/research\//, /^docs\/reviews\//,
   /^package(-lock)?\.json$/, /^wrangler\.toml$/, /^\.gitignore$/,
   /\.sql$/i, /\.spec\.mjs$/i, /\.test\.mjs$/i, /\.md$/i,
@@ -125,8 +127,15 @@ for (const f of files) {
     let compiled = rewriteCmsImageReferences(source, siteImagePaths, cmsMediaBase);
     if (extname(f).toLowerCase() === '.html') {
       compiled = ensureCriticalFontPreload(compiled);
-      if (!compiled.includes(AHREFS_ANALYTICS_SCRIPT)) {
-        compiled = compiled.replace(/<\/head\s*>/i, `${AHREFS_ANALYTICS_SCRIPT}\n$&`);
+      compiled = compiled.replace(/(src=["'][^"']*\bjs\/track\.js)\?v=[^"']+/g, `$1?v=${TRACKING_VERSION}`);
+      // Query strings may hold checkout capabilities or contact-form prefills.
+      // Ahrefs reads this override before its first automatic pageview.
+      const pagePath = `/${f.replace(/(?:^|\/)index\.html$/, '').replace(/\.html$/, '')}`;
+      const analyticsScript = AHREFS_ANALYTICS_SCRIPT.replace(' async>', ` data-page-location="${pagePath}" async>`);
+      if (compiled.includes(AHREFS_ANALYTICS_SCRIPT)) {
+        compiled = compiled.replace(AHREFS_ANALYTICS_SCRIPT, analyticsScript);
+      } else if (!compiled.includes(analyticsScript)) {
+        compiled = compiled.replace(/<\/head\s*>/i, `${analyticsScript}\n$&`);
       }
     }
     const unresolvedImages = unresolvedLocalImageReferences(compiled);
@@ -145,7 +154,7 @@ for (const f of files) {
 writeFileSync(join(OUT, '_headers'),
 `/*
   X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
+  Referrer-Policy: origin
   X-Frame-Options: SAMEORIGIN
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()

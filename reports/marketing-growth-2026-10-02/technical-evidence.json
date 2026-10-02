@@ -1,0 +1,73 @@
+{
+  "domain": "masest.co",
+  "checked_at": "2026-10-02T22:20:56.783Z",
+  "status": "complete_for_bounded_scope",
+  "sitemap": {
+    "url": "https://masest.co/sitemap.xml",
+    "status": 200,
+    "xml_valid": true,
+    "urls": 102,
+    "crawled": 102,
+    "all_http_200": true,
+    "all_canonical_match": true,
+    "all_indexable_directives": true,
+    "all_one_h1": true,
+    "duplicate_titles": 0,
+    "duplicate_descriptions": 0,
+    "json_ld_parse_errors": 0,
+    "live_lastmod_values": ["2026-10-02"]
+  },
+  "schema": {
+    "organization_pages": 102,
+    "product_pages": 15,
+    "breadcrumb_pages": 57,
+    "blog_posting_pages": 30,
+    "article_pages": 5,
+    "product_recheck_at": "2026-10-02T22:24:26.286Z",
+    "product_pages_with_name_image_description_and_priced_offers": 15,
+    "product_offer_nodes_in_focused_recheck": 30,
+    "rich_results_test_run": false,
+    "actual_rich_results_or_indexing_verified": false
+  },
+  "redirects": [
+    {"from": "http://masest.co/", "status": 301, "to": "https://masest.co/"},
+    {"from": "https://www.masest.co/", "status": 301, "to": "https://masest.co/"},
+    {"from": "https://masest.co/blog/cr-hd-vs-simple-green", "status": 301, "to": "/comparisons/cr-hd-vs-simple-green"},
+    {"from": "https://masest.co/blog/vertkleen-hcr-vs-clr", "status": 301, "to": "/comparisons/vertkleen-hcr-vs-clr"},
+    {"from": "https://masest.co/blog/lam3-vs-wet-forget", "status": 301, "to": "/comparisons/lam3-vs-wet-forget"}
+  ],
+  "robots": {
+    "status": 200,
+    "sitemap_declared": true,
+    "public_search_paths_allowed": true,
+    "api_path_disallowed": true,
+    "search_bot_access_configuration": "Allowed via wildcard for Googlebot, OAI-SearchBot, Claude-SearchBot, and PerplexityBot",
+    "training_restrictions": "GPTBot and ClaudeBot denied; existing policy preserved",
+    "actual_provider_ip_access_verified": false
+  },
+  "llms_txt": {"status": 404, "severity": "Info", "indexing_blocker": false},
+  "local_fix": {
+    "path": ".github/workflows/verify.yml",
+    "job": "verify",
+    "change": "actions/checkout@v5 with fetch-depth: 0",
+    "other_checkout_unchanged": "web_vitals",
+    "reproduction_file": "privacy.html",
+    "depth_one_git_log": {"commit": "fb593aa", "date": "2026-10-02", "subject": "test(analytics): isolate Ahrefs in browser regressions"},
+    "complete_history_git_log": {"commit": "512e31ae", "date": "2026-10-01", "subject": "fix: restore Services and add Marine under Applications (#167)"},
+    "existing_tests_passed": 14,
+    "yaml_parsed": true,
+    "diff_check_passed": true,
+    "committed": false,
+    "pushed": false,
+    "deployed": false
+  },
+  "unavailable": ["Search Console search analytics", "Search Console URL Inspection", "CrUX field data", "GA4 metrics", "Observed AI citations", "SEO plugin runtime"],
+  "scores": null,
+  "sources": [
+    "https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap",
+    "https://github.com/actions/checkout",
+    "https://developers.google.com/search/docs/appearance/structured-data/product-snippet",
+    "https://developers.google.com/search/docs/appearance/ai-features",
+    "https://developers.openai.com/api/docs/bots"
+  ]
+}
